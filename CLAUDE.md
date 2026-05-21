@@ -129,6 +129,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 ### Cadence (once built)
 - [ ] **Cadence analytics** — meeting frequency per account, open item age, account health trends over time, Pip flags accounts untouched in 30+ days. Hold until enough data exists to make it meaningful.
+- [ ] **Power BI integration** — connect Supabase directly to Power BI via Postgres connection string for full dashboard reporting. No special integration needed, just expose the DB connection. Hold until data volume justifies it.
 
 ### Future / bigger features
 - [ ] **Team support** — org layer, multiple users per account, shared accounts
