@@ -17,8 +17,7 @@ export function AddAccountModal({ userId, onSave, onClose, existing }) {
   var [revenue, setRevenue]    = useState(existing ? (existing.revenue || "") : "");
   var [tier, setTier]          = useState(existing ? (existing.tier || "Mid") : "Mid");
   var [status, setStatus]      = useState(existing ? (existing.status || "green") : "green");
-  var [objective, setObj]      = useState(existing ? (existing.objective || "") : "");
-  var [nextMeeting, setNext]   = useState(existing ? (existing.next_meeting || "") : "");
+  var [notes, setNotes]        = useState(existing ? (existing.objective || "") : "");
   var [loading, setLoading]    = useState(false);
   var [error, setError]        = useState(null);
 
@@ -31,8 +30,7 @@ export function AddAccountModal({ userId, onSave, onClose, existing }) {
       revenue:      revenue.trim() || null,
       tier:         tier,
       status:       status,
-      objective:    objective.trim() || null,
-      next_meeting: nextMeeting || null,
+      objective:    notes.trim() || null,
     };
     onSave(data)
       .then(function () {
@@ -101,21 +99,12 @@ export function AddAccountModal({ userId, onSave, onClose, existing }) {
         </div>
 
         <div>
-          <FL>Meeting Objective</FL>
+          <FL>Notes</FL>
           <TextArea
-            value={objective}
-            onChange={function (e) { setObj(e.target.value); }}
-            placeholder="What are you trying to accomplish with this account?"
+            value={notes}
+            onChange={function (e) { setNotes(e.target.value); }}
+            placeholder="Who they are, what they sell, any context worth knowing..."
             rows={2}
-          />
-        </div>
-
-        <div>
-          <FL>Next Meeting Date</FL>
-          <InputField
-            type="date"
-            value={nextMeeting}
-            onChange={function (e) { setNext(e.target.value); }}
           />
         </div>
 
