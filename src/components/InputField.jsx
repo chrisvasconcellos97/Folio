@@ -25,13 +25,14 @@ export function InputField({ value, onChange, placeholder, type, style }) {
   );
 }
 
-export function TextArea({ value, onChange, placeholder, rows, style }) {
+export function TextArea({ value, onChange, placeholder, rows, style, autoFocus }) {
   return (
     <textarea
       value={value}
       onChange={onChange}
       placeholder={placeholder}
       rows={rows || 4}
+      autoFocus={autoFocus}
       style={Object.assign({}, baseStyle, {
         resize: "vertical",
         lineHeight: 1.6,

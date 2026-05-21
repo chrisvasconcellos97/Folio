@@ -3,6 +3,7 @@ import { C } from "../../lib/colors";
 import { Pill } from "../../components/Pill";
 import { InputField } from "../../components/InputField";
 import { Card } from "../../components/Card";
+import { PipMark } from "../../components/PipMark";
 
 var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red };
 var STATUS_LABELS = { green: "Healthy", yellow: "Watch",  red: "At Risk" };
@@ -40,6 +41,16 @@ function SkeletonCard() {
 export function AccountsView({ accounts, loading, onSelect }) {
   var [search, setSearch] = useState("");
   var [filter, setFilter] = useState("All");
+
+  var todayStr   = new Date().toISOString().split("T")[0];
+  var in7DaysStr = (function () {
+    var d = new Date(); d.setDate(d.getDate() + 7); return d.toISOString().split("T")[0];
+  })();
+  var upcoming = loading ? [] : accounts
+    .filter(function (a) {
+      return a.next_meeting && a.next_meeting >= todayStr && a.next_meeting <= in7DaysStr;
+    })
+    .sort(function (a, b) { return a.next_meeting.localeCompare(b.next_meeting); });
 
   var filtered = accounts
     .filter(function (a) {
@@ -98,6 +109,55 @@ export function AccountsView({ accounts, loading, onSelect }) {
           );
         })}
       </div>
+
+      {/* Upcoming meetings — Pip alert */}
+      {upcoming.length > 0 && (
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+            <PipMark size={7} color={C.accent} glow pulse />
+            <div style={{ fontSize: 10, color: C.accent, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+              Pip — This Week
+            </div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {upcoming.map(function (a) {
+              var statusColor = STATUS_COLORS[a.status] || C.textSub;
+              var meetDate = new Date(a.next_meeting + "T12:00:00");
+              var daysUntil = Math.round((new Date(a.next_meeting + "T00:00:00") - new Date(todayStr + "T00:00:00")) / 86400000);
+              var dayLabel = daysUntil === 0 ? "Today" : daysUntil === 1 ? "Tomorrow" : "In " + daysUntil + " days";
+              return (
+                <div
+                  key={a.id}
+                  onClick={function () { onSelect(a); }}
+                  style={{
+                    background: C.accentGlow,
+                    border: "1px solid rgba(200,136,58,0.2)",
+                    borderLeft: "3px solid " + C.accent,
+                    borderRadius: 10,
+                    padding: "10px 14px",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 10,
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 2 }}>{a.name}</div>
+                    <div style={{ fontSize: 10, color: C.textMuted }}>
+                      {meetDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, marginBottom: 4 }}>{dayLabel}</div>
+                    <Pill color={statusColor}>{STATUS_LABELS[a.status] || a.status}</Pill>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Search */}
       <InputField

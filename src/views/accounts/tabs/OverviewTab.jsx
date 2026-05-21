@@ -30,7 +30,7 @@ function pipSummary(account, openCount) {
   );
 }
 
-export function OverviewTab({ account, openItems, onLogMeeting, onAddItem }) {
+export function OverviewTab({ account, openItems, onQuickMeeting, onLogMeeting, onAddItem }) {
   var openCount = openItems.filter(function (i) { return !i.done; }).length;
 
   return (
@@ -113,12 +113,28 @@ export function OverviewTab({ account, openItems, onLogMeeting, onAddItem }) {
 
       {/* Actions */}
       <div style={{ display: "flex", gap: 8 }}>
-        <AmberBtn style={{ flex: 1 }} onClick={onLogMeeting}>
-          Log Meeting
+        <AmberBtn style={{ flex: 1 }} onClick={onQuickMeeting}>
+          Quick Meeting
         </AmberBtn>
         <SecBtn style={{ flex: 1 }} onClick={onAddItem}>
           Add Item
         </SecBtn>
+      </div>
+      <div style={{ textAlign: "center" }}>
+        <button
+          onClick={onLogMeeting}
+          style={{
+            background: "none",
+            border: "none",
+            color: C.textMuted,
+            fontSize: 11,
+            fontFamily: "'DM Sans', sans-serif",
+            cursor: "pointer",
+            padding: "4px 8px",
+          }}
+        >
+          Full meeting log →
+        </button>
       </div>
     </div>
   );

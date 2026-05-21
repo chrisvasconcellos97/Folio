@@ -10,6 +10,7 @@ import { MeetingsTab } from "./tabs/MeetingsTab";
 import { ItemsTab } from "./tabs/ItemsTab";
 import { ContactsTab } from "./tabs/ContactsTab";
 import { LogMeetingModal } from "./LogMeetingModal";
+import { QuickMeetingModal } from "./QuickMeetingModal";
 import { AddItemModal } from "./AddItemModal";
 import { AddContactModal } from "./AddContactModal";
 
@@ -21,6 +22,7 @@ var TIER_COLORS   = { Major: C.blue, Mid: C.purple, Growth: C.green };
 export function AccountDetail({ account, userId, onBack, onEdit, onDelete }) {
   var [tab, setTab]               = useState("overview");
   var [showMeetingModal, setMeetingModal] = useState(false);
+  var [showQuickModal, setQuickModal]     = useState(false);
   var [showItemModal, setItemModal]       = useState(false);
   var [showContactModal, setContactModal] = useState(false);
   var [confirmDelete, setConfirmDelete]   = useState(false);
@@ -192,6 +194,7 @@ export function AccountDetail({ account, userId, onBack, onEdit, onDelete }) {
         <OverviewTab
           account={account}
           openItems={items}
+          onQuickMeeting={function () { setQuickModal(true); }}
           onLogMeeting={function () { setMeetingModal(true); }}
           onAddItem={function () { setItemModal(true); }}
         />
@@ -222,6 +225,16 @@ export function AccountDetail({ account, userId, onBack, onEdit, onDelete }) {
       )}
 
       {/* Modals */}
+      {showQuickModal && (
+        <QuickMeetingModal
+          accountId={account.id}
+          userId={userId}
+          accountName={account.name}
+          onSave={addMeeting}
+          onClose={function () { setQuickModal(false); }}
+        />
+      )}
+
       {showMeetingModal && (
         <LogMeetingModal
           accountId={account.id}
