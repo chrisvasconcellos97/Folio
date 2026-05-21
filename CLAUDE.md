@@ -110,6 +110,17 @@ This app is currently single-user but should be built with multi-tenancy in mind
 4. **Upcoming meeting alerts** — surface accounts with meetings in the next 7 days when opening the app; Pip flags them with context
 5. **Cadence** — recurring meeting hub per account. Set a schedule (e.g. every Thursday at noon), Folio surfaces it automatically. Hub view shows open items pinned at top carried forward until closed, full meeting history, ad hoc meetings linked in. Pip briefs you before you walk in based on full history. New top-level nav item alongside Accounts, Meetings, Pipeline, Pip.
 
+**Security hardening batch (ship as one focused update before adding other users):**
+
+6. **Rate limiting on Pip API** — prevent API abuse and runaway Anthropic costs
+7. **Clean up hardcoded anon key** — move fully to environment variables
+8. **Audit logging** — every login and data change timestamped and stored
+9. **Email verification on signup** — no unverified accounts
+10. **Session timeout** — auto logout after inactivity
+11. **Password strength enforcement** — minimum requirements on signup
+12. **Two-factor authentication (2FA)** — via Supabase Auth, eliminates phishing risk even if password is compromised
+13. **Active sessions page** — users can see all active sessions, last login location/time, and revoke access. The wow moment in a security demo.
+
 ---
 
 ## Feature Wishlist / Roadmap
