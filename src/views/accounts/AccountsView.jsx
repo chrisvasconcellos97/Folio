@@ -213,6 +213,17 @@ export function AccountsView({ accounts, loading, onSelect }) {
 
         {!loading && filtered.map(function (a) {
           var statusColor = STATUS_COLORS[a.status] || C.textSub;
+
+          var daysColor, daysLabel;
+          if (!a.last_meeting) {
+            daysColor = C.purple;
+            daysLabel = "—";
+          } else {
+            var days = Math.floor((new Date(todayStr + "T00:00:00") - new Date(a.last_meeting + "T00:00:00")) / 86400000);
+            daysLabel = days === 0 ? "today" : days + "d";
+            daysColor = days <= 14 ? C.green : days <= 45 ? C.accent : C.red;
+          }
+
           return (
             <div
               key={a.id}
@@ -255,7 +266,19 @@ export function AccountsView({ accounts, loading, onSelect }) {
                     )}
                   </div>
                 </div>
-                <div style={{ fontSize: 14, color: C.textMuted, flexShrink: 0, paddingTop: 2 }}>→</div>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0, gap: 3 }}>
+                  <div style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: daysColor,
+                    textShadow: "0 0 8px " + daysColor,
+                    fontVariantNumeric: "tabular-nums",
+                    letterSpacing: "0.02em",
+                  }}>
+                    {daysLabel}
+                  </div>
+                  <div style={{ fontSize: 13, color: C.textMuted }}>→</div>
+                </div>
               </div>
             </div>
           );
