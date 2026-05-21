@@ -107,6 +107,8 @@ This app is currently single-user but should be built with multi-tenancy in mind
 1. **Quick Meeting button** — one tap on an account creates a meeting stamped with today's date, skips optional fields, drops you straight into notes
 2. **Pip Summarize with date range** — button on the account that sends all meetings within a selected date range to Pip and returns a single relationship summary (last 30 days, last quarter, custom); saves output so Pip isn't called again unless new meetings exist since last summary
 3. **Loading skeleton on accounts list** — replace the "0 accounts" flash on load with a proper loading state so it's clear data is coming in
+4. **Upcoming meeting alerts** — surface accounts with meetings in the next 7 days when opening the app; Pip flags them with context
+5. **Cadence** — recurring meeting hub per account. Set a schedule (e.g. every Thursday at noon), Folio surfaces it automatically. Hub view shows open items pinned at top carried forward until closed, full meeting history, ad hoc meetings linked in. Pip briefs you before you walk in based on full history. New top-level nav item alongside Accounts, Meetings, Pipeline, Pip.
 
 ---
 
