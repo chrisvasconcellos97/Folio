@@ -29,8 +29,17 @@ export function useMeetings(userId, accountId) {
       .select()
       .then(function (result) {
         if (result.error) throw result.error;
+        var meeting = result.data[0];
+        // Keep last_meeting on the account in sync
+        if (data.account_id && data.meeting_date) {
+          supabase
+            .from("folio_accounts")
+            .update({ last_meeting: data.meeting_date })
+            .eq("id", data.account_id)
+            .then();
+        }
         fetch();
-        return result.data[0];
+        return meeting;
       });
   }
 
