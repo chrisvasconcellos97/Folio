@@ -116,6 +116,8 @@ This app is currently single-user but should be built with multi-tenancy in mind
 4. **Upcoming meeting alerts** — surface accounts with meetings in the next 7 days when opening the app; Pip flags them with context
 5. **Cadence** — recurring meeting hub per account. Set a schedule (e.g. every Thursday at noon), Folio surfaces it automatically. Hub view shows open items pinned at top carried forward until closed, full meeting history, ad hoc meetings linked in. Pip briefs you before you walk in based on full history. New top-level nav item alongside Accounts, Meetings, Pipeline, Pip.
 
+6. **Account list sorted by tier** — Major first, then Mid, then Growth. Alphabetical within each tier.
+
 **Security hardening batch (ship as one focused update before adding other users):**
 
 6. **Rate limiting on Pip API** — prevent API abuse and runaway Anthropic costs
