@@ -2,12 +2,18 @@
 
 ## The Briefcase Suite
 
-Folio and Lanyard are two apps that make up **Briefcase**, a personal account and conference management suite built for a sales team attending ABPA 2026.
+Briefcase is a suite of three apps built around account management, conference work, and project tracking. Folio is the hub — Lanyard and Gauge are spokes that punch out from Folio and feed data back.
 
-- **Folio** (`chrisvasconcellos97/Folio`) — year-round account management. Accounts, meetings, pipeline, contacts, open items, Pip AI.
-- **Lanyard** (separate repo) — conference-specific app. Schedule, partner profiles, team chat, personal meeting notes, Pip AI.
+- **Folio** (`chrisvasconcellos97/Folio`) — year-round account management. Accounts, meetings, pipeline, contacts, open items, Pip AI. The hub.
+- **Lanyard** (separate repo) — conference-specific app. Schedule, partner profiles, team chat, personal meeting notes, Pip AI. Punches out from Folio during conferences, feeds notes and partner data back.
+- **Gauge** (not yet built) — project management. Tracks commitments and deliverables from account meetings (Phase 1), then expands to company-wide product team integration where PMs manage work and AMs are linked to relevant projects (Phase 2). Feeds project status back into Folio account views.
 
-Both apps share the **same Supabase project**: `https://yrpdjmyfidhxlpmxasao.supabase.co`
+All three apps share the **same Supabase project**: `https://yrpdjmyfidhxlpmxasao.supabase.co`
+
+### Gauge — Build Notes
+- Phase 1: AM-facing. Commitments from meetings graduate into tracked projects in Gauge, visible on the account in Folio.
+- Phase 2: Company-wide. Product team uses Gauge as their primary tool, AMs linked to relevant projects. Get input from OEC product team and PMs before building Phase 2 — they'll know what's missing.
+- Same security model as Folio and Lanyard — shared Supabase, RLS, 2FA inherited automatically.
 
 ---
 
