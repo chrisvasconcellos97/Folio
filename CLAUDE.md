@@ -148,6 +148,9 @@ This app is currently single-user but should be built with multi-tenancy in mind
 - [ ] **Cadence analytics** — meeting frequency per account, open item age, account health trends over time, Pip flags accounts untouched in 30+ days. Hold until enough data exists to make it meaningful.
 - [ ] **Power BI integration** — connect Supabase directly to Power BI via Postgres connection string for full dashboard reporting. No special integration needed, just expose the DB connection. Hold until data volume justifies it.
 
+### Briefcase Landing Page
+- [ ] **Separate repo: `chrisvasconcellos97/Briefcase`** — standalone marketing/intro page for the full suite. Interactive icon selector to preview each app, live link to Folio, suite overview. Pitch line: "From the conference floor to year-round relationships. One suite. Powered by Pip." Reference image saved in Chris's previous Claude chat showing the three-app layout with Folio center, Lanyard left, Gauge right, SYNC connectors between them.
+
 ### Future / bigger features
 - [ ] **Team support** — org layer, multiple users per account, shared accounts
 - [ ] **Lanyard real auth** — connect Lanyard users to Folio users via Supabase Auth
