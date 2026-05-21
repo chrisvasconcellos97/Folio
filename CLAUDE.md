@@ -106,6 +106,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 1. **Quick Meeting button** — one tap on an account creates a meeting stamped with today's date, skips optional fields, drops you straight into notes
 2. **Pip Summarize with date range** — button on the account that sends all meetings within a selected date range to Pip and returns a single relationship summary (last 30 days, last quarter, custom); saves output so Pip isn't called again unless new meetings exist since last summary
+3. **Loading skeleton on accounts list** — replace the "0 accounts" flash on load with a proper loading state so it's clear data is coming in
 
 ---
 
