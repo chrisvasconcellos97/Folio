@@ -6,12 +6,15 @@ import { InputField, TextArea } from "../../components/InputField";
 import { FL } from "../../components/FieldLabel";
 
 export function AddContactModal({ accountId, userId, onSave, onClose }) {
-  var [name, setName]    = useState("");
-  var [title, setTitle]  = useState("");
-  var [poc, setPoc]      = useState(false);
-  var [notes, setNotes]  = useState("");
-  var [loading, setLoading] = useState(false);
-  var [error, setError]    = useState(null);
+  var [name, setName]         = useState("");
+  var [title, setTitle]       = useState("");
+  var [phone, setPhone]       = useState("");
+  var [email, setEmail]       = useState("");
+  var [linkedin, setLinkedin] = useState("");
+  var [poc, setPoc]           = useState(false);
+  var [notes, setNotes]       = useState("");
+  var [loading, setLoading]   = useState(false);
+  var [error, setError]       = useState(null);
 
   function handleSave() {
     if (!name.trim()) { setError("Contact name is required."); return; }
@@ -21,9 +24,12 @@ export function AddContactModal({ accountId, userId, onSave, onClose }) {
       account_id: accountId,
       user_id:    userId,
       name:       name.trim(),
-      title:      title.trim() || null,
+      title:      title.trim()    || null,
+      phone:      phone.trim()    || null,
+      email:      email.trim()    || null,
+      linkedin:   linkedin.trim() || null,
       is_poc:     poc,
-      notes:      notes.trim() || null,
+      notes:      notes.trim()    || null,
     })
       .then(function () {
         setLoading(false);
@@ -53,6 +59,35 @@ export function AddContactModal({ accountId, userId, onSave, onClose }) {
             value={title}
             onChange={function (e) { setTitle(e.target.value); }}
             placeholder="e.g. VP of Sales"
+          />
+        </div>
+
+        <div>
+          <FL>Phone</FL>
+          <InputField
+            value={phone}
+            onChange={function (e) { setPhone(e.target.value); }}
+            placeholder="e.g. (555) 123-4567"
+            type="tel"
+          />
+        </div>
+
+        <div>
+          <FL>Email</FL>
+          <InputField
+            value={email}
+            onChange={function (e) { setEmail(e.target.value); }}
+            placeholder="work@company.com"
+            type="email"
+          />
+        </div>
+
+        <div>
+          <FL>LinkedIn</FL>
+          <InputField
+            value={linkedin}
+            onChange={function (e) { setLinkedin(e.target.value); }}
+            placeholder="linkedin.com/in/username"
           />
         </div>
 
