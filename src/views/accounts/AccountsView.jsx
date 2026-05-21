@@ -245,7 +245,15 @@ export function AccountsView({ accounts, loading, onSelect }) {
                     <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{a.name}</div>
                     {a.tier && <Pill color={TIER_COLORS[a.tier] || C.textSub}>{a.tier}</Pill>}
                     <Pill color={statusColor}>{STATUS_LABELS[a.status] || a.status}</Pill>
+                    {a.region && <Pill color={C.accent}>{a.region}</Pill>}
                   </div>
+                  {a.tags && a.tags.length > 0 && (
+                    <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 6 }}>
+                      {a.tags.map(function (t) {
+                        return <Pill key={t} color={C.blue}>{t}</Pill>;
+                      })}
+                    </div>
+                  )}
 
                   {a.revenue && (
                     <div style={{ fontSize: 18, fontWeight: 700, color: C.accent, marginBottom: 6, fontVariantNumeric: "tabular-nums" }}>

@@ -91,7 +91,19 @@ export function AccountDetail({ account, userId, onBack, onEdit, onDelete }) {
                   {openCount + " open"}
                 </Pill>
               )}
+              {account.region && (
+                <Pill color={C.accent}>{account.region}</Pill>
+              )}
             </div>
+            {account.tags && account.tags.length > 0 && (
+              <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 6 }}>
+                {account.tags.map(function (t) {
+                  return (
+                    <Pill key={t} color={C.blue}>{t}</Pill>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div style={{ textAlign: "right", flexShrink: 0 }}>
