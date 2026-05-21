@@ -1,0 +1,147 @@
+import { C } from "../lib/colors";
+import { FolioIcon } from "../components/FolioIcon";
+import { PipMark } from "../components/PipMark";
+import { AmberBtn } from "../components/Buttons";
+
+var NAV_ITEMS = [
+  { id: "accounts", label: "Accounts", icon: "▣" },
+  { id: "meetings", label: "Meetings", icon: "◷" },
+  { id: "pipeline", label: "Pipeline", icon: "▦" },
+  { id: "pip",      label: "Pip",      icon: null },
+];
+
+export function MobileLayout({ view, setView, onAddAccount, onSignOut, children }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        minHeight: "100vh",
+        background: C.bg,
+      }}
+    >
+      {/* Mobile header */}
+      <div
+        style={{
+          background: C.bg,
+          borderBottom: "1px solid " + C.border,
+          padding: "14px 18px 12px",
+          position: "sticky",
+          top: 0,
+          zIndex: 50,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <FolioIcon size={24} />
+            <div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 5,
+                  fontSize: 15,
+                  fontWeight: 600,
+                  color: C.text,
+                }}
+              >
+                Folio
+                <PipMark size={6} color={C.accent} opacity={0.5} />
+              </div>
+              <div
+                style={{
+                  fontSize: 8,
+                  color: C.textMuted,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                }}
+              >
+                Account Management
+              </div>
+            </div>
+          </div>
+          <AmberBtn
+            onClick={onAddAccount}
+            style={{ fontSize: 11, padding: "6px 13px" }}
+          >
+            + Account
+          </AmberBtn>
+        </div>
+      </div>
+
+      {/* Scrollable content */}
+      <div
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          padding: "16px 18px 90px",
+        }}
+      >
+        {children}
+      </div>
+
+      {/* Bottom nav */}
+      <div
+        style={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          background: C.bgDark,
+          borderTop: "1px solid " + C.border,
+          padding: "8px 16px 12px",
+          zIndex: 50,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            background: "rgba(0,0,0,0.2)",
+            borderRadius: 10,
+            padding: 3,
+            gap: 2,
+          }}
+        >
+          {NAV_ITEMS.map(function (item) {
+            var active = view === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={function () { setView(item.id); }}
+                style={{
+                  flex: 1,
+                  padding: "7px 4px",
+                  borderRadius: 8,
+                  cursor: "pointer",
+                  fontSize: 9,
+                  fontWeight: 600,
+                  fontFamily: "'DM Sans', sans-serif",
+                  background: active ? C.bgCardAlt : "transparent",
+                  color: active ? C.accent : C.textMuted,
+                  border: "1px solid " + (active ? C.border : "transparent"),
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 3,
+                }}
+              >
+                {item.icon ? (
+                  <span style={{ fontSize: 13 }}>{item.icon}</span>
+                ) : (
+                  <PipMark size={8} color={active ? C.accent : C.textMuted} pulse={active} />
+                )}
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}

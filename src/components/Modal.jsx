@@ -1,0 +1,66 @@
+import { C } from "../lib/colors";
+
+export function Modal({ title, onClose, children, width }) {
+  function handleBackdrop(e) {
+    if (e.target === e.currentTarget) onClose();
+  }
+
+  return (
+    <div
+      onClick={handleBackdrop}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.65)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 200,
+        padding: 20,
+      }}
+    >
+      <div
+        className="fade-in"
+        style={{
+          background: C.bgCard,
+          border: "1px solid " + C.border,
+          borderRadius: 16,
+          padding: 24,
+          width: "100%",
+          maxWidth: width || 480,
+          maxHeight: "90vh",
+          overflowY: "auto",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 20,
+          }}
+        >
+          <div style={{ fontSize: 16, fontWeight: 600, color: C.text }}>
+            {title}
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: "none",
+              border: "none",
+              color: C.textMuted,
+              cursor: "pointer",
+              fontSize: 20,
+              fontFamily: "'DM Sans', sans-serif",
+              lineHeight: 1,
+              padding: "0 4px",
+            }}
+          >
+            ×
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
