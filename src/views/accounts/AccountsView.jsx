@@ -39,13 +39,27 @@ function SkeletonCard() {
 }
 
 export function AccountsView({ accounts, loading, onSelect }) {
-  var [search, setSearch] = useState("");
-  var [filter, setFilter] = useState("All");
+  var [search, setSearch]       = useState("");
+  var [filter, setFilter]       = useState("All");
+  var [tagFilter, setTagFilter] = useState(null);
+  var [regionFilter, setRegionFilter] = useState(null);
 
   var todayStr   = new Date().toISOString().split("T")[0];
   var in7DaysStr = (function () {
     var d = new Date(); d.setDate(d.getDate() + 7); return d.toISOString().split("T")[0];
   })();
+
+  var availableTags = loading ? [] : (function () {
+    var seen = {};
+    accounts.forEach(function (a) { (a.tags || []).forEach(function (t) { seen[t] = true; }); });
+    return Object.keys(seen).sort();
+  })();
+
+  var availableRegions = loading ? [] : accounts
+    .map(function (a) { return a.region; })
+    .filter(function (r, i, arr) { return r && arr.indexOf(r) === i; })
+    .sort();
+
   var upcoming = loading ? [] : accounts
     .filter(function (a) {
       return a.next_meeting && a.next_meeting >= todayStr && a.next_meeting <= in7DaysStr;
@@ -58,7 +72,9 @@ export function AccountsView({ accounts, loading, onSelect }) {
       var matchFilter =
         filter === "All" ||
         (filter === "At Risk" ? a.status === "red" : a.tier === filter);
-      return matchSearch && matchFilter;
+      var matchTag    = !tagFilter    || (a.tags && a.tags.includes(tagFilter));
+      var matchRegion = !regionFilter || a.region === regionFilter;
+      return matchSearch && matchFilter && matchTag && matchRegion;
     })
     .sort(function (a, b) {
       var tierDiff = (TIER_ORDER[a.tier] || 9) - (TIER_ORDER[b.tier] || 9);
@@ -167,8 +183,8 @@ export function AccountsView({ accounts, loading, onSelect }) {
         style={{ marginBottom: 10 }}
       />
 
-      {/* Filter pills */}
-      <div style={{ display: "flex", gap: 6, marginBottom: 14, overflowX: "auto", paddingBottom: 2 }}>
+      {/* Filter pills — tier / status */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 6, overflowX: "auto", paddingBottom: 2 }}>
         {FILTERS.map(function (f) {
           var active = filter === f;
           return (
@@ -193,6 +209,71 @@ export function AccountsView({ accounts, loading, onSelect }) {
           );
         })}
       </div>
+
+      {/* Filter pills — supplier type tags */}
+      {availableTags.length > 0 && (
+        <div style={{ display: "flex", gap: 6, marginBottom: 6, overflowX: "auto", paddingBottom: 2, alignItems: "center" }}>
+          <span style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap", flexShrink: 0 }}>Type</span>
+          {availableTags.map(function (t) {
+            var active = tagFilter === t;
+            return (
+              <button
+                key={t}
+                onClick={function () { setTagFilter(active ? null : t); }}
+                style={{
+                  background: active ? "rgba(103,200,249,0.15)" : C.bgPill,
+                  color: active ? C.blue : C.textMuted,
+                  border: "1px solid " + (active ? "rgba(103,200,249,0.35)" : C.border),
+                  borderRadius: 20,
+                  padding: "5px 12px",
+                  fontSize: 11,
+                  fontWeight: 600,
+                  fontFamily: "'DM Sans', sans-serif",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {t}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Filter pills — region */}
+      {availableRegions.length > 0 && (
+        <div style={{ display: "flex", gap: 6, marginBottom: 14, overflowX: "auto", paddingBottom: 2, alignItems: "center" }}>
+          <span style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap", flexShrink: 0 }}>Region</span>
+          {availableRegions.map(function (r) {
+            var active = regionFilter === r;
+            return (
+              <button
+                key={r}
+                onClick={function () { setRegionFilter(active ? null : r); }}
+                style={{
+                  background: active ? "rgba(200,136,58,0.15)" : C.bgPill,
+                  color: active ? C.accent : C.textMuted,
+                  border: "1px solid " + (active ? "rgba(200,136,58,0.3)" : C.border),
+                  borderRadius: 20,
+                  padding: "5px 12px",
+                  fontSize: 11,
+                  fontWeight: 600,
+                  fontFamily: "'DM Sans', sans-serif",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {r}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Spacer when no tag/region rows */}
+      {availableTags.length === 0 && availableRegions.length === 0 && (
+        <div style={{ marginBottom: 8 }} />
+      )}
 
       {/* Account list */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
