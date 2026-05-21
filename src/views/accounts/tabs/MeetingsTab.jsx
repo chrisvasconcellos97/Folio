@@ -1,9 +1,26 @@
+import { useState } from "react";
 import { C } from "../../../lib/colors";
-import { AmberBtn, DangerBtn } from "../../../components/Buttons";
+import { AmberBtn, DangerBtn, SecBtn } from "../../../components/Buttons";
 import { Card } from "../../../components/Card";
 import { FL } from "../../../components/FieldLabel";
+import { PipMark } from "../../../components/PipMark";
 
 var STARS = [1, 2, 3, 4, 5];
+
+function CopyBtn({ text }) {
+  var [copied, setCopied] = useState(false);
+  function handleCopy() {
+    navigator.clipboard.writeText(text).then(function () {
+      setCopied(true);
+      setTimeout(function () { setCopied(false); }, 2000);
+    });
+  }
+  return (
+    <SecBtn onClick={handleCopy} style={{ fontSize: 11, padding: "4px 10px" }}>
+      {copied ? "Copied" : "Copy"}
+    </SecBtn>
+  );
+}
 
 export function MeetingsTab({ meetings, onLogMeeting, onDelete }) {
   return (
@@ -59,6 +76,37 @@ export function MeetingsTab({ meetings, onLogMeeting, onDelete }) {
               )}
             </div>
 
+            {/* Pip Summary */}
+            {m.pip_summary && (
+              <div
+                style={{
+                  background: C.accentGlow,
+                  border: "1px solid rgba(200,136,58,0.2)",
+                  borderRadius: 10,
+                  padding: "10px 12px",
+                  marginBottom: 10,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
+                  <PipMark size={7} color={C.accent} glow />
+                  <span
+                    style={{
+                      fontSize: 9,
+                      color: C.accent,
+                      fontWeight: 600,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.1em",
+                    }}
+                  >
+                    Pip Summary
+                  </span>
+                </div>
+                <div style={{ fontSize: 12, color: C.textSub, lineHeight: 1.65 }}>
+                  {m.pip_summary}
+                </div>
+              </div>
+            )}
+
             {m.notes && (
               <div style={{ marginBottom: 10 }}>
                 <FL>Notes</FL>
@@ -100,6 +148,40 @@ export function MeetingsTab({ meetings, onLogMeeting, onDelete }) {
                 <FL>Follow-up</FL>
                 <div style={{ fontSize: 12, color: C.accent }}>
                   {new Date(m.follow_up_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                </div>
+              </div>
+            )}
+
+            {/* Pip Follow-Up Email */}
+            {m.pip_email && (
+              <div style={{ marginBottom: 10 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginBottom: 5,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <PipMark size={7} color={C.accent} glow />
+                    <FL style={{ marginBottom: 0 }}>Draft Follow-Up Email</FL>
+                  </div>
+                  <CopyBtn text={m.pip_email} />
+                </div>
+                <div
+                  style={{
+                    background: "rgba(0,0,0,0.2)",
+                    border: "1px solid " + C.border,
+                    borderRadius: 8,
+                    padding: "10px 12px",
+                    fontSize: 12,
+                    color: C.textSub,
+                    lineHeight: 1.7,
+                    whiteSpace: "pre-wrap",
+                  }}
+                >
+                  {m.pip_email}
                 </div>
               </div>
             )}
