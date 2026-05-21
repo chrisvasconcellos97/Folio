@@ -217,7 +217,7 @@ export function AccountsView({ accounts, loading, onSelect }) {
           var daysColor, daysLabel;
           if (!a.last_meeting) {
             daysColor = C.purple;
-            daysLabel = "—";
+            daysLabel = "not met";
           } else {
             var days = Math.floor((new Date(todayStr + "T00:00:00") - new Date(a.last_meeting + "T00:00:00")) / 86400000);
             daysLabel = days === 0 ? "today" : days + "d";
