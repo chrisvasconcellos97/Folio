@@ -105,6 +105,7 @@ export default function App() {
   var accountsListPane = (
     <AccountsView
       accounts={accounts}
+      loading={acctLoading}
       onSelect={handleSelectAccount}
     />
   );
@@ -225,6 +226,36 @@ export default function App() {
         {mainContent}
       </MobileLayout>
       {addAccountModal}
+      {/* Floating Pip (mobile) */}
+      {view !== "pip" && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 90,
+            right: 20,
+            zIndex: 90,
+          }}
+        >
+          <div
+            className="pip-sonar"
+            onClick={function () { handleSetView("pip"); }}
+            style={{
+              width: 52,
+              height: 52,
+              borderRadius: "50%",
+              background: C.accentGlow,
+              border: "1px solid rgba(200,136,58,0.4)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              boxShadow: "0 0 20px rgba(200,136,58,0.22)",
+            }}
+          >
+            <PipMark size={14} color={C.accent} glow pulse />
+          </div>
+        </div>
+      )}
     </>
   );
 }

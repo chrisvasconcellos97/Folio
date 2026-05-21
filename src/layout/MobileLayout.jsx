@@ -7,7 +7,6 @@ var NAV_ITEMS = [
   { id: "accounts", label: "Accounts", icon: "▣" },
   { id: "meetings", label: "Meetings", icon: "◷" },
   { id: "pipeline", label: "Pipeline", icon: "▦" },
-  { id: "pip",      label: "Pip",      icon: null },
 ];
 
 export function MobileLayout({ view, setView, onAddAccount, onSignOut, children }) {

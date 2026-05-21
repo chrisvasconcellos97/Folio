@@ -7,26 +7,63 @@ import { Card } from "../../components/Card";
 var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red };
 var STATUS_LABELS = { green: "Healthy", yellow: "Watch",  red: "At Risk" };
 var TIER_COLORS   = { Major: C.blue,   Mid: C.purple,    Growth: C.green };
+var TIER_ORDER    = { Major: 1, Mid: 2, Growth: 3 };
 
 var FILTERS = ["All", "Major", "Mid", "Growth", "At Risk"];
 
-export function AccountsView({ accounts, onSelect }) {
-  var [search, setSearch]   = useState("");
-  var [filter, setFilter]   = useState("All");
+function SkeletonCard() {
+  return (
+    <div
+      style={{
+        background: C.bgCard,
+        border: "1px solid " + C.border,
+        borderLeft: "3px solid " + C.border,
+        borderRadius: 12,
+        padding: "13px 15px",
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: "flex", gap: 7, marginBottom: 10, alignItems: "center" }}>
+            <div style={{ width: 120, height: 14, borderRadius: 6, background: "rgba(255,255,255,0.05)", animation: "skeleton-pulse 1.5s ease-in-out infinite" }} />
+            <div style={{ width: 40, height: 14, borderRadius: 6, background: "rgba(255,255,255,0.04)", animation: "skeleton-pulse 1.5s ease-in-out infinite 0.2s" }} />
+          </div>
+          <div style={{ width: 70, height: 18, borderRadius: 6, background: "rgba(255,255,255,0.04)", animation: "skeleton-pulse 1.5s ease-in-out infinite 0.1s", marginBottom: 8 }} />
+          <div style={{ width: 90, height: 10, borderRadius: 4, background: "rgba(255,255,255,0.03)", animation: "skeleton-pulse 1.5s ease-in-out infinite 0.3s" }} />
+        </div>
+        <div style={{ width: 14, height: 14, borderRadius: 4, background: "rgba(255,255,255,0.04)" }} />
+      </div>
+    </div>
+  );
+}
 
-  var filtered = accounts.filter(function (a) {
-    var matchSearch = a.name.toLowerCase().includes(search.toLowerCase());
-    var matchFilter =
-      filter === "All" ||
-      (filter === "At Risk" ? a.status === "red" : a.tier === filter);
-    return matchSearch && matchFilter;
-  });
+export function AccountsView({ accounts, loading, onSelect }) {
+  var [search, setSearch] = useState("");
+  var [filter, setFilter] = useState("All");
 
-  var atRisk       = accounts.filter(function (a) { return a.status === "red"; }).length;
-  var totalRevenue = accounts.length + " accounts";
+  var filtered = accounts
+    .filter(function (a) {
+      var matchSearch = a.name.toLowerCase().includes(search.toLowerCase());
+      var matchFilter =
+        filter === "All" ||
+        (filter === "At Risk" ? a.status === "red" : a.tier === filter);
+      return matchSearch && matchFilter;
+    })
+    .sort(function (a, b) {
+      var tierDiff = (TIER_ORDER[a.tier] || 9) - (TIER_ORDER[b.tier] || 9);
+      if (tierDiff !== 0) return tierDiff;
+      return a.name.localeCompare(b.name);
+    });
 
   return (
     <div>
+      <style>{`
+        @keyframes skeleton-pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.4; }
+        }
+      `}</style>
+
       {/* Stats */}
       <div
         style={{
@@ -37,9 +74,9 @@ export function AccountsView({ accounts, onSelect }) {
         }}
       >
         {[
-          { l: "Accounts",  v: accounts.length,  c: C.text },
-          { l: "Watching",  v: accounts.filter(function(a){ return a.status === "yellow"; }).length, c: C.yellow },
-          { l: "At Risk",   v: atRisk,            c: C.red },
+          { l: "Accounts", v: loading ? "—" : accounts.length, c: C.text },
+          { l: "Watching", v: loading ? "—" : accounts.filter(function(a){ return a.status === "yellow"; }).length, c: C.yellow },
+          { l: "At Risk",  v: loading ? "—" : accounts.filter(function(a){ return a.status === "red"; }).length, c: C.red },
         ].map(function (s) {
           return (
             <div
@@ -51,25 +88,10 @@ export function AccountsView({ accounts, onSelect }) {
                 padding: "12px 14px",
               }}
             >
-              <div
-                style={{
-                  fontSize: 22,
-                  fontWeight: 700,
-                  color: s.c,
-                  fontVariantNumeric: "tabular-nums",
-                }}
-              >
+              <div style={{ fontSize: 22, fontWeight: 700, color: s.c, fontVariantNumeric: "tabular-nums" }}>
                 {s.v}
               </div>
-              <div
-                style={{
-                  fontSize: 9,
-                  color: C.textMuted,
-                  marginTop: 3,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.06em",
-                }}
-              >
+              <div style={{ fontSize: 9, color: C.textMuted, marginTop: 3, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                 {s.l}
               </div>
             </div>
@@ -86,15 +108,7 @@ export function AccountsView({ accounts, onSelect }) {
       />
 
       {/* Filter pills */}
-      <div
-        style={{
-          display: "flex",
-          gap: 6,
-          marginBottom: 14,
-          overflowX: "auto",
-          paddingBottom: 2,
-        }}
-      >
+      <div style={{ display: "flex", gap: 6, marginBottom: 14, overflowX: "auto", paddingBottom: 2 }}>
         {FILTERS.map(function (f) {
           var active = filter === f;
           return (
@@ -122,20 +136,22 @@ export function AccountsView({ accounts, onSelect }) {
 
       {/* Account list */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {filtered.length === 0 && (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "40px 20px",
-              color: C.textMuted,
-              fontSize: 13,
-            }}
-          >
+        {loading && (
+          <>
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </>
+        )}
+
+        {!loading && filtered.length === 0 && (
+          <div style={{ textAlign: "center", padding: "40px 20px", color: C.textMuted, fontSize: 13 }}>
             No accounts found.
           </div>
         )}
 
-        {filtered.map(function (a) {
+        {!loading && filtered.map(function (a) {
           var statusColor = STATUS_COLORS[a.status] || C.textSub;
           return (
             <div
@@ -148,52 +164,20 @@ export function AccountsView({ accounts, onSelect }) {
                 borderRadius: 12,
                 padding: "13px 15px",
                 cursor: "pointer",
-                boxShadow:
-                  a.status === "red"
-                    ? "0 0 18px rgba(248,113,113,0.07)"
-                    : "none",
+                boxShadow: a.status === "red" ? "0 0 18px rgba(248,113,113,0.07)" : "none",
                 transition: "opacity 0.12s",
               }}
             >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                  gap: 10,
-                }}
-              >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
                 <div style={{ flex: 1 }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 7,
-                      marginBottom: 6,
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>
-                      {a.name}
-                    </div>
-                    {a.tier && (
-                      <Pill color={TIER_COLORS[a.tier] || C.textSub}>{a.tier}</Pill>
-                    )}
-                    <Pill color={statusColor}>
-                      {STATUS_LABELS[a.status] || a.status}
-                    </Pill>
+                  <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6, flexWrap: "wrap" }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{a.name}</div>
+                    {a.tier && <Pill color={TIER_COLORS[a.tier] || C.textSub}>{a.tier}</Pill>}
+                    <Pill color={statusColor}>{STATUS_LABELS[a.status] || a.status}</Pill>
                   </div>
 
                   {a.revenue && (
-                    <div
-                      style={{
-                        fontSize: 18,
-                        fontWeight: 700,
-                        color: C.accent,
-                        marginBottom: 6,
-                        fontVariantNumeric: "tabular-nums",
-                      }}
-                    >
+                    <div style={{ fontSize: 18, fontWeight: 700, color: C.accent, marginBottom: 6, fontVariantNumeric: "tabular-nums" }}>
                       {a.revenue}
                     </div>
                   )}
@@ -201,28 +185,17 @@ export function AccountsView({ accounts, onSelect }) {
                   <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                     {a.last_meeting && (
                       <div style={{ fontSize: 10, color: C.textMuted }}>
-                        {"Last: " +
-                          new Date(a.last_meeting).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                          })}
+                        {"Last: " + new Date(a.last_meeting).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                       </div>
                     )}
                     {a.next_meeting && (
                       <div style={{ fontSize: 10, color: C.textSub }}>
-                        {"Next: " +
-                          new Date(a.next_meeting).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                          })}
+                        {"Next: " + new Date(a.next_meeting).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                       </div>
                     )}
                   </div>
                 </div>
-
-                <div style={{ fontSize: 14, color: C.textMuted, flexShrink: 0, paddingTop: 2 }}>
-                  →
-                </div>
+                <div style={{ fontSize: 14, color: C.textMuted, flexShrink: 0, paddingTop: 2 }}>→</div>
               </div>
             </div>
           );
