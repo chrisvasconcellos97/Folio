@@ -5,6 +5,19 @@ import { PipMark } from "../../components/PipMark";
 import { AmberBtn } from "../../components/Buttons";
 import { InputField } from "../../components/InputField";
 
+function passwordStrength(pw) {
+  if (!pw) return null;
+  var hasMin    = pw.length >= 8;
+  var hasUpper  = /[A-Z]/.test(pw);
+  var hasNumber = /[0-9]/.test(pw);
+  if (hasMin && hasUpper && hasNumber) return "strong";
+  if (hasMin && (hasUpper || hasNumber))  return "fair";
+  return "weak";
+}
+
+var STRENGTH_COLORS = { weak: C.red, fair: C.yellow, strong: C.green };
+var STRENGTH_WIDTHS = { weak: "33%", fair: "66%", strong: "100%" };
+
 export function AuthView({ onSignIn, onSignUp }) {
   var [mode, setMode]           = useState("login");
   var [email, setEmail]         = useState("");
@@ -15,10 +28,24 @@ export function AuthView({ onSignIn, onSignUp }) {
   var [error, setError]         = useState(null);
   var [success, setSuccess]     = useState(null);
 
+  var strength = mode === "signup" ? passwordStrength(password) : null;
+
   function handleSubmit(e) {
     e.preventDefault();
     setError(null);
     setSuccess(null);
+
+    if (mode === "signup") {
+      if (!password || password.length < 8) {
+        setError("Password must be at least 8 characters.");
+        return;
+      }
+      if (!/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+        setError("Password needs at least one uppercase letter and one number.");
+        return;
+      }
+    }
+
     setLoading(true);
 
     if (mode === "login") {
@@ -183,6 +210,22 @@ export function AuthView({ onSignIn, onSignUp }) {
                 onChange={function (e) { setPassword(e.target.value); }}
                 placeholder="••••••••"
               />
+              {strength && (
+                <div style={{ marginTop: 6 }}>
+                  <div style={{ height: 3, background: C.border, borderRadius: 2, overflow: "hidden" }}>
+                    <div style={{
+                      height: "100%",
+                      width: STRENGTH_WIDTHS[strength],
+                      background: STRENGTH_COLORS[strength],
+                      borderRadius: 2,
+                      transition: "width 0.2s, background 0.2s",
+                    }} />
+                  </div>
+                  <div style={{ fontSize: 10, color: STRENGTH_COLORS[strength], marginTop: 3, textTransform: "capitalize" }}>
+                    {strength === "strong" ? "Strong" : strength === "fair" ? "Fair — add a number or uppercase" : "Weak — min 8 chars, uppercase, number"}
+                  </div>
+                </div>
+              )}
             </div>
 
             {error && (

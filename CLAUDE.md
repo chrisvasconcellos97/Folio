@@ -115,16 +115,16 @@ This app is currently single-user but should be built with multi-tenancy in mind
 3. **Last interaction tracking** — `last_interaction_at` column on accounts updated via Supabase trigger whenever a meeting, item, or contact is added. Powers the days counter on account cards (currently uses `last_meeting` as a proxy).
 4. **Tag + region filtering** — filter accounts list by supplier type tag and/or region. Tags and region are now stored on accounts but not yet filterable in the UI.
 
-**Security hardening batch (ship as one focused update before adding other users):**
+**Security hardening — shipped in code, two items need Supabase dashboard toggle:**
 
-6. **Rate limiting on Pip API** — prevent API abuse and runaway Anthropic costs
-7. **Clean up hardcoded anon key** — move fully to environment variables
-8. **Audit logging** — every login and data change timestamped and stored
-9. **Email verification on signup** — no unverified accounts
-10. **Session timeout** — auto logout after inactivity
-11. **Password strength enforcement** — minimum requirements on signup
-12. **Two-factor authentication (2FA)** — via Supabase Auth, eliminates phishing risk even if password is compromised
-13. **Active sessions page** — users can see all active sessions, last login location/time, and revoke access. The wow moment in a security demo.
+- ✅ Rate limiting on Pip API (20 req/min per user, in-memory)
+- ✅ Hardcoded anon key removed — env vars only
+- ✅ Audit log SQL written (`supabase/audit_log.sql`) — run when ready
+- ✅ Session timeout — 60 min inactivity auto-logout
+- ✅ Password strength enforcement — 8 chars, uppercase, number required on signup
+- ⚙️ **Email verification** — enable in Supabase Dashboard → Auth → Settings → "Enable email confirmations"
+- ⚙️ **2FA (TOTP)** — enable in Supabase Dashboard → Auth → Settings → "Enable MFA"
+- 🔜 Active sessions page — UI to view/revoke sessions (not yet built)
 
 ---
 

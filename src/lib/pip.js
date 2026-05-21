@@ -1,14 +1,20 @@
+import { supabase } from "./supabase";
+
 var PROXY_URL = import.meta.env.VITE_PIP_PROXY_URL || "/api/pip";
 
 export function askPip(messages, context) {
-  var body = JSON.stringify({ messages: messages, context: context || {} });
-  return fetch(PROXY_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: body,
-  }).then(function (res) {
-    if (!res.ok) throw new Error("Pip proxy error: " + res.status);
-    return res.json();
+  return supabase.auth.getSession().then(function (result) {
+    var token = result.data.session ? result.data.session.access_token : null;
+    var headers = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = "Bearer " + token;
+    return fetch(PROXY_URL, {
+      method: "POST",
+      headers: headers,
+      body: JSON.stringify({ messages: messages, context: context || {} }),
+    }).then(function (res) {
+      if (!res.ok) throw new Error("Pip proxy error: " + res.status);
+      return res.json();
+    });
   });
 }
 
