@@ -137,6 +137,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
 - [ ] **Last meeting auto-update** — when a meeting is logged, auto-set `last_meeting` on the account
 
 ### Medium priority
+- [ ] **Business card scanner** — "Scan Card" button in Add Contact opens camera, sends image to Claude vision via new `api/scan-card.js`, auto-fills name/title/phone/email/linkedin. If company isn't an existing account, prompt to create one. Ideal for post-conference intake.
 - [ ] **Email integration** — one-tap to open draft follow-up email in mail client (`mailto:` link pre-populated)
 - [ ] **Open items on meetings** — when logging a meeting, action items should optionally auto-create open items
 - [ ] **Account search improvement** — search across contacts and notes, not just account name

@@ -66,7 +66,7 @@ export function OverviewTab({ account, openItems, onQuickMeeting, onLogMeeting, 
       {/* Objective */}
       {account.objective && (
         <Card>
-          <FL>Meeting Objective</FL>
+          <FL>Notes</FL>
           <div style={{ fontSize: 13, color: C.text, lineHeight: 1.6 }}>
             {account.objective}
           </div>

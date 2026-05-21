@@ -13,12 +13,14 @@ var baseStyle = {
   boxSizing: "border-box",
 };
 
-export function InputField({ value, onChange, placeholder, type, style }) {
+export function InputField({ value, onChange, placeholder, type, style, onKeyDown, autoFocus }) {
   return (
     <input
       type={type || "text"}
       value={value}
       onChange={onChange}
+      onKeyDown={onKeyDown}
+      autoFocus={autoFocus}
       placeholder={placeholder}
       style={Object.assign({}, baseStyle, style || {})}
     />
