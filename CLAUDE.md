@@ -127,6 +127,9 @@ This app is currently single-user but should be built with multi-tenancy in mind
 - [ ] **Pipeline filters** — filter by tier, status, revenue range
 - [ ] **Notifications / reminders** — flag accounts with no contact in X days, overdue items
 
+### Cadence (once built)
+- [ ] **Cadence analytics** — meeting frequency per account, open item age, account health trends over time, Pip flags accounts untouched in 30+ days. Hold until enough data exists to make it meaningful.
+
 ### Future / bigger features
 - [ ] **Team support** — org layer, multiple users per account, shared accounts
 - [ ] **Lanyard real auth** — connect Lanyard users to Folio users via Supabase Auth
