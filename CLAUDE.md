@@ -92,6 +92,22 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 ---
 
+## Development Workflow
+
+- Features requested by Chris go on **Pending Updates** list below
+- Chris says "ship it" → everything on the list gets built in one batch
+- Items drop off the list after they ship
+- If items should be grouped for efficiency, suggest it before executing
+- Never execute immediately on a feature request — queue it first
+
+---
+
+## Pending Updates
+
+*Nothing queued — list is clear.*
+
+---
+
 ## Feature Wishlist / Roadmap
 
 ### High priority
