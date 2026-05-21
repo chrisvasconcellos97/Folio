@@ -29,6 +29,11 @@ export function useItems(userId, accountId) {
       .select()
       .then(function (result) {
         if (result.error) throw result.error;
+        if (data.account_id) {
+          supabase.from("folio_accounts")
+            .update({ last_interaction_at: new Date().toISOString() })
+            .eq("id", data.account_id).then();
+        }
         fetch();
         return result.data[0];
       });

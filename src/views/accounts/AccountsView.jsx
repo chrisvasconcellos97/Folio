@@ -296,11 +296,14 @@ export function AccountsView({ accounts, loading, onSelect }) {
           var statusColor = STATUS_COLORS[a.status] || C.textSub;
 
           var daysColor, daysLabel;
-          if (!a.last_meeting) {
+          var lastDate = a.last_interaction_at
+            ? a.last_interaction_at.split("T")[0]
+            : a.last_meeting;
+          if (!lastDate) {
             daysColor = C.purple;
             daysLabel = "not met";
           } else {
-            var days = Math.floor((new Date(todayStr + "T00:00:00") - new Date(a.last_meeting + "T00:00:00")) / 86400000);
+            var days = Math.floor((new Date(todayStr + "T00:00:00") - new Date(lastDate + "T00:00:00")) / 86400000);
             daysLabel = days === 0 ? "today" : days + "d";
             daysColor = days <= 14 ? C.green : days <= 45 ? C.accent : C.red;
           }

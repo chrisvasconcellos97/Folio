@@ -68,6 +68,13 @@ export default function App() {
     });
   }
 
+  function handleUpdateSelectedAccount(data) {
+    if (!selectedAccount) return Promise.resolve();
+    return updateAccount(selectedAccount.id, data).then(function () {
+      setSelected(function (prev) { return Object.assign({}, prev, data); });
+    });
+  }
+
   function handleDeleteAccount() {
     if (!selectedAccount) return;
     deleteAccount(selectedAccount.id).then(function () {
@@ -121,6 +128,7 @@ export default function App() {
           onBack={handleBack}
           onEdit={function () { setEditingAccount(selectedAccount); }}
           onDelete={handleDeleteAccount}
+          onUpdate={handleUpdateSelectedAccount}
         />
       );
     } else if (!isDesktop) {

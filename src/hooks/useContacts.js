@@ -28,6 +28,11 @@ export function useContacts(userId, accountId) {
       .select()
       .then(function (result) {
         if (result.error) throw result.error;
+        if (accountId) {
+          supabase.from("folio_accounts")
+            .update({ last_interaction_at: new Date().toISOString() })
+            .eq("id", accountId).then();
+        }
         fetch();
         return result.data[0];
       });

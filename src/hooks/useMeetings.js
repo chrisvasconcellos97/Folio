@@ -30,13 +30,10 @@ export function useMeetings(userId, accountId) {
       .then(function (result) {
         if (result.error) throw result.error;
         var meeting = result.data[0];
-        // Keep last_meeting on the account in sync
         if (data.account_id && data.meeting_date) {
-          supabase
-            .from("folio_accounts")
-            .update({ last_meeting: data.meeting_date })
-            .eq("id", data.account_id)
-            .then();
+          supabase.from("folio_accounts")
+            .update({ last_meeting: data.meeting_date, last_interaction_at: new Date().toISOString() })
+            .eq("id", data.account_id).then();
         }
         fetch();
         return meeting;

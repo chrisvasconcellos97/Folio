@@ -19,7 +19,7 @@ var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red };
 var STATUS_LABELS = { green: "Healthy", yellow: "Watch", red: "At Risk" };
 var TIER_COLORS   = { Major: C.blue, Mid: C.purple, Growth: C.green };
 
-export function AccountDetail({ account, userId, onBack, onEdit, onDelete }) {
+export function AccountDetail({ account, userId, onBack, onEdit, onDelete, onUpdate }) {
   var [tab, setTab]               = useState("overview");
   var [showMeetingModal, setMeetingModal] = useState(false);
   var [showQuickModal, setQuickModal]     = useState(false);
@@ -27,7 +27,7 @@ export function AccountDetail({ account, userId, onBack, onEdit, onDelete }) {
   var [showContactModal, setContactModal] = useState(false);
   var [confirmDelete, setConfirmDelete]   = useState(false);
 
-  var { meetings, addMeeting, deleteMeeting } = useMeetings(userId, account.id);
+  var { meetings, addMeeting, updateMeeting, deleteMeeting } = useMeetings(userId, account.id);
   var { items, addItem, closeItem }            = useItems(userId, account.id);
   var { contacts, addContact, deleteContact }  = useContacts(userId, account.id);
 
@@ -206,17 +206,27 @@ export function AccountDetail({ account, userId, onBack, onEdit, onDelete }) {
         <OverviewTab
           account={account}
           openItems={items}
+          meetings={meetings}
           onQuickMeeting={function () { setQuickModal(true); }}
           onLogMeeting={function () { setMeetingModal(true); }}
           onAddItem={function () { setItemModal(true); }}
+          onSaveSummary={function (summary) {
+            return onUpdate && onUpdate({
+              pip_account_summary: summary,
+              pip_account_summary_at: new Date().toISOString(),
+            });
+          }}
         />
       )}
 
       {tab === "meetings" && (
         <MeetingsTab
           meetings={meetings}
+          accountName={account.name}
+          userId={userId}
           onLogMeeting={function () { setMeetingModal(true); }}
           onDelete={deleteMeeting}
+          onUpdateMeeting={updateMeeting}
         />
       )}
 

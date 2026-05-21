@@ -4,6 +4,7 @@ import { AmberBtn, DangerBtn, SecBtn } from "../../../components/Buttons";
 import { Card } from "../../../components/Card";
 import { FL } from "../../../components/FieldLabel";
 import { PipMark } from "../../../components/PipMark";
+import { callAskPip } from "../../../lib/pip";
 
 var STARS = [1, 2, 3, 4, 5];
 
@@ -22,7 +23,29 @@ function CopyBtn({ text }) {
   );
 }
 
-export function MeetingsTab({ meetings, onLogMeeting, onDelete }) {
+export function MeetingsTab({ meetings, accountName, onLogMeeting, onDelete, onUpdateMeeting }) {
+  var [loadingPip, setLoadingPip] = useState({});
+  var [pipErrors, setPipErrors]   = useState({});
+
+  function handleAskPip(m) {
+    if (loadingPip[m.id]) return;
+    setLoadingPip(function (prev) { return Object.assign({}, prev, { [m.id]: true }); });
+    setPipErrors(function (prev) { return Object.assign({}, prev, { [m.id]: null }); });
+    callAskPip({
+      mode: "meeting",
+      accountName: accountName,
+      meeting: m,
+    }).then(function (data) {
+      setLoadingPip(function (prev) { return Object.assign({}, prev, { [m.id]: false }); });
+      if (data.summary && onUpdateMeeting) {
+        onUpdateMeeting(m.id, { pip_summary: data.summary, pip_email: data.email || null });
+      }
+    }).catch(function () {
+      setLoadingPip(function (prev) { return Object.assign({}, prev, { [m.id]: false }); });
+      setPipErrors(function (prev) { return Object.assign({}, prev, { [m.id]: "Pip is unavailable right now." }); });
+    });
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       {meetings.length === 0 && (
@@ -39,6 +62,8 @@ export function MeetingsTab({ meetings, onLogMeeting, onDelete }) {
       )}
 
       {meetings.map(function (m) {
+        var isLoading = !!loadingPip[m.id];
+        var pipErr    = pipErrors[m.id];
         return (
           <Card key={m.id}>
             <div
@@ -186,7 +211,37 @@ export function MeetingsTab({ meetings, onLogMeeting, onDelete }) {
               </div>
             )}
 
-            {onDelete && (
+            {/* Ask Pip — only if no summary yet */}
+            {!m.pip_summary && onUpdateMeeting && (
+              <div style={{ marginTop: 10 }}>
+                {pipErr && (
+                  <div style={{ fontSize: 11, color: C.red, marginBottom: 6 }}>{pipErr}</div>
+                )}
+                <button
+                  onClick={function () { handleAskPip(m); }}
+                  disabled={isLoading}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    background: "none",
+                    border: "1px solid rgba(200,136,58,0.25)",
+                    borderRadius: 8,
+                    padding: "6px 12px",
+                    cursor: isLoading ? "not-allowed" : "pointer",
+                    opacity: isLoading ? 0.5 : 1,
+                    fontFamily: "'DM Sans', sans-serif",
+                  }}
+                >
+                  <PipMark size={6} color={C.accent} glow pulse={isLoading} />
+                  <span style={{ fontSize: 11, color: C.accent, fontWeight: 600 }}>
+                    {isLoading ? "Asking Pip..." : "Ask Pip"}
+                  </span>
+                </button>
+              </div>
+            )}
+
+            {(onDelete) && (
               <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
                 <DangerBtn
                   onClick={function () { onDelete(m.id); }}
