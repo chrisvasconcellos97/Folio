@@ -4,6 +4,7 @@ import { Pill } from "../../components/Pill";
 import { InputField } from "../../components/InputField";
 import { Card } from "../../components/Card";
 import { PipMark } from "../../components/PipMark";
+import { QuickTaskModal } from "../quicktasks/QuickTaskModal";
 
 var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red };
 var STATUS_LABELS = { green: "Healthy", yellow: "Watch",  red: "At Risk" };
@@ -38,11 +39,15 @@ function SkeletonCard() {
   );
 }
 
-export function AccountsView({ accounts, loading, onSelect }) {
-  var [search, setSearch]       = useState("");
-  var [filter, setFilter]       = useState("All");
-  var [tagFilter, setTagFilter] = useState(null);
+export function AccountsView({ accounts, loading, onSelect, tasks, addTask, updateTask, deleteTask }) {
+  var [search, setSearch]           = useState("");
+  var [filter, setFilter]           = useState("All");
+  var [tagFilter, setTagFilter]     = useState(null);
   var [regionFilter, setRegionFilter] = useState(null);
+  var [showAddTask, setShowAddTask] = useState(false);
+  var [editingTask, setEditingTask] = useState(null);
+
+  var openTasks = (tasks || []).filter(function (t) { return !t.done; });
 
   var todayStr   = new Date().toISOString().split("T")[0];
   var in7DaysStr = (function () {
@@ -90,6 +95,116 @@ export function AccountsView({ accounts, loading, onSelect }) {
           50% { opacity: 0.4; }
         }
       `}</style>
+
+      {/* Quick Task button */}
+      <button
+        onClick={function () { setShowAddTask(true); }}
+        style={{
+          background: "transparent",
+          border: "1px dashed " + C.border,
+          borderRadius: 8,
+          padding: "7px 14px",
+          marginBottom: openTasks.length > 0 ? 10 : 16,
+          width: "100%",
+          textAlign: "left",
+          fontSize: 11,
+          color: C.textMuted,
+          fontFamily: "'DM Sans', sans-serif",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+        }}
+      >
+        <span style={{ fontSize: 14, lineHeight: 1 }}>+</span>
+        Quick Task
+      </button>
+
+      {/* Quick Tasks tray */}
+      {openTasks.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+            <div style={{ fontSize: 10, color: C.textSub, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+              Quick Tasks
+            </div>
+            <div style={{
+              background: C.bgPillActive,
+              border: "1px solid " + C.border,
+              borderRadius: 10,
+              padding: "1px 6px",
+              fontSize: 9,
+              fontWeight: 700,
+              color: C.accent,
+            }}>
+              {openTasks.length}
+            </div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+            {openTasks.map(function (t) {
+              var isOverdue = t.reminder_at && new Date(t.reminder_at) < new Date();
+              return (
+                <div key={t.id} style={{
+                  background: C.bgCard,
+                  border: "1px solid " + (isOverdue ? "rgba(248,113,113,0.25)" : C.border),
+                  borderLeft: "3px solid " + (isOverdue ? C.red : C.yellow),
+                  borderRadius: 10,
+                  padding: "9px 12px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                }}>
+                  <button
+                    onClick={function () { updateTask(t.id, { done: true }); }}
+                    title="Mark done"
+                    style={{
+                      width: 18,
+                      height: 18,
+                      borderRadius: "50%",
+                      border: "1px solid " + C.border,
+                      background: "transparent",
+                      cursor: "pointer",
+                      flexShrink: 0,
+                      padding: 0,
+                    }}
+                  />
+                  <div
+                    onClick={function () { setEditingTask(t); }}
+                    style={{ flex: 1, cursor: "pointer", minWidth: 0 }}
+                  >
+                    <div style={{
+                      fontSize: 13,
+                      fontWeight: 500,
+                      color: C.text,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}>
+                      {t.title}
+                    </div>
+                    {t.reminder_at && (
+                      <div style={{ fontSize: 10, color: isOverdue ? C.red : C.textMuted, marginTop: 2 }}>
+                        {"Reminder · " + new Date(t.reminder_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                      </div>
+                    )}
+                    {t.notes && (
+                      <div style={{
+                        fontSize: 11,
+                        color: C.textMuted,
+                        marginTop: 2,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}>
+                        {t.notes}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       <div
@@ -376,6 +491,21 @@ export function AccountsView({ accounts, loading, onSelect }) {
           );
         })}
       </div>
+
+      {showAddTask && (
+        <QuickTaskModal
+          onSave={addTask}
+          onClose={function () { setShowAddTask(false); }}
+        />
+      )}
+      {editingTask && (
+        <QuickTaskModal
+          existing={editingTask}
+          onSave={function (data) { return updateTask(editingTask.id, data); }}
+          onDelete={deleteTask}
+          onClose={function () { setEditingTask(null); }}
+        />
+      )}
     </div>
   );
 }

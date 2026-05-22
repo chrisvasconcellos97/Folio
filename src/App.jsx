@@ -3,6 +3,7 @@ import { useAuth } from "./hooks/useAuth";
 import { useAccounts } from "./hooks/useAccounts";
 import { useMeetings } from "./hooks/useMeetings";
 import { useCadences } from "./hooks/useCadences";
+import { useQuickTasks } from "./hooks/useQuickTasks";
 import { AuthView } from "./views/auth/AuthView";
 import { AccountsView } from "./views/accounts/AccountsView";
 import { AccountDetail } from "./views/accounts/AccountDetail";
@@ -72,6 +73,7 @@ export default function App() {
   }, [session]);
   var { meetings, loading: meetLoading } = useMeetings(userId);
   var { cadences, addCadence } = useCadences(userId);
+  var { tasks, addTask, updateTask, deleteTask } = useQuickTasks(userId);
 
   function handleSelectAccount(a) {
     setSelected(a);
@@ -165,6 +167,10 @@ export default function App() {
       accounts={accounts}
       loading={acctLoading}
       onSelect={handleSelectAccount}
+      tasks={tasks}
+      addTask={addTask}
+      updateTask={updateTask}
+      deleteTask={deleteTask}
     />
   );
 
