@@ -198,7 +198,11 @@ export default function App() {
         accounts={accounts}
         onSelectAccount={function (accountId) {
           var acct = accounts.find(function (a) { return a.id === accountId; });
-          if (acct) { handleSelectAccount(acct); handleSetView("accounts"); }
+          if (acct) {
+            setSelected(acct);
+            setView("accounts");
+            setPipPrefill({ tab: "cadence" });
+          }
         }}
       />
     );
