@@ -7,7 +7,7 @@ var baseStyle = {
   borderRadius: 10,
   padding: "10px 14px",
   color: C.text,
-  fontSize: 13,
+  fontSize: 16,
   fontFamily: "'DM Sans', sans-serif",
   outline: "none",
   boxSizing: "border-box",

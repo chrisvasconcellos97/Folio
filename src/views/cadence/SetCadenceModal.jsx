@@ -135,7 +135,7 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues }) {
                 style={{
                   width: 72, padding: '9px 12px', textAlign: 'center',
                   background: 'rgba(255,255,255,0.04)', border: '1px solid ' + C.border,
-                  borderRadius: 8, color: C.text, fontSize: 14,
+                  borderRadius: 8, color: C.text, fontSize: 16,
                   fontFamily: "'DM Sans', sans-serif",
                 }}
               />
@@ -152,7 +152,7 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues }) {
               style={{
                 flex: 1, padding: '9px 10px',
                 background: 'rgba(255,255,255,0.04)', border: '1px solid ' + C.border,
-                borderRadius: 8, color: C.text, fontSize: 13,
+                borderRadius: 8, color: C.text, fontSize: 16,
                 fontFamily: "'DM Sans', sans-serif",
               }}>
               {HOURS.map(function (h) { return <option key={h} value={h}>{h}</option>; })}
@@ -162,7 +162,7 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues }) {
               style={{
                 flex: 1, padding: '9px 10px',
                 background: 'rgba(255,255,255,0.04)', border: '1px solid ' + C.border,
-                borderRadius: 8, color: C.text, fontSize: 13,
+                borderRadius: 8, color: C.text, fontSize: 16,
                 fontFamily: "'DM Sans', sans-serif",
               }}>
               {MINUTES.map(function (m) { return <option key={m} value={m}>{m}</option>; })}
