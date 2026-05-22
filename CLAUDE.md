@@ -35,6 +35,9 @@ All three apps share the **same Supabase project**: `https://yrpdjmyfidhxlpmxasa
 - **Sub-accounts** shipped — parent/child on `folio_accounts` via `parent_account_id`
 - **Cadence** shipped — recurring meeting schedules per account, global cadence view, Pip awareness, monthly ordinal patterns, attendees from contacts, action buffer button
 - **Gauge Phase 1** shipped — in Folio as `src/views/gauge/`, and as standalone app in `gauge/`
+- **Pip onboarding tour** shipped — 9-screen animated tour on new signup (Folio intro, Pip rises with sonar rings, covers Accounts/Meetings/Pipeline/Cadence/Gauge/Pip AI). Spring-physics zip transitions, progress dots. Lives in `src/views/welcome/OnboardingTour.jsx`
+- **Returning login welcome** shipped — Pip floats with sonar rings, greeting pulls live open item count, account count, days since last visit. Rotates 5 greetings by day of week. Tap to dismiss. Lives in `src/views/welcome/ReturningWelcome.jsx`
+- **User menu** shipped — avatar/initials button top-right on mobile, bottom of sidebar on desktop. Dropdown: full name, title, Profile edit, App Tour replay, Sign out. Coming soon slots for Notifications/Preferences/My Org. Profile saves to Supabase user metadata. Lives in `src/components/UserMenu.jsx`
 
 ---
 
