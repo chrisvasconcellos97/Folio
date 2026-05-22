@@ -181,6 +181,14 @@ export function AccountsView({ accounts, loading, onSelect, tasks, addTask, upda
                     }}>
                       {t.title}
                     </div>
+                    {(function () {
+                      var acct = t.account_id ? (accounts || []).find(function (a) { return a.id === t.account_id; }) : null;
+                      return acct ? (
+                        <div style={{ fontSize: 10, color: C.accentDim, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 2 }}>
+                          {acct.name}
+                        </div>
+                      ) : null;
+                    })()}
                     {t.reminder_at && (
                       <div style={{ fontSize: 10, color: isOverdue ? C.red : C.textMuted, marginTop: 2 }}>
                         {"Reminder · " + new Date(t.reminder_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
@@ -494,6 +502,7 @@ export function AccountsView({ accounts, loading, onSelect, tasks, addTask, upda
 
       {showAddTask && (
         <QuickTaskModal
+          accounts={accounts}
           onSave={addTask}
           onClose={function () { setShowAddTask(false); }}
         />
@@ -501,6 +510,7 @@ export function AccountsView({ accounts, loading, onSelect, tasks, addTask, upda
       {editingTask && (
         <QuickTaskModal
           existing={editingTask}
+          accounts={accounts}
           onSave={function (data) { return updateTask(editingTask.id, data); }}
           onDelete={deleteTask}
           onClose={function () { setEditingTask(null); }}
