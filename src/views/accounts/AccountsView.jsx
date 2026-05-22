@@ -87,6 +87,27 @@ export function AccountsView({ accounts, loading, onSelect, tasks, addTask, upda
       return a.name.localeCompare(b.name);
     });
 
+  // Build display list: parents in sort order, children nested immediately below
+  var displayList = (function () {
+    var list      = [];
+    var addedIds  = {};
+    filtered.filter(function (a) { return !a.parent_account_id; }).forEach(function (parent) {
+      list.push({ account: parent, isChild: false });
+      addedIds[parent.id] = true;
+      filtered
+        .filter(function (a) { return a.parent_account_id === parent.id; })
+        .sort(function (a, b) { return a.name.localeCompare(b.name); })
+        .forEach(function (child) {
+          list.push({ account: child, isChild: true });
+          addedIds[child.id] = true;
+        });
+    });
+    filtered.forEach(function (a) {
+      if (!addedIds[a.id]) list.push({ account: a, isChild: false });
+    });
+    return list;
+  })();
+
   return (
     <div>
       <style>{`
@@ -415,7 +436,9 @@ export function AccountsView({ accounts, loading, onSelect, tasks, addTask, upda
           </div>
         )}
 
-        {!loading && filtered.map(function (a) {
+        {!loading && displayList.map(function (item) {
+          var a           = item.account;
+          var isChild     = item.isChild;
           var statusColor = STATUS_COLORS[a.status] || C.textSub;
 
           var daysColor, daysLabel;
@@ -431,16 +454,16 @@ export function AccountsView({ accounts, loading, onSelect, tasks, addTask, upda
             daysColor = days <= 14 ? C.green : days <= 45 ? C.accent : C.red;
           }
 
-          return (
+          var card = (
             <div
-              key={a.id}
               onClick={function () { onSelect(a); }}
               style={{
+                flex: isChild ? 1 : undefined,
                 background: C.bgCard,
                 border: "1px solid " + C.border,
                 borderLeft: "3px solid " + statusColor,
                 borderRadius: 12,
-                padding: "12px 14px",
+                padding: isChild ? "10px 12px" : "12px 14px",
                 cursor: "pointer",
                 transition: "opacity 0.12s",
               }}
@@ -449,9 +472,9 @@ export function AccountsView({ accounts, loading, onSelect, tasks, addTask, upda
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: a.revenue || a.next_meeting ? 4 : 0 }}>
                     <div style={{
-                      fontSize: 14,
+                      fontSize: isChild ? 13 : 14,
                       fontWeight: 600,
-                      color: C.text,
+                      color: isChild ? C.textSub : C.text,
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
@@ -487,6 +510,25 @@ export function AccountsView({ accounts, loading, onSelect, tasks, addTask, upda
               </div>
             </div>
           );
+
+          if (isChild) {
+            return (
+              <div key={a.id} style={{ display: "flex", alignItems: "flex-start", gap: 0, marginTop: -2 }}>
+                <div style={{
+                  width: 28,
+                  flexShrink: 0,
+                  display: "flex",
+                  justifyContent: "center",
+                  paddingTop: 11,
+                }}>
+                  <span style={{ fontSize: 13, color: C.textMuted, opacity: 0.3, lineHeight: 1 }}>↳</span>
+                </div>
+                {card}
+              </div>
+            );
+          }
+
+          return <div key={a.id}>{card}</div>;
         })}
       </div>
 
