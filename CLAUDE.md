@@ -113,7 +113,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
 1. **Pip Summarize with date range** — button on the account that sends all meetings within a selected date range to Pip and returns a single relationship summary (last 30 days, last quarter, custom); saves output so Pip isn't called again unless new meetings exist since last summary
 2. **Cadence** — recurring meeting hub per account. Set a schedule (e.g. every Thursday at noon), Folio surfaces it automatically. Hub view shows open items pinned at top carried forward until closed, full meeting history, ad hoc meetings linked in. Pip briefs you before you walk in based on full history. New top-level nav item alongside Accounts, Meetings, Pipeline, Pip.
 3. **Last interaction tracking** — `last_interaction_at` column on accounts updated via Supabase trigger whenever a meeting, item, or contact is added. Powers the days counter on account cards (currently uses `last_meeting` as a proxy).
-4. **Tag + region filtering** — filter accounts list by supplier type tag and/or region. Tags and region are now stored on accounts but not yet filterable in the UI.
+4. **Sub-accounts** — parent/child relationship on accounts. One parent (e.g. KSI) holds multiple child brands (e.g. Rogue, BPM Sport). One level deep only. Parent shows a Sub-accounts section; child shows a "Part of [Parent]" badge. Contacts, meetings, items stay on whichever account they belong to. Schema: `parent_account_id uuid references folio_accounts(id)`.
 
 **Security hardening — shipped in code, two items need Supabase dashboard toggle:**
 
