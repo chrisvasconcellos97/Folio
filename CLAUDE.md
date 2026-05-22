@@ -35,12 +35,34 @@ AMs may only ever work at the Task/Project level. PMs live across all four.
 - Account view: deliverables tied to a Folio account surfaced on that account card
 - Board (Kanban) + List views minimum; Timeline (Gantt) in Phase 2
 
+**Signature features (what no other PM tool can do):**
+
+1. **Promise Archaeology** — every task links to the exact Folio meeting note where the commitment was made. The original words, date, and account are visible alongside delivery status. AM confirms "yes, this is what I told them" before a task closes. Traceability from promise to delivery.
+
+2. **Commitment Drift Score** — a live per-account score measuring how far reality has drifted from what was promised (scope changes, pushed dates, aging open items). Revenue-weighted — a drifting $2M account looks different than a drifting $50K account. No PM tool connects delivery slippage to P&L.
+
+3. **Revenue-Weighted Prioritization** — PM backlog can rank by account revenue. Gauge flags when current prioritization is inverted (big account's work deprioritized below small account's work). Makes the business case without politics.
+
+4. **Silence Detector** — monitors the gap between what's late and what the client has been *told* is late. If a task slips and the client hasn't heard anything in Folio (no meeting notes, no logged contact), Pip flags it: "Client hasn't been told yet. That silence is getting expensive."
+
+5. **Before You Say Yes** — when an AM is about to log a new commitment in a Folio meeting, Pip checks the PM team's current Gauge load and responds with: current open items for this account, team capacity, and what happened last time a similar commitment was made. Not a blocker — a conscience.
+
+6. **Commitment Inheritance** — when a project closes, Pip scans final meeting notes for verbal follow-on commitments that were never formally tracked ("we'll revisit this in Q3"). Flags them for the AM to either create or dismiss. Catches the promises that live in wrap-up emails and disappear.
+
+7. **The Handoff Record** — when an AM or PM rolls off an account, Gauge auto-generates a structured Handoff Record: every promise, every delivery outcome, every pattern, plus Pip's relationship temperature read. Forensically accurate, generated from actual history, not a Notion doc nobody maintained.
+
+8. **Account Health vs. Delivery Health Matrix** — leadership view. Relationship Health (Folio signals) on one axis, Delivery Health (Gauge signals) on the other. Four quadrants, four action plans. The "where do I put attention right now?" view for managers. Only possible because Gauge sees both sides.
+
+9. **Pip's Relationship Obituary** — background analysis that flags accounts at churn risk before anyone says the word: commitment drift rising + cadence gaps widening + open items aging + no upsell conversations in meeting notes. Pip's framing: "This account isn't dead yet. Here's what needs to change in 30 days." Churn prediction from relationship data, not product usage data.
+
+10. **The Commitment Ledger** — a read-only, token-based URL an AM sends to a client. Shows every commitment made, when, current status, owner. No login required. Always live. Lightweight SOW tracker that lives between formal contracts. The client never has to ask "what's the status on X?" again.
+
 **Style:**
 - Same dark aesthetic as Folio and Lanyard
-- Accent color: **blue** (from the Gauge logo) — replaces Folio's amber and Lanyard's color scheme
+- Accent color: **blue** (from the Gauge logo — confirm hex before building) — replaces Folio's amber
 - Same component patterns, same font (DM Sans), same card/border/bg system — just recolored
 
-**Phase 1:** Any user (AM or PM) can create and manage work. Gauge is usable standalone.
+**Phase 1:** Any user (AM or PM) can create and manage work. Gauge is usable standalone. Core hierarchy + tasks + signature features above.
 **Phase 2:** Deep Folio integration — commitments from meetings auto-graduate to Gauge tasks; Folio account view shows live deliverable status. Get input from OEC product team and PMs before finalizing Phase 2 feature set.
 
 **Same security model as Folio and Lanyard** — shared Supabase, RLS, 2FA inherited automatically.
