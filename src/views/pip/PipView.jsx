@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { C } from "../../lib/colors";
 import { PipMark } from "../../components/PipMark";
 import { AmberBtn } from "../../components/Buttons";
@@ -12,7 +12,24 @@ var STARTERS = [
   "Summarize my book health.",
 ];
 
-export function PipView({ accounts, meetings, onAction }) {
+function buildTasksGreeting(openTasks, accounts) {
+  var n     = openTasks.length;
+  var lines = openTasks.slice(0, 5).map(function (t) {
+    var acct = t.account_id ? (accounts || []).find(function (a) { return a.id === t.account_id; }) : null;
+    return "• " + t.title + (acct ? " (" + acct.name + ")" : "");
+  });
+  var list = lines.join("\n") + (n > 5 ? "\n…and " + (n - 5) + " more." : "");
+  if (n === 1) {
+    return "Hey — one quick task still open before we get into it:\n" + list + "\n\nStill needs doing, or are we clear?";
+  }
+  return "Hey — " + n + " quick tasks open:\n" + list + "\n\nWant to run through them or focus on something else?";
+}
+
+export function PipView({ accounts, meetings, tasks, onAction }) {
+  var openTasks = useMemo(function () {
+    return (tasks || []).filter(function (t) { return !t.done; });
+  }, [tasks]);
+
   var [messages, setMessages] = useState([
     {
       role: "assistant",
@@ -22,6 +39,13 @@ export function PipView({ accounts, meetings, onAction }) {
   var [input, setInput]     = useState("");
   var [loading, setLoading] = useState(false);
   var bottomRef             = useRef(null);
+  var taskMsgSet            = useRef(false);
+
+  useEffect(function () {
+    if (taskMsgSet.current || openTasks.length === 0) return;
+    taskMsgSet.current = true;
+    setMessages([{ role: "assistant", text: buildTasksGreeting(openTasks, accounts) }]);
+  }, [openTasks, accounts]);
 
   useEffect(function () {
     if (bottomRef.current) {
@@ -44,10 +68,20 @@ export function PipView({ accounts, meetings, onAction }) {
       }),
       recentMeetings: meetings.slice(0, 10).map(function (m) {
         return {
-          account:     m.folio_accounts ? m.folio_accounts.name : "Unknown",
-          title:       m.title,
-          date:        m.meeting_date,
+          account:      m.folio_accounts ? m.folio_accounts.name : "Unknown",
+          title:        m.title,
+          date:         m.meeting_date,
           action_items: m.action_items,
+        };
+      }),
+      openQuickTasks: openTasks.map(function (t) {
+        var acct = t.account_id ? accounts.find(function (a) { return a.id === t.account_id; }) : null;
+        return {
+          id:          t.id,
+          title:       t.title,
+          notes:       t.notes || null,
+          account:     acct ? acct.name : null,
+          reminder_at: t.reminder_at || null,
         };
       }),
     };
