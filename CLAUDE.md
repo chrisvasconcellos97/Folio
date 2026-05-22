@@ -114,10 +114,12 @@ This app is currently single-user but should be built with multi-tenancy in mind
 ## Pending Updates
 
 1. **Quick Tasks** — fast capture for urgent, day-of items. "+ Quick Task" button on the main accounts page only. Tap it, add a title and optional details (customer name, phone, notes), optionally set a same-day reminder time. Tasks live in a lightweight tray on the main page — open tasks show above the accounts list, collapse when all done. Tap any task to expand, edit, mark done, or promote it into a full account/meeting. Designed for the "someone just called me and I can't do this right now" moment. Schema: `folio_quick_tasks` table with `id, user_id, title, notes, reminder_at, done, created_at`.
-2. **Pip Summarize with date range** — button on the account that sends all meetings within a selected date range to Pip and returns a single relationship summary (last 30 days, last quarter, custom); saves output so Pip isn't called again unless new meetings exist since last summary
-2. **Cadence** — recurring meeting hub per account. Set a schedule (e.g. every Thursday at noon), Folio surfaces it automatically. Hub view shows open items pinned at top carried forward until closed, full meeting history, ad hoc meetings linked in. Pip briefs you before you walk in based on full history. New top-level nav item alongside Accounts, Meetings, Pipeline, Pip.
-3. **Last interaction tracking** — `last_interaction_at` column on accounts updated via Supabase trigger whenever a meeting, item, or contact is added. Powers the days counter on account cards (currently uses `last_meeting` as a proxy).
-4. **Sub-accounts** — parent/child relationship on accounts. One parent (e.g. KSI) holds multiple child brands (e.g. Rogue, BPM Sport). One level deep only. Parent shows a Sub-accounts section; child shows a "Part of [Parent]" badge. Contacts, meetings, items stay on whichever account they belong to. Schema: `parent_account_id uuid references folio_accounts(id)`.
+2. **Sub-accounts migration** — UI and code are fully built. Just needs the `parent_account_id` column added in Supabase: `alter table folio_accounts add column if not exists parent_account_id uuid references folio_accounts(id);` — run this in the Supabase SQL editor to activate the feature.
+
+**Already shipped (drop from list):**
+- ✅ Pip Summarize with date range (30d / 90d / all time presets, saves to account)
+- ✅ Cadence (full nav item, per-account editor, calendar view, open items carry forward)
+- ✅ Last interaction tracking (`last_interaction_at` drives days counter on account cards)
 
 **Security hardening — shipped in code, two items need Supabase dashboard toggle:**
 
