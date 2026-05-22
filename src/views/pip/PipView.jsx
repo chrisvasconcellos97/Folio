@@ -67,6 +67,16 @@ export function PipView({ accounts, meetings, onAction }) {
     return text.replace(/<pip-action>[\s\S]*?<\/pip-action>/g, "").trim();
   }
 
+  function actionLabel(action, account) {
+    var name = account ? account.name : null;
+    if (action.type === 'open_cadence')  return 'Set Cadence' + (name ? ' for ' + name : '') + ' →';
+    if (action.type === 'open_meeting')  return 'Log Meeting' + (name ? ' for ' + name : '') + ' →';
+    if (action.type === 'open_item')     return 'Add Open Item' + (name ? ' for ' + name : '') + ' →';
+    if (action.type === 'open_contact')  return 'Add Contact' + (name ? ' for ' + name : '') + ' →';
+    if (action.type === 'navigate')      return 'Go to ' + (action.view || 'View') + ' →';
+    return 'Open →';
+  }
+
   function findAccount(name) {
     if (!name) return null;
     var lower = name.toLowerCase();
@@ -93,16 +103,13 @@ export function PipView({ accounts, meetings, onAction }) {
     askPip(apiMessages, buildContext())
       .then(function (data) {
         setLoading(false);
-        var rawText = data.content || data.text || "...";
-        var action  = parseAction(rawText);
+        var rawText   = data.content || data.text || "...";
+        var action    = parseAction(rawText);
         var cleanText = stripAction(rawText);
+        var account   = action && action.accountName ? findAccount(action.accountName) : null;
         setMessages(function (prev) {
-          return prev.concat([{ role: "assistant", text: cleanText }]);
+          return prev.concat([{ role: "assistant", text: cleanText, action: action || null, actionAccount: account || null }]);
         });
-        if (action && onAction) {
-          var account = action.accountName ? findAccount(action.accountName) : null;
-          onAction(action, account);
-        }
       })
       .catch(function (err) {
         setLoading(false);
@@ -185,7 +192,9 @@ export function PipView({ accounts, meetings, onAction }) {
               key={i}
               style={{
                 display: "flex",
-                justifyContent: isPip ? "flex-start" : "flex-end",
+                flexDirection: "column",
+                alignItems: isPip ? "flex-start" : "flex-end",
+                gap: 6,
               }}
             >
               <div
@@ -201,30 +210,33 @@ export function PipView({ accounts, meetings, onAction }) {
                 }}
               >
                 {isPip && (
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 5,
-                      marginBottom: 5,
-                    }}
-                  >
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 5 }}>
                     <PipMark size={6} color={C.accent} />
-                    <span
-                      style={{
-                        fontSize: 9,
-                        color: C.accent,
-                        fontWeight: 600,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.08em",
-                      }}
-                    >
+                    <span style={{ fontSize: 9, color: C.accent, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>
                       Pip
                     </span>
                   </div>
                 )}
                 {m.text}
               </div>
+              {isPip && m.action && onAction && (
+                <button
+                  onClick={function () { onAction(m.action, m.actionAccount); }}
+                  style={{
+                    background: "rgba(200,136,58,0.12)",
+                    border: "1px solid rgba(200,136,58,0.35)",
+                    borderRadius: 20,
+                    padding: "7px 14px",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: C.accent,
+                    fontFamily: "'DM Sans', sans-serif",
+                    cursor: "pointer",
+                  }}
+                >
+                  {actionLabel(m.action, m.actionAccount)}
+                </button>
+              )}
             </div>
           );
         })}

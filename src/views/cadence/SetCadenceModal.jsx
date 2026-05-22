@@ -1,10 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { C } from "../../lib/colors";
 import { Modal } from "../../components/Modal";
 import { AmberBtn, SecBtn } from "../../components/Buttons";
 import { FL } from "../../components/FieldLabel";
 
 var DAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function lastOccurrenceOf(dayOfWeek) {
+  var today = new Date();
+  today.setHours(0, 0, 0, 0);
+  var daysBack = (today.getDay() - dayOfWeek + 7) % 7;
+  var d = new Date(today);
+  d.setDate(today.getDate() - daysBack);
+  return d.toISOString().slice(0, 10);
+}
 var HOURS      = ['12', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'];
 var MINUTES    = ['00', '15', '30', '45'];
 
@@ -35,6 +44,11 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues }) {
   var [frequency,   setFrequency]   = useState(seed.frequency    || 'weekly');
   var [dayOfWeek,   setDayOfWeek]   = useState(seed.day_of_week  ?? 1);
   var [dayOfMonth,  setDayOfMonth]  = useState(seed.day_of_month ?? 1);
+  var [anchorDate,  setAnchorDate]  = useState(seed.anchor_date  || lastOccurrenceOf(seed.day_of_week ?? 1));
+
+  useEffect(function () {
+    if (frequency === 'biweekly') setAnchorDate(lastOccurrenceOf(dayOfWeek));
+  }, [dayOfWeek, frequency]);
   var [hour,        setHour]        = useState(init.hour);
   var [minute,      setMinute]      = useState(init.minute);
   var [ampm,        setAmpm]        = useState(init.ampm);
@@ -49,6 +63,7 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues }) {
       frequency,
       day_of_week:  frequency !== 'monthly' ? dayOfWeek  : null,
       day_of_month: frequency === 'monthly'  ? dayOfMonth : null,
+      anchor_date:  frequency === 'biweekly' ? anchorDate : null,
       meeting_time: toHHMM(hour, minute, ampm),
       notes:        notes.trim() || null,
     })
@@ -118,6 +133,27 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues }) {
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {/* Anchor date (biweekly only) */}
+        {frequency === 'biweekly' && (
+          <div>
+            <FL>Last Meeting Date</FL>
+            <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 6 }}>
+              Locks in the correct bi-weekly cycle
+            </div>
+            <input
+              type="date"
+              value={anchorDate}
+              onChange={function (e) { setAnchorDate(e.target.value); }}
+              style={{
+                width: '100%', padding: '9px 12px',
+                background: 'rgba(255,255,255,0.04)', border: '1px solid ' + C.border,
+                borderRadius: 8, color: C.text, fontSize: 16,
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            />
           </div>
         )}
 

@@ -44,7 +44,10 @@ export function getNextOccurrence(cadence, fromDate) {
 
   if (cadence.frequency === 'biweekly') {
     var target = cadence.day_of_week;
-    var ref = new Date(cadence.created_at);
+    var refStr = cadence.anchor_date
+      ? cadence.anchor_date + 'T00:00:00'
+      : cadence.created_at;
+    var ref = new Date(refStr);
     ref.setHours(0, 0, 0, 0);
     var current = from.getDay();
     var daysUntilNext = (target - current + 7) % 7;
