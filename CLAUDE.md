@@ -6,14 +6,44 @@ Briefcase is a suite of three apps built around account management, conference w
 
 - **Folio** (`chrisvasconcellos97/Folio`) — year-round account management. Accounts, meetings, pipeline, contacts, open items, Pip AI. The hub.
 - **Lanyard** (separate repo) — conference-specific app. Schedule, partner profiles, team chat, personal meeting notes, Pip AI. Punches out from Folio during conferences, feeds notes and partner data back.
-- **Gauge** (not yet built) — project management. Tracks commitments and deliverables from account meetings (Phase 1), then expands to company-wide product team integration where PMs manage work and AMs are linked to relevant projects (Phase 2). Feeds project status back into Folio account views.
+- **Gauge** (not yet built) — full project management tool. Serves two audiences: (1) AMs tracking client commitments and deliverables from meetings, (2) PMs and product teams managing deep product development. Both personas live here daily. Feeds project/deliverable status back into Folio account views.
 
 All three apps share the **same Supabase project**: `https://yrpdjmyfidhxlpmxasao.supabase.co`
 
 ### Gauge — Build Notes
-- Phase 1: AM-facing. Commitments from meetings graduate into tracked projects in Gauge, visible on the account in Folio.
-- Phase 2: Company-wide. Product team uses Gauge as their primary tool, AMs linked to relevant projects. Get input from OEC product team and PMs before building Phase 2 — they'll know what's missing.
-- Same security model as Folio and Lanyard — shared Supabase, RLS, 2FA inherited automatically.
+
+**Audience:** Not just AMs. Gauge must support a product/project manager who lives in it all day AND an AM who needs to track client commitments. Both use cases are first-class. Simple daily tasks and deep product development workflows both need to feel at home.
+
+**Hierarchy is required.** Work items have depth:
+- **Initiative** (top level) — a large body of work, e.g. "2026 Platform Rebuild"
+- **Project** — a deliverable set within an initiative, e.g. "API v2 Launch"
+- **Task** — the atomic unit of work within a project
+- **Subtask** — optional granular step within a task
+AMs may only ever work at the Task/Project level. PMs live across all four.
+
+**Vocabulary:**
+- A **Commitment** is what an AM promised in a Folio meeting (the origin moment)
+- That commitment becomes a **Task** (or Project if it's large enough) in Gauge
+- Tasks belong to Projects; Projects belong to Initiatives
+
+**Core features for v1:**
+- Task with: title, status, priority, assignee, due date, account link, meeting origin link, comment thread
+- Status stages: Backlog → In Progress → In Review → Done → Blocked (flag state)
+- Priority: Urgent / High / Normal / Low
+- Hierarchy: Initiative → Project → Task → Subtask
+- Personal view: "My Tasks" — everything assigned to me across all projects, grouped Today / Upcoming / Later
+- Account view: deliverables tied to a Folio account surfaced on that account card
+- Board (Kanban) + List views minimum; Timeline (Gantt) in Phase 2
+
+**Style:**
+- Same dark aesthetic as Folio and Lanyard
+- Accent color: **blue** (from the Gauge logo) — replaces Folio's amber and Lanyard's color scheme
+- Same component patterns, same font (DM Sans), same card/border/bg system — just recolored
+
+**Phase 1:** Any user (AM or PM) can create and manage work. Gauge is usable standalone.
+**Phase 2:** Deep Folio integration — commitments from meetings auto-graduate to Gauge tasks; Folio account view shows live deliverable status. Get input from OEC product team and PMs before finalizing Phase 2 feature set.
+
+**Same security model as Folio and Lanyard** — shared Supabase, RLS, 2FA inherited automatically.
 
 ---
 
