@@ -6,14 +6,18 @@ Briefcase is a suite of three apps built around account management, conference w
 
 - **Folio** (`chrisvasconcellos97/Folio`) — year-round account management. Accounts, meetings, pipeline, contacts, open items, Pip AI. The hub.
 - **Lanyard** (separate repo) — conference-specific app. Schedule, partner profiles, team chat, personal meeting notes, Pip AI. Punches out from Folio during conferences, feeds notes and partner data back.
-- **Gauge** (not yet built) — project management. Tracks commitments and deliverables from account meetings (Phase 1), then expands to company-wide product team integration where PMs manage work and AMs are linked to relevant projects (Phase 2). Feeds project status back into Folio account views.
+- **Gauge** (`chrisvasconcellos97/Folio` → `gauge/` subdirectory, separate Vercel deployment) — project management. Tracks commitments and deliverables from account meetings (Phase 1), then expands to company-wide product team integration where PMs manage work and AMs are linked to relevant projects (Phase 2). Feeds project status back into Folio account views.
 
 All three apps share the **same Supabase project**: `https://yrpdjmyfidhxlpmxasao.supabase.co`
 
-### Gauge — Build Notes
-- Phase 1: AM-facing. Commitments from meetings graduate into tracked projects in Gauge, visible on the account in Folio.
-- Phase 2: Company-wide. Product team uses Gauge as their primary tool, AMs linked to relevant projects. Get input from OEC product team and PMs before building Phase 2 — they'll know what's missing.
-- Same security model as Folio and Lanyard — shared Supabase, RLS, 2FA inherited automatically.
+### Gauge — Current State
+- Phase 1 built: standalone React + Vite app in `gauge/` subdirectory of the Folio repo
+- Deployed separately on Vercel; same Supabase project and auth as Folio
+- Blue (#67C8F9) accent theme vs Folio's amber
+- `gauge_projects` table with RLS — fields: title, description, status, priority, due_date, account_id, meeting_id
+- Sidebar layout, stats row, status filter tabs, project cards, Add/Edit/Delete modal
+- Reads `folio_accounts` to show account names on projects
+- Phase 2: Company-wide. Get input from OEC product team and PMs before building — they'll know what's missing.
 
 ---
 
@@ -21,12 +25,16 @@ All three apps share the **same Supabase project**: `https://yrpdjmyfidhxlpmxasa
 
 - React + Vite, deployed on Vercel, live as of May 2026
 - Supabase Auth (real email/password accounts)
-- Tables: `folio_accounts`, `folio_contacts`, `folio_meetings`, `folio_items` — all with RLS tied to `auth.uid()`
+- Tables: `folio_accounts`, `folio_contacts`, `folio_meetings`, `folio_items`, `gauge_projects` — all with RLS tied to `auth.uid()`
 - `folio_meetings` has two extra columns added post-launch: `pip_summary text`, `pip_email text`
 - Pip AI proxy at `api/pip.js` using `claude-haiku-4-5-20251001`, requires `ANTHROPIC_API_KEY` in Vercel env vars
 - Schema is in `supabase/schema.sql` — run in production
+- Gauge schema is in `supabase/gauge_schema.sql` — run in production
 - ABPA 2026 import is in `supabase/import_lanyard.sql` — run in production
 - 11 accounts and 8 meetings imported from Lanyard with Pip summaries and draft emails attached
+- **Sub-accounts** shipped — parent/child on `folio_accounts` via `parent_account_id`
+- **Cadence** shipped — recurring meeting schedules per account, global cadence view, Pip awareness, monthly ordinal patterns, attendees from contacts, action buffer button
+- **Gauge Phase 1** shipped — in Folio as `src/views/gauge/`, and as standalone app in `gauge/`
 
 ---
 
@@ -111,9 +119,8 @@ This app is currently single-user but should be built with multi-tenancy in mind
 ## Pending Updates
 
 1. **Pip Summarize with date range** — button on the account that sends all meetings within a selected date range to Pip and returns a single relationship summary (last 30 days, last quarter, custom); saves output so Pip isn't called again unless new meetings exist since last summary
-2. **Cadence** — recurring meeting hub per account. Set a schedule (e.g. every Thursday at noon), Folio surfaces it automatically. Hub view shows open items pinned at top carried forward until closed, full meeting history, ad hoc meetings linked in. Pip briefs you before you walk in based on full history. New top-level nav item alongside Accounts, Meetings, Pipeline, Pip.
-3. **Last interaction tracking** — `last_interaction_at` column on accounts updated via Supabase trigger whenever a meeting, item, or contact is added. Powers the days counter on account cards (currently uses `last_meeting` as a proxy).
-4. **Sub-accounts** — parent/child relationship on accounts. One parent (e.g. KSI) holds multiple child brands (e.g. Rogue, BPM Sport). One level deep only. Parent shows a Sub-accounts section; child shows a "Part of [Parent]" badge. Contacts, meetings, items stay on whichever account they belong to. Schema: `parent_account_id uuid references folio_accounts(id)`.
+2. **Last interaction tracking** — `last_interaction_at` column on accounts updated via Supabase trigger whenever a meeting, item, or contact is added. Powers the days counter on account cards (currently uses `last_meeting` as a proxy).
+3. **Demo account seed data** — create a demo@getfolio.app account pre-loaded with realistic fake companies, contacts, meetings, open items, and pipeline entries so anyone can try Folio without entering their own data.
 
 **Security hardening — shipped in code, two items need Supabase dashboard toggle:**
 
