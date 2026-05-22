@@ -12,7 +12,7 @@ var STARTERS = [
   "Summarize my book health.",
 ];
 
-export function PipView({ accounts, meetings }) {
+export function PipView({ accounts, meetings, onAction }) {
   var [messages, setMessages] = useState([
     {
       role: "assistant",
@@ -33,11 +33,13 @@ export function PipView({ accounts, meetings }) {
     return {
       accounts: accounts.map(function (a) {
         return {
+          id:      a.id,
           name:    a.name,
           tier:    a.tier,
           status:  a.status,
           revenue: a.revenue,
-          next_meeting: a.next_meeting,
+          region:  a.region,
+          tags:    a.tags,
         };
       }),
       recentMeetings: meetings.slice(0, 10).map(function (m) {
@@ -49,6 +51,30 @@ export function PipView({ accounts, meetings }) {
         };
       }),
     };
+  }
+
+  function parseAction(text) {
+    try {
+      var match = text.match(/<pip-action>([\s\S]*?)<\/pip-action>/);
+      if (!match) return null;
+      return JSON.parse(match[1].trim());
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function stripAction(text) {
+    return text.replace(/<pip-action>[\s\S]*?<\/pip-action>/g, "").trim();
+  }
+
+  function findAccount(name) {
+    if (!name) return null;
+    var lower = name.toLowerCase();
+    return accounts.find(function (a) {
+      return a.name.toLowerCase() === lower ||
+             a.name.toLowerCase().includes(lower) ||
+             lower.includes(a.name.toLowerCase());
+    }) || null;
   }
 
   function send(text) {
@@ -67,9 +93,16 @@ export function PipView({ accounts, meetings }) {
     askPip(apiMessages, buildContext())
       .then(function (data) {
         setLoading(false);
+        var rawText = data.content || data.text || "...";
+        var action  = parseAction(rawText);
+        var cleanText = stripAction(rawText);
         setMessages(function (prev) {
-          return prev.concat([{ role: "assistant", text: data.content || data.text || "..." }]);
+          return prev.concat([{ role: "assistant", text: cleanText }]);
         });
+        if (action && onAction) {
+          var account = action.accountName ? findAccount(action.accountName) : null;
+          onAction(action, account);
+        }
       })
       .catch(function (err) {
         setLoading(false);

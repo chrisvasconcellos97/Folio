@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { C } from "../../lib/colors";
 import { Pill } from "../../components/Pill";
 import { AmberBtn, SecBtn, DangerBtn } from "../../components/Buttons";
@@ -21,13 +21,25 @@ var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red };
 var STATUS_LABELS = { green: "Healthy", yellow: "Watch", red: "At Risk" };
 var TIER_COLORS   = { Major: C.blue, Mid: C.purple, Growth: C.green };
 
-export function AccountDetail({ account, userId, onBack, onEdit, onDelete, onUpdate }) {
+export function AccountDetail({ account, userId, onBack, onEdit, onDelete, onUpdate, pipPrefill, onPipPrefillHandled }) {
   var [tab, setTab]               = useState("overview");
   var [showMeetingModal, setMeetingModal] = useState(false);
   var [showQuickModal, setQuickModal]     = useState(false);
   var [showItemModal, setItemModal]       = useState(false);
   var [showContactModal, setContactModal] = useState(false);
   var [confirmDelete, setConfirmDelete]   = useState(false);
+
+  var [cadencePrefill, setCadencePrefill] = useState(null);
+
+  useEffect(function () {
+    if (!pipPrefill) return;
+    if (pipPrefill.tab) setTab(pipPrefill.tab);
+    if (pipPrefill.modal === "log_meeting")  setMeetingModal(true);
+    if (pipPrefill.modal === "add_item")     setItemModal(true);
+    if (pipPrefill.modal === "add_contact")  setContactModal(true);
+    if (pipPrefill.modal === "set_cadence")  setCadencePrefill(pipPrefill.data || {});
+    if (onPipPrefillHandled) onPipPrefillHandled();
+  }, [pipPrefill]);
 
   var { meetings, addMeeting, updateMeeting, deleteMeeting } = useMeetings(userId, account.id);
   var { items, addItem, closeItem }            = useItems(userId, account.id);
@@ -262,6 +274,8 @@ export function AccountDetail({ account, userId, onBack, onEdit, onDelete, onUpd
           onCloseItem={closeItem}
           onLogMeeting={function () { setMeetingModal(true); }}
           onDeleteMeeting={deleteMeeting}
+          prefill={cadencePrefill}
+          onPrefillHandled={function () { setCadencePrefill(null); }}
         />
       )}
 

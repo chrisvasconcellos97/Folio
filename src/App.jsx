@@ -40,6 +40,7 @@ export default function App() {
   var [selectedAccount, setSelected]    = useState(null);
   var [showAddAccount, setShowAddAccount] = useState(false);
   var [editingAccount, setEditingAccount] = useState(null);
+  var [pipPrefill, setPipPrefill]       = useState(null);
 
   var { accounts, loading: acctLoading, addAccount, updateAccount, deleteAccount } = useAccounts(userId);
   var { meetings, loading: meetLoading } = useMeetings(userId);
@@ -56,6 +57,26 @@ export default function App() {
   function handleSetView(v) {
     setView(v);
     setSelected(null);
+  }
+
+  function handlePipAction(action, account) {
+    if (action.type === "navigate") {
+      handleSetView(action.view);
+      return;
+    }
+    if (account) {
+      setView("accounts");
+      setSelected(account);
+      if (action.type === "open_cadence") {
+        setPipPrefill({ tab: "cadence", modal: "set_cadence", data: action.prefill || {} });
+      } else if (action.type === "open_meeting") {
+        setPipPrefill({ tab: "meetings", modal: "log_meeting" });
+      } else if (action.type === "open_item") {
+        setPipPrefill({ tab: "items", modal: "add_item" });
+      } else if (action.type === "open_contact") {
+        setPipPrefill({ tab: "contacts", modal: "add_contact" });
+      }
+    }
   }
 
   function handleAddAccount(data) {
@@ -132,6 +153,8 @@ export default function App() {
           onEdit={function () { setEditingAccount(selectedAccount); }}
           onDelete={handleDeleteAccount}
           onUpdate={handleUpdateSelectedAccount}
+          pipPrefill={pipPrefill}
+          onPipPrefillHandled={function () { setPipPrefill(null); }}
         />
       );
     } else if (!isDesktop) {
@@ -165,7 +188,7 @@ export default function App() {
   }
 
   if (view === "pip") {
-    mainContent = <PipView accounts={accounts} meetings={meetings} />;
+    mainContent = <PipView accounts={accounts} meetings={meetings} onAction={handlePipAction} />;
   }
 
   if (view === "cadence") {

@@ -1,13 +1,21 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { C } from "../../../lib/colors";
 import { AmberBtn, SecBtn, DangerBtn } from "../../../components/Buttons";
 import { SetCadenceModal } from "../../cadence/SetCadenceModal";
 import { getNextOccurrence, getFrequencyLabel, formatTime, daysUntil, formatDateFull } from "../../../lib/cadenceUtils";
 
-export function CadenceTab({ account, cadences, items, meetings, onAddCadence, onUpdateCadence, onDeleteCadence, onAddItem, onCloseItem, onLogMeeting, onDeleteMeeting }) {
+export function CadenceTab({ account, cadences, items, meetings, onAddCadence, onUpdateCadence, onDeleteCadence, onAddItem, onCloseItem, onLogMeeting, onDeleteMeeting, prefill, onPrefillHandled }) {
   var [showModal,     setShowModal]     = useState(false);
   var [editingCad,    setEditingCad]    = useState(null);
+  var [prefillValues, setPrefillValues] = useState(null);
   var [confirmDelete, setConfirmDelete] = useState(false);
+
+  useEffect(function () {
+    if (!prefill) return;
+    setPrefillValues(prefill);
+    setShowModal(true);
+    if (onPrefillHandled) onPrefillHandled();
+  }, [prefill]);
 
   var cadence   = cadences && cadences.length > 0 ? cadences[0] : null;
   var openItems = items.filter(function (i) { return !i.done; });
@@ -40,8 +48,9 @@ export function CadenceTab({ account, cadences, items, meetings, onAddCadence, o
         </div>
         {showModal && (
           <SetCadenceModal
+            initialValues={prefillValues}
             onSave={function (data) { return handleSave(data); }}
-            onClose={function () { setShowModal(false); }}
+            onClose={function () { setShowModal(false); setPrefillValues(null); }}
           />
         )}
       </div>
@@ -210,8 +219,9 @@ export function CadenceTab({ account, cadences, items, meetings, onAddCadence, o
       {showModal && (
         <SetCadenceModal
           existing={editingCad}
+          initialValues={editingCad ? null : prefillValues}
           onSave={function (data) { return handleSave(data); }}
-          onClose={function () { setShowModal(false); setEditingCad(null); }}
+          onClose={function () { setShowModal(false); setEditingCad(null); setPrefillValues(null); }}
         />
       )}
     </div>

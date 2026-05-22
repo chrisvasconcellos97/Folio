@@ -28,12 +28,13 @@ function fromHHMM(hhmm) {
   return { hour: String(hour), minute: closestMin, ampm };
 }
 
-export function SetCadenceModal({ onSave, onClose, existing }) {
-  var init = existing ? fromHHMM(existing.meeting_time) : { hour: '9', minute: '00', ampm: 'AM' };
+export function SetCadenceModal({ onSave, onClose, existing, initialValues }) {
+  var seed = existing || initialValues || {};
+  var init = seed.meeting_time ? fromHHMM(seed.meeting_time) : { hour: '9', minute: '00', ampm: 'AM' };
 
-  var [frequency,   setFrequency]   = useState(existing ? existing.frequency    : 'weekly');
-  var [dayOfWeek,   setDayOfWeek]   = useState(existing ? (existing.day_of_week  ?? 1) : 1);
-  var [dayOfMonth,  setDayOfMonth]  = useState(existing ? (existing.day_of_month ?? 1) : 1);
+  var [frequency,   setFrequency]   = useState(seed.frequency    || 'weekly');
+  var [dayOfWeek,   setDayOfWeek]   = useState(seed.day_of_week  ?? 1);
+  var [dayOfMonth,  setDayOfMonth]  = useState(seed.day_of_month ?? 1);
   var [hour,        setHour]        = useState(init.hour);
   var [minute,      setMinute]      = useState(init.minute);
   var [ampm,        setAmpm]        = useState(init.ampm);
