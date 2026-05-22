@@ -138,6 +138,9 @@ export function ProjectsView({ userId, accounts, openAdd, onAddClosed }) {
           padding: 3,
           gap: 2,
           marginBottom: 18,
+          overflowX: "auto",
+          WebkitOverflowScrolling: "touch",
+          scrollbarWidth: "none",
         }}
       >
         {FILTERS.map(function (f) {
@@ -147,8 +150,8 @@ export function ProjectsView({ userId, accounts, openAdd, onAddClosed }) {
               key={f.id}
               onClick={function () { setFilter(f.id); }}
               style={{
-                flex: 1,
-                padding: "7px 4px",
+                flex: "1 0 auto",
+                padding: "7px 10px",
                 borderRadius: 8,
                 cursor: "pointer",
                 fontSize: 11,
@@ -158,6 +161,7 @@ export function ProjectsView({ userId, accounts, openAdd, onAddClosed }) {
                 color: active ? C.blue : C.textMuted,
                 border: "1px solid " + (active ? GB_BDR : "transparent"),
                 transition: "all 0.15s",
+                whiteSpace: "nowrap",
               }}
             >
               {f.label}

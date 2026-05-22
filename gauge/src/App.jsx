@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { C } from "./lib/colors";
 import { useAuth } from "./hooks/useAuth";
 import { useAccounts } from "./hooks/useAccounts";
@@ -9,23 +9,31 @@ import { ProjectsView } from "./views/projects/ProjectsView";
 var GB     = "rgba(103,200,249,0.10)";
 var GB_BDR = "rgba(103,200,249,0.22)";
 
+function useBreakpoint() {
+  var [isDesktop, setIsDesktop] = useState(
+    typeof window !== "undefined" ? window.innerWidth >= 768 : true
+  );
+  useEffect(function () {
+    function handleResize() { setIsDesktop(window.innerWidth >= 768); }
+    window.addEventListener("resize", handleResize);
+    return function () { window.removeEventListener("resize", handleResize); };
+  }, []);
+  return isDesktop;
+}
+
 export function App() {
   var { session, loading, signIn, signOut } = useAuth();
-  var userId   = session ? session.user.id : null;
-  var accounts = useAccounts(userId);
+  var userId    = session ? session.user.id : null;
+  var accounts  = useAccounts(userId);
+  var isDesktop = useBreakpoint();
   var [openAdd, setOpenAdd] = useState(false);
 
   if (loading) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          background: C.bg,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
+      <div style={{
+        minHeight: "100vh", background: C.bg,
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}>
         <GaugeIcon size={36} glow />
       </div>
     );
@@ -35,75 +43,103 @@ export function App() {
     return <AuthView onSignIn={signIn} />;
   }
 
-  return (
-    <div
-      style={{
-        display: "flex",
-        height: "100vh",
-        background: C.bg,
-        overflow: "hidden",
-      }}
-    >
-      {/* Sidebar */}
-      <aside
-        style={{
-          width: 220,
-          flexShrink: 0,
+  /* ── Mobile layout ─────────────────────────────────────────── */
+  if (!isDesktop) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: C.bg }}>
+        {/* Header */}
+        <div style={{
           background: C.bgSidebar,
-          borderRight: "1px solid " + C.border,
-          display: "flex",
-          flexDirection: "column",
-          padding: "20px 0",
-          overflowY: "auto",
-        }}
-      >
+          borderBottom: "1px solid " + C.border,
+          padding: "14px 18px 12px",
+          position: "sticky", top: 0, zIndex: 50,
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: 8,
+              background: GB, border: "1px solid " + GB_BDR,
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <GaugeIcon size={18} glow />
+            </div>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: C.text, letterSpacing: "0.1em", lineHeight: 1 }}>
+                GAUGE
+              </div>
+              <div style={{ fontSize: 8, color: C.accent, letterSpacing: "0.1em", textTransform: "uppercase", marginTop: 2 }}>
+                Project Management
+              </div>
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button
+              onClick={function () { setOpenAdd(true); }}
+              style={{
+                background: GB, border: "1px solid " + GB_BDR,
+                borderRadius: 20, padding: "7px 14px",
+                color: C.accent, fontSize: 12, fontWeight: 600,
+                fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
+              }}
+            >
+              + New
+            </button>
+            <button
+              onClick={signOut}
+              style={{
+                background: "none", border: "1px solid " + C.border,
+                borderRadius: 20, padding: "7px 11px",
+                color: C.textMuted, fontSize: 11,
+                fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
+              }}
+            >
+              Sign out
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "16px 18px 40px" }}>
+          <ProjectsView
+            userId={userId}
+            accounts={accounts}
+            openAdd={openAdd}
+            onAddClosed={function () { setOpenAdd(false); }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  /* ── Desktop layout ────────────────────────────────────────── */
+  return (
+    <div style={{ display: "flex", height: "100vh", background: C.bg, overflow: "hidden" }}>
+      {/* Sidebar */}
+      <aside style={{
+        width: 220, flexShrink: 0,
+        background: C.bgSidebar,
+        borderRight: "1px solid " + C.border,
+        display: "flex", flexDirection: "column",
+        padding: "20px 0", overflowY: "auto",
+      }}>
         {/* Brand */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            padding: "0 18px 20px",
-            borderBottom: "1px solid " + C.border,
-            marginBottom: 16,
-          }}
-        >
-          <div
-            style={{
-              width: 38,
-              height: 38,
-              borderRadius: 10,
-              background: GB,
-              border: "1px solid " + GB_BDR,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-            }}
-          >
+        <div style={{
+          display: "flex", alignItems: "center", gap: 12,
+          padding: "0 18px 20px",
+          borderBottom: "1px solid " + C.border, marginBottom: 16,
+        }}>
+          <div style={{
+            width: 38, height: 38, borderRadius: 10,
+            background: GB, border: "1px solid " + GB_BDR,
+            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+          }}>
             <GaugeIcon size={22} glow />
           </div>
           <div>
-            <div
-              style={{
-                fontSize: 14,
-                fontWeight: 700,
-                color: C.text,
-                letterSpacing: "0.1em",
-                lineHeight: 1,
-              }}
-            >
+            <div style={{ fontSize: 14, fontWeight: 700, color: C.text, letterSpacing: "0.1em", lineHeight: 1 }}>
               GAUGE
             </div>
-            <div
-              style={{
-                fontSize: 9,
-                color: C.accent,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                marginTop: 3,
-              }}
-            >
+            <div style={{ fontSize: 9, color: C.accent, letterSpacing: "0.1em", textTransform: "uppercase", marginTop: 3 }}>
               Project Management
             </div>
           </div>
@@ -114,20 +150,11 @@ export function App() {
           <button
             onClick={function () { setOpenAdd(true); }}
             style={{
-              width: "100%",
-              background: GB,
-              border: "1px solid " + GB_BDR,
-              borderRadius: 8,
-              padding: "9px 14px",
-              color: C.accent,
-              fontSize: 12,
-              fontWeight: 600,
-              fontFamily: "'DM Sans', sans-serif",
-              cursor: "pointer",
-              textAlign: "left",
-              display: "flex",
-              alignItems: "center",
-              gap: 7,
+              width: "100%", background: GB, border: "1px solid " + GB_BDR,
+              borderRadius: 8, padding: "9px 14px",
+              color: C.accent, fontSize: 12, fontWeight: 600,
+              fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
+              textAlign: "left", display: "flex", alignItems: "center", gap: 7,
             }}
           >
             <span style={{ fontSize: 16, lineHeight: 1 }}>+</span>
@@ -135,60 +162,34 @@ export function App() {
           </button>
         </div>
 
-        {/* Nav item */}
+        {/* Nav */}
         <nav style={{ padding: "0 8px", flex: 1 }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              padding: "9px 10px",
-              borderRadius: 8,
-              background: GB,
-              border: "1px solid " + GB_BDR,
-              color: C.accent,
-              fontSize: 13,
-              fontWeight: 600,
-              marginBottom: 2,
-            }}
-          >
+          <div style={{
+            display: "flex", alignItems: "center", gap: 10,
+            padding: "9px 10px", borderRadius: 8,
+            background: GB, border: "1px solid " + GB_BDR,
+            color: C.accent, fontSize: 13, fontWeight: 600, marginBottom: 2,
+          }}>
             Projects
           </div>
         </nav>
 
         {/* User / sign out */}
-        <div
-          style={{
-            padding: "16px 12px 0",
-            borderTop: "1px solid " + C.border,
-            marginTop: 16,
-          }}
-        >
-          <div
-            style={{
-              fontSize: 10,
-              color: C.textMuted,
-              marginBottom: 8,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
+        <div style={{ padding: "16px 12px 0", borderTop: "1px solid " + C.border, marginTop: 16 }}>
+          <div style={{
+            fontSize: 10, color: C.textMuted, marginBottom: 8,
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          }}>
             {session.user.email}
           </div>
           <button
             onClick={signOut}
             style={{
-              background: "none",
-              border: "1px solid " + C.border,
-              borderRadius: 7,
-              padding: "7px 12px",
-              color: C.textMuted,
-              fontSize: 11,
-              fontFamily: "'DM Sans', sans-serif",
-              cursor: "pointer",
-              width: "100%",
-              textAlign: "left",
+              background: "none", border: "1px solid " + C.border,
+              borderRadius: 7, padding: "7px 12px",
+              color: C.textMuted, fontSize: 11,
+              fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
+              width: "100%", textAlign: "left",
             }}
           >
             Sign out
@@ -196,52 +197,20 @@ export function App() {
         </div>
       </aside>
 
-      {/* Main content */}
-      <main
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          padding: "28px 32px",
-        }}
-      >
-        {/* Page header */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 24,
-          }}
-        >
+      {/* Main */}
+      <main style={{ flex: 1, overflowY: "auto", padding: "28px 32px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
           <div>
-            <h1
-              style={{
-                fontSize: 20,
-                fontWeight: 700,
-                color: C.text,
-                lineHeight: 1.1,
-                margin: 0,
-              }}
-            >
-              Projects
-            </h1>
-            <div style={{ fontSize: 11, color: C.textMuted, marginTop: 3 }}>
-              Track commitments and deliverables
-            </div>
+            <h1 style={{ fontSize: 20, fontWeight: 700, color: C.text, lineHeight: 1.1, margin: 0 }}>Projects</h1>
+            <div style={{ fontSize: 11, color: C.textMuted, marginTop: 3 }}>Track commitments and deliverables</div>
           </div>
-
           <button
             onClick={function () { setOpenAdd(true); }}
             style={{
-              background: GB,
-              border: "1px solid " + GB_BDR,
-              borderRadius: 24,
-              padding: "8px 20px",
-              color: C.accent,
-              fontSize: 12,
-              fontWeight: 600,
-              fontFamily: "'DM Sans', sans-serif",
-              cursor: "pointer",
+              background: GB, border: "1px solid " + GB_BDR,
+              borderRadius: 24, padding: "8px 20px",
+              color: C.accent, fontSize: 12, fontWeight: 600,
+              fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
             }}
           >
             + New Project
