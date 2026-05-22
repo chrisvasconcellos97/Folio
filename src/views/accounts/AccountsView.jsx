@@ -440,59 +440,49 @@ export function AccountsView({ accounts, loading, onSelect, tasks, addTask, upda
                 border: "1px solid " + C.border,
                 borderLeft: "3px solid " + statusColor,
                 borderRadius: 12,
-                padding: "13px 15px",
+                padding: "12px 14px",
                 cursor: "pointer",
-                boxShadow: a.status === "red" ? "0 0 18px rgba(248,113,113,0.07)" : "none",
                 transition: "opacity 0.12s",
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6, flexWrap: "wrap" }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{a.name}</div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: a.revenue || a.next_meeting ? 4 : 0 }}>
+                    <div style={{
+                      fontSize: 14,
+                      fontWeight: 600,
+                      color: C.text,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}>
+                      {a.name}
+                    </div>
                     {a.tier && <Pill color={TIER_COLORS[a.tier] || C.textSub}>{a.tier}</Pill>}
-                    <Pill color={statusColor}>{STATUS_LABELS[a.status] || a.status}</Pill>
-                    {a.region && <Pill color={C.accent}>{a.region}</Pill>}
                   </div>
-                  {a.tags && a.tags.length > 0 && (
-                    <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 6 }}>
-                      {a.tags.map(function (t) {
-                        return <Pill key={t} color={C.blue}>{t}</Pill>;
-                      })}
+                  {(a.revenue || a.next_meeting) && (
+                    <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                      {a.revenue && (
+                        <div style={{ fontSize: 11, color: C.textMuted, fontVariantNumeric: "tabular-nums" }}>
+                          {a.revenue}
+                        </div>
+                      )}
+                      {a.next_meeting && (
+                        <div style={{ fontSize: 11, color: C.textMuted }}>
+                          {"Next · " + new Date(a.next_meeting + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        </div>
+                      )}
                     </div>
                   )}
-
-                  {a.revenue && (
-                    <div style={{ fontSize: 18, fontWeight: 700, color: C.accent, marginBottom: 6, fontVariantNumeric: "tabular-nums" }}>
-                      {a.revenue}
-                    </div>
-                  )}
-
-                  <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                    {a.last_meeting && (
-                      <div style={{ fontSize: 10, color: C.textMuted }}>
-                        {"Last: " + new Date(a.last_meeting).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                      </div>
-                    )}
-                    {a.next_meeting && (
-                      <div style={{ fontSize: 10, color: C.textSub }}>
-                        {"Next: " + new Date(a.next_meeting).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                      </div>
-                    )}
-                  </div>
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0, gap: 3 }}>
-                  <div style={{
-                    fontSize: 10,
-                    fontWeight: 700,
-                    color: daysColor,
-                    textShadow: "0 0 8px " + daysColor,
-                    fontVariantNumeric: "tabular-nums",
-                    letterSpacing: "0.02em",
-                  }}>
-                    {daysLabel}
-                  </div>
-                  <div style={{ fontSize: 13, color: C.textMuted }}>→</div>
+                <div style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: daysColor,
+                  fontVariantNumeric: "tabular-nums",
+                  flexShrink: 0,
+                }}>
+                  {daysLabel}
                 </div>
               </div>
             </div>
