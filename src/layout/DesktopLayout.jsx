@@ -1,5 +1,6 @@
 import { C } from "../lib/colors";
 import { FolioIcon } from "../components/FolioIcon";
+import { GaugeIcon } from "../components/GaugeIcon";
 import { PipMark } from "../components/PipMark";
 import { AmberBtn } from "../components/Buttons";
 
@@ -8,6 +9,7 @@ var NAV_ITEMS = [
   { id: "meetings", label: "Meetings",  icon: "◷"  },
   { id: "pipeline", label: "Pipeline",  icon: "▦"  },
   { id: "cadence",  label: "Cadence",   icon: "↻"  },
+  { id: "gauge",    label: "Gauge",     icon: "gauge" },
   { id: "pip",      label: "Pip",       icon: null },
 ];
 
@@ -91,13 +93,15 @@ export function DesktopLayout({
                   fontFamily: "'DM Sans', sans-serif",
                   fontWeight: active ? 600 : 400,
                   fontSize: 13,
-                  background: active ? C.bgPillActive : "transparent",
-                  color: active ? C.accent : C.textSub,
-                  border: "1px solid " + (active ? "rgba(200,136,58,0.2)" : "transparent"),
+                  background: active ? (item.id === "gauge" ? "rgba(103,200,249,0.08)" : C.bgPillActive) : "transparent",
+                  color: active ? (item.id === "gauge" ? C.blue : C.accent) : C.textSub,
+                  border: "1px solid " + (active ? (item.id === "gauge" ? "rgba(103,200,249,0.2)" : "rgba(200,136,58,0.2)") : "transparent"),
                   textAlign: "left",
                 }}
               >
-                {item.icon ? (
+                {item.icon === "gauge" ? (
+                  <GaugeIcon size={14} color={active ? C.blue : C.textMuted} />
+                ) : item.icon ? (
                   <span style={{ fontSize: 13, opacity: 0.7 }}>{item.icon}</span>
                 ) : (
                   <PipMark size={7} color={active ? C.accent : C.textMuted} pulse={active} />

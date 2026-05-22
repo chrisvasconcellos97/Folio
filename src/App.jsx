@@ -11,6 +11,7 @@ import { MeetingsView } from "./views/meetings/MeetingsView";
 import { PipelineView } from "./views/pipeline/PipelineView";
 import { PipView } from "./views/pip/PipView";
 import { CadenceView } from "./views/cadence/CadenceView";
+import { GaugeView } from "./views/gauge/GaugeView";
 import { DesktopLayout } from "./layout/DesktopLayout";
 import { MobileLayout } from "./layout/MobileLayout";
 import { PipMark } from "./components/PipMark";
@@ -191,6 +192,15 @@ export default function App() {
 
   if (view === "pip") {
     mainContent = <PipView accounts={accounts} meetings={meetings} onAction={handlePipAction} />;
+  }
+
+  if (view === "gauge") {
+    mainContent = (
+      <GaugeView
+        userId={userId}
+        accounts={accounts}
+      />
+    );
   }
 
   if (view === "cadence") {
