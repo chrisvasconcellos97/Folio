@@ -51,6 +51,28 @@
       /* Overlay transition */
       .fade-in { animation: fadeIn 0.15s ease-out; }
       @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+      /* Welcome / Pip tour animations */
+      @keyframes pipFloat {
+        0%, 100% { transform: translateY(0px) scale(1); }
+        50%       { transform: translateY(-14px) scale(1.02); }
+      }
+      @keyframes pipRise {
+        0%   { opacity: 0; transform: translateY(50px) scale(0.3); }
+        100% { opacity: 1; transform: translateY(0px)  scale(1);   }
+      }
+      @keyframes folioAppear {
+        0%   { opacity: 0; transform: translate(-50%,-50%) scale(0.7); }
+        100% { opacity: 1; transform: translate(-50%,-50%) scale(1);   }
+      }
+      @keyframes tourSonar {
+        0%   { transform: translate(-50%,-50%) scale(1);   opacity: 0.5; }
+        100% { transform: translate(-50%,-50%) scale(3.5); opacity: 0;   }
+      }
+      @keyframes tapPulse {
+        0%, 100% { opacity: 0.4; }
+        50%       { opacity: 1;   }
+      }
     </style>
   </head>
   <body>
