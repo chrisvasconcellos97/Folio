@@ -25,7 +25,7 @@ function buildTasksGreeting(openTasks, accounts) {
   return "Hey — " + n + " quick tasks open:\n" + list + "\n\nWant to run through them or focus on something else?";
 }
 
-export function PipView({ accounts, meetings, tasks, onAction }) {
+export function PipView({ accounts, meetings, tasks, addTask, updateTask, onAction }) {
   var openTasks = useMemo(function () {
     return (tasks || []).filter(function (t) { return !t.done; });
   }, [tasks]);
@@ -111,6 +111,21 @@ export function PipView({ accounts, meetings, tasks, onAction }) {
     return 'Open →';
   }
 
+  function executeQuickTaskAction(action) {
+    if (!action) return Promise.resolve(null);
+    if (action.type === "complete_task" && action.task_id && updateTask) {
+      return updateTask(action.task_id, { done: true }).then(function () { return "completed"; });
+    }
+    if (action.type === "add_quick_task" && action.title && addTask) {
+      return addTask({
+        title:      action.title,
+        notes:      action.notes || null,
+        account_id: action.account_id || null,
+      }).then(function () { return "added"; });
+    }
+    return Promise.resolve(null);
+  }
+
   function findAccount(name) {
     if (!name) return null;
     var lower = name.toLowerCase();
@@ -136,24 +151,30 @@ export function PipView({ accounts, meetings, tasks, onAction }) {
 
     askPip(apiMessages, buildContext())
       .then(function (data) {
-        setLoading(false);
         var rawText   = data.content || data.text || "...";
         var action    = parseAction(rawText);
         var cleanText = stripAction(rawText);
         var account   = action && action.accountName ? findAccount(action.accountName) : null;
-        setMessages(function (prev) {
-          return prev.concat([{ role: "assistant", text: cleanText, action: action || null, actionAccount: account || null }]);
+        return executeQuickTaskAction(action).then(function (result) {
+          setLoading(false);
+          setMessages(function (prev) {
+            return prev.concat([{
+              role:         "assistant",
+              text:         cleanText,
+              action:       action || null,
+              actionAccount: account || null,
+              actionResult: result,
+            }]);
+          });
         });
       })
       .catch(function (err) {
         setLoading(false);
         setMessages(function (prev) {
-          return prev.concat([
-            {
-              role: "assistant",
-              text: "Something went sideways on my end. Try again in a sec.",
-            },
-          ]);
+          return prev.concat([{
+            role: "assistant",
+            text: "Something went sideways on my end. Try again in a sec.",
+          }]);
         });
       });
   }
@@ -253,6 +274,12 @@ export function PipView({ accounts, meetings, tasks, onAction }) {
                 )}
                 {m.text}
               </div>
+              {isPip && m.actionResult && (
+                <div style={{ fontSize: 10, color: C.accent, display: "flex", alignItems: "center", gap: 5, paddingLeft: 4 }}>
+                  <span style={{ color: "#4ade80" }}>✓</span>
+                  {m.actionResult === "completed" ? "Task marked done" : "Task added"}
+                </div>
+              )}
               {isPip && m.action && onAction && (
                 <button
                   onClick={function () { onAction(m.action, m.actionAccount); }}

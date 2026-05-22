@@ -52,6 +52,20 @@ var PIP_SYSTEM = [
   "If openQuickTasks exist in the context, you already surfaced them in your opening message.",
   "During conversation, reference them naturally if relevant — e.g., if the user mentions an account that has a related task.",
   "Don't nag, but don't let them fall through the cracks either.",
+  "",
+  "You can also act on quick tasks directly:",
+  "",
+  "Mark a task done:",
+  '<pip-action>{"type":"complete_task","task_id":"[exact uuid from openQuickTasks context]"}</pip-action>',
+  "",
+  "Add a new quick task:",
+  '<pip-action>{"type":"add_quick_task","title":"...","notes":"[optional, null if none]","account_id":"[exact uuid from accounts context, or null]"}</pip-action>',
+  "",
+  "Quick task rules:",
+  "- Only use complete_task when you have the exact task_id from openQuickTasks. Never guess or fabricate IDs.",
+  "- If the user says 'mark X as done' and you can match it to a task in context, complete it. If ambiguous, confirm first.",
+  "- For add_quick_task, account_id must come from the accounts context or be null. Never fabricate account IDs.",
+  "- These actions execute immediately — confirm in your message text what you're doing (e.g. 'Done — marking that one off.').",
 ].join("\n");
 
 

@@ -223,7 +223,7 @@ export default function App() {
   }
 
   if (view === "pip") {
-    mainContent = <PipView accounts={accounts} meetings={meetings} tasks={tasks} onAction={handlePipAction} />;
+    mainContent = <PipView accounts={accounts} meetings={meetings} tasks={tasks} addTask={addTask} updateTask={updateTask} onAction={handlePipAction} />;
   }
 
   if (view === "gauge") {
