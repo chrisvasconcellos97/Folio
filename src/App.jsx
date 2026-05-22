@@ -48,6 +48,11 @@ export default function App() {
   var [showReturning, setShowReturning]   = useState(false);
   var welcomeShown = useRef(false);
 
+  function replayTour() {
+    setShowReturning(false);
+    setShowOnboarding(true);
+  }
+
   var { accounts, loading: acctLoading, addAccount, updateAccount, deleteAccount } = useAccounts(userId);
 
   useEffect(function () {
@@ -262,6 +267,7 @@ export default function App() {
           setView={handleSetView}
           onAddAccount={function () { setShowAddAccount(true); }}
           onSignOut={signOut}
+          onTour={replayTour}
           userMeta={userMeta}
           accountsPane={view === "accounts" ? accountsListPane : null}
           detailPane={mainContent}
@@ -322,6 +328,8 @@ export default function App() {
         setView={handleSetView}
         onAddAccount={function () { setShowAddAccount(true); }}
         onSignOut={signOut}
+        onTour={replayTour}
+        userMeta={userMeta}
       >
         {mainContent}
       </MobileLayout>
