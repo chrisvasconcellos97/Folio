@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { C } from "../../lib/colors";
-import { useProjects } from "../../hooks/useProjects";
 import { ProjectModal } from "./ProjectModal";
 
 var STATUS_COLORS = {
@@ -44,8 +43,7 @@ function isOverdue(dateStr) {
   return new Date(dateStr + "T00:00:00") < new Date(new Date().toDateString());
 }
 
-export function ProjectsView({ userId, accounts, openAdd, onAddClosed }) {
-  var { projects, loading, addProject, updateProject, deleteProject } = useProjects(userId);
+export function ProjectsView({ projects, loading, accounts, openAdd, onAddClosed, addProject, updateProject, deleteProject }) {
   var [filter, setFilter]   = useState("all");
   var [showAdd, setShowAdd] = useState(false);
   var [editing, setEditing] = useState(null);
