@@ -139,6 +139,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
 ### Medium priority
 - [ ] **Business card scanner** — "Scan Card" button in Add Contact opens camera, sends image to Claude vision via new `api/scan-card.js`, auto-fills name/title/phone/email/linkedin. Smart account matching: fuzzy-match extracted company name against existing `folio_accounts` — if match found, show "Looks like [Account Name] — add to this account?" with one-tap confirm; if no match, prompt to create a new account. Ideal for post-conference intake.
 - [ ] **Email integration** — one-tap to open draft follow-up email in mail client (`mailto:` link pre-populated)
+- [ ] **Outlook integration** — link Outlook account via Microsoft Graph API (OAuth). Read email addresses from inbox/contacts and automatically match them to existing Folio contacts by email. Surface unmatched addresses as suggestions to create new contacts. Future expansion: pull meeting invites from Outlook calendar into cadence history. Auth flow: Azure AD app registration → OAuth in Folio → store access/refresh tokens in Supabase (new `user_integrations` table).
 - [ ] **Open items on meetings** — when logging a meeting, action items should optionally auto-create open items
 - [ ] **Account search improvement** — search across contacts and notes, not just account name
 - [ ] **Pipeline filters** — filter by tier, status, revenue range
