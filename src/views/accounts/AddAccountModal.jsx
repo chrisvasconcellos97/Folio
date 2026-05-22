@@ -60,7 +60,7 @@ function TagChip({ label, active, onClick, onRemove, color }) {
   );
 }
 
-export function AddAccountModal({ userId, onSave, onClose, existing }) {
+export function AddAccountModal({ userId, onSave, onClose, existing, accounts }) {
   var [name, setName]       = useState(existing ? existing.name : "");
   var [revenue, setRevenue] = useState(existing ? (existing.revenue || "") : "");
   var [tier, setTier]       = useState(existing ? (existing.tier || "Mid") : "Mid");
@@ -70,6 +70,7 @@ export function AddAccountModal({ userId, onSave, onClose, existing }) {
   var [customTag, setCustomTag] = useState("");
   var [states, setStates]       = useState(existing ? (existing.serviced_states || []) : []);
   var [statePickerOpen, setStatePickerOpen] = useState(false);
+  var [parentAccountId, setParentAccountId] = useState(existing ? (existing.parent_account_id || '') : '');
   var [loading, setLoading] = useState(false);
   var [error, setError]     = useState(null);
 
@@ -103,15 +104,16 @@ export function AddAccountModal({ userId, onSave, onClose, existing }) {
     setLoading(true);
     setError(null);
     onSave({
-      name:            name.trim(),
-      revenue:         revenue.trim() || null,
-      tier:            tier,
-      status:          status,
-      objective:       notes.trim() || null,
-      tags:            tags.length > 0 ? tags : null,
-      serviced_states: states.length > 0 ? states : null,
-      region:          region || null,
-      market_scope:    marketScope || null,
+      name:             name.trim(),
+      revenue:          revenue.trim() || null,
+      tier:             tier,
+      status:           status,
+      objective:        notes.trim() || null,
+      tags:             tags.length > 0 ? tags : null,
+      serviced_states:  states.length > 0 ? states : null,
+      region:           region || null,
+      market_scope:     marketScope || null,
+      parent_account_id: parentAccountId || null,
     })
       .then(function () { setLoading(false); onClose(); })
       .catch(function (err) { setLoading(false); setError(err.message); });
@@ -357,6 +359,31 @@ export function AddAccountModal({ userId, onSave, onClose, existing }) {
             </div>
           )}
         </div>
+
+        {/* Parent account */}
+        {accounts && accounts.length > 0 && (
+          <div>
+            <FL>Part of <span style={{ fontWeight: 400, color: C.textMuted }}>(optional)</span></FL>
+            <select
+              value={parentAccountId}
+              onChange={function (e) { setParentAccountId(e.target.value); }}
+              style={{
+                width: '100%', padding: '9px 12px',
+                background: 'rgba(255,255,255,0.04)', border: '1px solid ' + C.border,
+                borderRadius: 8, color: parentAccountId ? C.text : C.textMuted, fontSize: 16,
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              <option value="">None (standalone account)</option>
+              {accounts
+                .filter(function (a) { return !existing || a.id !== existing.id; })
+                .filter(function (a) { return !a.parent_account_id; })
+                .map(function (a) {
+                  return <option key={a.id} value={a.id}>{a.name}</option>;
+                })}
+            </select>
+          </div>
+        )}
 
         {/* Notes */}
         <div>

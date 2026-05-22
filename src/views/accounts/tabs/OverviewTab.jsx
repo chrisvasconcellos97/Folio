@@ -36,7 +36,7 @@ function pipStatusLine(account, openCount) {
   );
 }
 
-export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLogMeeting, onAddItem, onSaveSummary }) {
+export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLogMeeting, onAddItem, onSaveSummary, subAccounts, onSelectAccount }) {
   var [range, setRange]       = useState(RANGES[0]);
   var [generating, setGen]    = useState(false);
   var [pipError, setPipError] = useState(null);
@@ -268,6 +268,47 @@ export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLo
           Full meeting log →
         </button>
       </div>
+
+      {/* Sub-accounts */}
+      {subAccounts && subAccounts.length > 0 && (
+        <div style={{ marginTop: 8 }}>
+          <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+            Sub-accounts ({subAccounts.length})
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {subAccounts.map(function (sub) {
+              var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red };
+              var TIER_COLORS = { Major: C.blue, Mid: C.purple, Growth: C.green };
+              return (
+                <div
+                  key={sub.id}
+                  onClick={function () { onSelectAccount && onSelectAccount(sub); }}
+                  style={{
+                    background: C.bgCard, border: '1px solid ' + C.border,
+                    borderRadius: 10, padding: '11px 14px', cursor: 'pointer',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{sub.name}</div>
+                    <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                      {sub.tier && (
+                        <span style={{ fontSize: 10, color: TIER_COLORS[sub.tier] || C.textMuted }}>{sub.tier}</span>
+                      )}
+                      {sub.status && (
+                        <span style={{ fontSize: 10, color: STATUS_COLORS[sub.status] || C.textMuted }}>
+                          {{ green: 'Healthy', yellow: 'Watch', red: 'At Risk' }[sub.status] || sub.status}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <span style={{ fontSize: 11, color: C.textMuted }}>→</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { C } from "../../lib/colors";
 import { PipMark } from "../../components/PipMark";
+import { SetCadenceModal } from "./SetCadenceModal";
 import {
   getOccurrencesInRange, getNextOccurrence, getFrequencyLabel,
   formatTime, daysUntil, formatDateFull, isSameDay,
@@ -331,8 +332,9 @@ function ListView({ cadences, onSelectAccount }) {
 }
 
 /* ---- Main CadenceView ---- */
-export function CadenceView({ cadences, accounts, onSelectAccount }) {
+export function CadenceView({ cadences, accounts, onSelectAccount, addCadence }) {
   var [viewMode, setViewMode] = useState('list');
+  var [showAddModal, setShowAddModal] = useState(false);
   var [calDate,  setCalDate]  = useState(function () {
     var d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0); return d;
   });
@@ -382,20 +384,53 @@ export function CadenceView({ cadences, accounts, onSelectAccount }) {
   if (!cadences || cadences.length === 0) {
     return (
       <div>
-        <div style={{ fontSize: 20, fontWeight: 700, color: C.text, marginBottom: 16 }}>Cadence</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div style={{ fontSize: 20, fontWeight: 700, color: C.text }}>Cadence</div>
+          <button
+            onClick={function () { setShowAddModal(true); }}
+            style={{
+              background: 'rgba(200,136,58,0.12)', border: '1px solid rgba(200,136,58,0.3)',
+              borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 600,
+              color: C.accent, fontFamily: "'DM Sans', sans-serif", cursor: 'pointer',
+            }}
+          >
+            + Set Cadence
+          </button>
+        </div>
         {viewToggle}
         <div style={{ textAlign: 'center', padding: '60px 0', color: C.textMuted }}>
           <PipMark size={16} color={C.accentDim} glow />
           <div style={{ marginTop: 12, fontSize: 14, color: C.textMuted }}>No cadences set yet</div>
           <div style={{ fontSize: 12, marginTop: 6 }}>Open an account and set a cadence to get started.</div>
         </div>
+        {showAddModal && addCadence && (
+          <SetCadenceModal
+            accounts={accounts}
+            onSave={function (data) {
+              return addCadence(data).then(function () { setShowAddModal(false); });
+            }}
+            onClose={function () { setShowAddModal(false); }}
+          />
+        )}
       </div>
     );
   }
 
   return (
     <div>
-      <div style={{ fontSize: 20, fontWeight: 700, color: C.text, marginBottom: 16 }}>Cadence</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <div style={{ fontSize: 20, fontWeight: 700, color: C.text }}>Cadence</div>
+        <button
+          onClick={function () { setShowAddModal(true); }}
+          style={{
+            background: 'rgba(200,136,58,0.12)', border: '1px solid rgba(200,136,58,0.3)',
+            borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 600,
+            color: C.accent, fontFamily: "'DM Sans', sans-serif", cursor: 'pointer',
+          }}
+        >
+          + Set Cadence
+        </button>
+      </div>
       {viewToggle}
 
       {viewMode === 'calendar' && (

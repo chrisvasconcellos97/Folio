@@ -37,7 +37,7 @@ function fromHHMM(hhmm) {
   return { hour: String(hour), minute: closestMin, ampm };
 }
 
-export function SetCadenceModal({ onSave, onClose, existing, initialValues }) {
+export function SetCadenceModal({ onSave, onClose, existing, initialValues, accounts }) {
   var seed = existing || initialValues || {};
   var init = seed.meeting_time ? fromHHMM(seed.meeting_time) : { hour: '9', minute: '00', ampm: 'AM' };
 
@@ -45,6 +45,9 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues }) {
   var [dayOfWeek,   setDayOfWeek]   = useState(seed.day_of_week  ?? 1);
   var [dayOfMonth,  setDayOfMonth]  = useState(seed.day_of_month ?? 1);
   var [anchorDate,  setAnchorDate]  = useState(seed.anchor_date  || lastOccurrenceOf(seed.day_of_week ?? 1));
+  var [monthlyType,   setMonthlyType]   = useState(seed.monthly_type   || 'day_of_month');
+  var [monthlyOrdinal, setMonthlyOrdinal] = useState(seed.monthly_ordinal || 'first');
+  var [selectedAccountId, setSelectedAccountId] = useState(null);
 
   useEffect(function () {
     if (frequency === 'biweekly') setAnchorDate(lastOccurrenceOf(dayOfWeek));
@@ -57,15 +60,20 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues }) {
   var [error,       setError]       = useState(null);
 
   function handleSave() {
+    if (accounts && !selectedAccountId) { setError("Please select an account."); return; }
     setLoading(true);
     setError(null);
+    var isOrdinalMonthly = frequency === 'monthly' && monthlyType === 'day_of_week';
     onSave({
       frequency,
-      day_of_week:  frequency !== 'monthly' ? dayOfWeek  : null,
-      day_of_month: frequency === 'monthly'  ? dayOfMonth : null,
-      anchor_date:  frequency === 'biweekly' ? anchorDate : null,
-      meeting_time: toHHMM(hour, minute, ampm),
-      notes:        notes.trim() || null,
+      day_of_week:     (frequency !== 'monthly' || isOrdinalMonthly) ? dayOfWeek : null,
+      day_of_month:    frequency === 'monthly' && !isOrdinalMonthly ? dayOfMonth : null,
+      anchor_date:     frequency === 'biweekly' ? anchorDate : null,
+      monthly_type:    frequency === 'monthly' ? monthlyType : null,
+      monthly_ordinal: isOrdinalMonthly ? monthlyOrdinal : null,
+      meeting_time:    toHHMM(hour, minute, ampm),
+      notes:           notes.trim() || null,
+      ...(accounts && selectedAccountId ? { account_id: selectedAccountId } : {}),
     })
       .then(function () { setLoading(false); onClose(); })
       .catch(function (err) { setLoading(false); setError(err.message); });
@@ -103,6 +111,28 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues }) {
   return (
     <Modal title={existing ? "Edit Cadence" : "Set Cadence"} onClose={onClose} width={420}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+        {/* Account picker (shown when used from global cadence view) */}
+        {accounts && accounts.length > 0 && (
+          <div>
+            <FL>Account</FL>
+            <select
+              value={selectedAccountId || ''}
+              onChange={function (e) { setSelectedAccountId(e.target.value || null); }}
+              style={{
+                width: '100%', padding: '9px 12px',
+                background: 'rgba(255,255,255,0.04)', border: '1px solid ' + C.border,
+                borderRadius: 8, color: selectedAccountId ? C.text : C.textMuted, fontSize: 16,
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              <option value="">Select an account...</option>
+              {accounts.map(function (a) {
+                return <option key={a.id} value={a.id}>{a.name}</option>;
+              })}
+            </select>
+          </div>
+        )}
 
         {/* Frequency */}
         <div>
@@ -157,26 +187,73 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues }) {
           </div>
         )}
 
-        {/* Day of month */}
+        {/* Monthly type toggle + fields */}
         {frequency === 'monthly' && (
-          <div>
-            <FL>Day of Month</FL>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <input
-                type="number" min="1" max="31" value={dayOfMonth}
-                onChange={function (e) {
-                  var v = parseInt(e.target.value);
-                  if (v >= 1 && v <= 31) setDayOfMonth(v);
-                }}
-                style={{
-                  width: 72, padding: '9px 12px', textAlign: 'center',
-                  background: 'rgba(255,255,255,0.04)', border: '1px solid ' + C.border,
-                  borderRadius: 8, color: C.text, fontSize: 16,
-                  fontFamily: "'DM Sans', sans-serif",
-                }}
-              />
-              <span style={{ fontSize: 12, color: C.textMuted }}>of each month</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div>
+              <FL>Monthly Pattern</FL>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {[['day_of_month', 'By Date'], ['day_of_week', 'By Day']].map(function (pair) {
+                  var active = monthlyType === pair[0];
+                  return (
+                    <button key={pair[0]} type="button" onClick={function () { setMonthlyType(pair[0]); }}
+                      style={pillStyle(active)}>
+                      {pair[1]}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
+
+            {monthlyType === 'day_of_month' && (
+              <div>
+                <FL>Day of Month</FL>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <input
+                    type="number" min="1" max="31" value={dayOfMonth}
+                    onChange={function (e) { var v = parseInt(e.target.value); if (v >= 1 && v <= 31) setDayOfMonth(v); }}
+                    style={{
+                      width: 72, padding: '9px 12px', textAlign: 'center',
+                      background: 'rgba(255,255,255,0.04)', border: '1px solid ' + C.border,
+                      borderRadius: 8, color: C.text, fontSize: 16,
+                      fontFamily: "'DM Sans', sans-serif",
+                    }}
+                  />
+                  <span style={{ fontSize: 12, color: C.textMuted }}>of each month</span>
+                </div>
+              </div>
+            )}
+
+            {monthlyType === 'day_of_week' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div>
+                  <FL>Ordinal</FL>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {[['first','1st'],['second','2nd'],['third','3rd'],['fourth','4th'],['last','Last']].map(function (pair) {
+                      return (
+                        <button key={pair[0]} type="button" onClick={function () { setMonthlyOrdinal(pair[0]); }}
+                          style={Object.assign({}, pillStyle(monthlyOrdinal === pair[0]), { flex: 1, fontSize: 11 })}>
+                          {pair[1]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div>
+                  <FL>Day</FL>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {DAYS_SHORT.map(function (d, i) {
+                      return (
+                        <button key={d} type="button" onClick={function () { setDayOfWeek(i); }}
+                          style={dayStyle(dayOfWeek === i)}>
+                          {d}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

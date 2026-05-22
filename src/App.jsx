@@ -44,7 +44,7 @@ export default function App() {
 
   var { accounts, loading: acctLoading, addAccount, updateAccount, deleteAccount } = useAccounts(userId);
   var { meetings, loading: meetLoading } = useMeetings(userId);
-  var { cadences } = useCadences(userId);
+  var { cadences, addCadence } = useCadences(userId);
 
   function handleSelectAccount(a) {
     setSelected(a);
@@ -149,10 +149,12 @@ export default function App() {
         <AccountDetail
           account={selectedAccount}
           userId={userId}
+          accounts={accounts}
           onBack={handleBack}
           onEdit={function () { setEditingAccount(selectedAccount); }}
           onDelete={handleDeleteAccount}
           onUpdate={handleUpdateSelectedAccount}
+          onSelectAccount={function (acct) { setSelected(acct); }}
           pipPrefill={pipPrefill}
           onPipPrefillHandled={function () { setPipPrefill(null); }}
         />
@@ -196,6 +198,7 @@ export default function App() {
       <CadenceView
         cadences={cadences}
         accounts={accounts}
+        addCadence={addCadence}
         onSelectAccount={function (accountId) {
           var acct = accounts.find(function (a) { return a.id === accountId; });
           if (acct) {
@@ -214,6 +217,7 @@ export default function App() {
     <AddAccountModal
       userId={userId}
       existing={editingAccount || null}
+      accounts={accounts}
       onSave={editingAccount ? handleEditAccount : handleAddAccount}
       onClose={function () { setShowAddAccount(false); setEditingAccount(null); }}
     />

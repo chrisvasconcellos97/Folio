@@ -21,7 +21,7 @@ var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red };
 var STATUS_LABELS = { green: "Healthy", yellow: "Watch", red: "At Risk" };
 var TIER_COLORS   = { Major: C.blue, Mid: C.purple, Growth: C.green };
 
-export function AccountDetail({ account, userId, onBack, onEdit, onDelete, onUpdate, pipPrefill, onPipPrefillHandled }) {
+export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDelete, onUpdate, onSelectAccount, pipPrefill, onPipPrefillHandled }) {
   var [tab, setTab]               = useState("overview");
   var [showMeetingModal, setMeetingModal] = useState(false);
   var [showQuickModal, setQuickModal]     = useState(false);
@@ -45,6 +45,10 @@ export function AccountDetail({ account, userId, onBack, onEdit, onDelete, onUpd
   var { items, addItem, closeItem }            = useItems(userId, account.id);
   var { contacts, addContact, deleteContact }  = useContacts(userId, account.id);
   var { cadences, addCadence, updateCadence, deleteCadence } = useCadences(userId, account.id);
+
+  var allAccounts   = accounts || [];
+  var subAccounts   = allAccounts.filter(function (a) { return a.parent_account_id === account.id; });
+  var parentAccount = account.parent_account_id ? allAccounts.find(function (a) { return a.id === account.parent_account_id; }) : null;
 
   var statusColor = STATUS_COLORS[account.status] || C.textSub;
   var openCount   = items.filter(function (i) { return !i.done; }).length;
@@ -108,6 +112,18 @@ export function AccountDetail({ account, userId, onBack, onEdit, onDelete, onUpd
               )}
               {account.region && (
                 <Pill color={C.accent}>{account.region}</Pill>
+              )}
+              {parentAccount && (
+                <button
+                  onClick={function () { onSelectAccount && onSelectAccount(parentAccount); }}
+                  style={{
+                    background: 'rgba(200,136,58,0.08)', border: '1px solid rgba(200,136,58,0.2)',
+                    borderRadius: 20, padding: '3px 10px', fontSize: 11, fontWeight: 600,
+                    color: C.accent, fontFamily: "'DM Sans', sans-serif", cursor: 'pointer',
+                  }}
+                >
+                  ↑ {parentAccount.name}
+                </button>
               )}
             </div>
             {account.tags && account.tags.length > 0 && (
@@ -231,6 +247,8 @@ export function AccountDetail({ account, userId, onBack, onEdit, onDelete, onUpd
               pip_account_summary_at: new Date().toISOString(),
             });
           }}
+          subAccounts={subAccounts}
+          onSelectAccount={onSelectAccount}
         />
       )}
 

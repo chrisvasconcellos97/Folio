@@ -25,7 +25,13 @@ export function getFrequencyLabel(cadence) {
   var time = cadence.meeting_time ? ' · ' + formatTime(cadence.meeting_time) : '';
   if (cadence.frequency === 'weekly')   return 'Every ' + day + time;
   if (cadence.frequency === 'biweekly') return 'Every other ' + day + time;
-  if (cadence.frequency === 'monthly')  return 'Monthly · ' + ordinal(cadence.day_of_month) + time;
+  if (cadence.frequency === 'monthly') {
+    if (cadence.monthly_type === 'day_of_week' && cadence.monthly_ordinal && cadence.day_of_week != null) {
+      var ordLabels = { first: 'First', second: 'Second', third: 'Third', fourth: 'Fourth', last: 'Last' };
+      return (ordLabels[cadence.monthly_ordinal] || '') + ' ' + DAYS_FULL[cadence.day_of_week] + time;
+    }
+    return 'Monthly · ' + ordinal(cadence.day_of_month) + time;
+  }
   return '';
 }
 
@@ -64,6 +70,17 @@ export function getNextOccurrence(cadence, fromDate) {
   }
 
   if (cadence.frequency === 'monthly') {
+    if (cadence.monthly_type === 'day_of_week' && cadence.monthly_ordinal && cadence.day_of_week != null) {
+      var y = from.getFullYear(), mo = from.getMonth();
+      var day = getNthWeekdayOfMonth(y, mo, cadence.day_of_week, cadence.monthly_ordinal);
+      var next = day ? new Date(y, mo, day) : null;
+      if (!next || next < from) {
+        mo++; if (mo > 11) { mo = 0; y++; }
+        day = getNthWeekdayOfMonth(y, mo, cadence.day_of_week, cadence.monthly_ordinal);
+        next = day ? new Date(y, mo, day) : null;
+      }
+      return next;
+    }
     var target = cadence.day_of_month;
     var next = new Date(from.getFullYear(), from.getMonth(), target);
     if (next < from) next = new Date(from.getFullYear(), from.getMonth() + 1, target);
@@ -88,7 +105,15 @@ export function getOccurrencesInRange(cadence, startDate, endDate) {
     if (cadence.frequency === 'weekly')        current.setDate(current.getDate() + 7);
     else if (cadence.frequency === 'biweekly') current.setDate(current.getDate() + 14);
     else if (cadence.frequency === 'monthly') {
-      current = new Date(current.getFullYear(), current.getMonth() + 1, cadence.day_of_month);
+      var ny = current.getFullYear(), nm = current.getMonth() + 1;
+      if (nm > 11) { nm = 0; ny++; }
+      if (cadence.monthly_type === 'day_of_week' && cadence.monthly_ordinal) {
+        var nd = getNthWeekdayOfMonth(ny, nm, cadence.day_of_week, cadence.monthly_ordinal);
+        current = nd ? new Date(ny, nm, nd) : null;
+        if (!current) break;
+      } else {
+        current = new Date(ny, nm, cadence.day_of_month);
+      }
     } else break;
   }
 
@@ -138,4 +163,22 @@ export function getCalendarGrid(year, month) {
     grid.push(new Date(year, month, 1 - startDow + i));
   }
   return grid;
+}
+
+export function getNthWeekdayOfMonth(year, month, dayOfWeek, ordinal) {
+  var firstDay = new Date(year, month, 1);
+  var firstDow = firstDay.getDay();
+  var daysUntilTarget = (dayOfWeek - firstDow + 7) % 7;
+  var firstOccurrence = 1 + daysUntilTarget;
+  if (ordinal === 'last') {
+    var lastDay = new Date(year, month + 1, 0).getDate();
+    var lastDow = new Date(year, month, lastDay).getDay();
+    var daysBack = (lastDow - dayOfWeek + 7) % 7;
+    return lastDay - daysBack;
+  }
+  var ordinals = { first: 1, second: 2, third: 3, fourth: 4 };
+  var n = ordinals[ordinal] || 1;
+  var day = firstOccurrence + (n - 1) * 7;
+  var daysInMonth = new Date(year, month + 1, 0).getDate();
+  return day <= daysInMonth ? day : null;
 }
