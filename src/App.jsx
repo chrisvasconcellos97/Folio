@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "./hooks/useAuth";
 import { useAccounts } from "./hooks/useAccounts";
 import { useMeetings } from "./hooks/useMeetings";
+import { useCadences } from "./hooks/useCadences";
 import { AuthView } from "./views/auth/AuthView";
 import { AccountsView } from "./views/accounts/AccountsView";
 import { AccountDetail } from "./views/accounts/AccountDetail";
@@ -9,6 +10,7 @@ import { AddAccountModal } from "./views/accounts/AddAccountModal";
 import { MeetingsView } from "./views/meetings/MeetingsView";
 import { PipelineView } from "./views/pipeline/PipelineView";
 import { PipView } from "./views/pip/PipView";
+import { CadenceView } from "./views/cadence/CadenceView";
 import { DesktopLayout } from "./layout/DesktopLayout";
 import { MobileLayout } from "./layout/MobileLayout";
 import { PipMark } from "./components/PipMark";
@@ -41,6 +43,7 @@ export default function App() {
 
   var { accounts, loading: acctLoading, addAccount, updateAccount, deleteAccount } = useAccounts(userId);
   var { meetings, loading: meetLoading } = useMeetings(userId);
+  var { cadences } = useCadences(userId);
 
   function handleSelectAccount(a) {
     setSelected(a);
@@ -163,6 +166,19 @@ export default function App() {
 
   if (view === "pip") {
     mainContent = <PipView accounts={accounts} meetings={meetings} />;
+  }
+
+  if (view === "cadence") {
+    mainContent = (
+      <CadenceView
+        cadences={cadences}
+        accounts={accounts}
+        onSelectAccount={function (accountId) {
+          var acct = accounts.find(function (a) { return a.id === accountId; });
+          if (acct) { handleSelectAccount(acct); handleSetView("accounts"); }
+        }}
+      />
+    );
   }
 
   /* ---------- Render ---------- */

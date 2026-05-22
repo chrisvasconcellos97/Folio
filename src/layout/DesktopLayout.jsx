@@ -4,9 +4,10 @@ import { PipMark } from "../components/PipMark";
 import { AmberBtn } from "../components/Buttons";
 
 var NAV_ITEMS = [
-  { id: "accounts", label: "Accounts",  icon: "▣" },
-  { id: "meetings", label: "Meetings",  icon: "◷" },
-  { id: "pipeline", label: "Pipeline",  icon: "▦" },
+  { id: "accounts", label: "Accounts",  icon: "▣"  },
+  { id: "meetings", label: "Meetings",  icon: "◷"  },
+  { id: "pipeline", label: "Pipeline",  icon: "▦"  },
+  { id: "cadence",  label: "Cadence",   icon: "↻"  },
   { id: "pip",      label: "Pip",       icon: null },
 ];
 

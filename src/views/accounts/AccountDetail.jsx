@@ -5,16 +5,18 @@ import { AmberBtn, SecBtn, DangerBtn } from "../../components/Buttons";
 import { useMeetings } from "../../hooks/useMeetings";
 import { useItems } from "../../hooks/useItems";
 import { useContacts } from "../../hooks/useContacts";
+import { useCadences } from "../../hooks/useCadences";
 import { OverviewTab } from "./tabs/OverviewTab";
 import { MeetingsTab } from "./tabs/MeetingsTab";
 import { ItemsTab } from "./tabs/ItemsTab";
 import { ContactsTab } from "./tabs/ContactsTab";
+import { CadenceTab } from "./tabs/CadenceTab";
 import { LogMeetingModal } from "./LogMeetingModal";
 import { QuickMeetingModal } from "./QuickMeetingModal";
 import { AddItemModal } from "./AddItemModal";
 import { AddContactModal } from "./AddContactModal";
 
-var TABS = ["overview", "meetings", "items", "contacts"];
+var TABS = ["overview", "meetings", "items", "contacts", "cadence"];
 var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red };
 var STATUS_LABELS = { green: "Healthy", yellow: "Watch", red: "At Risk" };
 var TIER_COLORS   = { Major: C.blue, Mid: C.purple, Growth: C.green };
@@ -30,6 +32,7 @@ export function AccountDetail({ account, userId, onBack, onEdit, onDelete, onUpd
   var { meetings, addMeeting, updateMeeting, deleteMeeting } = useMeetings(userId, account.id);
   var { items, addItem, closeItem }            = useItems(userId, account.id);
   var { contacts, addContact, deleteContact }  = useContacts(userId, account.id);
+  var { cadences, addCadence, updateCadence, deleteCadence } = useCadences(userId, account.id);
 
   var statusColor = STATUS_COLORS[account.status] || C.textSub;
   var openCount   = items.filter(function (i) { return !i.done; }).length;
@@ -243,6 +246,22 @@ export function AccountDetail({ account, userId, onBack, onEdit, onDelete, onUpd
           contacts={contacts}
           onAdd={function () { setContactModal(true); }}
           onDelete={deleteContact}
+        />
+      )}
+
+      {tab === "cadence" && (
+        <CadenceTab
+          account={account}
+          cadences={cadences}
+          items={items}
+          meetings={meetings}
+          onAddCadence={addCadence}
+          onUpdateCadence={updateCadence}
+          onDeleteCadence={deleteCadence}
+          onAddItem={function () { setItemModal(true); }}
+          onCloseItem={closeItem}
+          onLogMeeting={function () { setMeetingModal(true); }}
+          onDeleteMeeting={deleteMeeting}
         />
       )}
 

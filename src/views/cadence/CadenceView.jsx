@@ -1,0 +1,424 @@
+import { useState } from "react";
+import { C } from "../../lib/colors";
+import { PipMark } from "../../components/PipMark";
+import {
+  getOccurrencesInRange, getNextOccurrence, getFrequencyLabel,
+  formatTime, daysUntil, formatDateFull, isSameDay,
+  startOfWeek, getCalendarGrid, DAYS_SHORT, MONTHS,
+} from "../../lib/cadenceUtils";
+
+var ACCOUNT_COLORS = [C.accent, C.green, C.blue, C.purple];
+
+function accountColor(id) {
+  if (!id) return C.accent;
+  var hash = id.split('').reduce(function (a, c) { return a + c.charCodeAt(0); }, 0);
+  return ACCOUNT_COLORS[hash % ACCOUNT_COLORS.length];
+}
+
+var navBtnStyle = {
+  background: 'none',
+  border: '1px solid ' + C.border,
+  borderRadius: 6,
+  color: C.textSub,
+  fontSize: 18,
+  lineHeight: 1,
+  cursor: 'pointer',
+  padding: '3px 10px',
+  fontFamily: "'DM Sans', sans-serif",
+};
+
+/* ---- Shared event card ---- */
+function CadenceEventCard({ event, onSelectAccount, showDate }) {
+  var cadence = event.cadence;
+  var account = event.account;
+  var col     = accountColor(cadence.account_id);
+  var name    = account && account.name ? account.name : 'Unknown';
+
+  return (
+    <div style={{
+      background: C.bgCard,
+      border: '1px solid ' + C.border,
+      borderLeft: '3px solid ' + col,
+      borderRadius: 8,
+      padding: '11px 14px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+    }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{name}</div>
+        <div style={{ fontSize: 11, color: C.textMuted, marginTop: 3 }}>
+          {getFrequencyLabel(cadence)}
+        </div>
+        {showDate && event.date && (
+          <div style={{ fontSize: 11, color: col, marginTop: 3 }}>
+            {daysUntil(event.date)} · {formatDateFull(event.date)}
+            {cadence.meeting_time ? ' · ' + formatTime(cadence.meeting_time) : ''}
+          </div>
+        )}
+      </div>
+      {onSelectAccount && (
+        <button
+          onClick={function () { onSelectAccount(cadence.account_id); }}
+          style={{
+            background: col + '18',
+            border: '1px solid ' + col + '44',
+            borderRadius: 7,
+            padding: '5px 11px',
+            fontSize: 11,
+            color: col,
+            fontFamily: "'DM Sans', sans-serif",
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          View →
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* ---- Calendar view ---- */
+function CalendarView({ year, month, events, onPrev, onNext, onSelectAccount }) {
+  var today    = new Date();
+  var grid     = getCalendarGrid(year, month);
+  var [selectedDay, setSelectedDay] = useState(null);
+
+  function dayEvents(date) {
+    return events.filter(function (e) { return isSameDay(e.date, date); });
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+        <button onClick={onPrev} style={navBtnStyle}>‹</button>
+        <span style={{ fontSize: 14, fontWeight: 600, color: C.text }}>
+          {MONTHS[month] + ' ' + year}
+        </span>
+        <button onClick={onNext} style={navBtnStyle}>›</button>
+      </div>
+
+      {/* Day headers */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, marginBottom: 4 }}>
+        {DAYS_SHORT.map(function (d) {
+          return (
+            <div key={d} style={{ textAlign: 'center', fontSize: 10, color: C.textMuted, fontWeight: 600, padding: '3px 0' }}>
+              {d}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3 }}>
+        {grid.map(function (date, i) {
+          var inMonth  = date.getMonth() === month;
+          var isToday  = isSameDay(date, today);
+          var evts     = dayEvents(date);
+          var selected = selectedDay && isSameDay(date, selectedDay);
+
+          return (
+            <div
+              key={i}
+              onClick={function () { if (evts.length > 0) setSelectedDay(selected ? null : date); }}
+              style={{
+                minHeight: 58,
+                background: selected ? 'rgba(200,136,58,0.07)' : 'rgba(255,255,255,0.02)',
+                border: '1px solid ' + (selected ? 'rgba(200,136,58,0.3)' : C.border),
+                borderRadius: 6,
+                padding: '5px 5px 4px',
+                cursor: evts.length > 0 ? 'pointer' : 'default',
+                opacity: inMonth ? 1 : 0.25,
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 3 }}>
+                {isToday ? (
+                  <span style={{
+                    background: C.accent, color: '#000',
+                    width: 18, height: 18, borderRadius: '50%',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 10, fontWeight: 700,
+                  }}>
+                    {date.getDate()}
+                  </span>
+                ) : (
+                  <span style={{ fontSize: 11, color: C.textSub }}>{date.getDate()}</span>
+                )}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {evts.slice(0, 2).map(function (ev, j) {
+                  var col  = accountColor(ev.cadence.account_id);
+                  var name = ev.account && ev.account.name ? ev.account.name.slice(0, 9) : '?';
+                  return (
+                    <div key={j} style={{
+                      background: col + '22', color: col,
+                      borderRadius: 3, padding: '1px 4px',
+                      fontSize: 9, fontWeight: 600,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>
+                      {name}
+                    </div>
+                  );
+                })}
+                {evts.length > 2 && (
+                  <div style={{ fontSize: 9, color: C.textMuted, paddingLeft: 2 }}>+{evts.length - 2}</div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Selected day detail */}
+      {selectedDay && dayEvents(selectedDay).length > 0 && (
+        <div style={{ marginTop: 14, borderTop: '1px solid ' + C.border, paddingTop: 12 }}>
+          <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 8 }}>
+            {formatDateFull(selectedDay)}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {dayEvents(selectedDay).map(function (ev, i) {
+              return <CadenceEventCard key={i} event={ev} onSelectAccount={onSelectAccount} />;
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---- Week view ---- */
+function WeekView({ weekStart, weekEnd, events, onPrev, onNext, onSelectAccount }) {
+  var today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  var days = [];
+  for (var i = 0; i < 7; i++) {
+    var d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
+    days.push(d);
+  }
+
+  function dayEvents(date) {
+    return events.filter(function (e) { return isSameDay(e.date, date); });
+  }
+
+  var wLabel = MONTHS[weekStart.getMonth()].slice(0, 3) + ' ' + weekStart.getDate() +
+    ' – ' + MONTHS[weekEnd.getMonth()].slice(0, 3) + ' ' + weekEnd.getDate() + ', ' + weekEnd.getFullYear();
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+        <button onClick={onPrev} style={navBtnStyle}>‹</button>
+        <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{wLabel}</span>
+        <button onClick={onNext} style={navBtnStyle}>›</button>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+        {days.map(function (day, i) {
+          var isToday  = isSameDay(day, today);
+          var evts     = dayEvents(day);
+
+          return (
+            <div key={i} style={{
+              background: 'rgba(255,255,255,0.02)',
+              border: '1px solid ' + (isToday ? 'rgba(200,136,58,0.3)' : C.border),
+              borderRadius: 8,
+              padding: '8px 5px',
+              minHeight: 90,
+            }}>
+              <div style={{ textAlign: 'center', marginBottom: 6 }}>
+                <div style={{ fontSize: 9, color: C.textMuted, fontWeight: 600, textTransform: 'uppercase' }}>
+                  {DAYS_SHORT[day.getDay()]}
+                </div>
+                <div style={{
+                  fontSize: 14, marginTop: 2,
+                  fontWeight: isToday ? 700 : 400,
+                  color: isToday ? C.accent : C.text,
+                }}>
+                  {day.getDate()}
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                {evts.map(function (ev, j) {
+                  var col  = accountColor(ev.cadence.account_id);
+                  var name = ev.account && ev.account.name ? ev.account.name : '?';
+                  var time = ev.cadence.meeting_time ? formatTime(ev.cadence.meeting_time) : '';
+                  return (
+                    <div key={j}
+                      onClick={function () { onSelectAccount && onSelectAccount(ev.cadence.account_id); }}
+                      style={{
+                        background: col + '18', border: '1px solid ' + col + '44',
+                        borderRadius: 5, padding: '4px 5px', cursor: 'pointer',
+                      }}
+                    >
+                      <div style={{ fontSize: 9, fontWeight: 700, color: col, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {name}
+                      </div>
+                      {time && <div style={{ fontSize: 9, color: C.textMuted, marginTop: 1 }}>{time}</div>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ---- List view ---- */
+function ListView({ cadences, onSelectAccount }) {
+  var today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  var items = cadences.map(function (cadence) {
+    var next = getNextOccurrence(cadence, today);
+    var acct = cadence.folio_accounts;
+    return { cadence, next, account: acct };
+  }).filter(function (item) { return item.next; });
+
+  items.sort(function (a, b) { return a.next - b.next; });
+
+  var endOfToday    = new Date(today); endOfToday.setHours(23, 59, 59);
+  var endOfWeek     = new Date(today); endOfWeek.setDate(today.getDate() + (6 - today.getDay())); endOfWeek.setHours(23, 59, 59);
+  var endOfNextWeek = new Date(endOfWeek); endOfNextWeek.setDate(endOfNextWeek.getDate() + 7);
+
+  var groups = [
+    { key: 'today',    label: 'TODAY',     items: [] },
+    { key: 'week',     label: 'THIS WEEK', items: [] },
+    { key: 'nextweek', label: 'NEXT WEEK', items: [] },
+    { key: 'later',    label: 'LATER',     items: [] },
+  ];
+
+  items.forEach(function (item) {
+    var d = new Date(item.next); d.setHours(0, 0, 0, 0);
+    if (isSameDay(d, today))    groups[0].items.push(item);
+    else if (d <= endOfWeek)    groups[1].items.push(item);
+    else if (d <= endOfNextWeek) groups[2].items.push(item);
+    else                        groups[3].items.push(item);
+  });
+
+  var filled = groups.filter(function (g) { return g.items.length > 0; });
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      {filled.map(function (group) {
+        return (
+          <div key={group.key}>
+            <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 700, letterSpacing: '0.08em', marginBottom: 8 }}>
+              {group.label}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {group.items.map(function (item, i) {
+                return (
+                  <CadenceEventCard
+                    key={i}
+                    event={{ cadence: item.cadence, date: item.next, account: item.account }}
+                    onSelectAccount={onSelectAccount}
+                    showDate
+                  />
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ---- Main CadenceView ---- */
+export function CadenceView({ cadences, accounts, onSelectAccount }) {
+  var [viewMode, setViewMode] = useState('list');
+  var [calDate,  setCalDate]  = useState(function () {
+    var d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0); return d;
+  });
+  var [weekDate, setWeekDate] = useState(function () { return startOfWeek(new Date()); });
+
+  var calYear  = calDate.getFullYear();
+  var calMonth = calDate.getMonth();
+  var weekEnd  = new Date(weekDate); weekEnd.setDate(weekDate.getDate() + 6);
+
+  function getEventsForRange(start, end) {
+    var evts = [];
+    (cadences || []).forEach(function (cadence) {
+      var acct = cadence.folio_accounts;
+      getOccurrencesInRange(cadence, start, end).forEach(function (date) {
+        evts.push({ cadence, date, account: acct });
+      });
+    });
+    evts.sort(function (a, b) { return a.date - b.date; });
+    return evts;
+  }
+
+  var calEvents  = getEventsForRange(new Date(calYear, calMonth, 1), new Date(calYear, calMonth + 1, 0));
+  var weekEvents = getEventsForRange(weekDate, weekEnd);
+
+  var viewToggle = (
+    <div style={{ display: 'flex', gap: 4, background: 'rgba(0,0,0,0.25)', borderRadius: 10, padding: 3, marginBottom: 16 }}>
+      {[['calendar', 'Calendar'], ['week', 'Week'], ['list', 'List']].map(function (pair) {
+        var active = viewMode === pair[0];
+        return (
+          <button key={pair[0]} onClick={function () { setViewMode(pair[0]); }}
+            style={{
+              flex: 1, padding: '7px 4px', borderRadius: 8, cursor: 'pointer',
+              fontSize: 12, fontWeight: active ? 600 : 400,
+              fontFamily: "'DM Sans', sans-serif",
+              background: active ? C.bgCardAlt : 'transparent',
+              color: active ? C.accent : C.textMuted,
+              border: '1px solid ' + (active ? C.border : 'transparent'),
+            }}
+          >
+            {pair[1]}
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  if (!cadences || cadences.length === 0) {
+    return (
+      <div>
+        <div style={{ fontSize: 20, fontWeight: 700, color: C.text, marginBottom: 16 }}>Cadence</div>
+        {viewToggle}
+        <div style={{ textAlign: 'center', padding: '60px 0', color: C.textMuted }}>
+          <PipMark size={16} color={C.accentDim} glow />
+          <div style={{ marginTop: 12, fontSize: 14, color: C.textMuted }}>No cadences set yet</div>
+          <div style={{ fontSize: 12, marginTop: 6 }}>Open an account and set a cadence to get started.</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div style={{ fontSize: 20, fontWeight: 700, color: C.text, marginBottom: 16 }}>Cadence</div>
+      {viewToggle}
+
+      {viewMode === 'calendar' && (
+        <CalendarView
+          year={calYear} month={calMonth} events={calEvents}
+          onPrev={function () { setCalDate(new Date(calYear, calMonth - 1, 1)); }}
+          onNext={function () { setCalDate(new Date(calYear, calMonth + 1, 1)); }}
+          onSelectAccount={onSelectAccount}
+        />
+      )}
+
+      {viewMode === 'week' && (
+        <WeekView
+          weekStart={weekDate} weekEnd={weekEnd} events={weekEvents}
+          onPrev={function () { var d = new Date(weekDate); d.setDate(d.getDate() - 7); setWeekDate(d); }}
+          onNext={function () { var d = new Date(weekDate); d.setDate(d.getDate() + 7); setWeekDate(d); }}
+          onSelectAccount={onSelectAccount}
+        />
+      )}
+
+      {viewMode === 'list' && (
+        <ListView cadences={cadences} onSelectAccount={onSelectAccount} />
+      )}
+    </div>
+  );
+}
