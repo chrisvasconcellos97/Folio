@@ -3,6 +3,7 @@ import { FolioIcon } from "../components/FolioIcon";
 import { GaugeIcon } from "../components/GaugeIcon";
 import { PipMark } from "../components/PipMark";
 import { AmberBtn } from "../components/Buttons";
+import { UserMenu } from "../components/UserMenu";
 
 var NAV_ITEMS = [
   { id: "accounts", label: "Accounts", icon: "▣"     },
@@ -12,7 +13,7 @@ var NAV_ITEMS = [
   { id: "gauge",    label: "Gauge",    icon: "gauge"  },
 ];
 
-export function MobileLayout({ view, setView, onAddAccount, onSignOut, children }) {
+export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, userMeta, children }) {
   return (
     <div
       style={{
@@ -68,12 +69,12 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, children 
               </div>
             </div>
           </div>
-          <AmberBtn
-            onClick={onAddAccount}
-            style={{ fontSize: 11, padding: "6px 13px" }}
-          >
-            + Account
-          </AmberBtn>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <AmberBtn onClick={onAddAccount} style={{ fontSize: 11, padding: "6px 13px" }}>
+              + Account
+            </AmberBtn>
+            <UserMenu userMeta={userMeta} onSignOut={onSignOut} onTour={onTour} />
+          </div>
         </div>
       </div>
 

@@ -1,5 +1,8 @@
 # Folio — Claude Development Context
 
+## Deployment Rule
+**Always push directly to `main`.** Vercel auto-deploys on push to main. Never use feature branches unless Chris explicitly asks. If the session was configured with a feature branch, push to main anyway: `git push origin HEAD:main`.
+
 ## The Briefcase Suite
 
 Briefcase is a suite of three apps built around account management, conference work, and project tracking. Folio is the hub — Lanyard and Gauge are spokes that punch out from Folio and feed data back.

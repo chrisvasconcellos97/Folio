@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "./hooks/useAuth";
 import { useAccounts } from "./hooks/useAccounts";
 import { useMeetings } from "./hooks/useMeetings";
@@ -12,6 +12,8 @@ import { PipelineView } from "./views/pipeline/PipelineView";
 import { PipView } from "./views/pip/PipView";
 import { CadenceView } from "./views/cadence/CadenceView";
 import { GaugeView } from "./views/gauge/GaugeView";
+import { OnboardingTour } from "./views/welcome/OnboardingTour";
+import { ReturningWelcome } from "./views/welcome/ReturningWelcome";
 import { DesktopLayout } from "./layout/DesktopLayout";
 import { MobileLayout } from "./layout/MobileLayout";
 import { PipMark } from "./components/PipMark";
@@ -42,8 +44,32 @@ export default function App() {
   var [showAddAccount, setShowAddAccount] = useState(false);
   var [editingAccount, setEditingAccount] = useState(null);
   var [pipPrefill, setPipPrefill]       = useState(null);
+  var [showOnboarding, setShowOnboarding] = useState(false);
+  var [showReturning, setShowReturning]   = useState(false);
+  var welcomeShown = useRef(false);
+
+  function replayTour() {
+    setShowReturning(false);
+    setShowOnboarding(true);
+  }
 
   var { accounts, loading: acctLoading, addAccount, updateAccount, deleteAccount } = useAccounts(userId);
+
+  useEffect(function () {
+    if (!session || welcomeShown.current) return;
+    welcomeShown.current = true;
+    var uid         = session.user.id;
+    var onboarded   = localStorage.getItem("folio_onboarded_" + uid);
+    var createdAt   = new Date(session.user.created_at);
+    var featureDate = new Date("2026-05-22T00:00:00Z");
+    var isNewUser   = createdAt >= featureDate;
+    if (!onboarded && isNewUser) {
+      setShowOnboarding(true);
+    } else {
+      if (!onboarded) localStorage.setItem("folio_onboarded_" + uid, "true");
+      setShowReturning(true);
+    }
+  }, [session]);
   var { meetings, loading: meetLoading } = useMeetings(userId);
   var { cadences, addCadence } = useCadences(userId);
 
@@ -241,6 +267,7 @@ export default function App() {
           setView={handleSetView}
           onAddAccount={function () { setShowAddAccount(true); }}
           onSignOut={signOut}
+          onTour={replayTour}
           userMeta={userMeta}
           accountsPane={view === "accounts" ? accountsListPane : null}
           detailPane={mainContent}
@@ -276,6 +303,20 @@ export default function App() {
             </div>
           </div>
         )}
+        {showOnboarding && (
+          <OnboardingTour onComplete={function () {
+            localStorage.setItem("folio_onboarded_" + userId, "true");
+            setShowOnboarding(false);
+          }} />
+        )}
+        {!showOnboarding && showReturning && (
+          <ReturningWelcome
+            userId={userId}
+            userName={userMeta ? userMeta.full_name : ""}
+            accountCount={accounts.length}
+            onDismiss={function () { setShowReturning(false); }}
+          />
+        )}
       </>
     );
   }
@@ -287,6 +328,8 @@ export default function App() {
         setView={handleSetView}
         onAddAccount={function () { setShowAddAccount(true); }}
         onSignOut={signOut}
+        onTour={replayTour}
+        userMeta={userMeta}
       >
         {mainContent}
       </MobileLayout>
@@ -320,6 +363,20 @@ export default function App() {
             <PipMark size={14} color={C.accent} glow pulse />
           </div>
         </div>
+      )}
+      {showOnboarding && (
+        <OnboardingTour onComplete={function () {
+          localStorage.setItem("folio_onboarded_" + userId, "true");
+          setShowOnboarding(false);
+        }} />
+      )}
+      {!showOnboarding && showReturning && (
+        <ReturningWelcome
+          userId={userId}
+          userName={userMeta ? userMeta.full_name : ""}
+          accountCount={accounts.length}
+          onDismiss={function () { setShowReturning(false); }}
+        />
       )}
     </>
   );

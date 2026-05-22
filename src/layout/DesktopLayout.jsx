@@ -3,6 +3,7 @@ import { FolioIcon } from "../components/FolioIcon";
 import { GaugeIcon } from "../components/GaugeIcon";
 import { PipMark } from "../components/PipMark";
 import { AmberBtn } from "../components/Buttons";
+import { UserMenu } from "../components/UserMenu";
 
 var NAV_ITEMS = [
   { id: "accounts", label: "Accounts",  icon: "▣"  },
@@ -18,6 +19,7 @@ export function DesktopLayout({
   setView,
   onAddAccount,
   onSignOut,
+  onTour,
   userMeta,
   accountsPane,
   detailPane,
@@ -120,37 +122,10 @@ export function DesktopLayout({
           + Account
         </AmberBtn>
 
-        {/* User */}
-        {userMeta && (
-          <div
-            style={{
-              borderTop: "1px solid " + C.border,
-              paddingTop: 14,
-              marginTop: 4,
-            }}
-          >
-            <div style={{ fontSize: 12, fontWeight: 500, color: C.text, marginBottom: 2 }}>
-              {userMeta.full_name || "User"}
-            </div>
-            <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 10 }}>
-              {userMeta.title || ""}
-            </div>
-            <button
-              onClick={onSignOut}
-              style={{
-                background: "none",
-                border: "none",
-                color: C.textMuted,
-                cursor: "pointer",
-                fontSize: 11,
-                fontFamily: "'DM Sans', sans-serif",
-                padding: 0,
-              }}
-            >
-              Sign out
-            </button>
-          </div>
-        )}
+        {/* User menu */}
+        <div style={{ borderTop: "1px solid " + C.border, paddingTop: 14, marginTop: 4 }}>
+          <UserMenu userMeta={userMeta} onSignOut={onSignOut} onTour={onTour} dropUp />
+        </div>
       </div>
 
       {/* Accounts list column (only for accounts view) */}
