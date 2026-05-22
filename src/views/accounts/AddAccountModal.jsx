@@ -4,7 +4,18 @@ import { Modal } from "../../components/Modal";
 import { AmberBtn, SecBtn } from "../../components/Buttons";
 import { InputField, TextArea, SelectField } from "../../components/InputField";
 import { FL } from "../../components/FieldLabel";
-import { detectRegion, detectMarketScope } from "../../lib/regions";
+import { detectRegion, detectMarketScope, STATE_NAMES } from "../../lib/regions";
+
+var REGION_GROUPS = [
+  { label: "Northeast",     states: ["ME","NH","VT","MA","RI","CT","NY","NJ","PA"] },
+  { label: "Mid-Atlantic",  states: ["MD","DE","DC","VA","WV"] },
+  { label: "Southeast",     states: ["NC","SC","GA","FL","AL","MS","TN","KY"] },
+  { label: "Midwest",       states: ["OH","IN","IL","MI","WI","MN","IA","MO","ND","SD","NE","KS"] },
+  { label: "South Central", states: ["TX","OK","AR","LA"] },
+  { label: "Mountain",      states: ["CO","UT","ID","MT","WY","NV","AZ","NM"] },
+  { label: "West",          states: ["CA","OR","WA","AK","HI"] },
+];
+var ALL_STATES = Object.keys(STATE_NAMES);
 
 var TIERS    = ["Major", "Mid", "Growth"];
 var STATUSES = [
@@ -57,8 +68,8 @@ export function AddAccountModal({ userId, onSave, onClose, existing }) {
   var [notes, setNotes]     = useState(existing ? (existing.objective || "") : "");
   var [tags, setTags]       = useState(existing ? (existing.tags || []) : []);
   var [customTag, setCustomTag] = useState("");
-  var [states, setStates]   = useState(existing ? (existing.serviced_states || []) : []);
-  var [stateInput, setStateInput] = useState("");
+  var [states, setStates]       = useState(existing ? (existing.serviced_states || []) : []);
+  var [statePickerOpen, setStatePickerOpen] = useState(false);
   var [loading, setLoading] = useState(false);
   var [error, setError]     = useState(null);
 
@@ -81,17 +92,10 @@ export function AddAccountModal({ userId, onSave, onClose, existing }) {
     if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addCustomTag(); }
   }
 
-  function handleStateKey(e) {
-    if (e.key === "Enter" || e.key === "," || e.key === " ") {
-      e.preventDefault();
-      var val = stateInput.trim().toUpperCase().replace(/,/g, "");
-      if (val && !states.includes(val)) setStates(function (prev) { return prev.concat([val]); });
-      setStateInput("");
-    }
-  }
-
-  function removeState(s) {
-    setStates(function (prev) { return prev.filter(function (x) { return x !== s; }); });
+  function toggleState(s) {
+    setStates(function (prev) {
+      return prev.includes(s) ? prev.filter(function (x) { return x !== s; }) : prev.concat([s]);
+    });
   }
 
   function handleSave() {
@@ -188,56 +192,163 @@ export function AddAccountModal({ userId, onSave, onClose, existing }) {
         </div>
 
         {/* Serviced states */}
-        <div>
-          <FL>Serviced States</FL>
-          {/* Chips */}
-          {states.length > 0 && (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 6 }}>
-              {states.map(function (s) {
-                return (
-                  <span
-                    key={s}
+        <div style={{ position: "relative" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+            <FL style={{ marginBottom: 0 }}>Serviced States</FL>
+            {states.length > 0 && (
+              <button
+                type="button"
+                onClick={function () { setStates([]); }}
+                style={{ background: "none", border: "none", fontSize: 11, color: C.textMuted, cursor: "pointer", padding: 0 }}
+              >
+                Clear all
+              </button>
+            )}
+          </div>
+
+          {/* Trigger button */}
+          <button
+            type="button"
+            onClick={function () { setStatePickerOpen(function (o) { return !o; }); }}
+            style={{
+              width: "100%",
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid " + (statePickerOpen ? "rgba(200,136,58,0.4)" : C.border),
+              borderRadius: 8,
+              padding: "9px 12px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              cursor: "pointer",
+              fontFamily: "'DM Sans', sans-serif",
+              fontSize: 13,
+              color: states.length > 0 ? C.text : C.textMuted,
+            }}
+          >
+            <span>
+              {states.length === 0 && "Select states..."}
+              {states.length > 0 && states.length < 6 && states.join(", ")}
+              {states.length >= 6 && states.length + " states selected"}
+            </span>
+            <span style={{ fontSize: 10, color: C.textMuted }}>{statePickerOpen ? "▲" : "▼"}</span>
+          </button>
+
+          {/* Dropdown panel */}
+          {statePickerOpen && (
+            <>
+              <div
+                onClick={function () { setStatePickerOpen(false); }}
+                style={{ position: "fixed", inset: 0, zIndex: 10 }}
+              />
+              <div style={{
+                position: "absolute",
+                top: "calc(100% + 4px)",
+                left: 0,
+                right: 0,
+                background: "#1c1912",
+                border: "1px solid " + C.border,
+                borderRadius: 10,
+                padding: 12,
+                zIndex: 11,
+                maxHeight: 320,
+                overflowY: "auto",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+              }}>
+                {/* National quick-select */}
+                <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+                  <button
+                    type="button"
+                    onClick={function () { setStates(states.length === ALL_STATES.length ? [] : ALL_STATES.slice()); }}
                     style={{
-                      background: "rgba(124,92,191,0.12)",
-                      color: C.purple,
-                      border: "1px solid rgba(124,92,191,0.25)",
+                      background: states.length === ALL_STATES.length ? "rgba(200,136,58,0.15)" : "rgba(200,136,58,0.06)",
+                      color: C.accent,
+                      border: "1px solid rgba(200,136,58," + (states.length === ALL_STATES.length ? "0.4" : "0.2") + ")",
                       borderRadius: 6,
-                      padding: "3px 8px",
+                      padding: "5px 12px",
                       fontSize: 11,
-                      fontWeight: 600,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 4,
+                      fontWeight: 700,
+                      fontFamily: "'DM Sans', sans-serif",
+                      cursor: "pointer",
                     }}
                   >
-                    {s}
-                    <span
-                      onClick={function () { removeState(s); }}
-                      style={{ cursor: "pointer", color: C.textMuted, fontSize: 13, lineHeight: 1 }}
-                    >
-                      ×
-                    </span>
-                  </span>
-                );
-              })}
-            </div>
+                    {states.length === ALL_STATES.length ? "✓ National" : "National (all)"}
+                  </button>
+                </div>
+
+                {/* Region groups */}
+                {REGION_GROUPS.map(function (group) {
+                  var allSelected = group.states.every(function (s) { return states.includes(s); });
+                  return (
+                    <div key={group.label} style={{ marginBottom: 10 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: C.textMuted, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+                          {group.label}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={function () {
+                            if (allSelected) {
+                              setStates(function (prev) { return prev.filter(function (s) { return !group.states.includes(s); }); });
+                            } else {
+                              setStates(function (prev) {
+                                var next = prev.slice();
+                                group.states.forEach(function (s) { if (!next.includes(s)) next.push(s); });
+                                return next;
+                              });
+                            }
+                          }}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            fontSize: 10,
+                            color: allSelected ? C.accent : C.textMuted,
+                            cursor: "pointer",
+                            padding: 0,
+                            fontFamily: "'DM Sans', sans-serif",
+                          }}
+                        >
+                          {allSelected ? "deselect" : "select all"}
+                        </button>
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                        {group.states.map(function (s) {
+                          var on = states.includes(s);
+                          return (
+                            <button
+                              key={s}
+                              type="button"
+                              onClick={function () { toggleState(s); }}
+                              style={{
+                                background: on ? "rgba(124,92,191,0.2)" : "rgba(255,255,255,0.04)",
+                                color: on ? C.purple : C.textMuted,
+                                border: "1px solid " + (on ? "rgba(124,92,191,0.4)" : C.border),
+                                borderRadius: 5,
+                                padding: "4px 8px",
+                                fontSize: 11,
+                                fontWeight: on ? 700 : 400,
+                                fontFamily: "'DM Sans', sans-serif",
+                                cursor: "pointer",
+                                minWidth: 34,
+                                textAlign: "center",
+                              }}
+                            >
+                              {s}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           )}
-          <InputField
-            value={stateInput}
-            onChange={function (e) { setStateInput(e.target.value.toUpperCase()); }}
-            onKeyDown={handleStateKey}
-            placeholder="Type state code + Enter (FL, GA, TN...)"
-          />
+
           {/* Auto-detected region */}
           {region && (
             <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ fontSize: 10, color: C.textMuted }}>Auto-detected:</span>
-              <span style={{
-                fontSize: 11,
-                fontWeight: 700,
-                color: C.accent,
-                textShadow: "0 0 8px " + C.accent,
-              }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: C.accent, textShadow: "0 0 8px " + C.accent }}>
                 {region}
               </span>
               {marketScope && (
