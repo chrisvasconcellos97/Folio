@@ -6,17 +6,19 @@ import { useMeetings } from "../../hooks/useMeetings";
 import { useItems } from "../../hooks/useItems";
 import { useContacts } from "../../hooks/useContacts";
 import { useCadences } from "../../hooks/useCadences";
+import { useProjects } from "../../hooks/useProjects";
 import { OverviewTab } from "./tabs/OverviewTab";
 import { MeetingsTab } from "./tabs/MeetingsTab";
 import { ItemsTab } from "./tabs/ItemsTab";
 import { ContactsTab } from "./tabs/ContactsTab";
 import { CadenceTab } from "./tabs/CadenceTab";
+import { ProjectsTab } from "./tabs/ProjectsTab";
 import { LogMeetingModal } from "./LogMeetingModal";
 import { QuickMeetingModal } from "./QuickMeetingModal";
 import { AddItemModal } from "./AddItemModal";
 import { AddContactModal } from "./AddContactModal";
 
-var TABS = ["overview", "meetings", "items", "contacts", "cadence"];
+var TABS = ["overview", "meetings", "items", "contacts", "cadence", "projects"];
 var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red };
 var STATUS_LABELS = { green: "Healthy", yellow: "Watch", red: "At Risk" };
 var TIER_COLORS   = { Major: C.blue, Mid: C.purple, Growth: C.green };
@@ -45,6 +47,7 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
   var { items, addItem, closeItem }            = useItems(userId, account.id);
   var { contacts, addContact, deleteContact }  = useContacts(userId, account.id);
   var { cadences, addCadence, updateCadence, deleteCadence } = useCadences(userId, account.id);
+  var { projects, addProject, updateProject, deleteProject } = useProjects(userId, account.id);
 
   var allAccounts   = accounts || [];
   var subAccounts   = allAccounts.filter(function (a) { return a.parent_account_id === account.id; });
@@ -208,6 +211,8 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
         }}
       >
         {TABS.map(function (t) {
+          var isGauge  = t === "projects";
+          var active   = tab === t;
           return (
             <button
               key={t}
@@ -221,12 +226,12 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
                 fontWeight: 600,
                 fontFamily: "'DM Sans', sans-serif",
                 textTransform: "capitalize",
-                background: tab === t ? C.bgCardAlt : "transparent",
-                color: tab === t ? C.accent : C.textMuted,
-                border: "1px solid " + (tab === t ? C.border : "transparent"),
+                background: active ? C.bgCardAlt : "transparent",
+                color: active ? (isGauge ? C.blue : C.accent) : C.textMuted,
+                border: "1px solid " + (active ? (isGauge ? "rgba(103,200,249,0.2)" : C.border) : "transparent"),
               }}
             >
-              {t}
+              {isGauge ? "gauge" : t}
             </button>
           );
         })}
@@ -295,6 +300,17 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
           onDeleteMeeting={deleteMeeting}
           prefill={cadencePrefill}
           onPrefillHandled={function () { setCadencePrefill(null); }}
+        />
+      )}
+
+      {tab === "projects" && (
+        <ProjectsTab
+          projects={projects}
+          accounts={accounts}
+          accountId={account.id}
+          addProject={addProject}
+          updateProject={updateProject}
+          deleteProject={deleteProject}
         />
       )}
 

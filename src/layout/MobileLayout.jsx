@@ -1,13 +1,15 @@
 import { C } from "../lib/colors";
 import { FolioIcon } from "../components/FolioIcon";
+import { GaugeIcon } from "../components/GaugeIcon";
 import { PipMark } from "../components/PipMark";
 import { AmberBtn } from "../components/Buttons";
 
 var NAV_ITEMS = [
-  { id: "accounts", label: "Accounts", icon: "▣" },
-  { id: "meetings", label: "Meetings", icon: "◷" },
-  { id: "pipeline", label: "Pipeline", icon: "▦" },
-  { id: "cadence",  label: "Cadence",  icon: "↻" },
+  { id: "accounts", label: "Accounts", icon: "▣"     },
+  { id: "meetings", label: "Meetings", icon: "◷"     },
+  { id: "pipeline", label: "Pipeline", icon: "▦"     },
+  { id: "cadence",  label: "Cadence",  icon: "↻"     },
+  { id: "gauge",    label: "Gauge",    icon: "gauge"  },
 ];
 
 export function MobileLayout({ view, setView, onAddAccount, onSignOut, children }) {
@@ -123,7 +125,7 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, children 
                   fontWeight: 600,
                   fontFamily: "'DM Sans', sans-serif",
                   background: active ? C.bgCardAlt : "transparent",
-                  color: active ? C.accent : C.textMuted,
+                  color: active ? (item.id === "gauge" ? C.blue : C.accent) : C.textMuted,
                   border: "1px solid " + (active ? C.border : "transparent"),
                   display: "flex",
                   flexDirection: "column",
@@ -131,7 +133,9 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, children 
                   gap: 3,
                 }}
               >
-                {item.icon ? (
+                {item.icon === "gauge" ? (
+                  <GaugeIcon size={14} color={active ? C.blue : C.textMuted} />
+                ) : item.icon ? (
                   <span style={{ fontSize: 13 }}>{item.icon}</span>
                 ) : (
                   <PipMark size={8} color={active ? C.accent : C.textMuted} pulse={active} />
