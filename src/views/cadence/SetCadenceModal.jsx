@@ -37,7 +37,7 @@ function fromHHMM(hhmm) {
   return { hour: String(hour), minute: closestMin, ampm };
 }
 
-export function SetCadenceModal({ onSave, onClose, existing, initialValues, accounts }) {
+export function SetCadenceModal({ onSave, onClose, existing, initialValues, accounts, contacts }) {
   var seed = existing || initialValues || {};
   var init = seed.meeting_time ? fromHHMM(seed.meeting_time) : { hour: '9', minute: '00', ampm: 'AM' };
 
@@ -48,6 +48,7 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues, acco
   var [monthlyType,   setMonthlyType]   = useState(seed.monthly_type   || 'day_of_month');
   var [monthlyOrdinal, setMonthlyOrdinal] = useState(seed.monthly_ordinal || 'first');
   var [selectedAccountId, setSelectedAccountId] = useState(null);
+  var [defaultAttendees, setDefaultAttendees] = useState(existing ? (existing.default_attendees || []) : []);
 
   useEffect(function () {
     if (frequency === 'biweekly') setAnchorDate(lastOccurrenceOf(dayOfWeek));
@@ -58,6 +59,12 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues, acco
   var [notes,       setNotes]       = useState(existing ? (existing.notes || '') : '');
   var [loading,     setLoading]     = useState(false);
   var [error,       setError]       = useState(null);
+
+  function toggleDefaultAttendee(name) {
+    setDefaultAttendees(function (prev) {
+      return prev.includes(name) ? prev.filter(function (n) { return n !== name; }) : prev.concat([name]);
+    });
+  }
 
   function handleSave() {
     if (accounts && !selectedAccountId) { setError("Please select an account."); return; }
@@ -71,8 +78,9 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues, acco
       anchor_date:     frequency === 'biweekly' ? anchorDate : null,
       monthly_type:    frequency === 'monthly' ? monthlyType : null,
       monthly_ordinal: isOrdinalMonthly ? monthlyOrdinal : null,
-      meeting_time:    toHHMM(hour, minute, ampm),
-      notes:           notes.trim() || null,
+      meeting_time:       toHHMM(hour, minute, ampm),
+      notes:              notes.trim() || null,
+      default_attendees:  defaultAttendees.length > 0 ? defaultAttendees : null,
       ...(accounts && selectedAccountId ? { account_id: selectedAccountId } : {}),
     })
       .then(function () { setLoading(false); onClose(); })
@@ -292,6 +300,39 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues, acco
             </div>
           </div>
         </div>
+
+        {/* Default attendees */}
+        {contacts && contacts.length > 0 && (
+          <div>
+            <FL>Default Attendees <span style={{ fontWeight: 400, color: C.textMuted }}>(optional)</span></FL>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+              {contacts.map(function (c) {
+                var active = defaultAttendees.includes(c.name);
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={function () { toggleDefaultAttendee(c.name); }}
+                    style={{
+                      background: active ? 'rgba(200,136,58,0.15)' : 'rgba(255,255,255,0.04)',
+                      border: '1px solid ' + (active ? 'rgba(200,136,58,0.4)' : C.border),
+                      borderRadius: 20,
+                      padding: '5px 12px',
+                      fontSize: 12,
+                      fontWeight: active ? 600 : 400,
+                      color: active ? C.accent : C.textMuted,
+                      fontFamily: "'DM Sans', sans-serif",
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {active ? '✓ ' : ''}{c.name}
+                    {c.title ? ' · ' + c.title : ''}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Standing agenda */}
         <div>

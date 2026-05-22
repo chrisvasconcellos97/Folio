@@ -7,7 +7,7 @@ import { FL } from "../../components/FieldLabel";
 
 var STARS = [1, 2, 3, 4, 5];
 
-export function LogMeetingModal({ accountId, userId, onSave, onClose }) {
+export function LogMeetingModal({ accountId, userId, contacts, onSave, onClose }) {
   var today = new Date().toISOString().split("T")[0];
   var [title, setTitle]            = useState("");
   var [date, setDate]              = useState(today);
@@ -17,8 +17,15 @@ export function LogMeetingModal({ accountId, userId, onSave, onClose }) {
   var [commitments, setCommit]     = useState("");
   var [followUp, setFollowUp]      = useState("");
   var [rating, setRating]          = useState(0);
+  var [attendees, setAttendees]    = useState([]);
   var [loading, setLoading]        = useState(false);
   var [error, setError]            = useState(null);
+
+  function toggleAttendee(name) {
+    setAttendees(function (prev) {
+      return prev.includes(name) ? prev.filter(function (n) { return n !== name; }) : prev.concat([name]);
+    });
+  }
 
   function handleSave() {
     if (!title.trim()) { setError("Meeting title is required."); return; }
@@ -35,6 +42,7 @@ export function LogMeetingModal({ accountId, userId, onSave, onClose }) {
       commitments:    commitments.trim() || null,
       follow_up_date: followUp || null,
       rating:         rating || null,
+      attendees:      attendees.length > 0 ? attendees : null,
     })
       .then(function () {
         setLoading(false);
@@ -66,6 +74,38 @@ export function LogMeetingModal({ accountId, userId, onSave, onClose }) {
             onChange={function (e) { setDate(e.target.value); }}
           />
         </div>
+
+        {contacts && contacts.length > 0 && (
+          <div>
+            <FL>Attendees</FL>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
+              {contacts.map(function (c) {
+                var active = attendees.includes(c.name);
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={function () { toggleAttendee(c.name); }}
+                    style={{
+                      background: active ? "rgba(200,136,58,0.15)" : "rgba(255,255,255,0.04)",
+                      border: "1px solid " + (active ? "rgba(200,136,58,0.4)" : C.border),
+                      borderRadius: 20,
+                      padding: "5px 12px",
+                      fontSize: 12,
+                      fontWeight: active ? 600 : 400,
+                      color: active ? C.accent : C.textMuted,
+                      fontFamily: "'DM Sans', sans-serif",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {active ? "✓ " : ""}{c.name}
+                    {c.title ? " · " + c.title : ""}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <div>
           <FL>Notes</FL>

@@ -285,6 +285,7 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
           cadences={cadences}
           items={items}
           meetings={meetings}
+          contacts={contacts}
           onAddCadence={addCadence}
           onUpdateCadence={updateCadence}
           onDeleteCadence={deleteCadence}
@@ -303,6 +304,7 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
           accountId={account.id}
           userId={userId}
           accountName={account.name}
+          contacts={contacts}
           onSave={addMeeting}
           onClose={function () { setQuickModal(false); }}
         />
@@ -312,6 +314,7 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
         <LogMeetingModal
           accountId={account.id}
           userId={userId}
+          contacts={contacts}
           onSave={addMeeting}
           onClose={function () { setMeetingModal(false); }}
         />

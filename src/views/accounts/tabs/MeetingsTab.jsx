@@ -84,6 +84,11 @@ export function MeetingsTab({ meetings, accountName, onLogMeeting, onDelete, onU
                     ? new Date(m.meeting_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
                     : ""}
                 </div>
+                {m.attendees && m.attendees.length > 0 && (
+                  <div style={{ fontSize: 11, color: C.accent, marginTop: 3 }}>
+                    {m.attendees.join(', ')}
+                  </div>
+                )}
               </div>
               {m.rating && (
                 <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>

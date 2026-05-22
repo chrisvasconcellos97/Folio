@@ -4,7 +4,7 @@ import { AmberBtn, SecBtn, DangerBtn } from "../../../components/Buttons";
 import { SetCadenceModal } from "../../cadence/SetCadenceModal";
 import { getNextOccurrence, getFrequencyLabel, formatTime, daysUntil, formatDateFull } from "../../../lib/cadenceUtils";
 
-export function CadenceTab({ account, cadences, items, meetings, onAddCadence, onUpdateCadence, onDeleteCadence, onAddItem, onCloseItem, onLogMeeting, onDeleteMeeting, prefill, onPrefillHandled }) {
+export function CadenceTab({ account, cadences, items, meetings, contacts, onAddCadence, onUpdateCadence, onDeleteCadence, onAddItem, onCloseItem, onLogMeeting, onDeleteMeeting, prefill, onPrefillHandled }) {
   var [showModal,     setShowModal]     = useState(false);
   var [editingCad,    setEditingCad]    = useState(null);
   var [prefillValues, setPrefillValues] = useState(null);
@@ -49,6 +49,7 @@ export function CadenceTab({ account, cadences, items, meetings, onAddCadence, o
         {showModal && (
           <SetCadenceModal
             initialValues={prefillValues}
+            contacts={contacts}
             onSave={function (data) { return handleSave(data); }}
             onClose={function () { setShowModal(false); setPrefillValues(null); }}
           />
@@ -194,6 +195,11 @@ export function CadenceTab({ account, cadences, items, meetings, onAddCadence, o
                         weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
                       })}
                     </div>
+                    {m.attendees && m.attendees.length > 0 && (
+                      <div style={{ fontSize: 11, color: C.accent, marginTop: 4 }}>
+                        {m.attendees.join(', ')}
+                      </div>
+                    )}
                     {m.notes && (
                       <div style={{ fontSize: 12, color: C.text, marginTop: 4, lineHeight: 1.4 }}>{m.notes}</div>
                     )}
@@ -220,6 +226,7 @@ export function CadenceTab({ account, cadences, items, meetings, onAddCadence, o
         <SetCadenceModal
           existing={editingCad}
           initialValues={editingCad ? null : prefillValues}
+          contacts={contacts}
           onSave={function (data) { return handleSave(data); }}
           onClose={function () { setShowModal(false); setEditingCad(null); setPrefillValues(null); }}
         />
