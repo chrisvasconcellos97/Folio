@@ -18,28 +18,130 @@ var RANGES = [
   { label: "All Time", days: null },
 ];
 
-function pipStatusLine(account, openCount) {
-  if (account.status === "red") {
-    return (
-      account.name +
-      " needs attention. " +
-      openCount +
-      " open item" +
-      (openCount !== 1 ? "s" : "") +
-      " — the oldest may be overdue. I'd prioritize this one before your next call."
-    );
+function pickV(seed, variants) {
+  var hash = seed.split("").reduce(function (acc, c) { return (acc * 31 + c.charCodeAt(0)) | 0; }, 0);
+  return variants[Math.abs(hash) % variants.length];
+}
+
+function buildPipInsight(account, openItems, revenueHistory, shopMetrics) {
+  var rh = revenueHistory || [];
+  var sm = shopMetrics    || [];
+
+  var openCount    = openItems.filter(function (i) { return !i.done; }).length;
+  var today        = new Date().toISOString().split("T")[0];
+  var overdueCount = openItems.filter(function (i) { return !i.done && i.due_date && i.due_date < today; }).length;
+
+  var daysSince = null;
+  if (account.last_interaction_at) {
+    daysSince = Math.floor((Date.now() - new Date(account.last_interaction_at).getTime()) / 86400000);
   }
-  if (account.status === "yellow") {
-    return (
-      account.name +
-      " is moving in the right direction, but watch the open items. " +
-      openCount +
-      " still pending."
-    );
+
+  var latestRev  = latestRecord(rh, account.id);
+  var revMom     = latestRev ? momPct(rh, account.id, "revenue") : null;
+  var latestShop = latestRecord(sm, account.id);
+  var nocDelta   = latestShop ? momDelta(sm, account.id, "no_connection") : null;
+  var intgDelta  = latestShop ? momDelta(sm, account.id, "integrated")    : null;
+
+  var hasNextMeeting   = !!account.next_meeting;
+  var nextMeetingLabel = account.next_meeting
+    ? new Date(account.next_meeting).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+    : null;
+
+  var seed      = (account.id || account.name) + new Date().getDate().toString();
+  var isGhosted = daysSince !== null && daysSince >= 60;
+  var isStale   = daysSince !== null && daysSince >= 30 && daysSince < 60;
+  var parts     = [];
+
+  // Lead — most critical signal first
+  if (account.status === "red" && isGhosted) {
+    parts.push(pickV(seed + "a", [
+      account.name + " is at risk and it's been " + daysSince + " days since your last touchpoint. That's a long silence.",
+      account.name + " is flagged and you haven't touched base in " + daysSince + " days. This one needs a call.",
+      "Red flag and " + daysSince + " days since contact on " + account.name + " — bump this to the top of the list.",
+    ]));
+  } else if (account.status === "red") {
+    parts.push(pickV(seed + "a", [
+      account.name + " needs attention." + (openCount > 0 ? " " + openCount + " open item" + (openCount !== 1 ? "s" : "") + " in the queue." : " The relationship needs a check-in."),
+      account.name + " is flagged. I'd get ahead of this before it slips further.",
+      "Something's off with " + account.name + ". Worth a proactive check-in before the next call.",
+    ]));
+  } else if (isGhosted) {
+    parts.push(pickV(seed + "a", [
+      "It's been " + daysSince + " days since you touched " + account.name + ". Might be worth a quick check-in.",
+      account.name + " hasn't heard from you in " + daysSince + " days. A short email or call goes a long way.",
+      "Quiet on the " + account.name + " front — " + daysSince + " days since last contact. Don't let this one go cold.",
+    ]));
+  } else if (isStale && account.status === "yellow") {
+    parts.push(pickV(seed + "a", [
+      account.name + " is in a watchful state and you haven't reached out in " + daysSince + " days. Keep the momentum going.",
+      daysSince + " days since your last touchpoint with " + account.name + " — and they're still yellow. Stay on it.",
+      account.name + " is watch-listed and going a bit quiet. A check-in now could shift the trajectory.",
+    ]));
+  } else if (account.status === "yellow") {
+    parts.push(pickV(seed + "a", [
+      account.name + " is moving in the right direction, but there's still work to do.",
+      account.name + " is trending okay. Watch the open items — they'll tell you if this is slipping.",
+      "Cautiously optimistic on " + account.name + ". Yellow means watch it, not forget it.",
+    ]));
+  } else if (account.status === "green" && daysSince !== null && daysSince <= 14) {
+    parts.push(pickV(seed + "a", [
+      account.name + " is in solid shape — and you were just there " + daysSince + " days ago. Good cadence.",
+      account.name + " looks healthy. Recent contact, clean pipeline. Don't jinx it.",
+      "Good momentum with " + account.name + ". Status is green and the relationship is active.",
+    ]));
+  } else {
+    parts.push(pickV(seed + "a", [
+      account.name + " is in good shape. Relationship looks solid from where I'm sitting.",
+      account.name + " is healthy. Keep doing what you're doing.",
+      "No red flags on " + account.name + ". Clean status, things are moving.",
+    ]));
   }
-  return (
-    account.name + " is in great shape. Relationship is healthy and the pipeline looks solid."
-  );
+
+  // Secondary — revenue signal if meaningful
+  if (revMom !== null && revMom >= 10) {
+    parts.push(pickV(seed + "b", [
+      "Revenue is up " + revMom + "% month over month — strong.",
+      "MoM revenue is up " + revMom + "%. That's a good number.",
+    ]));
+  } else if (revMom !== null && revMom <= -10) {
+    parts.push(pickV(seed + "b", [
+      "Revenue dropped " + Math.abs(revMom) + "% month over month — worth a closer look.",
+      "MoM revenue is down " + Math.abs(revMom) + "%. Keep an eye on the trend.",
+    ]));
+  }
+
+  // Tertiary — shop signals
+  if (nocDelta !== null && nocDelta > 0) {
+    parts.push(pickV(seed + "c", [
+      "No-connection count is up " + nocDelta + " this month — flag it on your next call.",
+      nocDelta + " more shops with no connection this month. That needs follow-up.",
+    ]));
+  } else if (intgDelta !== null && intgDelta > 0) {
+    parts.push(pickV(seed + "c", [
+      intgDelta + " more shops integrated this month — nice progress.",
+      "Integration count is up " + intgDelta + ". That's a win.",
+    ]));
+  }
+
+  // Closing — overdue, next meeting, or nudge
+  if (overdueCount > 0) {
+    parts.push(pickV(seed + "d", [
+      overdueCount + " item" + (overdueCount !== 1 ? "s are" : " is") + " overdue — clear those before your next call.",
+      "You've got " + overdueCount + " overdue item" + (overdueCount !== 1 ? "s" : "") + " here. Get those cleared.",
+    ]));
+  } else if (hasNextMeeting) {
+    parts.push(pickV(seed + "d", [
+      "Next meeting is on " + nextMeetingLabel + " — you're good.",
+      "Scheduled for " + nextMeetingLabel + ". Stay prepared.",
+    ]));
+  } else if (account.status !== "red") {
+    parts.push(pickV(seed + "d", [
+      "No meeting on the calendar — worth booking something.",
+      "Nothing scheduled yet. A quick check-in could keep this one warm.",
+    ]));
+  }
+
+  return parts.join(" ");
 }
 
 function pctColor(pct) {
@@ -143,7 +245,7 @@ export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLo
           </div>
         </div>
         <div style={{ fontSize: 13, color: C.textSub, lineHeight: 1.65 }}>
-          {pipStatusLine(account, openCount)}
+          {buildPipInsight(account, openItems, revenueHistory, shopMetrics)}
         </div>
       </div>
 
