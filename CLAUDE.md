@@ -6,7 +6,7 @@
 git push origin HEAD:main
 git push origin HEAD:claude/build-folio-desktop-app-XzvZ5
 ```
-Never push to only one of them. If the session configures a different feature branch, push to it too, but these two are always required.
+Never push to only one of them. **Do NOT push to any other branches** (session feature branches, etc.) — Vercel counts every branch push toward its 100 deployments/day free tier limit.
 
 ## The Briefcase Suite
 
