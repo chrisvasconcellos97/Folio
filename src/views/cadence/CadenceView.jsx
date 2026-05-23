@@ -16,6 +16,10 @@ function accountColor(id) {
   return ACCOUNT_COLORS[hash % ACCOUNT_COLORS.length];
 }
 
+function eventColor(event) {
+  return event.cadence.type === 'task' ? C.yellow : accountColor(event.cadence.account_id);
+}
+
 var navBtnStyle = {
   background: 'none',
   border: '1px solid ' + C.border,
@@ -32,8 +36,8 @@ var navBtnStyle = {
 function CadenceEventCard({ event, onSelectAccount, showDate }) {
   var cadence = event.cadence;
   var account = event.account;
-  var col     = accountColor(cadence.account_id);
-  var name    = account && account.name ? account.name : 'Unknown';
+  var col     = eventColor(event);
+  var name    = account && account.name ? (cadence.type === 'task' ? '✓ ' + cadence.task_title : account.name) : 'Unknown';
 
   return (
     <div style={{
@@ -49,6 +53,9 @@ function CadenceEventCard({ event, onSelectAccount, showDate }) {
     }}>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{name}</div>
+        {account && account.name && cadence.type === 'task' && (
+          <div style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>{account.name}</div>
+        )}
         <div style={{ fontSize: 11, color: C.textMuted, marginTop: 3 }}>
           {getFrequencyLabel(cadence)}
         </div>
@@ -150,8 +157,10 @@ function CalendarView({ year, month, events, onPrev, onNext, onSelectAccount }) 
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {evts.slice(0, 2).map(function (ev, j) {
-                  var col  = accountColor(ev.cadence.account_id);
-                  var name = ev.account && ev.account.name ? ev.account.name.slice(0, 9) : '?';
+                  var col  = eventColor(ev);
+                  var name = ev.cadence.type === 'task'
+                    ? ('✓ ' + (ev.cadence.task_title || '?')).slice(0, 11)
+                    : (ev.account && ev.account.name ? ev.account.name.slice(0, 9) : '?');
                   return (
                     <div key={j} style={{
                       background: col + '22', color: col,
@@ -243,8 +252,10 @@ function WeekView({ weekStart, weekEnd, events, onPrev, onNext, onSelectAccount 
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                 {evts.map(function (ev, j) {
-                  var col  = accountColor(ev.cadence.account_id);
-                  var name = ev.account && ev.account.name ? ev.account.name : '?';
+                  var col  = eventColor(ev);
+                  var name = ev.cadence.type === 'task'
+                    ? '✓ ' + (ev.cadence.task_title || '?')
+                    : (ev.account && ev.account.name ? ev.account.name : '?');
                   var time = ev.cadence.meeting_time ? formatTime(ev.cadence.meeting_time) : '';
                   return (
                     <div key={j}

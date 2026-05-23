@@ -4,10 +4,70 @@ import { AmberBtn, SecBtn, DangerBtn } from "../../../components/Buttons";
 import { SetCadenceModal } from "../../cadence/SetCadenceModal";
 import { getNextOccurrence, getFrequencyLabel, formatTime, daysUntil, formatDateFull } from "../../../lib/cadenceUtils";
 
+function CadenceCard({ cad, today, confirmDeleteId, setConfirmDeleteId, onDeleteCadence, setEditingCad, setShowModal }) {
+  var isTask  = cad.type === 'task';
+  var next    = getNextOccurrence(cad, today);
+  var confirm = confirmDeleteId === cad.id;
+
+  return (
+    <div style={{
+      background: C.bgCard,
+      border: '1px solid ' + C.border,
+      borderLeft: '3px solid ' + (isTask ? C.yellow : C.accent),
+      borderRadius: 10,
+      padding: '13px 15px',
+      marginBottom: 8,
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 10, color: isTask ? C.yellow : C.textMuted, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 5 }}>
+            {isTask ? '✓ Recurring Task' : 'Meeting Cadence'}
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>
+            {isTask ? cad.task_title : getFrequencyLabel(cad)}
+          </div>
+          {isTask && (
+            <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
+              {getFrequencyLabel(cad)}
+            </div>
+          )}
+          {next && (
+            <div style={{ fontSize: 12, color: isTask ? C.yellow : C.accent, marginTop: 6 }}>
+              {isTask ? 'Next due: ' : 'Next: '}{daysUntil(next)} · {formatDateFull(next)}
+              {!isTask && cad.meeting_time ? ' · ' + formatTime(cad.meeting_time) : ''}
+            </div>
+          )}
+          {cad.notes && (
+            <div style={{ fontSize: 12, color: C.textMuted, marginTop: 6, lineHeight: 1.5 }}>
+              {cad.notes}
+            </div>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+          <SecBtn onClick={function () { setEditingCad(cad); setShowModal(true); }} style={{ fontSize: 11, padding: '5px 10px' }}>
+            Edit
+          </SecBtn>
+          {!confirm ? (
+            <DangerBtn onClick={function () { setConfirmDeleteId(cad.id); }} style={{ fontSize: 11, padding: '5px 10px' }}>
+              Remove
+            </DangerBtn>
+          ) : (
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <span style={{ fontSize: 11, color: C.red }}>Sure?</span>
+              <DangerBtn onClick={function () { onDeleteCadence(cad.id); setConfirmDeleteId(null); }} style={{ fontSize: 11, padding: '5px 10px' }}>Yes</DangerBtn>
+              <SecBtn onClick={function () { setConfirmDeleteId(null); }} style={{ fontSize: 11, padding: '5px 10px' }}>No</SecBtn>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function CadenceTab({ account, cadences, items, meetings, contacts, onAddCadence, onUpdateCadence, onDeleteCadence, onAddItem, onCloseItem, onLogMeeting, onDeleteMeeting, prefill, onPrefillHandled }) {
-  var [showModal,      setShowModal]      = useState(false);
-  var [editingCad,     setEditingCad]     = useState(null);
-  var [prefillValues,  setPrefillValues]  = useState(null);
+  var [showModal,       setShowModal]       = useState(false);
+  var [editingCad,      setEditingCad]      = useState(null);
+  var [prefillValues,   setPrefillValues]   = useState(null);
   var [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   useEffect(function () {
@@ -17,9 +77,8 @@ export function CadenceTab({ account, cadences, items, meetings, contacts, onAdd
     if (onPrefillHandled) onPrefillHandled();
   }, [prefill]);
 
-  var openItems     = items.filter(function (i) { return !i.done; });
-  var today         = new Date();
-  today.setHours(0, 0, 0, 0);
+  var openItems       = items.filter(function (i) { return !i.done; });
+  var today           = new Date(); today.setHours(0, 0, 0, 0);
   var meetingCadences = cadences.filter(function (c) { return c.type !== 'task'; });
   var taskCadences    = cadences.filter(function (c) { return c.type === 'task'; });
 
@@ -33,76 +92,19 @@ export function CadenceTab({ account, cadences, items, meetings, contacts, onAdd
     letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8,
   };
 
-  function CadenceCard({ cad }) {
-    var isTask  = cad.type === 'task';
-    var next    = getNextOccurrence(cad, today);
-    var confirm = confirmDeleteId === cad.id;
-    return (
-      <div style={{
-        background: C.bgCard,
-        border: '1px solid ' + C.border,
-        borderLeft: '3px solid ' + (isTask ? C.yellow : C.accent),
-        borderRadius: 10,
-        padding: '13px 15px',
-        marginBottom: 8,
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 10, color: isTask ? C.yellow : C.textMuted, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 5 }}>
-              {isTask ? '✓ Recurring Task' : 'Meeting Cadence'}
-            </div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>
-              {isTask ? cad.task_title : getFrequencyLabel(cad)}
-            </div>
-            {isTask && (
-              <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
-                {getFrequencyLabel(cad)}
-              </div>
-            )}
-            {next && (
-              <div style={{ fontSize: 12, color: isTask ? C.yellow : C.accent, marginTop: 6 }}>
-                {isTask ? 'Next due: ' : 'Next: '}{daysUntil(next)} · {formatDateFull(next)}
-                {!isTask && cad.meeting_time ? ' · ' + formatTime(cad.meeting_time) : ''}
-              </div>
-            )}
-            {cad.notes && (
-              <div style={{ fontSize: 12, color: C.textMuted, marginTop: 6, lineHeight: 1.5 }}>
-                {cad.notes}
-              </div>
-            )}
-          </div>
-          <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-            <SecBtn onClick={function () { setEditingCad(cad); setShowModal(true); }} style={{ fontSize: 11, padding: '5px 10px' }}>
-              Edit
-            </SecBtn>
-            {!confirm ? (
-              <DangerBtn onClick={function () { setConfirmDeleteId(cad.id); }} style={{ fontSize: 11, padding: '5px 10px' }}>
-                Remove
-              </DangerBtn>
-            ) : (
-              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <span style={{ fontSize: 11, color: C.red }}>Sure?</span>
-                <DangerBtn onClick={function () { onDeleteCadence(cad.id); setConfirmDeleteId(null); }} style={{ fontSize: 11, padding: '5px 10px' }}>Yes</DangerBtn>
-                <SecBtn onClick={function () { setConfirmDeleteId(null); }} style={{ fontSize: 11, padding: '5px 10px' }}>No</SecBtn>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  var cardProps = { today, confirmDeleteId, setConfirmDeleteId, onDeleteCadence, setEditingCad, setShowModal };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-      {/* Cadences list */}
+      {/* Cadences */}
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
           <div style={sectionLabel}>
             Schedules{cadences.length > 0 ? ' (' + cadences.length + ')' : ''}
           </div>
           <button
-            onClick={function () { setEditingCad(null); setShowModal(true); }}
+            onClick={function () { setEditingCad(null); setPrefillValues(null); setShowModal(true); }}
             style={{ background: 'none', border: 'none', fontSize: 11, color: C.accent, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
           >
             + Add
@@ -116,12 +118,16 @@ export function CadenceTab({ account, cadences, items, meetings, contacts, onAdd
             <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 18 }}>
               Add a meeting cadence or a recurring task for this account.
             </div>
-            <AmberBtn onClick={function () { setShowModal(true); }}>Add Cadence</AmberBtn>
+            <AmberBtn onClick={function () { setEditingCad(null); setPrefillValues(null); setShowModal(true); }}>Add Cadence</AmberBtn>
           </div>
         )}
 
-        {meetingCadences.map(function (c) { return <CadenceCard key={c.id} cad={c} />; })}
-        {taskCadences.map(function (c)    { return <CadenceCard key={c.id} cad={c} />; })}
+        {meetingCadences.map(function (c) {
+          return <CadenceCard key={c.id} cad={c} {...cardProps} />;
+        })}
+        {taskCadences.map(function (c) {
+          return <CadenceCard key={c.id} cad={c} {...cardProps} />;
+        })}
       </div>
 
       {/* Open items */}
