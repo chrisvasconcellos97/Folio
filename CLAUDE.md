@@ -118,7 +118,9 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 ## Pending Updates
 
-1. **Pip Voice Chat** — microphone button next to the send arrow in Pip's input bar. Tap to start listening (browser Web Speech API, free, no backend changes). Silence detection auto-sends. Pip's text response is also read aloud via browser SpeechSynthesis. Small speaker toggle to mute audio output. Mic button pulses while recording. Works hands-free — useful while driving between accounts. Start with free browser APIs; swap in ElevenLabs/Whisper later if voice quality needs improvement.
+1. **Pip cards — PipelineView + MeetingsView** — two views still using hand-rolled `PipMark` cards instead of `PipInsightCard` with `pickV` rotating variants. PipelineView has a `pipAnalysis()` function with real logic but needs the standard card treatment. MeetingsView has no top-level insight card at all — needs one added that reads meeting volume, recency, upcoming count, and account coverage.
+
+2. **Pip Voice Chat** — microphone button next to the send arrow in Pip's input bar. Tap to start listening (browser Web Speech API, free, no backend changes). Silence detection auto-sends. Pip's text response is also read aloud via browser SpeechSynthesis. Small speaker toggle to mute audio output. Mic button pulses while recording. Works hands-free — useful while driving between accounts. Start with free browser APIs; swap in ElevenLabs/Whisper later if voice quality needs improvement.
 
 2. **Pipeline V2 + Revenue History + Shop Metrics** — one batch build, three connected pieces:
    - **`folio_revenue_history`** table: `id, user_id, account_id, month int, year int, revenue numeric, created_at`. Unique on `(account_id, month, year)`. Monthly snapshots, upserted manually when Chris runs reports.
