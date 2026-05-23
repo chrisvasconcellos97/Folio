@@ -7,6 +7,7 @@ export function Modal({ title, onClose, children, width }) {
 
   return (
     <div
+      className="fade-in"
       onClick={handleBackdrop}
       style={{
         position: "fixed",

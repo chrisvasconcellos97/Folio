@@ -86,7 +86,9 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, u
           padding: "16px 18px 90px",
         }}
       >
-        {children}
+        <div key={view} className="view-fade-in">
+          {children}
+        </div>
       </div>
 
       {/* Bottom nav */}

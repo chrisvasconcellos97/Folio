@@ -48,6 +48,7 @@ export default function App() {
   var [pipPrefill, setPipPrefill]       = useState(null);
   var [showOnboarding, setShowOnboarding] = useState(false);
   var [showReturning, setShowReturning]   = useState(false);
+  var [pipTransition, setPipTransition] = useState("idle");
   var welcomeShown = useRef(false);
 
   function replayTour() {
@@ -86,8 +87,14 @@ export default function App() {
   }
 
   function handleSetView(v) {
-    setView(v);
-    setSelected(null);
+    if (v === view) return;
+    setPipTransition("out");
+    setTimeout(function () {
+      setView(v);
+      setSelected(null);
+      setPipTransition("in");
+      setTimeout(function () { setPipTransition("idle"); }, 400);
+    }, 200);
   }
 
   function handlePipAction(action, account) {
@@ -181,20 +188,22 @@ export default function App() {
   if (view === "accounts") {
     if (selectedAccount) {
       mainContent = (
-        <AccountDetail
-          account={selectedAccount}
-          userId={userId}
-          accounts={accounts}
-          onBack={handleBack}
-          onEdit={function () { setEditingAccount(selectedAccount); }}
-          onDelete={handleDeleteAccount}
-          onUpdate={handleUpdateSelectedAccount}
-          onSelectAccount={function (acct) { setSelected(acct); }}
-          pipPrefill={pipPrefill}
-          onPipPrefillHandled={function () { setPipPrefill(null); }}
-          revenueHistory={revenueHistory}
-          shopMetrics={shopMetrics}
-        />
+        <div key={selectedAccount.id} className="view-fade-in">
+          <AccountDetail
+            account={selectedAccount}
+            userId={userId}
+            accounts={accounts}
+            onBack={handleBack}
+            onEdit={function () { setEditingAccount(selectedAccount); }}
+            onDelete={handleDeleteAccount}
+            onUpdate={handleUpdateSelectedAccount}
+            onSelectAccount={function (acct) { setSelected(acct); }}
+            pipPrefill={pipPrefill}
+            onPipPrefillHandled={function () { setPipPrefill(null); }}
+            revenueHistory={revenueHistory}
+            shopMetrics={shopMetrics}
+          />
+        </div>
       );
     } else if (!isDesktop) {
       mainContent = accountsListPane;
@@ -294,7 +303,7 @@ export default function App() {
             }}
           >
             <div
-              className="pip-sonar"
+              className={"pip-sonar" + (pipTransition === "out" ? " pip-out" : pipTransition === "in" ? " pip-in" : "")}
               onClick={function () { handleSetView("pip"); }}
               style={{
                 width: 52,
@@ -355,7 +364,7 @@ export default function App() {
           }}
         >
           <div
-            className="pip-sonar"
+            className={"pip-sonar" + (pipTransition === "out" ? " pip-out" : pipTransition === "in" ? " pip-in" : "")}
             onClick={function () { handleSetView("pip"); }}
             style={{
               width: 52,

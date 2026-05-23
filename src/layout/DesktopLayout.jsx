@@ -151,7 +151,9 @@ export function DesktopLayout({
           padding: "24px 32px",
         }}
       >
-        {detailPane || children}
+        <div key={view} className="view-fade-in">
+          {detailPane || children}
+        </div>
       </div>
     </div>
   );

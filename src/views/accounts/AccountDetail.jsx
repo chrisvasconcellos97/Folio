@@ -238,6 +238,7 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
       </div>
 
       {/* Tab content */}
+      <div key={tab} className="tab-fade-in">
       {tab === "overview" && (
         <OverviewTab
           account={account}
@@ -319,6 +320,7 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
           deleteProject={deleteProject}
         />
       )}
+      </div>
 
       {/* Modals */}
       {showQuickModal && (
