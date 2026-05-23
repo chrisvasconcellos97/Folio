@@ -1,7 +1,12 @@
 # Folio — Claude Development Context
 
 ## Deployment Rule
-**Always push directly to `main`.** Vercel auto-deploys on push to main. Never use feature branches unless Chris explicitly asks. If the session was configured with a feature branch, push to main anyway: `git push origin HEAD:main`.
+**Vercel production branch is `claude/build-folio-desktop-app-XzvZ5`.** Always push to both `main` AND this branch on every commit:
+```
+git push origin HEAD:main
+git push origin HEAD:claude/build-folio-desktop-app-XzvZ5
+```
+Never push to only one of them. If the session configures a different feature branch, push to it too, but these two are always required.
 
 ## The Briefcase Suite
 
