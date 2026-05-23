@@ -144,6 +144,35 @@ This app is currently single-user but should be built with multi-tenancy in mind
    - **QuickTaskModal "Saving…" state** — `saving` state exists but button text never changes. Update button label to "Saving…" while in-flight.
    - **Pip auto-scroll to latest** — when a new Pip message arrives, auto-scroll the conversation container to the bottom. `useRef` on the message list + `scrollIntoView` on message append.
 
+5. **Accessibility (a11y):**
+   - **aria-labels on icon-only buttons** — Modal close `×`, calendar nav `‹` `›`, Pip send `→`, mic and mute buttons all lack aria-label. Screen readers can't describe them. One-line fix per button.
+   - **Interactive divs need button semantics** — ItemsTab checkboxes, CadenceView calendar day cells, account list cards, and week-view event divs are all `<div onClick>` with no `role="button"` or `tabIndex`. Keyboard users can't reach them. Convert to `<button>` or add role + tabIndex + onKeyDown.
+   - **Semantic form labels** — the `FL` (FieldLabel) component is a styled div, not a `<label>`. No input has an `id` or `aria-labelledby` linking it to its label. Screen readers announce inputs with no context. Convert FL to render a `<label>` and add matching `id` props to InputField.
+   - **Focus trap in Modal** — when a modal opens, focus isn't moved inside and Tab can still reach background elements. Add focus trap to `src/components/Modal.jsx` (move focus on open, return to trigger on close).
+   - **aria-live for dynamic content** — Pip responses, task completions, and form errors appear dynamically with no `aria-live` announcement. Screen reader users miss them. Add `aria-live="polite"` to the Pip message list and error containers.
+
+6. **Code quality:**
+   - **Extract `ChipDropdown` component** — the trigger-button + backdrop + floating chip panel pattern is copy-pasted identically in SetCadenceModal, QuickTaskModal, and AddAccountModal (~150 lines duplicated across 3 files). Extract to `src/components/ChipDropdown.jsx` with props for `options`, `value`/`values`, `onSelect`, `multi`, `placeholder`. One fix propagates everywhere.
+   - **Add missing color tokens to `C`** — `#1a2b28` (dropdown panel background) is hardcoded in at least 5 places. Add `C.bgDropdown = "#1a2b28"` to `src/lib/colors.js`. Also consolidate the `rgba(74,155,130,0.*)` opacity variants — they're used at 6, 7, 12, 15, 18, 3, 35, 4, 45 inconsistently. Define a standard scale.
+   - **Split oversized files** — CadenceView.jsx (571 lines), AccountsView.jsx (553 lines), and OverviewTab.jsx (531 lines) each mix 3–5 sub-components and their logic inline. Extract CalendarView, WeekView, and ListView out of CadenceView as a starting point.
+
+7. **Error resilience:**
+   - **Surface fetch errors from all hooks** — useMeetings, useItems, useContacts, useCadences, useProjects, and useAccountMetrics all swallow Supabase errors silently (stale data with no indication). Only useAccounts has an error state. Add `error` state to all hooks and show a banner or retry button when data fails to load.
+   - **Pip API timeout + retry** — `src/lib/pip.js` has no AbortController, so a stalled request hangs indefinitely. Add a 25-second timeout and one automatic retry on 5xx. Handle 429 (rate limit) responses specifically with a user-facing "Pip is busy, try again in a moment" message.
+   - **Fix fire-and-forget metadata updates** — `last_meeting` and `last_interaction_at` updates in useMeetings, useItems, and useContacts use `.then()` with no callback and no `.catch()`. Failures are completely silent. Add error logging at minimum; ideally surface a non-blocking warning.
+
+8. **Feature completeness:** *(audit in progress — will update)*
+
+9. **PWA / installability:**
+   - **Web manifest + icons** — no `manifest.json`, no app icons (192×192, 512×512), no `apple-touch-icon`. App cannot be installed to home screen. Add manifest via `vite-plugin-pwa` (already in the Vite ecosystem) with name, short_name, theme_color matching `C.bg` (#0D1F1C), and a PipMark-based icon.
+   - **Offline account cache** — all data requires live Supabase. At minimum, cache the accounts list and most recent meetings in localStorage so the app is readable in a spotty-signal parking lot before a call. Write-through on fetch, read from cache if network fails.
+   - **PWA meta tags** — add `<meta name="theme-color">` and `<meta name="apple-mobile-web-app-capable">` to `index.html` for correct iOS home screen behavior.
+
+10. **Developer experience:**
+    - **ESLint** — no config exists. Add `eslint` + `eslint-plugin-react` + `eslint-plugin-react-hooks` with a minimal config. The react-hooks rules would have caught several of the issues above (missing deps, components defined inside components). Add a `lint` script to package.json.
+    - **GitHub Actions CI** — no `.github/workflows` exists. A single lint-on-push workflow (lint + build) would catch broken builds before they reach Vercel. Low setup cost, high safety net value.
+    - **Vitest** — Vite projects get Vitest for free (same config, no Jest overhead). Not urgent, but worth adding when the codebase stabilizes — the utility functions in `src/lib/` (cadenceUtils, metricsUtils, regions) are pure functions that are easy to unit test.
+
 **Already shipped (drop from list):**
 - ✅ Quick Tasks — tray on main page, modal with account dropdown + reminder presets, Pip integration (surface open tasks on load, complete/add via natural language)
 - ✅ Sub-accounts — UI + migration (`parent_account_id` column live), nested display with faded ↳ arrow on accounts list
