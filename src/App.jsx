@@ -227,7 +227,7 @@ export default function App() {
   }
 
   if (view === "pip") {
-    mainContent = <PipView accounts={accounts} meetings={meetings} tasks={tasks} addTask={addTask} updateTask={updateTask} onAction={handlePipAction} revenueHistory={revenueHistory} shopMetrics={shopMetrics} />;
+    mainContent = <PipView accounts={accounts} meetings={meetings} tasks={tasks} addTask={addTask} updateTask={updateTask} onAction={handlePipAction} revenueHistory={revenueHistory} shopMetrics={shopMetrics} cadences={cadences} />;
   }
 
   if (view === "gauge") {

@@ -5,6 +5,7 @@ import { AmberBtn } from "../../components/Buttons";
 import { InputField } from "../../components/InputField";
 import { askPip } from "../../lib/pip";
 import { latestRecord, momPct, yoyPct, fmtRevenue, fmtPct } from "../../lib/metricsUtils";
+import { getNextOccurrence, getFrequencyLabel } from "../../lib/cadenceUtils";
 
 var STARTERS = [
   "Which accounts need my attention this week?",
@@ -26,7 +27,7 @@ function buildTasksGreeting(openTasks, accounts) {
   return "Hey — " + n + " quick tasks open:\n" + list + "\n\nWant to run through them or focus on something else?";
 }
 
-export function PipView({ accounts, meetings, tasks, addTask, updateTask, onAction, revenueHistory, shopMetrics }) {
+export function PipView({ accounts, meetings, tasks, addTask, updateTask, onAction, revenueHistory, shopMetrics, cadences }) {
   var openTasks = useMemo(function () {
     return (tasks || []).filter(function (t) { return !t.done; });
   }, [tasks]);
@@ -37,10 +38,46 @@ export function PipView({ accounts, meetings, tasks, addTask, updateTask, onActi
       text: "Hey. Ready when you are. What's going on with your accounts?",
     },
   ]);
-  var [input, setInput]     = useState("");
-  var [loading, setLoading] = useState(false);
-  var bottomRef             = useRef(null);
-  var taskMsgSet            = useRef(false);
+  var [input, setInput]           = useState("");
+  var [loading, setLoading]       = useState(false);
+  var [listening, setListening]   = useState(false);
+  var [audioEnabled, setAudio]    = useState(true);
+  var bottomRef                   = useRef(null);
+  var taskMsgSet                  = useRef(false);
+  var recognitionRef              = useRef(null);
+  var voiceSupported = typeof window !== "undefined" && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+
+  function startListening() {
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) return;
+    var r = new SR();
+    r.continuous = false;
+    r.interimResults = false;
+    r.lang = "en-US";
+    r.onstart  = function () { setListening(true); };
+    r.onend    = function () { setListening(false); };
+    r.onerror  = function () { setListening(false); };
+    r.onresult = function (e) {
+      var transcript = e.results[0][0].transcript;
+      setListening(false);
+      send(transcript);
+    };
+    recognitionRef.current = r;
+    r.start();
+  }
+
+  function stopListening() {
+    if (recognitionRef.current) recognitionRef.current.stop();
+    setListening(false);
+  }
+
+  function speak(text) {
+    if (!audioEnabled || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance(text);
+    u.rate = 1.05;
+    window.speechSynthesis.speak(u);
+  }
 
   useEffect(function () {
     if (taskMsgSet.current || openTasks.length === 0) return;
@@ -101,6 +138,18 @@ export function PipView({ accounts, meetings, tasks, addTask, updateTask, onActi
           notes:       t.notes || null,
           account:     acct ? acct.name : null,
           reminder_at: t.reminder_at || null,
+        };
+      }),
+      upcomingTaskCadences: (cadences || []).filter(function (c) { return c.type === "task"; }).map(function (c) {
+        var today = new Date(); today.setHours(0, 0, 0, 0);
+        var next  = getNextOccurrence(c, today);
+        var days  = next ? Math.round((next - today) / 86400000) : null;
+        return {
+          task:     c.task_title,
+          account:  c.folio_accounts ? c.folio_accounts.name : null,
+          schedule: getFrequencyLabel(c),
+          nextDue:  next ? next.toISOString().split("T")[0] : null,
+          daysUntil: days,
         };
       }),
     };
@@ -185,6 +234,7 @@ export function PipView({ accounts, meetings, tasks, addTask, updateTask, onActi
               actionResult: result,
             }]);
           });
+          speak(cleanText);
         });
       })
       .catch(function (err) {
@@ -243,8 +293,22 @@ export function PipView({ accounts, meetings, tasks, addTask, updateTask, onActi
         <div style={{ fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 4 }}>
           Pip
         </div>
-        <div style={{ fontSize: 12, color: C.textMuted }}>
-          Your account intelligence
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+          <div style={{ fontSize: 12, color: C.textMuted }}>Your account intelligence</div>
+          {voiceSupported && (
+            <button
+              onClick={function () { setAudio(function (v) { if (!v) window.speechSynthesis && window.speechSynthesis.cancel(); return !v; }); }}
+              title={audioEnabled ? "Mute Pip's voice" : "Unmute Pip's voice"}
+              style={{ background: "none", border: "none", cursor: "pointer", padding: "2px 4px", opacity: audioEnabled ? 1 : 0.4, lineHeight: 1 }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.textMuted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                {audioEnabled
+                  ? <><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></>
+                  : <><path d="M11 5L6 9H2v6h4l5 4V5z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></>
+                }
+              </svg>
+            </button>
+          )}
         </div>
       </div>
 
@@ -402,9 +466,30 @@ export function PipView({ accounts, meetings, tasks, addTask, updateTask, onActi
           value={input}
           onChange={function (e) { setInput(e.target.value); }}
           onKeyDown={handleKeyDown}
-          placeholder="Ask Pip anything about your accounts..."
+          placeholder={listening ? "Listening..." : "Ask Pip anything about your accounts..."}
           style={{ flex: 1 }}
         />
+        {voiceSupported && (
+          <button
+            onClick={listening ? stopListening : startListening}
+            className={listening ? "pip-pulse" : ""}
+            title={listening ? "Stop listening" : "Speak to Pip"}
+            style={{
+              width: 38, height: 38, borderRadius: "50%", flexShrink: 0,
+              background: listening ? "rgba(224,92,92,0.15)" : C.accentGlow,
+              border: "1px solid " + (listening ? "rgba(224,92,92,0.4)" : C.accentLine),
+              color: listening ? C.red : C.accent,
+              cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              {listening
+                ? <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none"/>
+                : <><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 19v3M8 22h8"/></>
+              }
+            </svg>
+          </button>
+        )}
         <AmberBtn
           onClick={function () { send(); }}
           disabled={loading || !input.trim()}
