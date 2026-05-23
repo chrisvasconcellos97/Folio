@@ -113,10 +113,17 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 ## Pending Updates
 
-1. **Quick Tasks** — fast capture for urgent, day-of items. "+ Quick Task" button on the main accounts page only. Tap it, add a title and optional details (customer name, phone, notes), optionally set a same-day reminder time. Tasks live in a lightweight tray on the main page — open tasks show above the accounts list, collapse when all done. Tap any task to expand, edit, mark done, or promote it into a full account/meeting. Designed for the "someone just called me and I can't do this right now" moment. Schema: `folio_quick_tasks` table with `id, user_id, title, notes, reminder_at, done, created_at`.
-2. **Sub-accounts migration** — UI and code are fully built. Just needs the `parent_account_id` column added in Supabase: `alter table folio_accounts add column if not exists parent_account_id uuid references folio_accounts(id);` — run this in the Supabase SQL editor to activate the feature.
+1. **Pipeline V2 + Revenue History + Shop Metrics** — one batch build, three connected pieces:
+   - **`folio_revenue_history`** table: `id, user_id, account_id, month int, year int, revenue numeric, created_at`. Unique on `(account_id, month, year)`. Monthly snapshots, upserted manually when Chris runs reports.
+   - **`folio_shop_metrics`** table: `id, user_id, account_id, month int, year int, connected int, integrated int, no_connection int, created_at`. Same pattern. Tracks shop connection status counts per supplier account per month.
+   - **Pipeline view redesign** — replaces current revenue bar view. Shows all accounts with MoM/YoY revenue deltas. Desktop: Recharts bar/line chart (12-month view). Mobile: table with MoM/YoY columns. "Log Month" entry mode for bulk monthly input.
+   - **Account detail** — new section showing that account's revenue history sparkline + MoM/YoY, and shop metrics counts with MoM deltas (Connected ↑2 / Integrated ↑4 / No Connection ↓1). Only shown if data exists for that account.
+   - **Pip context** — revenue trend and shop metrics fed into Pip system prompt per account for richer pre-call briefs.
+   - **Data entry workflow** — Chris runs monthly reports externally, pastes numbers into chat, Claude upserts rows directly via Supabase. No complex input UI needed for now.
 
 **Already shipped (drop from list):**
+- ✅ Quick Tasks — tray on main page, modal with account dropdown + reminder presets, Pip integration (surface open tasks on load, complete/add via natural language)
+- ✅ Sub-accounts — UI + migration (`parent_account_id` column live), nested display with faded ↳ arrow on accounts list
 - ✅ Pip Summarize with date range (30d / 90d / all time presets, saves to account)
 - ✅ Cadence (full nav item, per-account editor, calendar view, open items carry forward)
 - ✅ Last interaction tracking (`last_interaction_at` drives days counter on account cards)
