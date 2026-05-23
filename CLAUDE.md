@@ -180,6 +180,16 @@ This app is currently single-user but should be built with multi-tenancy in mind
     - **GitHub Actions CI** — no `.github/workflows` exists. A single lint-on-push workflow (lint + build) would catch broken builds before they reach Vercel. Low setup cost, high safety net value.
     - **Vitest** — Vite projects get Vitest for free (same config, no Jest overhead). Not urgent, but worth adding when the codebase stabilizes — the utility functions in `src/lib/` (cadenceUtils, metricsUtils, regions) are pure functions that are easy to unit test.
 
+11. **Native feel / micro-polish:**
+    - **Prevent overscroll bounce** — add `overscroll-behavior: none` to content scroll containers so iOS rubber-band doesn't expose the dark background behind the app.
+    - **Reset scroll on view change** — when navigating between views, scroll position stays wherever it was left. Reset to top on view change so you never land halfway down a new screen.
+    - **Remove tap highlight** — add `-webkit-tap-highlight-color: transparent` globally so tapping buttons/cards doesn't flash the default blue iOS highlight.
+    - **Active/pressed states** — interactive cards and nav buttons have no visual press feedback. Add subtle `opacity: 0.75` or `transform: scale(0.97)` on `:active` so every tap feels acknowledged.
+    - **Safe area insets** — on iPhone with notch/home bar, content can be obscured. Apply `padding-bottom: env(safe-area-inset-bottom)` to the bottom nav and `padding-top: env(safe-area-inset-top)` to the header.
+    - **Input font-size 16px minimum** — any `<input>` with `font-size < 16px` triggers iOS auto-zoom on focus, shifting the whole layout. Audit all inputs and enforce `font-size: 16px` minimum (can visually scale with `transform` if needed).
+    - **No text selection on UI chrome** — account names, labels, nav items, and buttons all highlight on long-press/drag. Add `user-select: none` to nav, headers, and card chrome; leave it on actual content (notes, emails).
+    - **Cursor consistency** — some interactive divs (chip dropdowns, calendar cells, account cards) are missing `cursor: pointer`. Audit and standardize.
+
 **Already shipped (drop from list):**
 - ✅ Quick Tasks — tray on main page, modal with account dropdown + reminder presets, Pip integration (surface open tasks on load, complete/add via natural language)
 - ✅ Sub-accounts — UI + migration (`parent_account_id` column live), nested display with faded ↳ arrow on accounts list
