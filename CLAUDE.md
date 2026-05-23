@@ -113,7 +113,9 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 ## Pending Updates
 
-1. **Pipeline V2 + Revenue History + Shop Metrics** — one batch build, three connected pieces:
+1. **Pip Voice Chat** — microphone button next to the send arrow in Pip's input bar. Tap to start listening (browser Web Speech API, free, no backend changes). Silence detection auto-sends. Pip's text response is also read aloud via browser SpeechSynthesis. Small speaker toggle to mute audio output. Mic button pulses while recording. Works hands-free — useful while driving between accounts. Start with free browser APIs; swap in ElevenLabs/Whisper later if voice quality needs improvement.
+
+2. **Pipeline V2 + Revenue History + Shop Metrics** — one batch build, three connected pieces:
    - **`folio_revenue_history`** table: `id, user_id, account_id, month int, year int, revenue numeric, created_at`. Unique on `(account_id, month, year)`. Monthly snapshots, upserted manually when Chris runs reports.
    - **`folio_shop_metrics`** table: `id, user_id, account_id, month int, year int, connected int, integrated int, no_connection int, created_at`. Same pattern. Tracks shop connection status counts per supplier account per month.
    - **Pipeline view redesign** — replaces current revenue bar view. Shows all accounts with MoM/YoY revenue deltas. Desktop: Recharts bar/line chart (12-month view). Mobile: table with MoM/YoY columns. "Log Month" entry mode for bulk monthly input.
