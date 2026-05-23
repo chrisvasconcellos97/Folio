@@ -4,9 +4,93 @@ import { AmberBtn, DangerBtn, SecBtn } from "../../../components/Buttons";
 import { Card } from "../../../components/Card";
 import { FL } from "../../../components/FieldLabel";
 import { PipMark } from "../../../components/PipMark";
+import { PipInsightCard } from "../../../components/PipInsightCard";
 import { callAskPip } from "../../../lib/pip";
+import { pickV } from "../../../lib/metricsUtils";
 
 var STARS = [1, 2, 3, 4, 5];
+
+function buildMeetingsInsight(meetings, accountName) {
+  var seed  = accountName + new Date().getDate().toString();
+  var today = new Date().toISOString().split("T")[0];
+
+  if (meetings.length === 0) {
+    return pickV(seed + "m0", [
+      "No meetings logged yet. Add the first one and I'll have a lot more to work with.",
+      "Nothing tracked here yet. Once you log a meeting, this tab gets a lot more useful.",
+    ]);
+  }
+
+  var sorted = meetings.slice().sort(function (a, b) {
+    return b.meeting_date > a.meeting_date ? 1 : -1;
+  });
+  var last = sorted[0];
+  var daysSinceLast = last.meeting_date
+    ? Math.floor((Date.now() - new Date(last.meeting_date + "T00:00:00").getTime()) / 86400000)
+    : null;
+
+  var parts = [];
+
+  // Lead — last meeting recency
+  if (daysSinceLast === null) {
+    parts.push(meetings.length + " meeting" + (meetings.length !== 1 ? "s" : "") + " logged for " + accountName + ".");
+  } else if (daysSinceLast < 7) {
+    parts.push(pickV(seed + "ml", [
+      "Just came out of a meeting with " + accountName + " — " + daysSinceLast + " day" + (daysSinceLast !== 1 ? "s" : "") + " ago. Fresh.",
+      "Last meeting was " + daysSinceLast + " day" + (daysSinceLast !== 1 ? "s" : "") + " ago. Good cadence here.",
+    ]));
+  } else if (daysSinceLast < 30) {
+    parts.push(pickV(seed + "ml", [
+      "Last meeting was " + daysSinceLast + " days ago. " + meetings.length + " logged in total — solid rhythm.",
+      meetings.length + " meeting" + (meetings.length !== 1 ? "s" : "") + " on record. Last one was " + daysSinceLast + " days back.",
+    ]));
+  } else if (daysSinceLast < 90) {
+    parts.push(pickV(seed + "ml", [
+      "It's been " + daysSinceLast + " days since the last logged meeting. Cadence is slowing down here.",
+      "Last meeting was " + daysSinceLast + " days ago — getting a bit quiet.",
+    ]));
+  } else {
+    parts.push(pickV(seed + "ml", [
+      "Over " + Math.floor(daysSinceLast / 30) + " months since the last logged meeting. That's a long gap.",
+      daysSinceLast + " days since the last entry here — worth scheduling something.",
+    ]));
+  }
+
+  // Secondary — avg rating if rated
+  var rated = meetings.filter(function (m) { return m.rating; });
+  if (rated.length > 0) {
+    var avg = rated.reduce(function (sum, m) { return sum + m.rating; }, 0) / rated.length;
+    if (avg >= 4) {
+      parts.push(pickV(seed + "mr", [
+        "Meetings have been rating well — " + avg.toFixed(1) + "/5 on average.",
+        "Avg rating of " + avg.toFixed(1) + "/5. Good quality conversations here.",
+      ]));
+    } else if (avg < 3) {
+      parts.push(pickV(seed + "mr", [
+        "Meeting quality is averaging " + avg.toFixed(1) + "/5. Worth checking what's not landing.",
+        "Ratings are trending low at " + avg.toFixed(1) + "/5. Something to look at.",
+      ]));
+    }
+  }
+
+  // Closing — overdue follow-ups or unsummarized
+  var overdueFU     = meetings.filter(function (m) { return m.follow_up_date && m.follow_up_date < today; });
+  var unsummarized  = meetings.filter(function (m) { return !m.pip_summary; });
+
+  if (overdueFU.length > 0) {
+    parts.push(pickV(seed + "mc", [
+      overdueFU.length + " follow-up" + (overdueFU.length !== 1 ? "s are" : " is") + " past due. Don't let those sit.",
+      overdueFU.length + " overdue follow-up" + (overdueFU.length !== 1 ? "s" : "") + " in here — address those before the next call.",
+    ]));
+  } else if (unsummarized.length > 0 && meetings.length > 1) {
+    parts.push(pickV(seed + "mc", [
+      unsummarized.length + " meeting" + (unsummarized.length !== 1 ? "s" : "") + " still without a Pip summary.",
+      unsummarized.length + " unsummarized — hit 'Ask Pip' when you have a moment.",
+    ]));
+  }
+
+  return parts.join(" ");
+}
 
 function CopyBtn({ text }) {
   var [copied, setCopied] = useState(false);
@@ -48,15 +132,10 @@ export function MeetingsTab({ meetings, accountName, onLogMeeting, onDelete, onU
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <PipInsightCard text={buildMeetingsInsight(meetings, accountName)} />
+
       {meetings.length === 0 && (
-        <div
-          style={{
-            textAlign: "center",
-            padding: "40px 20px",
-            color: C.textMuted,
-            fontSize: 13,
-          }}
-        >
+        <div style={{ textAlign: "center", padding: "40px 20px", color: C.textMuted, fontSize: 13 }}>
           No meetings logged yet.
         </div>
       )}
@@ -66,15 +145,7 @@ export function MeetingsTab({ meetings, accountName, onLogMeeting, onDelete, onU
         var pipErr    = pipErrors[m.id];
         return (
           <Card key={m.id}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-start",
-                marginBottom: 10,
-                gap: 12,
-              }}
-            >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10, gap: 12 }}>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 3 }}>
                   {m.title || "Meeting"}
@@ -94,82 +165,48 @@ export function MeetingsTab({ meetings, accountName, onLogMeeting, onDelete, onU
                 <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
                   {STARS.map(function (s) {
                     return (
-                      <span
-                        key={s}
-                        style={{ fontSize: 12, color: s <= m.rating ? C.yellow : C.textMuted }}
-                      >
-                        ★
-                      </span>
+                      <span key={s} style={{ fontSize: 12, color: s <= m.rating ? C.yellow : C.textMuted }}>★</span>
                     );
                   })}
                 </div>
               )}
             </div>
 
-            {/* Pip Summary */}
             {m.pip_summary && (
-              <div
-                style={{
-                  background: C.accentGlow,
-                  border: "1px solid rgba(74,155,130,0.2)",
-                  borderRadius: 10,
-                  padding: "10px 12px",
-                  marginBottom: 10,
-                }}
-              >
+              <div style={{ background: C.accentGlow, border: "1px solid rgba(74,155,130,0.2)", borderRadius: 10, padding: "10px 12px", marginBottom: 10 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
                   <PipMark size={7} color={C.accent} glow />
-                  <span
-                    style={{
-                      fontSize: 9,
-                      color: C.accent,
-                      fontWeight: 600,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.1em",
-                    }}
-                  >
-                    Pip Summary
-                  </span>
+                  <span style={{ fontSize: 9, color: C.accent, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em" }}>Pip Summary</span>
                 </div>
-                <div style={{ fontSize: 12, color: C.textSub, lineHeight: 1.65 }}>
-                  {m.pip_summary}
-                </div>
+                <div style={{ fontSize: 12, color: C.textSub, lineHeight: 1.65 }}>{m.pip_summary}</div>
               </div>
             )}
 
             {m.notes && (
               <div style={{ marginBottom: 10 }}>
                 <FL>Notes</FL>
-                <div style={{ fontSize: 12, color: C.textSub, lineHeight: 1.65, whiteSpace: "pre-wrap" }}>
-                  {m.notes}
-                </div>
+                <div style={{ fontSize: 12, color: C.textSub, lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{m.notes}</div>
               </div>
             )}
 
             {m.talking_points && (
               <div style={{ marginBottom: 10 }}>
                 <FL>Talking Points</FL>
-                <div style={{ fontSize: 12, color: C.textSub, lineHeight: 1.65, whiteSpace: "pre-wrap" }}>
-                  {m.talking_points}
-                </div>
+                <div style={{ fontSize: 12, color: C.textSub, lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{m.talking_points}</div>
               </div>
             )}
 
             {m.action_items && (
               <div style={{ marginBottom: 10 }}>
                 <FL>Action Items</FL>
-                <div style={{ fontSize: 12, color: C.yellow, lineHeight: 1.65, whiteSpace: "pre-wrap" }}>
-                  {m.action_items}
-                </div>
+                <div style={{ fontSize: 12, color: C.yellow, lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{m.action_items}</div>
               </div>
             )}
 
             {m.commitments && (
               <div style={{ marginBottom: 10 }}>
                 <FL>Commitments</FL>
-                <div style={{ fontSize: 12, color: C.blue, lineHeight: 1.65, whiteSpace: "pre-wrap" }}>
-                  {m.commitments}
-                </div>
+                <div style={{ fontSize: 12, color: C.blue, lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{m.commitments}</div>
               </div>
             )}
 
@@ -182,41 +219,21 @@ export function MeetingsTab({ meetings, accountName, onLogMeeting, onDelete, onU
               </div>
             )}
 
-            {/* Pip Follow-Up Email */}
             {m.pip_email && (
               <div style={{ marginBottom: 10 }}>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    marginBottom: 5,
-                  }}
-                >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <PipMark size={7} color={C.accent} glow />
                     <FL style={{ marginBottom: 0 }}>Draft Follow-Up Email</FL>
                   </div>
                   <CopyBtn text={m.pip_email} />
                 </div>
-                <div
-                  style={{
-                    background: "rgba(0,0,0,0.2)",
-                    border: "1px solid " + C.border,
-                    borderRadius: 8,
-                    padding: "10px 12px",
-                    fontSize: 12,
-                    color: C.textSub,
-                    lineHeight: 1.7,
-                    whiteSpace: "pre-wrap",
-                  }}
-                >
+                <div style={{ background: "rgba(0,0,0,0.2)", border: "1px solid " + C.border, borderRadius: 8, padding: "10px 12px", fontSize: 12, color: C.textSub, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
                   {m.pip_email}
                 </div>
               </div>
             )}
 
-            {/* Ask Pip — only if no summary yet */}
             {!m.pip_summary && onUpdateMeeting && (
               <div style={{ marginTop: 10 }}>
                 {pipErr && (
@@ -225,18 +242,7 @@ export function MeetingsTab({ meetings, accountName, onLogMeeting, onDelete, onU
                 <button
                   onClick={function () { handleAskPip(m); }}
                   disabled={isLoading}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    background: "none",
-                    border: "1px solid rgba(74,155,130,0.25)",
-                    borderRadius: 8,
-                    padding: "6px 12px",
-                    cursor: isLoading ? "not-allowed" : "pointer",
-                    opacity: isLoading ? 0.5 : 1,
-                    fontFamily: "'DM Sans', sans-serif",
-                  }}
+                  style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "1px solid rgba(74,155,130,0.25)", borderRadius: 8, padding: "6px 12px", cursor: isLoading ? "not-allowed" : "pointer", opacity: isLoading ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
                 >
                   <PipMark size={6} color={C.accent} glow pulse={isLoading} />
                   <span style={{ fontSize: 11, color: C.accent, fontWeight: 600 }}>
@@ -246,12 +252,9 @@ export function MeetingsTab({ meetings, accountName, onLogMeeting, onDelete, onU
               </div>
             )}
 
-            {(onDelete) && (
+            {onDelete && (
               <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
-                <DangerBtn
-                  onClick={function () { onDelete(m.id); }}
-                  style={{ fontSize: 11, padding: "5px 12px" }}
-                >
+                <DangerBtn onClick={function () { onDelete(m.id); }} style={{ fontSize: 11, padding: "5px 12px" }}>
                   Delete
                 </DangerBtn>
               </div>

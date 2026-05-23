@@ -273,6 +273,7 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
       {tab === "items" && (
         <ItemsTab
           items={items}
+          accountId={account.id}
           onClose={closeItem}
           onAdd={function () { setItemModal(true); }}
         />
@@ -281,6 +282,7 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
       {tab === "contacts" && (
         <ContactsTab
           contacts={contacts}
+          accountId={account.id}
           onAdd={function () { setContactModal(true); }}
           onDelete={deleteContact}
         />

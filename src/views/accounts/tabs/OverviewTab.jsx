@@ -9,7 +9,7 @@ import {
   latestRecord, accountRecords,
   momPct, yoyPct, momDelta,
   fmtRevenue, fmtPct, fmtDelta,
-  MONTH_NAMES,
+  MONTH_NAMES, pickV,
 } from "../../../lib/metricsUtils";
 
 var RANGES = [
@@ -17,11 +17,6 @@ var RANGES = [
   { label: "90 Days",  days: 90 },
   { label: "All Time", days: null },
 ];
-
-function pickV(seed, variants) {
-  var hash = seed.split("").reduce(function (acc, c) { return (acc * 31 + c.charCodeAt(0)) | 0; }, 0);
-  return variants[Math.abs(hash) % variants.length];
-}
 
 function buildPipInsight(account, openItems, revenueHistory, shopMetrics) {
   var rh = revenueHistory || [];

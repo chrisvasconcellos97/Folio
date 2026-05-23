@@ -67,3 +67,8 @@ export function fmtDelta(delta) {
 }
 
 export var MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+export function pickV(seed, variants) {
+  var hash = seed.split("").reduce(function (acc, c) { return (acc * 31 + c.charCodeAt(0)) | 0; }, 0);
+  return variants[Math.abs(hash) % variants.length];
+}

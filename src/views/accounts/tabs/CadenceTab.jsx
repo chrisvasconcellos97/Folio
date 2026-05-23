@@ -1,8 +1,80 @@
 import { useState, useEffect } from "react";
 import { C } from "../../../lib/colors";
 import { AmberBtn, SecBtn, DangerBtn } from "../../../components/Buttons";
+import { PipInsightCard } from "../../../components/PipInsightCard";
 import { SetCadenceModal } from "../../cadence/SetCadenceModal";
 import { getNextOccurrence, getFrequencyLabel, formatTime, daysUntil, formatDateFull } from "../../../lib/cadenceUtils";
+import { pickV } from "../../../lib/metricsUtils";
+
+function buildCadenceInsight(cadences, account) {
+  var seed  = (account.id || account.name) + new Date().getDate().toString();
+  var today = new Date(); today.setHours(0, 0, 0, 0);
+
+  var meetingCads = cadences.filter(function (c) { return c.type !== 'task'; });
+  var taskCads    = cadences.filter(function (c) { return c.type === 'task'; });
+
+  if (cadences.length === 0) {
+    return pickV(seed + "ca0", [
+      "No schedules set up yet. A cadence keeps you from going dark on this account.",
+      "Nothing scheduled here. Add a meeting cadence or a recurring task to stay on top of this one.",
+    ]);
+  }
+
+  var upcoming = cadences
+    .map(function (c) {
+      var next = getNextOccurrence(c, today);
+      return next ? { cadence: c, daysOut: Math.round((next - today) / 86400000) } : null;
+    })
+    .filter(Boolean)
+    .sort(function (a, b) { return a.daysOut - b.daysOut; });
+
+  var soonest = upcoming.length > 0 ? upcoming[0] : null;
+  var parts   = [];
+
+  // Lead — next occurrence urgency
+  if (soonest && soonest.daysOut <= 2) {
+    var lbl = soonest.cadence.type === 'task'
+      ? (soonest.cadence.task_title || "Recurring task")
+      : "Meeting";
+    parts.push(pickV(seed + "cal", [
+      lbl + " is " + (soonest.daysOut === 0 ? "today" : soonest.daysOut === 1 ? "tomorrow" : "in " + soonest.daysOut + " days") + ". Be ready.",
+      (soonest.daysOut === 0 ? "Today: " : soonest.daysOut === 1 ? "Tomorrow: " : "In " + soonest.daysOut + " days: ") + lbl + ".",
+    ]));
+  } else if (soonest && soonest.daysOut <= 7) {
+    var lbl2 = soonest.cadence.type === 'task'
+      ? (soonest.cadence.task_title || "Recurring task")
+      : "Meeting";
+    parts.push(pickV(seed + "cal", [
+      "Next up: " + lbl2 + " in " + soonest.daysOut + " day" + (soonest.daysOut !== 1 ? "s" : "") + ". Steady cadence.",
+      lbl2 + " coming in " + soonest.daysOut + " day" + (soonest.daysOut !== 1 ? "s" : "") + ".",
+    ]));
+  } else if (soonest) {
+    parts.push(pickV(seed + "cal", [
+      cadences.length + " schedule" + (cadences.length !== 1 ? "s" : "") + " active. Next up in " + soonest.daysOut + " days.",
+      "Cadence is set — " + soonest.daysOut + " days to the next one.",
+    ]));
+  } else {
+    parts.push(pickV(seed + "cal", [
+      cadences.length + " schedule" + (cadences.length !== 1 ? "s" : "") + " configured.",
+      "Got " + cadences.length + " cadence" + (cadences.length !== 1 ? "s" : "") + " running for this account.",
+    ]));
+  }
+
+  // Secondary — mix of types
+  if (meetingCads.length > 0 && taskCads.length > 0) {
+    parts.push(pickV(seed + "cas", [
+      meetingCads.length + " meeting cadence" + (meetingCads.length !== 1 ? "s" : "") + " and " + taskCads.length + " recurring task" + (taskCads.length !== 1 ? "s" : "") + ".",
+      "Mix of meetings and tasks scheduled — solid setup.",
+    ]));
+  } else if (taskCads.length > 0 && meetingCads.length === 0) {
+    parts.push(pickV(seed + "cas", [
+      "Only recurring tasks here — no meeting cadence set yet.",
+      taskCads.length + " recurring task" + (taskCads.length !== 1 ? "s" : "") + " tracked. Consider adding a meeting cadence too.",
+    ]));
+  }
+
+  return parts.join(" ");
+}
 
 function CadenceCard({ cad, today, confirmDeleteId, setConfirmDeleteId, onDeleteCadence, setEditingCad, setShowModal }) {
   var isTask  = cad.type === 'task';
@@ -96,6 +168,8 @@ export function CadenceTab({ account, cadences, items, meetings, contacts, onAdd
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+      <PipInsightCard text={buildCadenceInsight(cadences, account)} />
 
       {/* Cadences */}
       <div>
