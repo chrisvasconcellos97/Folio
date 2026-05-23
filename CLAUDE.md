@@ -130,6 +130,11 @@ This app is currently single-user but should be built with multi-tenancy in mind
    - **Pip context** — revenue trend and shop metrics fed into Pip system prompt per account for richer pre-call briefs.
    - **Data entry workflow** — Chris runs monthly reports externally, pastes numbers into chat, Claude upserts rows directly via Supabase. No complex input UI needed for now.
 
+3. **Performance — three targeted fixes:**
+   - **`useMemo` in AccountsView** — wrap the 6 chained filter/sort computations (availableTags, availableRegions, filtered, displayList, etc. — lines ~50–109) in `useMemo` keyed on their actual inputs. Prevents re-running on every keystroke in the search field.
+   - **Memoize insight builders** — all `buildXInsight()` calls (`buildPipInsight`, `buildMeetingsInsight`, `buildPipelineInsight`, `buildGlobalCadenceInsight`) run on every parent render. Wrap in `useMemo`; since the seed is date-based the result is stable per day. Prevents text flickering when unrelated state changes.
+   - **Fix index-based list keys in CadenceView** — lines 228, 260, 323 use loop index `j`/`i` as React keys. Replace with `ev.id` or a stable string to prevent incorrect remounts on reorder.
+
 **Already shipped (drop from list):**
 - ✅ Quick Tasks — tray on main page, modal with account dropdown + reminder presets, Pip integration (surface open tasks on load, complete/add via natural language)
 - ✅ Sub-accounts — UI + migration (`parent_account_id` column live), nested display with faded ↳ arrow on accounts list
