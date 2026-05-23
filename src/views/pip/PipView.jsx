@@ -4,6 +4,7 @@ import { PipMark } from "../../components/PipMark";
 import { AmberBtn } from "../../components/Buttons";
 import { InputField } from "../../components/InputField";
 import { askPip } from "../../lib/pip";
+import { latestRecord, momPct, yoyPct, fmtRevenue, fmtPct } from "../../lib/metricsUtils";
 
 var STARTERS = [
   "Which accounts need my attention this week?",
@@ -25,7 +26,7 @@ function buildTasksGreeting(openTasks, accounts) {
   return "Hey — " + n + " quick tasks open:\n" + list + "\n\nWant to run through them or focus on something else?";
 }
 
-export function PipView({ accounts, meetings, tasks, addTask, updateTask, onAction }) {
+export function PipView({ accounts, meetings, tasks, addTask, updateTask, onAction, revenueHistory, shopMetrics }) {
   var openTasks = useMemo(function () {
     return (tasks || []).filter(function (t) { return !t.done; });
   }, [tasks]);
@@ -54,8 +55,12 @@ export function PipView({ accounts, meetings, tasks, addTask, updateTask, onActi
   }, [messages]);
 
   function buildContext() {
+    var rh = revenueHistory || [];
+    var sm = shopMetrics    || [];
     return {
       accounts: accounts.map(function (a) {
+        var latest   = latestRecord(rh, a.id);
+        var shopLatest = latestRecord(sm, a.id);
         return {
           id:      a.id,
           name:    a.name,
@@ -64,6 +69,20 @@ export function PipView({ accounts, meetings, tasks, addTask, updateTask, onActi
           revenue: a.revenue,
           region:  a.region,
           tags:    a.tags,
+          revenueTrend: latest ? {
+            amount:    fmtRevenue(latest.revenue),
+            month:     latest.month,
+            year:      latest.year,
+            momPct:    momPct(rh, a.id, "revenue"),
+            yoyPct:    yoyPct(rh, a.id, "revenue"),
+          } : null,
+          shopConnections: shopLatest ? {
+            connected:    shopLatest.connected,
+            integrated:   shopLatest.integrated,
+            no_connection: shopLatest.no_connection,
+            month:        shopLatest.month,
+            year:         shopLatest.year,
+          } : null,
         };
       }),
       recentMeetings: meetings.slice(0, 10).map(function (m) {

@@ -23,7 +23,7 @@ var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red };
 var STATUS_LABELS = { green: "Healthy", yellow: "Watch", red: "At Risk" };
 var TIER_COLORS   = { Major: C.blue, Mid: C.purple, Growth: C.green };
 
-export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDelete, onUpdate, onSelectAccount, pipPrefill, onPipPrefillHandled }) {
+export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDelete, onUpdate, onSelectAccount, pipPrefill, onPipPrefillHandled, revenueHistory, shopMetrics }) {
   var [tab, setTab]               = useState("overview");
   var [showMeetingModal, setMeetingModal] = useState(false);
   var [showQuickModal, setQuickModal]     = useState(false);
@@ -254,6 +254,8 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
           }}
           subAccounts={subAccounts}
           onSelectAccount={onSelectAccount}
+          revenueHistory={revenueHistory || []}
+          shopMetrics={shopMetrics || []}
         />
       )}
 

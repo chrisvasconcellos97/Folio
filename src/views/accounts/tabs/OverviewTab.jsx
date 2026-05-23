@@ -5,6 +5,12 @@ import { AmberBtn, SecBtn } from "../../../components/Buttons";
 import { Card } from "../../../components/Card";
 import { FL } from "../../../components/FieldLabel";
 import { callAskPip } from "../../../lib/pip";
+import {
+  latestRecord, accountRecords,
+  momPct, yoyPct, momDelta,
+  fmtRevenue, fmtPct, fmtDelta,
+  MONTH_NAMES,
+} from "../../../lib/metricsUtils";
 
 var RANGES = [
   { label: "30 Days",  days: 30 },
@@ -36,7 +42,39 @@ function pipStatusLine(account, openCount) {
   );
 }
 
-export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLogMeeting, onAddItem, onSaveSummary, subAccounts, onSelectAccount }) {
+function pctColor(pct) {
+  if (pct === null || pct === undefined) return C.textMuted;
+  return pct >= 0 ? C.green : C.red;
+}
+
+function MiniSparkline({ records }) {
+  if (!records || records.length === 0) return null;
+  var last12  = records.slice(-12);
+  var maxRev  = Math.max.apply(null, last12.map(function (r) { return r.revenue; }));
+  if (maxRev === 0) return null;
+  return (
+    <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 18, marginTop: 8 }}>
+      {last12.map(function (r, i) {
+        var h      = Math.max(2, Math.round((r.revenue / maxRev) * 18));
+        var isLast = i === last12.length - 1;
+        return (
+          <div
+            key={i}
+            title={MONTH_NAMES[r.month - 1] + " " + r.year + ": " + fmtRevenue(r.revenue)}
+            style={{
+              flex: 1, height: h,
+              background: isLast ? C.accent : C.accentDim,
+              borderRadius: 1,
+              opacity: isLast ? 0.9 : 0.4,
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLogMeeting, onAddItem, onSaveSummary, subAccounts, onSelectAccount, revenueHistory, shopMetrics }) {
   var [range, setRange]       = useState(RANGES[0]);
   var [generating, setGen]    = useState(false);
   var [pipError, setPipError] = useState(null);
@@ -242,6 +280,88 @@ export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLo
           </div>
         </Card>
       </div>
+
+      {/* Revenue trend */}
+      {(function () {
+        var rh      = revenueHistory || [];
+        var sm      = shopMetrics || [];
+        var latest  = latestRecord(rh, account.id);
+        var records = accountRecords(rh, account.id);
+        var mom     = momPct(rh, account.id, "revenue");
+        var yoy     = yoyPct(rh, account.id, "revenue");
+        var latestShop = latestRecord(sm, account.id);
+        var smMomConn = latestShop ? momDelta(sm, account.id, "connected")     : null;
+        var smMomIntg = latestShop ? momDelta(sm, account.id, "integrated")    : null;
+        var smMomNoc  = latestShop ? momDelta(sm, account.id, "no_connection") : null;
+        var monthLabel = latest ? MONTH_NAMES[latest.month - 1] + " " + latest.year : "";
+        var shopLabel  = latestShop ? MONTH_NAMES[latestShop.month - 1] + " " + latestShop.year : "";
+        var total      = latestShop ? latestShop.connected + latestShop.integrated + latestShop.no_connection : 0;
+
+        return (
+          <>
+            {latest && (
+              <Card>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 2 }}>
+                  <FL>Revenue Trend</FL>
+                  <div style={{ fontSize: 9, color: C.textMuted }}>{monthLabel}</div>
+                </div>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 4 }}>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: C.accent, fontVariantNumeric: "tabular-nums" }}>
+                    {fmtRevenue(latest.revenue)}
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {mom !== null && (
+                      <span style={{ fontSize: 11, fontWeight: 600, color: pctColor(mom) }}>{fmtPct(mom)} MoM</span>
+                    )}
+                    {yoy !== null && (
+                      <span style={{ fontSize: 11, fontWeight: 600, color: pctColor(yoy) }}>{fmtPct(yoy)} YoY</span>
+                    )}
+                  </div>
+                </div>
+                <MiniSparkline records={records} />
+              </Card>
+            )}
+
+            {latestShop && (
+              <Card>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                  <FL>Shop Connections</FL>
+                  <div style={{ fontSize: 9, color: C.textMuted }}>{total} total · {shopLabel}</div>
+                </div>
+                {[
+                  { label: "Connected",     key: "connected",     color: C.yellow, delta: smMomConn },
+                  { label: "Integrated",    key: "integrated",    color: C.green,  delta: smMomIntg },
+                  { label: "No Connection", key: "no_connection", color: C.red,    delta: smMomNoc  },
+                ].map(function (row) {
+                  var val = latestShop[row.key];
+                  var pct = total > 0 ? Math.round((val / total) * 100) : 0;
+                  return (
+                    <div key={row.key} style={{ marginBottom: 7 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <div style={{ width: 6, height: 6, borderRadius: "50%", background: row.color, opacity: 0.8 }} />
+                          <span style={{ fontSize: 12, color: C.textSub }}>{row.label}</span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          {row.delta !== null && row.delta !== undefined && (
+                            <span style={{ fontSize: 11, fontWeight: 600, color: row.key === "no_connection" ? pctColor(-row.delta) : pctColor(row.delta) }}>
+                              {fmtDelta(row.delta)} MoM
+                            </span>
+                          )}
+                          <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontVariantNumeric: "tabular-nums", minWidth: 24, textAlign: "right" }}>{val}</span>
+                        </div>
+                      </div>
+                      <div style={{ height: 3, background: C.bgDark, borderRadius: 2, overflow: "hidden" }}>
+                        <div style={{ width: pct + "%", height: "100%", background: row.color, borderRadius: 2, opacity: 0.6 }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </Card>
+            )}
+          </>
+        );
+      })()}
 
       {/* Actions */}
       <div style={{ display: "flex", gap: 8 }}>

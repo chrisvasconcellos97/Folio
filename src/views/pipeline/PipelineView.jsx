@@ -1,45 +1,77 @@
 import { C } from "../../lib/colors";
 import { PipMark } from "../../components/PipMark";
 import { Pill } from "../../components/Pill";
+import {
+  latestRecord, accountRecords,
+  momPct, yoyPct,
+  fmtRevenue, fmtPct,
+  MONTH_NAMES,
+} from "../../lib/metricsUtils";
 
-var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red };
-var STATUS_LABELS = { green: "Healthy", yellow: "Watch", red: "At Risk" };
-var TIER_COLORS   = { Major: C.blue, Mid: C.purple, Growth: C.green };
+var TIER_COLORS = { Major: C.blue, Mid: C.purple, Growth: C.green };
 
-function parseRevenue(str) {
-  if (!str) return 0;
-  var n = parseFloat(str.replace(/[^0-9.]/g, ""));
-  if (str.toUpperCase().includes("B")) return n * 1000;
-  if (str.toUpperCase().includes("M")) return n;
-  if (str.toUpperCase().includes("K")) return n / 1000;
-  return n;
+function pctColor(pct) {
+  if (pct === null || pct === undefined) return C.textMuted;
+  return pct >= 0 ? C.green : C.red;
 }
 
-function pipAnalysis(accounts) {
-  var atRisk = accounts.filter(function (a) { return a.status === "red"; });
-  var total  = accounts.reduce(function (sum, a) { return sum + parseRevenue(a.revenue); }, 0);
-  if (atRisk.length === 0) {
-    return "Book looks clean right now. All accounts are healthy or on watch. I'd keep an eye on the Watch ones but nothing's on fire.";
-  }
-  var names = atRisk.map(function (a) { return a.name; }).join(" and ");
-  var pct   = total > 0
-    ? Math.round(
-        (atRisk.reduce(function (s, a) { return s + parseRevenue(a.revenue); }, 0) / total) * 100
-      )
-    : 0;
+function Sparkline({ records }) {
+  if (!records || records.length === 0) return null;
+  var last12  = records.slice(-12);
+  var maxRev  = Math.max.apply(null, last12.map(function (r) { return r.revenue; }));
+  if (maxRev === 0) return null;
+
   return (
-    atRisk.length +
-    " account" +
-    (atRisk.length > 1 ? "s" : "") +
-    " at risk — " +
-    names +
-    ". That's " +
-    pct +
-    "% of your book. Worth prioritizing before things slip further."
+    <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 22, marginTop: 10 }}>
+      {last12.map(function (r, i) {
+        var h      = Math.max(2, Math.round((r.revenue / maxRev) * 22));
+        var isLast = i === last12.length - 1;
+        return (
+          <div
+            key={i}
+            title={MONTH_NAMES[r.month - 1] + " " + r.year + ": " + fmtRevenue(r.revenue)}
+            style={{
+              flex: 1,
+              height: h,
+              background: isLast ? C.accent : C.accentDim,
+              borderRadius: 1,
+              opacity: isLast ? 0.9 : 0.45,
+            }}
+          />
+        );
+      })}
+    </div>
   );
 }
 
-export function PipelineView({ accounts, loading }) {
+function pipAnalysis(accounts, revenueHistory) {
+  var withData = accounts.filter(function (a) { return latestRecord(revenueHistory, a.id) !== null; });
+
+  if (withData.length === 0) {
+    return "No revenue history yet. Once you log the first month for any account, I can start tracking trends and flagging what's moving.";
+  }
+
+  var momValues = withData
+    .map(function (a) { return momPct(revenueHistory, a.id, "revenue"); })
+    .filter(function (p) { return p !== null; });
+  var avgMoM = momValues.length > 0
+    ? Math.round(momValues.reduce(function (s, p) { return s + p; }, 0) / momValues.length)
+    : null;
+  var down = momValues.filter(function (p) { return p < 0; }).length;
+
+  var parts = [withData.length + " of " + accounts.length + " accounts reporting."];
+  if (avgMoM !== null) {
+    parts.push("Book is " + (avgMoM >= 0 ? "up" : "down") + " " + Math.abs(avgMoM) + "% MoM on average.");
+  }
+  if (down > 0) {
+    parts.push(down + " account" + (down !== 1 ? "s" : "") + " trending down — worth a look.");
+  } else if (momValues.length > 0) {
+    parts.push("Everything with data is trending up. Don't jinx it.");
+  }
+  return parts.join(" ");
+}
+
+export function PipelineView({ accounts, loading, revenueHistory, shopMetrics }) {
   if (loading) {
     return (
       <div style={{ textAlign: "center", padding: "40px 0", color: C.textMuted, fontSize: 13 }}>
@@ -48,12 +80,14 @@ export function PipelineView({ accounts, loading }) {
     );
   }
 
-  var sorted = accounts
-    .slice()
-    .sort(function (a, b) { return parseRevenue(b.revenue) - parseRevenue(a.revenue); });
+  revenueHistory = revenueHistory || [];
 
-  var max = sorted.length > 0 ? parseRevenue(sorted[0].revenue) : 1;
-  if (max === 0) max = 1;
+  var withData    = accounts.filter(function (a) { return latestRecord(revenueHistory, a.id) !== null; });
+  var withoutData = accounts.filter(function (a) { return latestRecord(revenueHistory, a.id) === null; });
+
+  withData.sort(function (a, b) {
+    return latestRecord(revenueHistory, b.id).revenue - latestRecord(revenueHistory, a.id).revenue;
+  });
 
   return (
     <div>
@@ -67,51 +101,25 @@ export function PipelineView({ accounts, loading }) {
           marginBottom: 16,
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            marginBottom: 10,
-          }}
-        >
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
           <PipMark size={9} color={C.accent} glow pulse />
-          <div
-            style={{
-              fontSize: 10,
-              color: C.accent,
-              fontWeight: 600,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-            }}
-          >
+          <div style={{ fontSize: 10, color: C.accent, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>
             Pip — Pipeline Health
           </div>
         </div>
         <div style={{ fontSize: 13, color: C.textSub, lineHeight: 1.65 }}>
-          {pipAnalysis(accounts)}
+          {pipAnalysis(accounts, revenueHistory)}
         </div>
       </div>
 
-      {/* Revenue bars */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {sorted.length === 0 && (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "40px 20px",
-              color: C.textMuted,
-              fontSize: 13,
-            }}
-          >
-            No accounts yet.
-          </div>
-        )}
-
-        {sorted.map(function (a) {
-          var rev        = parseRevenue(a.revenue);
-          var barWidth   = max > 0 ? (rev / max) * 100 : 0;
-          var statusColor = STATUS_COLORS[a.status] || C.textSub;
+        {/* Accounts with revenue history */}
+        {withData.map(function (a) {
+          var latest     = latestRecord(revenueHistory, a.id);
+          var mom        = momPct(revenueHistory, a.id, "revenue");
+          var yoy        = yoyPct(revenueHistory, a.id, "revenue");
+          var records    = accountRecords(revenueHistory, a.id);
+          var monthLabel = latest ? MONTH_NAMES[latest.month - 1] + " " + latest.year : "";
 
           return (
             <div
@@ -123,71 +131,75 @@ export function PipelineView({ accounts, loading }) {
                 padding: "12px 14px",
               }}
             >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: 10,
-                  gap: 10,
-                }}
-              >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div style={{ flex: 1 }}>
-                  <div
-                    style={{
-                      fontSize: 13,
-                      fontWeight: 500,
-                      color: C.text,
-                      marginBottom: 4,
-                    }}
-                  >
-                    {a.name}
-                  </div>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    {a.tier && (
-                      <Pill color={TIER_COLORS[a.tier] || C.textSub} style={{ fontSize: 9 }}>
-                        {a.tier}
-                      </Pill>
-                    )}
-                    <Pill color={statusColor} style={{ fontSize: 9 }}>
-                      {STATUS_LABELS[a.status] || a.status}
-                    </Pill>
-                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 5 }}>{a.name}</div>
+                  {a.tier && (
+                    <Pill color={TIER_COLORS[a.tier] || C.textSub} style={{ fontSize: 9 }}>{a.tier}</Pill>
+                  )}
                 </div>
-                <div
-                  style={{
-                    fontSize: 15,
-                    fontWeight: 700,
-                    color: C.accent,
-                    flexShrink: 0,
-                    fontVariantNumeric: "tabular-nums",
-                  }}
-                >
-                  {a.revenue || "—"}
+                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: C.accent, fontVariantNumeric: "tabular-nums" }}>
+                    {fmtRevenue(latest ? latest.revenue : null)}
+                  </div>
+                  <div style={{ fontSize: 9, color: C.textMuted, marginBottom: 5 }}>{monthLabel}</div>
+                  <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                    {mom !== null && (
+                      <span style={{ fontSize: 11, fontWeight: 600, color: pctColor(mom) }}>
+                        {fmtPct(mom)} MoM
+                      </span>
+                    )}
+                    {yoy !== null && (
+                      <span style={{ fontSize: 11, fontWeight: 600, color: pctColor(yoy) }}>
+                        {fmtPct(yoy)} YoY
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
+              <Sparkline records={records} />
+            </div>
+          );
+        })}
 
-              <div
-                style={{
-                  height: 5,
-                  background: C.bgDark,
-                  borderRadius: 3,
-                  overflow: "hidden",
-                }}
-              >
-                <div
-                  style={{
-                    width: barWidth + "%",
-                    height: "100%",
-                    background: statusColor,
-                    borderRadius: 3,
-                    opacity: 0.75,
-                  }}
-                />
+        {/* Divider */}
+        {withoutData.length > 0 && withData.length > 0 && (
+          <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", padding: "6px 2px 2px" }}>
+            No history yet
+          </div>
+        )}
+
+        {/* Accounts without revenue history */}
+        {withoutData.map(function (a) {
+          return (
+            <div
+              key={a.id}
+              style={{
+                background: C.bgCard,
+                border: "1px solid " + C.border,
+                borderRadius: 12,
+                padding: "12px 14px",
+                opacity: 0.55,
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: C.textSub, marginBottom: 5 }}>{a.name}</div>
+                  {a.tier && (
+                    <Pill color={TIER_COLORS[a.tier] || C.textSub} style={{ fontSize: 9 }}>{a.tier}</Pill>
+                  )}
+                </div>
+                <div style={{ fontSize: 11, color: C.textMuted }}>No data yet</div>
               </div>
             </div>
           );
         })}
+
+        {accounts.length === 0 && (
+          <div style={{ textAlign: "center", padding: "40px 20px", color: C.textMuted, fontSize: 13 }}>
+            No accounts yet.
+          </div>
+        )}
       </div>
     </div>
   );

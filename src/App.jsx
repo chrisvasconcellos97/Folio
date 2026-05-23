@@ -4,6 +4,7 @@ import { useAccounts } from "./hooks/useAccounts";
 import { useMeetings } from "./hooks/useMeetings";
 import { useCadences } from "./hooks/useCadences";
 import { useQuickTasks } from "./hooks/useQuickTasks";
+import { useAccountMetrics } from "./hooks/useAccountMetrics";
 import { AuthView } from "./views/auth/AuthView";
 import { AccountsView } from "./views/accounts/AccountsView";
 import { AccountDetail } from "./views/accounts/AccountDetail";
@@ -74,6 +75,7 @@ export default function App() {
   var { meetings, loading: meetLoading } = useMeetings(userId);
   var { cadences, addCadence } = useCadences(userId);
   var { tasks, addTask, updateTask, deleteTask } = useQuickTasks(userId);
+  var { revenueHistory, shopMetrics, upsertRevenue, upsertShopMetrics } = useAccountMetrics(userId);
 
   function handleSelectAccount(a) {
     setSelected(a);
@@ -190,6 +192,8 @@ export default function App() {
           onSelectAccount={function (acct) { setSelected(acct); }}
           pipPrefill={pipPrefill}
           onPipPrefillHandled={function () { setPipPrefill(null); }}
+          revenueHistory={revenueHistory}
+          shopMetrics={shopMetrics}
         />
       );
     } else if (!isDesktop) {
@@ -219,11 +223,11 @@ export default function App() {
   }
 
   if (view === "pipeline") {
-    mainContent = <PipelineView accounts={accounts} loading={acctLoading} />;
+    mainContent = <PipelineView accounts={accounts} loading={acctLoading} revenueHistory={revenueHistory} shopMetrics={shopMetrics} />;
   }
 
   if (view === "pip") {
-    mainContent = <PipView accounts={accounts} meetings={meetings} tasks={tasks} addTask={addTask} updateTask={updateTask} onAction={handlePipAction} />;
+    mainContent = <PipView accounts={accounts} meetings={meetings} tasks={tasks} addTask={addTask} updateTask={updateTask} onAction={handlePipAction} revenueHistory={revenueHistory} shopMetrics={shopMetrics} />;
   }
 
   if (view === "gauge") {
