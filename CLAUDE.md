@@ -190,6 +190,12 @@ This app is currently single-user but should be built with multi-tenancy in mind
     - **No text selection on UI chrome** — account names, labels, nav items, and buttons all highlight on long-press/drag. Add `user-select: none` to nav, headers, and card chrome; leave it on actual content (notes, emails).
     - **Cursor consistency** — some interactive divs (chip dropdowns, calendar cells, account cards) are missing `cursor: pointer`. Audit and standardize.
 
+12. **Motion design / transitions:**
+    - **Slide direction** — navigation should feel spatial: going "forward" (accounts → detail, list → tab) slides content in from the right; going "back" slides from the left. Track nav direction in state and apply `slideInRight` vs `slideInLeft` keyframes instead of the generic fade. Makes the app feel like real pages, not just swaps.
+    - **Mobile sheet modals** — on mobile breakpoint, modals should slide up from the bottom like a native iOS sheet instead of appearing centered on screen. One CSS change to `src/components/Modal.jsx` conditioned on viewport width.
+    - **Staggered list load** — account cards, meeting rows, and contact entries animate in one-by-one with a 50ms CSS `animation-delay` between each item when a view loads. Done with CSS `animation-delay` (not JS timers) so it's GPU-free and doesn't stutter.
+    - **Directional back transition** — navigating back from account detail fades + slides right (reverse of forward). Requires knowing the transition direction, which the slide direction work above will already track.
+
 **Already shipped (drop from list):**
 - ✅ Quick Tasks — tray on main page, modal with account dropdown + reminder presets, Pip integration (surface open tasks on load, complete/add via natural language)
 - ✅ Sub-accounts — UI + migration (`parent_account_id` column live), nested display with faded ↳ arrow on accounts list
