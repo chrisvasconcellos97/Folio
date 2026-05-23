@@ -1,6 +1,7 @@
 import { C } from "../../lib/colors";
 import { PipMark } from "../../components/PipMark";
 import { PipInsightCard } from "../../components/PipInsightCard";
+import { PipLoader } from "../../components/PipLoader";
 import { Card } from "../../components/Card";
 import { FL } from "../../components/FieldLabel";
 import { pickV } from "../../lib/metricsUtils";
@@ -83,8 +84,8 @@ export function MeetingsView({ meetings, loading }) {
 
   if (loading) {
     return (
-      <div style={{ textAlign: "center", padding: "40px 0", color: C.textMuted, fontSize: 13 }}>
-        Loading meetings...
+      <div>
+        <PipLoader />
       </div>
     );
   }

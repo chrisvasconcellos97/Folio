@@ -1,5 +1,6 @@
 import { C } from "../../lib/colors";
 import { PipInsightCard } from "../../components/PipInsightCard";
+import { PipLoader } from "../../components/PipLoader";
 import { Pill } from "../../components/Pill";
 import {
   latestRecord, accountRecords,
@@ -110,11 +111,7 @@ function buildPipelineInsight(accounts, revenueHistory) {
 
 export function PipelineView({ accounts, loading, revenueHistory, shopMetrics }) {
   if (loading) {
-    return (
-      <div style={{ textAlign: "center", padding: "40px 0", color: C.textMuted, fontSize: 13 }}>
-        Loading pipeline...
-      </div>
-    );
+    return <PipLoader />;
   }
 
   revenueHistory = revenueHistory || [];

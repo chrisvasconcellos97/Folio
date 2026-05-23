@@ -3,6 +3,7 @@ import { C } from "../../lib/colors";
 import { GaugeIcon } from "../../components/GaugeIcon";
 import { useProjects } from "../../hooks/useProjects";
 import { ProjectModal } from "./ProjectModal";
+import { PipLoader } from "../../components/PipLoader";
 
 var STATUS_COLORS = {
   active:    C.blue,
@@ -225,11 +226,7 @@ export function GaugeView({ userId, accounts }) {
       </div>
 
       {/* Project list */}
-      {loading && (
-        <div style={{ textAlign: "center", padding: "40px 0", color: C.textMuted, fontSize: 13 }}>
-          Loading projects…
-        </div>
-      )}
+      {loading && <PipLoader />}
 
       {!loading && filtered.length === 0 && (
         <div

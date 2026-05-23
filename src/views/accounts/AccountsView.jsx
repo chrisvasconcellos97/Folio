@@ -4,6 +4,7 @@ import { Pill } from "../../components/Pill";
 import { InputField } from "../../components/InputField";
 import { Card } from "../../components/Card";
 import { PipMark } from "../../components/PipMark";
+import { PipLoader } from "../../components/PipLoader";
 import { QuickTaskModal } from "../quicktasks/QuickTaskModal";
 
 var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red };
@@ -421,14 +422,7 @@ export function AccountsView({ accounts, loading, onSelect, tasks, addTask, upda
 
       {/* Account list */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {loading && (
-          <>
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-          </>
-        )}
+        {loading && <PipLoader height={300} />}
 
         {!loading && filtered.length === 0 && (
           <div style={{ textAlign: "center", padding: "40px 20px", color: C.textMuted, fontSize: 13 }}>

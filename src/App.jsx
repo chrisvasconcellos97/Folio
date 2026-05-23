@@ -139,16 +139,16 @@ export default function App() {
 
   if (authLoading) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          background: C.bg,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <PipMark size={18} color={C.accent} glow pulse />
+      <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div className="pip-sonar" style={{
+          width: 52, height: 52, borderRadius: "50%",
+          background: C.accentGlow,
+          border: "1px solid rgba(74,155,130,0.4)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          boxShadow: "0 0 20px rgba(74,155,130,0.22)",
+        }}>
+          <PipMark size={14} color={C.accent} glow pulse />
+        </div>
       </div>
     );
   }
