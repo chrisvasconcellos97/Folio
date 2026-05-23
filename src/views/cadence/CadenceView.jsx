@@ -465,6 +465,16 @@ export function CadenceView({ cadences, accounts, onSelectAccount, addCadence })
       {viewMode === 'list' && (
         <ListView cadences={cadences} onSelectAccount={onSelectAccount} />
       )}
+
+      {showAddModal && (
+        <SetCadenceModal
+          accounts={accounts}
+          onSave={function (data) {
+            return addCadence(data).then(function () { setShowAddModal(false); });
+          }}
+          onClose={function () { setShowAddModal(false); }}
+        />
+      )}
     </div>
   );
 }
