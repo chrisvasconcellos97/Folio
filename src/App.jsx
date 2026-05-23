@@ -103,7 +103,7 @@ export default function App() {
       } else if (action.type === "open_meeting") {
         setPipPrefill({ tab: "meetings", modal: "log_meeting" });
       } else if (action.type === "open_item") {
-        setPipPrefill({ tab: "items", modal: "add_item" });
+        setPipPrefill({ tab: "tasks", modal: "add_item" });
       } else if (action.type === "open_contact") {
         setPipPrefill({ tab: "contacts", modal: "add_contact" });
       }

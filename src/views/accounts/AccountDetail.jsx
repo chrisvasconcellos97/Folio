@@ -18,7 +18,7 @@ import { QuickMeetingModal } from "./QuickMeetingModal";
 import { AddItemModal } from "./AddItemModal";
 import { AddContactModal } from "./AddContactModal";
 
-var TABS = ["overview", "meetings", "items", "contacts", "cadence", "projects"];
+var TABS = ["overview", "meetings", "tasks", "contacts", "cadence", "projects"];
 var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red };
 var STATUS_LABELS = { green: "Healthy", yellow: "Watch", red: "At Risk" };
 var TIER_COLORS   = { Major: C.blue, Mid: C.purple, Growth: C.green };
@@ -270,12 +270,14 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
         />
       )}
 
-      {tab === "items" && (
+      {tab === "tasks" && (
         <ItemsTab
           items={items}
+          taskCadences={cadences.filter(function (c) { return c.type === 'task'; })}
           accountId={account.id}
           onClose={closeItem}
           onAdd={function () { setItemModal(true); }}
+          onGoToCadence={function () { setTab("cadence"); }}
         />
       )}
 
