@@ -483,7 +483,13 @@ export function CadenceView({ cadences, accounts, onSelectAccount, addCadence })
           <SetCadenceModal
             accounts={accounts}
             onSave={function (data) {
-              return addCadence(data).then(function () { setShowAddModal(false); });
+              var ids = data.account_ids;
+              var rest = Object.assign({}, data);
+              delete rest.account_ids;
+              var saves = ids
+                ? ids.map(function (id) { return addCadence(Object.assign({}, rest, { account_id: id })); })
+                : [addCadence(data)];
+              return Promise.all(saves).then(function () { setShowAddModal(false); });
             }}
             onClose={function () { setShowAddModal(false); }}
           />
@@ -536,7 +542,13 @@ export function CadenceView({ cadences, accounts, onSelectAccount, addCadence })
         <SetCadenceModal
           accounts={accounts}
           onSave={function (data) {
-            return addCadence(data).then(function () { setShowAddModal(false); });
+            var ids = data.account_ids;
+            var rest = Object.assign({}, data);
+            delete rest.account_ids;
+            var saves = ids
+              ? ids.map(function (id) { return addCadence(Object.assign({}, rest, { account_id: id })); })
+              : [addCadence(data)];
+            return Promise.all(saves).then(function () { setShowAddModal(false); });
           }}
           onClose={function () { setShowAddModal(false); }}
         />

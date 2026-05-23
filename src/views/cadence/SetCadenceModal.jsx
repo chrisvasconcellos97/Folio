@@ -50,7 +50,9 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues, acco
   var [anchorDate,    setAnchorDate]    = useState(seed.anchor_date  || lastOccurrenceOf(seed.day_of_week ?? 1));
   var [monthlyType,   setMonthlyType]   = useState(seed.monthly_type    || 'day_of_month');
   var [monthlyOrdinal, setMonthlyOrdinal] = useState(seed.monthly_ordinal || 'first');
-  var [selectedAccountId, setSelectedAccountId] = useState(null);
+  var [selectedAccountId,  setSelectedAccountId]  = useState(null);
+  var [selectedAccountIds, setSelectedAccountIds] = useState([]);
+  var [acctDropOpen,       setAcctDropOpen]       = useState(false);
   var [defaultAttendees, setDefaultAttendees]   = useState(existing ? (existing.default_attendees || []) : []);
   var [hour,   setHour]   = useState(init.hour);
   var [minute, setMinute] = useState(init.minute);
@@ -58,6 +60,12 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues, acco
   var [notes,  setNotes]  = useState(existing ? (existing.notes || '') : '');
   var [loading, setLoading] = useState(false);
   var [error,   setError]   = useState(null);
+
+  function toggleAccountId(id) {
+    setSelectedAccountIds(function (prev) {
+      return prev.includes(id) ? prev.filter(function (a) { return a !== id; }) : prev.concat([id]);
+    });
+  }
 
   useEffect(function () {
     if (frequency === 'biweekly') setAnchorDate(lastOccurrenceOf(dayOfWeek));
@@ -70,12 +78,14 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues, acco
   }
 
   function handleSave() {
-    if (accounts && !selectedAccountId) { setError("Please select an account."); return; }
+    var isMultiTask = accounts && type === 'task';
+    if (accounts && type === 'meeting' && !selectedAccountId) { setError("Please select an account."); return; }
+    if (isMultiTask && selectedAccountIds.length === 0) { setError("Please select at least one account."); return; }
     if (type === 'task' && !taskTitle.trim()) { setError("Task description is required."); return; }
     setLoading(true);
     setError(null);
     var isOrdinalMonthly = frequency === 'monthly' && monthlyType === 'day_of_week';
-    onSave({
+    var payload = {
       type,
       task_title:      type === 'task' ? taskTitle.trim() : null,
       frequency,
@@ -87,8 +97,11 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues, acco
       meeting_time:    type === 'meeting' ? toHHMM(hour, minute, ampm) : null,
       notes:           notes.trim() || null,
       default_attendees: type === 'meeting' && defaultAttendees.length > 0 ? defaultAttendees : null,
-      ...(accounts && selectedAccountId ? { account_id: selectedAccountId } : {}),
-    })
+    };
+    if (accounts && type === 'meeting') payload.account_id = selectedAccountId;
+    if (isMultiTask) payload.account_ids = selectedAccountIds;
+    else if (accounts && selectedAccountId) payload.account_id = selectedAccountId;
+    onSave(payload)
       .then(function () { setLoading(false); onClose(); })
       .catch(function (err) { setLoading(false); setError(err.message); });
   }
@@ -140,7 +153,7 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues, acco
         )}
 
         {/* Account picker (global cadence view) */}
-        {accounts && accounts.length > 0 && (
+        {accounts && accounts.length > 0 && type === 'meeting' && (
           <div>
             <FL>Account</FL>
             <select
@@ -151,6 +164,89 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues, acco
               <option value="">Select an account...</option>
               {accounts.map(function (a) { return <option key={a.id} value={a.id}>{a.name}</option>; })}
             </select>
+          </div>
+        )}
+
+        {/* Multi-account picker for tasks */}
+        {accounts && accounts.length > 0 && type === 'task' && (
+          <div style={{ position: 'relative' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <FL style={{ marginBottom: 0 }}>Accounts</FL>
+              {selectedAccountIds.length > 0 && (
+                <button type="button" onClick={function () { setSelectedAccountIds([]); }}
+                  style={{ background: 'none', border: 'none', fontSize: 11, color: C.textMuted, cursor: 'pointer', padding: 0, fontFamily: "'DM Sans', sans-serif" }}>
+                  Clear all
+                </button>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={function () { setAcctDropOpen(function (o) { return !o; }); }}
+              style={{
+                width: '100%', background: 'rgba(255,255,255,0.04)',
+                border: '1px solid ' + (acctDropOpen ? 'rgba(74,155,130,0.4)' : C.border),
+                borderRadius: 8, padding: '9px 12px',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontSize: 13,
+                color: selectedAccountIds.length > 0 ? C.text : C.textMuted,
+              }}
+            >
+              <span>
+                {selectedAccountIds.length === 0 && 'Select accounts...'}
+                {selectedAccountIds.length === 1 && accounts.find(function (a) { return a.id === selectedAccountIds[0]; })?.name}
+                {selectedAccountIds.length > 1 && selectedAccountIds.length + ' accounts selected'}
+              </span>
+              <span style={{ fontSize: 10, color: C.textMuted }}>{acctDropOpen ? '▲' : '▼'}</span>
+            </button>
+
+            {acctDropOpen && (
+              <>
+                <div onClick={function () { setAcctDropOpen(false); }} style={{ position: 'fixed', inset: 0, zIndex: 10 }} />
+                <div style={{
+                  position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
+                  background: '#1a2b28', border: '1px solid ' + C.border,
+                  borderRadius: 10, padding: 10, zIndex: 11,
+                  maxHeight: 240, overflowY: 'auto',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                }}>
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                    <button type="button"
+                      onClick={function () {
+                        setSelectedAccountIds(
+                          selectedAccountIds.length === accounts.length ? [] : accounts.map(function (a) { return a.id; })
+                        );
+                      }}
+                      style={{
+                        background: selectedAccountIds.length === accounts.length ? 'rgba(74,155,130,0.15)' : 'rgba(74,155,130,0.06)',
+                        color: C.accent,
+                        border: '1px solid rgba(74,155,130,' + (selectedAccountIds.length === accounts.length ? '0.4' : '0.2') + ')',
+                        borderRadius: 6, padding: '4px 12px', fontSize: 11, fontWeight: 700,
+                        fontFamily: "'DM Sans', sans-serif", cursor: 'pointer',
+                      }}>
+                      {selectedAccountIds.length === accounts.length ? '✓ All accounts' : 'Select all'}
+                    </button>
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                    {accounts.map(function (a) {
+                      var on = selectedAccountIds.includes(a.id);
+                      return (
+                        <button key={a.id} type="button" onClick={function () { toggleAccountId(a.id); }}
+                          style={{
+                            background: on ? 'rgba(74,155,130,0.18)' : 'rgba(255,255,255,0.04)',
+                            color: on ? C.accent : C.textMuted,
+                            border: '1px solid ' + (on ? 'rgba(74,155,130,0.45)' : C.border),
+                            borderRadius: 6, padding: '5px 11px', fontSize: 12,
+                            fontWeight: on ? 700 : 400,
+                            fontFamily: "'DM Sans', sans-serif", cursor: 'pointer',
+                          }}>
+                          {on ? '✓ ' : ''}{a.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
 
