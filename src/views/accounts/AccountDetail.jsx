@@ -120,7 +120,7 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
                 <button
                   onClick={function () { onSelectAccount && onSelectAccount(parentAccount); }}
                   style={{
-                    background: 'rgba(200,136,58,0.08)', border: '1px solid rgba(200,136,58,0.2)',
+                    background: 'rgba(74,155,130,0.08)', border: '1px solid rgba(74,155,130,0.2)',
                     borderRadius: 20, padding: '3px 10px', fontSize: 11, fontWeight: 600,
                     color: C.accent, fontFamily: "'DM Sans', sans-serif", cursor: 'pointer',
                   }}
@@ -228,7 +228,7 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
                 textTransform: "capitalize",
                 background: active ? C.bgCardAlt : "transparent",
                 color: active ? (isGauge ? C.blue : C.accent) : C.textMuted,
-                border: "1px solid " + (active ? (isGauge ? "rgba(103,200,249,0.2)" : C.border) : "transparent"),
+                border: "1px solid " + (active ? (isGauge ? "rgba(123,108,246,0.2)" : C.border) : "transparent"),
               }}
             >
               {isGauge ? "gauge" : t}

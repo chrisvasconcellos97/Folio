@@ -12,10 +12,10 @@ function ContactLink({ href, label, color }) {
         fontSize: 11,
         color: color || C.accent,
         textDecoration: "none",
-        background: "rgba(200,136,58,0.07)",
+        background: "rgba(74,155,130,0.07)",
         padding: "2px 8px",
         borderRadius: 6,
-        border: "1px solid rgba(200,136,58,0.15)",
+        border: "1px solid rgba(74,155,130,0.15)",
         whiteSpace: "nowrap",
       }}
     >
@@ -49,8 +49,8 @@ export function ContactsTab({ contacts, onAdd, onDelete }) {
                   width: 40,
                   height: 40,
                   borderRadius: "50%",
-                  background: c.is_poc ? "rgba(200,136,58,0.2)" : "rgba(200,136,58,0.07)",
-                  border: "1px solid rgba(200,136,58,0.2)",
+                  background: c.is_poc ? "rgba(74,155,130,0.2)" : "rgba(74,155,130,0.07)",
+                  border: "1px solid rgba(74,155,130,0.2)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",

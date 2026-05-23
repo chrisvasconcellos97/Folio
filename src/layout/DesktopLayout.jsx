@@ -95,9 +95,9 @@ export function DesktopLayout({
                   fontFamily: "'DM Sans', sans-serif",
                   fontWeight: active ? 600 : 400,
                   fontSize: 13,
-                  background: active ? (item.id === "gauge" ? "rgba(103,200,249,0.08)" : C.bgPillActive) : "transparent",
+                  background: active ? (item.id === "gauge" ? "rgba(123,108,246,0.08)" : C.bgPillActive) : "transparent",
                   color: active ? (item.id === "gauge" ? C.blue : C.accent) : C.textSub,
-                  border: "1px solid " + (active ? (item.id === "gauge" ? "rgba(103,200,249,0.2)" : "rgba(200,136,58,0.2)") : "transparent"),
+                  border: "1px solid " + (active ? (item.id === "gauge" ? "rgba(123,108,246,0.2)" : "rgba(74,155,130,0.2)") : "transparent"),
                   textAlign: "left",
                 }}
               >

@@ -297,12 +297,12 @@ export default function App() {
                 height: 52,
                 borderRadius: "50%",
                 background: C.accentGlow,
-                border: "1px solid rgba(200,136,58,0.4)",
+                border: "1px solid rgba(74,155,130,0.4)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 cursor: "pointer",
-                boxShadow: "0 0 20px rgba(200,136,58,0.22)",
+                boxShadow: "0 0 20px rgba(74,155,130,0.22)",
               }}
             >
               <PipMark size={14} color={C.accent} glow pulse />
@@ -358,12 +358,12 @@ export default function App() {
               height: 52,
               borderRadius: "50%",
               background: C.accentGlow,
-              border: "1px solid rgba(200,136,58,0.4)",
+              border: "1px solid rgba(74,155,130,0.4)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               cursor: "pointer",
-              boxShadow: "0 0 20px rgba(200,136,58,0.22)",
+              boxShadow: "0 0 20px rgba(74,155,130,0.22)",
             }}
           >
             <PipMark size={14} color={C.accent} glow pulse />

@@ -76,7 +76,7 @@ export function MeetingsView({ meetings, loading }) {
                         <div
                           style={{
                             background: C.accentGlow,
-                            border: "1px solid rgba(200,136,58,0.2)",
+                            border: "1px solid rgba(74,155,130,0.2)",
                             borderRadius: 20,
                             padding: "3px 10px",
                             display: "inline-flex",

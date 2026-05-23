@@ -291,7 +291,7 @@ export function AccountsView({ accounts, loading, onSelect, tasks, addTask, upda
                   onClick={function () { onSelect(a); }}
                   style={{
                     background: C.accentGlow,
-                    border: "1px solid rgba(200,136,58,0.2)",
+                    border: "1px solid rgba(74,155,130,0.2)",
                     borderLeft: "3px solid " + C.accent,
                     borderRadius: 10,
                     padding: "10px 14px",
@@ -338,7 +338,7 @@ export function AccountsView({ accounts, loading, onSelect, tasks, addTask, upda
               style={{
                 background: active ? C.bgPillActive : C.bgPill,
                 color: active ? C.accent : C.textMuted,
-                border: "1px solid " + (active ? "rgba(200,136,58,0.3)" : C.border),
+                border: "1px solid " + (active ? "rgba(74,155,130,0.3)" : C.border),
                 borderRadius: 20,
                 padding: "5px 12px",
                 fontSize: 11,
@@ -365,9 +365,9 @@ export function AccountsView({ accounts, loading, onSelect, tasks, addTask, upda
                 key={t}
                 onClick={function () { setTagFilter(active ? null : t); }}
                 style={{
-                  background: active ? "rgba(103,200,249,0.15)" : C.bgPill,
+                  background: active ? "rgba(123,108,246,0.15)" : C.bgPill,
                   color: active ? C.blue : C.textMuted,
-                  border: "1px solid " + (active ? "rgba(103,200,249,0.35)" : C.border),
+                  border: "1px solid " + (active ? "rgba(123,108,246,0.35)" : C.border),
                   borderRadius: 20,
                   padding: "5px 12px",
                   fontSize: 11,
@@ -395,9 +395,9 @@ export function AccountsView({ accounts, loading, onSelect, tasks, addTask, upda
                 key={r}
                 onClick={function () { setRegionFilter(active ? null : r); }}
                 style={{
-                  background: active ? "rgba(200,136,58,0.15)" : C.bgPill,
+                  background: active ? "rgba(74,155,130,0.15)" : C.bgPill,
                   color: active ? C.accent : C.textMuted,
-                  border: "1px solid " + (active ? "rgba(200,136,58,0.3)" : C.border),
+                  border: "1px solid " + (active ? "rgba(74,155,130,0.3)" : C.border),
                   borderRadius: 20,
                   padding: "5px 12px",
                   fontSize: 11,

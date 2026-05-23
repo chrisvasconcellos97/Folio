@@ -111,7 +111,7 @@ export function MeetingsTab({ meetings, accountName, onLogMeeting, onDelete, onU
               <div
                 style={{
                   background: C.accentGlow,
-                  border: "1px solid rgba(200,136,58,0.2)",
+                  border: "1px solid rgba(74,155,130,0.2)",
                   borderRadius: 10,
                   padding: "10px 12px",
                   marginBottom: 10,
@@ -230,7 +230,7 @@ export function MeetingsTab({ meetings, accountName, onLogMeeting, onDelete, onU
                     alignItems: "center",
                     gap: 6,
                     background: "none",
-                    border: "1px solid rgba(200,136,58,0.25)",
+                    border: "1px solid rgba(74,155,130,0.25)",
                     borderRadius: 8,
                     padding: "6px 12px",
                     cursor: isLoading ? "not-allowed" : "pointer",

@@ -32,9 +32,9 @@ function TagChip({ label, active, onClick, onRemove, color }) {
       type="button"
       onClick={onClick}
       style={{
-        background: active ? "rgba(103,200,249,0.15)" : "rgba(103,200,249,0.04)",
+        background: active ? "rgba(123,108,246,0.15)" : "rgba(123,108,246,0.04)",
         color: active ? col : C.textMuted,
-        border: "1px solid " + (active ? "rgba(103,200,249,0.35)" : C.border),
+        border: "1px solid " + (active ? "rgba(123,108,246,0.35)" : C.border),
         borderRadius: 8,
         padding: "5px 10px",
         fontSize: 11,
@@ -215,7 +215,7 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts })
             style={{
               width: "100%",
               background: "rgba(255,255,255,0.04)",
-              border: "1px solid " + (statePickerOpen ? "rgba(200,136,58,0.4)" : C.border),
+              border: "1px solid " + (statePickerOpen ? "rgba(74,155,130,0.4)" : C.border),
               borderRadius: 8,
               padding: "9px 12px",
               display: "flex",
@@ -262,9 +262,9 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts })
                     type="button"
                     onClick={function () { setStates(states.length === ALL_STATES.length ? [] : ALL_STATES.slice()); }}
                     style={{
-                      background: states.length === ALL_STATES.length ? "rgba(200,136,58,0.15)" : "rgba(200,136,58,0.06)",
+                      background: states.length === ALL_STATES.length ? "rgba(74,155,130,0.15)" : "rgba(74,155,130,0.06)",
                       color: C.accent,
-                      border: "1px solid rgba(200,136,58," + (states.length === ALL_STATES.length ? "0.4" : "0.2") + ")",
+                      border: "1px solid rgba(74,155,130," + (states.length === ALL_STATES.length ? "0.4" : "0.2") + ")",
                       borderRadius: 6,
                       padding: "5px 12px",
                       fontSize: 11,

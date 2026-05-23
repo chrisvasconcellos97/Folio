@@ -89,8 +89,8 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues, acco
 
   var pill = {
     active: {
-      border: '1px solid rgba(200,136,58,0.4)',
-      background: 'rgba(200,136,58,0.12)',
+      border: '1px solid rgba(74,155,130,0.4)',
+      background: 'rgba(74,155,130,0.12)',
       color: C.accent,
       fontWeight: 700,
     },
@@ -314,8 +314,8 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues, acco
                     type="button"
                     onClick={function () { toggleDefaultAttendee(c.name); }}
                     style={{
-                      background: active ? 'rgba(200,136,58,0.15)' : 'rgba(255,255,255,0.04)',
-                      border: '1px solid ' + (active ? 'rgba(200,136,58,0.4)' : C.border),
+                      background: active ? 'rgba(74,155,130,0.15)' : 'rgba(255,255,255,0.04)',
+                      border: '1px solid ' + (active ? 'rgba(74,155,130,0.4)' : C.border),
                       borderRadius: 20,
                       padding: '5px 12px',
                       fontSize: 12,

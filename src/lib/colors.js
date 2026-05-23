@@ -1,26 +1,55 @@
+// ─── Folio Theme ─────────────────────────────────────────────────────────────
+// To retheme: update the hex value AND its _rgb companion below.
+// All derived rgba tokens auto-update from the _rgb string — nothing else
+// needs touching for a full recolor.
+// ─────────────────────────────────────────────────────────────────────────────
+
+var _accent = "74,155,130";   // #4A9B82
+var _red    = "224,92,92";    // #E05C5C
+var _yellow = "232,168,56";   // #E8A838
+var _blue   = "123,108,246";  // #7B6CF6
+
 export const C = {
-  bg:           "#12100A",
-  bgCard:       "#1A1610",
-  bgCardAlt:    "#211C12",
-  bgDark:       "#0D0B07",
-  bgPill:       "#2A2215",
-  bgPillActive: "#3D3020",
+  // ── Backgrounds ──────────────────────────────────────────────────────────
+  bg:           "#0D1F1C",
+  bgCard:       "#142420",
+  bgCardAlt:    "#1A2E2A",
+  bgDark:       "#091712",
+  bgPill:       "#1e3530",
+  bgPillActive: "#2a4a42",
 
-  accent:      "#C8883A",
-  accentDim:   "#8A5A22",
-  accentGlow:  "rgba(200,136,58,0.12)",
+  // ── Accent ───────────────────────────────────────────────────────────────
+  accent:       "#4A9B82",
+  accentDim:    "#2E6B59",
+  accentGlow:   "rgba(" + _accent + ",0.12)",
+  accentFaint:  "rgba(" + _accent + ",0.08)",
+  accentLine:   "rgba(" + _accent + ",0.2)",
+  accentRing:   "rgba(" + _accent + ",0.35)",
+  accentBorder: "rgba(" + _accent + ",0.4)",
+  accentShadow: "rgba(" + _accent + ",0.22)",
 
-  green:   "#4ADE80",
-  yellow:  "#FBBF24",
-  red:     "#F87171",
-  blue:    "#67C8F9",
-  purple:  "#7C5CBF",
+  // ── Status ───────────────────────────────────────────────────────────────
+  green:  "#4A9B82",
+  yellow: "#E8A838",
+  red:    "#E05C5C",
+  blue:   "#7B6CF6",
+  purple: "#7B6CF6",
 
-  text:      "#F0EDE8",
-  textSub:   "#9E9888",
-  textMuted: "#4A4035",
+  // ── Status derived ───────────────────────────────────────────────────────
+  redFaint:    "rgba(" + _red    + ",0.12)",
+  redLine:     "rgba(" + _red    + ",0.2)",
+  yellowFaint: "rgba(" + _yellow + ",0.12)",
+  blueFaint:   "rgba(" + _blue   + ",0.12)",
+  blueLine:    "rgba(" + _blue   + ",0.2)",
 
-  border: "#2A2215",
+  // ── Text ─────────────────────────────────────────────────────────────────
+  text:      "#E8F0EC",
+  textSub:   "#8BA89E",
+  textMuted: "#4A6A60",
+
+  // ── Borders ──────────────────────────────────────────────────────────────
+  border:       "#1e3530",
+  borderBright: "#2a4a42",
 };
 
 export function hexToRgb(hex) {

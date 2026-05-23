@@ -10,7 +10,7 @@ function Shell({ blue, children }) {
   return (
     <div style={{
       background: blue ? "rgba(8,16,24,0.93)" : "rgba(13,11,7,0.91)",
-      border: "1px solid " + (blue ? "rgba(103,200,249,0.22)" : C.border),
+      border: "1px solid " + (blue ? "rgba(123,108,246,0.22)" : C.border),
       borderRadius: 14,
       padding: "10px 12px",
     }}>
@@ -160,8 +160,8 @@ function GaugePreview() {
         {projects.map(function (p) {
           return (
             <div key={p.title} style={{
-              background: "rgba(103,200,249,0.05)",
-              border: "1px solid rgba(103,200,249,0.12)",
+              background: "rgba(123,108,246,0.05)",
+              border: "1px solid rgba(123,108,246,0.12)",
               borderRadius: 8, padding: "7px 10px",
             }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
@@ -187,8 +187,8 @@ function PipPreview() {
         </div>
       </div>
       <div style={{
-        background: "rgba(200,136,58,0.07)",
-        border: "1px solid rgba(200,136,58,0.22)",
+        background: "rgba(74,155,130,0.07)",
+        border: "1px solid rgba(74,155,130,0.22)",
         borderRadius: 10, borderTopLeftRadius: 2,
         padding: "9px 11px",
         fontSize: 11, color: C.textSub, lineHeight: 1.6,
@@ -335,14 +335,14 @@ export function OnboardingTour({ onComplete }) {
                   <div style={{
                     position: "absolute", top: "50%", left: "50%",
                     width: 80, height: 80, borderRadius: "50%",
-                    border: "1px solid rgba(200,136,58,0.3)",
+                    border: "1px solid rgba(74,155,130,0.3)",
                     animation: "tourSonar 3s ease-out infinite",
                     pointerEvents: "none",
                   }} />
                   <div style={{
                     position: "absolute", top: "50%", left: "50%",
                     width: 80, height: 80, borderRadius: "50%",
-                    border: "1px solid rgba(200,136,58,0.3)",
+                    border: "1px solid rgba(74,155,130,0.3)",
                     animation: "tourSonar 3s ease-out 1.5s infinite",
                     pointerEvents: "none",
                   }} />
@@ -350,9 +350,9 @@ export function OnboardingTour({ onComplete }) {
               )}
               <div style={{
                 width: 80, height: 80, borderRadius: "50%",
-                background: "rgba(200,136,58,0.1)",
-                border: "1px solid rgba(200,136,58,0.4)",
-                boxShadow: "0 0 32px rgba(200,136,58,0.28)",
+                background: "rgba(74,155,130,0.1)",
+                border: "1px solid rgba(74,155,130,0.4)",
+                boxShadow: "0 0 32px rgba(74,155,130,0.28)",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 animation: introRisen
                   ? "pipFloat 3s ease-in-out infinite"
@@ -395,9 +395,9 @@ export function OnboardingTour({ onComplete }) {
               width: pipSize,
               height: pipSize,
               borderRadius: "50%",
-              background: "rgba(200,136,58,0.1)",
-              border: "1px solid rgba(200,136,58,0.38)",
-              boxShadow: "0 0 " + (current.pipLarge ? "38px" : "22px") + " rgba(200,136,58,0.26)",
+              background: "rgba(74,155,130,0.1)",
+              border: "1px solid rgba(74,155,130,0.38)",
+              boxShadow: "0 0 " + (current.pipLarge ? "38px" : "22px") + " rgba(74,155,130,0.26)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -491,10 +491,10 @@ export function OnboardingTour({ onComplete }) {
               style={{
                 width: "100%",
                 background: current.isDone ? C.accent : C.accentGlow,
-                border: current.isDone ? "none" : "1px solid rgba(200,136,58,0.3)",
+                border: current.isDone ? "none" : "1px solid rgba(74,155,130,0.3)",
                 borderRadius: 24, padding: "14px",
                 fontSize: 13, fontWeight: 700,
-                color: current.isDone ? "#0D0B07" : C.accent,
+                color: current.isDone ? "#091712" : C.accent,
                 fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
               }}
             >

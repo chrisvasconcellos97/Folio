@@ -49,12 +49,14 @@ export function DangerBtn({ onClick, children, style }) {
     <button
       onClick={onClick}
       style={Object.assign({}, btnBase, {
-        background: "rgba(248,113,113,0.12)",
-        color: "#F87171",
-        border: "1px solid rgba(248,113,113,0.2)",
+        background: C.redFaint,
+        color: C.red,
+        border: "1px solid " + C.redLine,
       }, style || {})}
     >
       {children}
     </button>
   );
 }
+
+export { AmberBtn as AccentBtn };

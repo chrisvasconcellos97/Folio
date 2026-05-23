@@ -23,7 +23,7 @@ var PRIORITY_COLORS = {
   low:    C.green,
 };
 
-var GB_BDR = "rgba(103,200,249,0.2)";
+var GB_BDR = "rgba(123,108,246,0.2)";
 
 function fmt(dateStr) {
   if (!dateStr) return null;
@@ -68,7 +68,7 @@ export function ProjectsTab({ projects, accounts, accountId, addProject, updateP
         <button
           onClick={function () { setShowAdd(true); }}
           style={{
-            background: "rgba(103,200,249,0.1)",
+            background: "rgba(123,108,246,0.1)",
             border: "1px solid " + GB_BDR,
             borderRadius: 20,
             padding: "5px 13px",
