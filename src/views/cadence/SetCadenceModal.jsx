@@ -53,6 +53,7 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues, acco
   var [selectedAccountId,  setSelectedAccountId]  = useState(null);
   var [selectedAccountIds, setSelectedAccountIds] = useState([]);
   var [acctDropOpen,       setAcctDropOpen]       = useState(false);
+  var [meetingAcctDropOpen, setMeetingAcctDropOpen] = useState(false);
   var [defaultAttendees, setDefaultAttendees]   = useState(existing ? (existing.default_attendees || []) : []);
   var [hour,   setHour]   = useState(init.hour);
   var [minute, setMinute] = useState(init.minute);
@@ -152,18 +153,61 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues, acco
           </div>
         )}
 
-        {/* Account picker (global cadence view) */}
+        {/* Account picker (global cadence view — meetings) */}
         {accounts && accounts.length > 0 && type === 'meeting' && (
-          <div>
+          <div style={{ position: 'relative' }}>
             <FL>Account</FL>
-            <select
-              value={selectedAccountId || ''}
-              onChange={function (e) { setSelectedAccountId(e.target.value || null); }}
-              style={{ width: '100%', padding: '9px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid ' + C.border, borderRadius: 8, color: selectedAccountId ? C.text : C.textMuted, fontSize: 16, fontFamily: "'DM Sans', sans-serif" }}
+            <button
+              type="button"
+              onClick={function () { setMeetingAcctDropOpen(function (o) { return !o; }); }}
+              style={{
+                width: '100%', background: 'rgba(255,255,255,0.04)',
+                border: '1px solid ' + (meetingAcctDropOpen ? 'rgba(74,155,130,0.4)' : C.border),
+                borderRadius: 8, padding: '9px 12px',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontSize: 13,
+                color: selectedAccountId ? C.text : C.textMuted,
+              }}
             >
-              <option value="">Select an account...</option>
-              {accounts.map(function (a) { return <option key={a.id} value={a.id}>{a.name}</option>; })}
-            </select>
+              <span>
+                {selectedAccountId
+                  ? (accounts.find(function (a) { return a.id === selectedAccountId; }) || {}).name || 'Select...'
+                  : 'Select an account...'}
+              </span>
+              <span style={{ fontSize: 10, color: C.textMuted }}>{meetingAcctDropOpen ? '▲' : '▼'}</span>
+            </button>
+            {meetingAcctDropOpen && (
+              <>
+                <div onClick={function () { setMeetingAcctDropOpen(false); }} style={{ position: 'fixed', inset: 0, zIndex: 10 }} />
+                <div style={{
+                  position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
+                  background: '#1a2b28', border: '1px solid ' + C.border,
+                  borderRadius: 10, padding: 10, zIndex: 11,
+                  maxHeight: 240, overflowY: 'auto',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                    {accounts.map(function (a) {
+                      var on = selectedAccountId === a.id;
+                      return (
+                        <button key={a.id} type="button"
+                          onClick={function () { setSelectedAccountId(a.id); setMeetingAcctDropOpen(false); }}
+                          style={{
+                            background: on ? 'rgba(74,155,130,0.18)' : 'rgba(255,255,255,0.04)',
+                            color: on ? C.accent : C.textMuted,
+                            border: '1px solid ' + (on ? 'rgba(74,155,130,0.45)' : C.border),
+                            borderRadius: 6, padding: '5px 11px', fontSize: 12,
+                            fontWeight: on ? 700 : 400,
+                            fontFamily: "'DM Sans', sans-serif", cursor: 'pointer',
+                          }}>
+                          {on ? '✓ ' : ''}{a.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -366,27 +410,38 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues, acco
         {/* Time (meeting only) */}
         {type === 'meeting' && (
           <div>
-            <FL>Time</FL>
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-              <select value={hour} onChange={function (e) { setHour(e.target.value); }}
-                style={{ flex: 1, padding: '9px 10px', background: 'rgba(255,255,255,0.04)', border: '1px solid ' + C.border, borderRadius: 8, color: C.text, fontSize: 16, fontFamily: "'DM Sans', sans-serif" }}>
-                {HOURS.map(function (h) { return <option key={h} value={h}>{h}</option>; })}
-              </select>
-              <span style={{ color: C.textMuted, fontSize: 16, fontWeight: 700 }}>:</span>
-              <select value={minute} onChange={function (e) { setMinute(e.target.value); }}
-                style={{ flex: 1, padding: '9px 10px', background: 'rgba(255,255,255,0.04)', border: '1px solid ' + C.border, borderRadius: 8, color: C.text, fontSize: 16, fontFamily: "'DM Sans', sans-serif" }}>
-                {MINUTES.map(function (m) { return <option key={m} value={m}>{m}</option>; })}
-              </select>
-              <div style={{ display: 'flex', gap: 4 }}>
-                {['AM', 'PM'].map(function (p) {
-                  return (
-                    <button key={p} type="button" onClick={function () { setAmpm(p); }}
-                      style={Object.assign({}, pillStyle(ampm === p), { flex: 'none', padding: '9px 14px' })}>
-                      {p}
-                    </button>
-                  );
-                })}
-              </div>
+            <FL>Hour</FL>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 5, marginBottom: 10 }}>
+              {HOURS.map(function (h) {
+                return (
+                  <button key={h} type="button" onClick={function () { setHour(h); }}
+                    style={pillStyle(hour === h)}>
+                    {h}
+                  </button>
+                );
+              })}
+            </div>
+            <FL>Minute</FL>
+            <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+              {MINUTES.map(function (m) {
+                return (
+                  <button key={m} type="button" onClick={function () { setMinute(m); }}
+                    style={Object.assign({}, pillStyle(minute === m), { flex: 1 })}>
+                    :{m}
+                  </button>
+                );
+              })}
+            </div>
+            <FL>AM / PM</FL>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {['AM', 'PM'].map(function (p) {
+                return (
+                  <button key={p} type="button" onClick={function () { setAmpm(p); }}
+                    style={Object.assign({}, pillStyle(ampm === p), { flex: 1 })}>
+                    {p}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}

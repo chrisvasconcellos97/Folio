@@ -2,7 +2,7 @@ import { useState } from "react";
 import { C } from "../../lib/colors";
 import { Modal } from "../../components/Modal";
 import { AmberBtn, SecBtn } from "../../components/Buttons";
-import { InputField, TextArea, SelectField } from "../../components/InputField";
+import { InputField, TextArea } from "../../components/InputField";
 import { FL } from "../../components/FieldLabel";
 import { detectRegion, detectMarketScope, STATE_NAMES } from "../../lib/regions";
 
@@ -70,6 +70,7 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts })
   var [customTag, setCustomTag] = useState("");
   var [states, setStates]       = useState(existing ? (existing.serviced_states || []) : []);
   var [statePickerOpen, setStatePickerOpen] = useState(false);
+  var [parentDropOpen, setParentDropOpen] = useState(false);
   var [parentAccountId, setParentAccountId] = useState(existing ? (existing.parent_account_id || '') : '');
   var [loading, setLoading] = useState(false);
   var [error, setError]     = useState(null);
@@ -139,15 +140,49 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts })
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           <div>
             <FL>Tier</FL>
-            <SelectField value={tier} onChange={function (e) { setTier(e.target.value); }}>
-              {TIERS.map(function (t) { return <option key={t} value={t}>{t}</option>; })}
-            </SelectField>
+            <div style={{ display: "flex", gap: 5 }}>
+              {TIERS.map(function (t) {
+                var on = tier === t;
+                return (
+                  <button key={t} type="button" onClick={function () { setTier(t); }}
+                    style={{
+                      flex: 1,
+                      background: on ? "rgba(74,155,130,0.15)" : "rgba(255,255,255,0.04)",
+                      color: on ? C.accent : C.textMuted,
+                      border: "1px solid " + (on ? "rgba(74,155,130,0.35)" : C.border),
+                      borderRadius: 8, padding: "9px 6px", fontSize: 12,
+                      fontWeight: on ? 700 : 400,
+                      fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
+                    }}>
+                    {t}
+                  </button>
+                );
+              })}
+            </div>
           </div>
           <div>
             <FL>Status</FL>
-            <SelectField value={status} onChange={function (e) { setStatus(e.target.value); }}>
-              {STATUSES.map(function (s) { return <option key={s.value} value={s.value}>{s.label}</option>; })}
-            </SelectField>
+            <div style={{ display: "flex", gap: 5 }}>
+              {STATUSES.map(function (s) {
+                var on = status === s.value;
+                var col = s.value === "green" ? C.accent : s.value === "yellow" ? C.yellow : C.red;
+                var bgRgb = s.value === "green" ? "74,155,130" : s.value === "yellow" ? "232,168,56" : "224,92,92";
+                return (
+                  <button key={s.value} type="button" onClick={function () { setStatus(s.value); }}
+                    style={{
+                      flex: 1,
+                      background: on ? "rgba(" + bgRgb + ",0.15)" : "rgba(255,255,255,0.04)",
+                      color: on ? col : C.textMuted,
+                      border: "1px solid " + (on ? "rgba(" + bgRgb + ",0.4)" : C.border),
+                      borderRadius: 8, padding: "9px 4px", fontSize: 11,
+                      fontWeight: on ? 700 : 400,
+                      fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
+                    }}>
+                    {s.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
@@ -362,26 +397,74 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts })
 
         {/* Parent account */}
         {accounts && accounts.length > 0 && (
-          <div>
+          <div style={{ position: "relative" }}>
             <FL>Part of <span style={{ fontWeight: 400, color: C.textMuted }}>(optional)</span></FL>
-            <select
-              value={parentAccountId}
-              onChange={function (e) { setParentAccountId(e.target.value); }}
+            <button
+              type="button"
+              onClick={function () { setParentDropOpen(function (o) { return !o; }); }}
               style={{
-                width: '100%', padding: '9px 12px',
-                background: 'rgba(255,255,255,0.04)', border: '1px solid ' + C.border,
-                borderRadius: 8, color: parentAccountId ? C.text : C.textMuted, fontSize: 16,
-                fontFamily: "'DM Sans', sans-serif",
+                width: "100%", background: "rgba(255,255,255,0.04)",
+                border: "1px solid " + (parentDropOpen ? "rgba(74,155,130,0.4)" : C.border),
+                borderRadius: 8, padding: "9px 12px",
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontSize: 13,
+                color: parentAccountId ? C.text : C.textMuted,
               }}
             >
-              <option value="">None (standalone account)</option>
-              {accounts
-                .filter(function (a) { return !existing || a.id !== existing.id; })
-                .filter(function (a) { return !a.parent_account_id; })
-                .map(function (a) {
-                  return <option key={a.id} value={a.id}>{a.name}</option>;
-                })}
-            </select>
+              <span>
+                {parentAccountId
+                  ? (accounts.find(function (a) { return a.id === parentAccountId; }) || {}).name || "Select..."
+                  : "None (standalone)"}
+              </span>
+              <span style={{ fontSize: 10, color: C.textMuted }}>{parentDropOpen ? "▲" : "▼"}</span>
+            </button>
+            {parentDropOpen && (
+              <>
+                <div onClick={function () { setParentDropOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 10 }} />
+                <div style={{
+                  position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0,
+                  background: "#1a2b28", border: "1px solid " + C.border,
+                  borderRadius: 10, padding: 10, zIndex: 11,
+                  maxHeight: 240, overflowY: "auto",
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+                }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                    <button type="button"
+                      onClick={function () { setParentAccountId(""); setParentDropOpen(false); }}
+                      style={{
+                        background: !parentAccountId ? "rgba(74,155,130,0.18)" : "rgba(255,255,255,0.04)",
+                        color: !parentAccountId ? C.accent : C.textMuted,
+                        border: "1px solid " + (!parentAccountId ? "rgba(74,155,130,0.45)" : C.border),
+                        borderRadius: 6, padding: "5px 11px", fontSize: 12,
+                        fontWeight: !parentAccountId ? 700 : 400,
+                        fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
+                      }}>
+                      {!parentAccountId ? "✓ " : ""}None
+                    </button>
+                    {accounts
+                      .filter(function (a) { return !existing || a.id !== existing.id; })
+                      .filter(function (a) { return !a.parent_account_id; })
+                      .map(function (a) {
+                        var on = parentAccountId === a.id;
+                        return (
+                          <button key={a.id} type="button"
+                            onClick={function () { setParentAccountId(a.id); setParentDropOpen(false); }}
+                            style={{
+                              background: on ? "rgba(74,155,130,0.18)" : "rgba(255,255,255,0.04)",
+                              color: on ? C.accent : C.textMuted,
+                              border: "1px solid " + (on ? "rgba(74,155,130,0.45)" : C.border),
+                              borderRadius: 6, padding: "5px 11px", fontSize: 12,
+                              fontWeight: on ? 700 : 400,
+                              fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
+                            }}>
+                            {on ? "✓ " : ""}{a.name}
+                          </button>
+                        );
+                      })}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
 
