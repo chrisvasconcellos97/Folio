@@ -80,6 +80,7 @@ function CadenceCard({ cad, today, confirmDeleteId, setConfirmDeleteId, onDelete
   var isTask  = cad.type === 'task';
   var next    = getNextOccurrence(cad, today);
   var confirm = confirmDeleteId === cad.id;
+  var isGlobal = cad.is_global;
 
   return (
     <div style={{
@@ -115,20 +116,28 @@ function CadenceCard({ cad, today, confirmDeleteId, setConfirmDeleteId, onDelete
             </div>
           )}
         </div>
-        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-          <SecBtn onClick={function () { setEditingCad(cad); setShowModal(true); }} style={{ fontSize: 11, padding: '5px 10px' }}>
-            Edit
-          </SecBtn>
-          {!confirm ? (
-            <DangerBtn onClick={function () { setConfirmDeleteId(cad.id); }} style={{ fontSize: 11, padding: '5px 10px' }}>
-              Remove
-            </DangerBtn>
+        <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' }}>
+          {isGlobal ? (
+            <span style={{ fontSize: 10, color: C.accent, background: 'rgba(74,155,130,0.1)', border: '1px solid rgba(74,155,130,0.2)', borderRadius: 12, padding: '3px 9px', fontWeight: 600, letterSpacing: '0.04em' }}>
+              All Accounts
+            </span>
           ) : (
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-              <span style={{ fontSize: 11, color: C.red }}>Sure?</span>
-              <DangerBtn onClick={function () { onDeleteCadence(cad.id); setConfirmDeleteId(null); }} style={{ fontSize: 11, padding: '5px 10px' }}>Yes</DangerBtn>
-              <SecBtn onClick={function () { setConfirmDeleteId(null); }} style={{ fontSize: 11, padding: '5px 10px' }}>No</SecBtn>
-            </div>
+            <>
+              <SecBtn onClick={function () { setEditingCad(cad); setShowModal(true); }} style={{ fontSize: 11, padding: '5px 10px' }}>
+                Edit
+              </SecBtn>
+              {!confirm ? (
+                <DangerBtn onClick={function () { setConfirmDeleteId(cad.id); }} style={{ fontSize: 11, padding: '5px 10px' }}>
+                  Remove
+                </DangerBtn>
+              ) : (
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <span style={{ fontSize: 11, color: C.red }}>Sure?</span>
+                  <DangerBtn onClick={function () { onDeleteCadence(cad.id); setConfirmDeleteId(null); }} style={{ fontSize: 11, padding: '5px 10px' }}>Yes</DangerBtn>
+                  <SecBtn onClick={function () { setConfirmDeleteId(null); }} style={{ fontSize: 11, padding: '5px 10px' }}>No</SecBtn>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

@@ -1,7 +1,9 @@
 import { C } from "../../lib/colors";
 import { PipMark } from "../../components/PipMark";
+import { PipInsightCard } from "../../components/PipInsightCard";
 import { Card } from "../../components/Card";
 import { FL } from "../../components/FieldLabel";
+import { pickV } from "../../lib/metricsUtils";
 
 function groupByMonth(meetings) {
   var groups = {};
@@ -13,6 +15,64 @@ function groupByMonth(meetings) {
     groups[key].push(m);
   });
   return groups;
+}
+
+function buildMeetingsInsight(meetings) {
+  var seed  = "meetings" + new Date().getDate().toString();
+  var today = new Date(); today.setHours(0, 0, 0, 0);
+
+  if (meetings.length === 0) {
+    return pickV(seed + "m0", [
+      "No meetings logged yet. They'll show here once you start tracking them from any account.",
+      "Empty log. Start tracking from any account page to build your history.",
+    ]);
+  }
+
+  var todayMs   = today.getTime();
+  var upcoming  = meetings.filter(function (m) { return m.meeting_date && new Date(m.meeting_date + "T00:00:00").getTime() >= todayMs; });
+  var past      = meetings.filter(function (m) { return !m.meeting_date || new Date(m.meeting_date + "T00:00:00").getTime() < todayMs; });
+  var todayCount = upcoming.filter(function (m) { return new Date(m.meeting_date + "T00:00:00").getTime() === todayMs; }).length;
+
+  var sortedPast  = past.slice().sort(function (a, b) { return new Date(b.meeting_date) - new Date(a.meeting_date); });
+  var lastMeeting = sortedPast.length > 0 ? sortedPast[0] : null;
+  var daysSinceLast = lastMeeting
+    ? Math.round((todayMs - new Date(lastMeeting.meeting_date + "T00:00:00").getTime()) / 86400000)
+    : null;
+
+  var uniqueAccounts = new Set(meetings.map(function (m) { return m.account_id; })).size;
+
+  var parts = [];
+
+  if (todayCount > 0) {
+    parts.push(pickV(seed + "ml", [
+      todayCount === 1 ? "One meeting today. Make it count." : todayCount + " meetings on the board today.",
+      todayCount + " today. Be prepared.",
+    ]));
+  } else if (upcoming.length > 0) {
+    parts.push(pickV(seed + "ml", [
+      upcoming.length + " upcoming meeting" + (upcoming.length !== 1 ? "s" : "") + " logged.",
+      upcoming.length + " in the pipeline. Good to have the calendar filled.",
+    ]));
+  } else {
+    parts.push(pickV(seed + "ml", [
+      past.length + " meetings logged across " + uniqueAccounts + " account" + (uniqueAccounts !== 1 ? "s" : "") + ".",
+      "Meeting history spans " + uniqueAccounts + " account" + (uniqueAccounts !== 1 ? "s" : "") + ". " + past.length + " total.",
+    ]));
+  }
+
+  if (daysSinceLast !== null && daysSinceLast > 14 && upcoming.length === 0) {
+    parts.push(pickV(seed + "ms", [
+      "Last one was " + daysSinceLast + " days ago with nothing upcoming. Time to fill the calendar.",
+      daysSinceLast + " days since the last meeting and nothing ahead. Schedule something.",
+    ]));
+  } else if (upcoming.length > 0 && past.length > 0) {
+    parts.push(pickV(seed + "ms", [
+      past.length + " in the log, " + upcoming.length + " coming up.",
+      "Good momentum — " + past.length + " logged, " + upcoming.length + " ahead.",
+    ]));
+  }
+
+  return parts.join(" ");
 }
 
 export function MeetingsView({ meetings, loading }) {
@@ -31,6 +91,7 @@ export function MeetingsView({ meetings, loading }) {
 
   return (
     <div>
+      <PipInsightCard text={buildMeetingsInsight(meetings)} />
       {/* Upcoming */}
       {upcoming.length > 0 && (
         <div style={{ marginBottom: 24 }}>

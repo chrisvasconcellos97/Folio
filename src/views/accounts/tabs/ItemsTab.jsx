@@ -111,8 +111,15 @@ export function ItemsTab({ items, taskCadences, accountId, onClose, onAdd, onGoT
                 borderRadius: 10, padding: "11px 13px", marginBottom: 6,
               }}>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 12, color: C.text, fontWeight: 600, lineHeight: 1.4 }}>
-                    {t.cadence.task_title}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+                    <div style={{ fontSize: 12, color: C.text, fontWeight: 600, lineHeight: 1.4 }}>
+                      {t.cadence.task_title}
+                    </div>
+                    {t.cadence.is_global && (
+                      <span style={{ fontSize: 9, color: C.accent, background: 'rgba(74,155,130,0.1)', border: '1px solid rgba(74,155,130,0.2)', borderRadius: 10, padding: '2px 7px', fontWeight: 600, letterSpacing: '0.04em' }}>
+                        All Accounts
+                      </span>
+                    )}
                   </div>
                   <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
                     {getFrequencyLabel(t.cadence)}

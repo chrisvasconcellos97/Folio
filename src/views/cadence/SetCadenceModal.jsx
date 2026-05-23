@@ -247,6 +247,12 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues, acco
                 </div>
               </>
             )}
+            {selectedAccountIds.length > 0 && accounts && selectedAccountIds.length === accounts.length && (
+              <div style={{ fontSize: 11, color: C.accent, marginTop: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span>↻</span>
+                <span>All accounts selected — saves as a global task and auto-applies to new accounts.</span>
+              </div>
+            )}
           </div>
         )}
 

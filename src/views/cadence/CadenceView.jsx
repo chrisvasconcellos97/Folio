@@ -101,7 +101,10 @@ function CadenceEventCard({ event, onSelectAccount, showDate }) {
   var cadence = event.cadence;
   var account = event.account;
   var col     = eventColor(event);
-  var name    = account && account.name ? (cadence.type === 'task' ? '✓ ' + cadence.task_title : account.name) : 'Unknown';
+  var isGlobal = cadence.is_global;
+  var name = cadence.type === 'task'
+    ? '✓ ' + (cadence.task_title || '?')
+    : (account && account.name ? account.name : 'Unknown');
 
   return (
     <div style={{
@@ -117,8 +120,10 @@ function CadenceEventCard({ event, onSelectAccount, showDate }) {
     }}>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{name}</div>
-        {account && account.name && cadence.type === 'task' && (
-          <div style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>{account.name}</div>
+        {cadence.type === 'task' && (
+          <div style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>
+            {isGlobal ? 'All Accounts' : (account && account.name ? account.name : '')}
+          </div>
         )}
         <div style={{ fontSize: 11, color: C.textMuted, marginTop: 3 }}>
           {getFrequencyLabel(cadence)}
@@ -130,7 +135,7 @@ function CadenceEventCard({ event, onSelectAccount, showDate }) {
           </div>
         )}
       </div>
-      {onSelectAccount && (
+      {onSelectAccount && !isGlobal && (
         <button
           onClick={function () { onSelectAccount(cadence.account_id); }}
           style={{
@@ -486,6 +491,10 @@ export function CadenceView({ cadences, accounts, onSelectAccount, addCadence })
               var ids = data.account_ids;
               var rest = Object.assign({}, data);
               delete rest.account_ids;
+              if (ids && accounts && ids.length === accounts.length && rest.type === 'task') {
+                return addCadence(Object.assign({}, rest, { is_global: true, account_id: null }))
+                  .then(function () { setShowAddModal(false); });
+              }
               var saves = ids
                 ? ids.map(function (id) { return addCadence(Object.assign({}, rest, { account_id: id })); })
                 : [addCadence(data)];
@@ -545,6 +554,10 @@ export function CadenceView({ cadences, accounts, onSelectAccount, addCadence })
             var ids = data.account_ids;
             var rest = Object.assign({}, data);
             delete rest.account_ids;
+            if (ids && accounts && ids.length === accounts.length && rest.type === 'task') {
+              return addCadence(Object.assign({}, rest, { is_global: true, account_id: null }))
+                .then(function () { setShowAddModal(false); });
+            }
             var saves = ids
               ? ids.map(function (id) { return addCadence(Object.assign({}, rest, { account_id: id })); })
               : [addCadence(data)];

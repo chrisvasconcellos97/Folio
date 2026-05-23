@@ -13,7 +13,7 @@ export function useCadences(userId, accountId) {
       .select("*, folio_accounts(id, name)")
       .eq("user_id", userId)
       .order("created_at", { ascending: true });
-    if (accountId) query = query.eq("account_id", accountId);
+    if (accountId) query = query.or("account_id.eq." + accountId + ",is_global.eq.true");
     query.then(function (result) {
       setLoading(false);
       if (!result.error) setCadences(result.data || []);

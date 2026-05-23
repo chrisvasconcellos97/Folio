@@ -1,11 +1,12 @@
 import { C } from "../../lib/colors";
-import { PipMark } from "../../components/PipMark";
+import { PipInsightCard } from "../../components/PipInsightCard";
 import { Pill } from "../../components/Pill";
 import {
   latestRecord, accountRecords,
   momPct, yoyPct,
   fmtRevenue, fmtPct,
   MONTH_NAMES,
+  pickV,
 } from "../../lib/metricsUtils";
 
 var TIER_COLORS = { Major: C.blue, Mid: C.purple, Growth: C.green };
@@ -44,30 +45,66 @@ function Sparkline({ records }) {
   );
 }
 
-function pipAnalysis(accounts, revenueHistory) {
+function buildPipelineInsight(accounts, revenueHistory) {
+  var seed     = "pipeline" + new Date().getDate().toString();
   var withData = accounts.filter(function (a) { return latestRecord(revenueHistory, a.id) !== null; });
 
   if (withData.length === 0) {
-    return "No revenue history yet. Once you log the first month for any account, I can start tracking trends and flagging what's moving.";
+    return pickV(seed + "p0", [
+      "No revenue history yet. Once you log the first month for any account, I can start tracking trends and flagging what's moving.",
+      "Pipeline is blank. Log the first month for any account and I'll show you what's trending.",
+    ]);
   }
 
   var momValues = withData
     .map(function (a) { return momPct(revenueHistory, a.id, "revenue"); })
     .filter(function (p) { return p !== null; });
-  var avgMoM = momValues.length > 0
+  var avgMoM  = momValues.length > 0
     ? Math.round(momValues.reduce(function (s, p) { return s + p; }, 0) / momValues.length)
     : null;
-  var down = momValues.filter(function (p) { return p < 0; }).length;
+  var down    = momValues.filter(function (p) { return p < 0; }).length;
+  var up      = momValues.filter(function (p) { return p > 0; }).length;
+  var atRisk  = accounts.filter(function (a) { return a.status === "red"; }).length;
+  var watching = accounts.filter(function (a) { return a.status === "yellow"; }).length;
 
-  var parts = [withData.length + " of " + accounts.length + " accounts reporting."];
+  var parts = [];
+
   if (avgMoM !== null) {
-    parts.push("Book is " + (avgMoM >= 0 ? "up" : "down") + " " + Math.abs(avgMoM) + "% MoM on average.");
+    parts.push(pickV(seed + "pl", [
+      withData.length + " of " + accounts.length + " accounts reporting. Book is " + (avgMoM >= 0 ? "up" : "down") + " " + Math.abs(avgMoM) + "% MoM on average.",
+      "Tracking " + withData.length + " account" + (withData.length !== 1 ? "s" : "") + ". Average MoM: " + (avgMoM >= 0 ? "+" : "") + avgMoM + "%.",
+    ]));
+  } else {
+    parts.push(pickV(seed + "pl", [
+      withData.length + " of " + accounts.length + " accounts have revenue history logged.",
+      withData.length + " reporting, " + (accounts.length - withData.length) + " without data yet.",
+    ]));
   }
+
   if (down > 0) {
-    parts.push(down + " account" + (down !== 1 ? "s" : "") + " trending down — worth a look.");
+    parts.push(pickV(seed + "ps", [
+      down + " account" + (down !== 1 ? "s are" : " is") + " trending down — worth a look.",
+      down + " down, " + up + " up. Address the declines before they compound.",
+    ]));
   } else if (momValues.length > 0) {
-    parts.push("Everything with data is trending up. Don't jinx it.");
+    parts.push(pickV(seed + "ps", [
+      "Everything with data is trending up. Don't jinx it.",
+      up + " account" + (up !== 1 ? "s" : "") + " moving in the right direction.",
+    ]));
   }
+
+  if (atRisk > 0) {
+    parts.push(pickV(seed + "pc", [
+      atRisk + " account" + (atRisk !== 1 ? "s" : "") + " marked at risk. Those need priority attention.",
+      atRisk + " at-risk — make sure they're getting face time before the number gets worse.",
+    ]));
+  } else if (watching > 0) {
+    parts.push(pickV(seed + "pc", [
+      watching + " on watch status. Keep tabs.",
+      watching + " account" + (watching !== 1 ? "s" : "") + " on yellow. Don't let those slip to red.",
+    ]));
+  }
+
   return parts.join(" ");
 }
 
@@ -92,25 +129,7 @@ export function PipelineView({ accounts, loading, revenueHistory, shopMetrics })
   return (
     <div>
       {/* Pip analysis */}
-      <div
-        style={{
-          background: C.bgCard,
-          border: "1px solid " + C.border,
-          borderRadius: 12,
-          padding: "14px 16px",
-          marginBottom: 16,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-          <PipMark size={9} color={C.accent} glow pulse />
-          <div style={{ fontSize: 10, color: C.accent, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-            Pip — Pipeline Health
-          </div>
-        </div>
-        <div style={{ fontSize: 13, color: C.textSub, lineHeight: 1.65 }}>
-          {pipAnalysis(accounts, revenueHistory)}
-        </div>
-      </div>
+      <PipInsightCard text={buildPipelineInsight(accounts, revenueHistory)} />
 
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {/* Accounts with revenue history */}
