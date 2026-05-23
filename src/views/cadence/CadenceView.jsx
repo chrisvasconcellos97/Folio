@@ -1,12 +1,76 @@
 import { useState } from "react";
 import { C } from "../../lib/colors";
 import { PipMark } from "../../components/PipMark";
+import { PipInsightCard } from "../../components/PipInsightCard";
 import { SetCadenceModal } from "./SetCadenceModal";
 import {
   getOccurrencesInRange, getNextOccurrence, getFrequencyLabel,
   formatTime, daysUntil, formatDateFull, isSameDay,
   startOfWeek, getCalendarGrid, DAYS_SHORT, MONTHS,
 } from "../../lib/cadenceUtils";
+import { pickV } from "../../lib/metricsUtils";
+
+function buildGlobalCadenceInsight(cadences) {
+  var seed  = "global" + new Date().getDate().toString();
+  var today = new Date(); today.setHours(0, 0, 0, 0);
+
+  if (!cadences || cadences.length === 0) {
+    return pickV(seed + "g0", [
+      "No cadences set yet. Open an account and set a recurring meeting or task to get started.",
+      "Nothing scheduled across your accounts. A cadence keeps you from going dark on the accounts that matter.",
+    ]);
+  }
+
+  var taskCads    = cadences.filter(function (c) { return c.type === 'task'; });
+  var meetingCads = cadences.filter(function (c) { return c.type !== 'task'; });
+
+  var upcoming = cadences.map(function (c) {
+    var next = getNextOccurrence(c, today);
+    return next ? { cadence: c, daysOut: Math.round((next - today) / 86400000) } : null;
+  }).filter(Boolean).sort(function (a, b) { return a.daysOut - b.daysOut; });
+
+  var todayCount = upcoming.filter(function (u) { return u.daysOut === 0; }).length;
+  var weekCount  = upcoming.filter(function (u) { return u.daysOut <= 7; }).length;
+  var soonest    = upcoming.length > 0 ? upcoming[0] : null;
+
+  var parts = [];
+
+  // Lead — today vs this week vs general
+  if (todayCount > 0) {
+    parts.push(pickV(seed + "gl", [
+      todayCount + " cadence" + (todayCount !== 1 ? "s" : "") + " due today. Make sure you're ready.",
+      todayCount === 1 ? "One on the schedule today. Don't let it slip." : todayCount + " things on the board today.",
+    ]));
+  } else if (weekCount > 0) {
+    parts.push(pickV(seed + "gl", [
+      weekCount + " coming up this week across your accounts.",
+      "This week has " + weekCount + " cadence" + (weekCount !== 1 ? "s" : "") + " lined up. Solid pipeline.",
+    ]));
+  } else if (soonest) {
+    var acctName = soonest.cadence.folio_accounts && soonest.cadence.folio_accounts.name
+      ? soonest.cadence.folio_accounts.name
+      : "your next account";
+    parts.push(pickV(seed + "gl", [
+      cadences.length + " cadence" + (cadences.length !== 1 ? "s" : "") + " active. Next up in " + soonest.daysOut + " days.",
+      "Quiet week ahead — " + acctName + " is next in " + soonest.daysOut + " day" + (soonest.daysOut !== 1 ? "s" : "") + ".",
+    ]));
+  }
+
+  // Secondary — mix context
+  if (meetingCads.length > 0 && taskCads.length > 0) {
+    parts.push(pickV(seed + "gs", [
+      meetingCads.length + " meeting cadence" + (meetingCads.length !== 1 ? "s" : "") + " and " + taskCads.length + " recurring task" + (taskCads.length !== 1 ? "s" : "") + " across all accounts.",
+      "Good mix — meetings and tasks both tracked.",
+    ]));
+  } else if (taskCads.length > 0) {
+    parts.push(pickV(seed + "gs", [
+      taskCads.length + " recurring task" + (taskCads.length !== 1 ? "s" : "") + " running. No meeting cadences set.",
+      "All tasks, no meeting cadences — consider setting a check-in frequency for your key accounts.",
+    ]));
+  }
+
+  return parts.join(" ");
+}
 
 var ACCOUNT_COLORS = [C.accent, C.green, C.blue, C.purple];
 
@@ -408,6 +472,7 @@ export function CadenceView({ cadences, accounts, onSelectAccount, addCadence })
             + Set Cadence
           </button>
         </div>
+        <PipInsightCard text={buildGlobalCadenceInsight(cadences)} />
         {viewToggle}
         <div style={{ textAlign: 'center', padding: '60px 0', color: C.textMuted }}>
           <PipMark size={16} color={C.accentDim} glow />
@@ -442,6 +507,7 @@ export function CadenceView({ cadences, accounts, onSelectAccount, addCadence })
           + Set Cadence
         </button>
       </div>
+      <PipInsightCard text={buildGlobalCadenceInsight(cadences)} />
       {viewToggle}
 
       {viewMode === 'calendar' && (
