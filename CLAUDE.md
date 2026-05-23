@@ -135,6 +135,15 @@ This app is currently single-user but should be built with multi-tenancy in mind
    - **Memoize insight builders** — all `buildXInsight()` calls (`buildPipInsight`, `buildMeetingsInsight`, `buildPipelineInsight`, `buildGlobalCadenceInsight`) run on every parent render. Wrap in `useMemo`; since the seed is date-based the result is stable per day. Prevents text flickering when unrelated state changes.
    - **Fix index-based list keys in CadenceView** — lines 228, 260, 323 use loop index `j`/`i` as React keys. Replace with `ev.id` or a stable string to prevent incorrect remounts on reorder.
 
+4. **UX polish — seven fixes:**
+   - **Toast notifications** — build a lightweight shared `Toast` component (~50 lines, no library). 2-second fade, top-center position. Wire into all CRUD operations: saves, deletes, errors. Single `useToast` hook or context so any component can trigger it.
+   - **Consistent delete confirmation** — standardize the "Sure?" two-step pattern (already exists in CadenceTab and AccountDetail) across MeetingsTab, ContactsTab, and QuickTaskModal. All three currently fire delete on a single click.
+   - **Escape key closes modals** — add a `useEffect` in `src/components/Modal.jsx` that listens for `keydown` Escape and calls `onClose`. One change, fixes every modal in the app.
+   - **Actionable empty states** — add a CTA button to each empty state that has one: AccountsView "No accounts" → "Add Account", ItemsTab "All clear" → "Add Action Item", MeetingsView → "Log a Meeting" (navigates to account), ContactsTab "No contacts yet" → "Add Contact".
+   - **Mobile tap targets** — ItemsTab checkbox squares are 16px (too small for thumb); Modal close `×` has no padding. Wrap checkbox in a larger hit area div; add padding to modal close button.
+   - **QuickTaskModal "Saving…" state** — `saving` state exists but button text never changes. Update button label to "Saving…" while in-flight.
+   - **Pip auto-scroll to latest** — when a new Pip message arrives, auto-scroll the conversation container to the bottom. `useRef` on the message list + `scrollIntoView` on message append.
+
 **Already shipped (drop from list):**
 - ✅ Quick Tasks — tray on main page, modal with account dropdown + reminder presets, Pip integration (surface open tasks on load, complete/add via natural language)
 - ✅ Sub-accounts — UI + migration (`parent_account_id` column live), nested display with faded ↳ arrow on accounts list
