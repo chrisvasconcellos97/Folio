@@ -161,7 +161,14 @@ This app is currently single-user but should be built with multi-tenancy in mind
    - **Pip API timeout + retry** — `src/lib/pip.js` has no AbortController, so a stalled request hangs indefinitely. Add a 25-second timeout and one automatic retry on 5xx. Handle 429 (rate limit) responses specifically with a user-facing "Pip is busy, try again in a moment" message.
    - **Fix fire-and-forget metadata updates** — `last_meeting` and `last_interaction_at` updates in useMeetings, useItems, and useContacts use `.then()` with no callback and no `.catch()`. Failures are completely silent. Add error logging at minimum; ideally surface a non-blocking warning.
 
-8. **Feature completeness:** *(audit in progress — will update)*
+8. **Feature completeness:**
+   - **⚠️ DATA LOSS — Add `attendees` column to meetings table** — LogMeetingModal saves `attendees` array, MeetingsTab and CadenceTab render it, but `folio_meetings` has no `attendees` column in the schema. Every meeting's attendee list is silently dropped on save. Fix: `ALTER TABLE folio_meetings ADD COLUMN IF NOT EXISTS attendees text[];`
+   - **Edit Meeting modal** — meetings can be created and deleted but not edited. `updateMeeting` exists in the hook and is passed to MeetingsTab but there's no modal wired to it. 9 fields (title, date, notes, talking_points, attendees, action_items, commitments, follow_up_date, rating) are frozen after creation.
+   - **Edit Item modal** — items can be created and closed but not edited. `updateItem` exists in the hook but AddItemModal has no edit mode and the hook function isn't even exported to AccountDetail. Text, due_date, and owner can't be changed without delete + recreate.
+   - **Edit Contact modal** — contacts can be created and deleted but not edited. `updateContact` doesn't exist in the hook at all. Name, title, phone, email, linkedin, notes all frozen after creation.
+   - **pip_email mailto link** — pip_email is displayed with a Copy button in MeetingsTab but no `mailto:` link. ContactsTab already uses `href={"mailto:" + c.email}` — apply the same pattern to pip_email drafts so one tap opens the mail client.
+   - **Cadence carry-forward not implemented** — CLAUDE.md marks it shipped but it isn't. Items are independent records with no link to cadence occurrences. No trigger or logic auto-creates an item when a recurring task cadence fires. Either build a scheduled function or add a manual "create item from cadence" button as a stopgap.
+   - **Schema sync** — `supabase/contacts_v2.sql` adds phone/email/linkedin columns that are missing from the base `schema.sql`. Anyone running schema.sql fresh is missing those columns. Consolidate into schema.sql.
 
 9. **PWA / installability:**
    - **Web manifest + icons** — no `manifest.json`, no app icons (192×192, 512×512), no `apple-touch-icon`. App cannot be installed to home screen. Add manifest via `vite-plugin-pwa` (already in the Vite ecosystem) with name, short_name, theme_color matching `C.bg` (#0D1F1C), and a PipMark-based icon.
