@@ -147,11 +147,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 6. **Motion design / transitions:** *(no open items)*
 
-7. **Typography & visual rhythm:**
-    - **Consistent type scale** — standardize to 12 / 14 / 16 / 20 / 24px across the app. Currently uses 9, 11, 12, 13, 15, 22, 24px with no clear system.
-    - **Tabular nums on all figures** — revenue, counts, and dates should use `font-variant-numeric: tabular-nums`. Already on the revenue header; needs to be everywhere.
-    - **Consistent label spacing** — uppercase tracking labels (`font-size: 9px`, `letter-spacing: 0.08em`) are used inconsistently. Define one standard and apply it everywhere.
-    - **Line height audit** — dense info cards (account cards, meeting rows) have inconsistent line heights.
+7. **Typography & visual rhythm:** *(no open items)*
 
 8. **Copy & tone:** *(no open items)*
 
@@ -170,9 +166,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
     - **Export contacts to CSV** — download all contacts for an account.
     - **Share meeting summary** — copy-ready text block from a meeting's notes + action items.
 
-12. **Personalization — two remaining:**
-    - **Default tab per account** — let users pin a default tab so opening an account always lands on Meetings, Contacts, or Overview.
-    - **Dashboard density toggle** — compact vs. comfortable view on the accounts list.
+12. **Personalization:** *(no open items)*
 
 13. **Data visualization:**
     - **Sparklines on account cards** — a tiny 8-point revenue trend line on each account card. Only shown if revenue history data exists.
@@ -267,6 +261,11 @@ This app is currently single-user but should be built with multi-tenancy in mind
 - ✅ Cursor consistency — `cursor: pointer` + `role="button"` audited across all interactive divs; GaugeView project rows fixed
 - ✅ Button labels — "Save Meeting" → "Log Meeting", edit-mode saves → "Done", add-mode labels already correct
 - ✅ Section headers — "Auto Health" → "Health", "Follow-up" → "Follow-up Due", "YTD Revenue" → "Revenue YTD"
+- ✅ Tabular nums on all figures — dates, counts, revenue, percentages, day numbers across 6 files
+- ✅ Consistent label spacing — 10px/700/uppercase/0.07em standardized across MeetingsView, CadenceView, PipelineView
+- ✅ Line height audit — multi-line text containers standardized to 1.5/1.6
+- ✅ Default tab per account — localStorage remembers last tab per account (`folio_default_tab_<id>`)
+- ✅ Dashboard density toggle — ⊟/⊞ toggle on accounts list, compact mode tightens cards and hides secondary info
 - ✅ Persistent filter prefs — filter state persisted to localStorage in AccountsView
 - ✅ Empty state copy — "Nothing here yet — add your first account and I'll get to work"
 - ✅ Error message copy — "Couldn't delete/save — check your connection" across MeetingsTab, ContactsTab, ItemsTab
