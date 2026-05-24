@@ -20,6 +20,10 @@ create table if not exists folio_accounts (
   serviced_states         text[] default '{}',
   market_scope            text,
   parent_account_id       uuid references folio_accounts,
+  account_type            text DEFAULT 'standard',
+  address                 text,
+  lat                     float8,
+  lng                     float8,
   created_at              timestamptz default now(),
   updated_at              timestamptz default now()
 );

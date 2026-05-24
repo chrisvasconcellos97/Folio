@@ -61,7 +61,7 @@ function TagChip({ label, active, onClick, onRemove, color }) {
   );
 }
 
-export function AddAccountModal({ userId, onSave, onClose, existing, accounts }) {
+export function AddAccountModal({ userId, onSave, onClose, existing, accounts, defaultType, defaultParentId }) {
   var [name, setName]       = useState(existing ? existing.name : "");
   var [revenue, setRevenue] = useState(existing ? (existing.revenue || "") : "");
   var [tier, setTier]       = useState(existing ? (existing.tier || "Mid") : "Mid");
@@ -71,7 +71,11 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts })
   var [customTag, setCustomTag] = useState("");
   var [states, setStates]       = useState(existing ? (existing.serviced_states || []) : []);
   var [statePickerOpen, setStatePickerOpen] = useState(false);
-  var [parentAccountId, setParentAccountId] = useState(existing ? (existing.parent_account_id || '') : '');
+  var [parentAccountId, setParentAccountId] = useState(
+    existing ? (existing.parent_account_id || '') : (defaultParentId || '')
+  );
+  var [accountType, setAccountType] = useState(existing ? (existing.account_type || 'standard') : (defaultType || 'standard'));
+  var [address, setAddress]         = useState(existing ? (existing.address || '') : '');
   var [loading, setLoading] = useState(false);
   var [error, setError]     = useState(null);
 
@@ -105,16 +109,18 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts })
     setLoading(true);
     setError(null);
     onSave({
-      name:             name.trim(),
-      revenue:          revenue.trim() || null,
-      tier:             tier,
-      status:           status,
-      objective:        notes.trim() || null,
-      tags:             tags.length > 0 ? tags : null,
-      serviced_states:  states.length > 0 ? states : null,
-      region:           region || null,
-      market_scope:     marketScope || null,
+      name:              name.trim(),
+      revenue:           revenue.trim() || null,
+      tier:              tier,
+      status:            status,
+      objective:         notes.trim() || null,
+      tags:              tags.length > 0 ? tags : null,
+      serviced_states:   states.length > 0 ? states : null,
+      region:            region || null,
+      market_scope:      marketScope || null,
       parent_account_id: parentAccountId || null,
+      account_type:      accountType || 'standard',
+      address:           address.trim() || null,
     })
       .then(function () { setLoading(false); onClose(); })
       .catch(function (err) { setLoading(false); setError(err.message); });
@@ -134,6 +140,17 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts })
         <div>
           <FL htmlFor="account-revenue">Revenue (YTD)</FL>
           <InputField id="account-revenue" value={revenue} onChange={function (e) { setRevenue(e.target.value); }} placeholder="e.g. $4.9M" />
+        </div>
+
+        {/* Address */}
+        <div>
+          <FL htmlFor="account-address">Address <span style={{ fontWeight: 400, color: C.textMuted }}>(optional)</span></FL>
+          <InputField
+            id="account-address"
+            value={address}
+            onChange={function (e) { setAddress(e.target.value); }}
+            placeholder="123 Main St, Chicago, IL 60601"
+          />
         </div>
 
         {/* Tier + Status */}
@@ -185,6 +202,31 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts })
             </div>
           </div>
         </div>
+
+        {/* MSO toggle */}
+        {defaultType !== 'shop' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button
+              type="button"
+              onClick={function () { setAccountType(function (t) { return t === 'mso' ? 'standard' : 'mso'; }); }}
+              style={{
+                width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer',
+                background: accountType === 'mso' ? C.accent : 'rgba(255,255,255,0.1)',
+                position: 'relative', transition: 'background 0.2s', flexShrink: 0,
+              }}
+            >
+              <span style={{
+                position: 'absolute', top: 2, left: accountType === 'mso' ? 18 : 2,
+                width: 16, height: 16, borderRadius: '50%', background: '#fff',
+                transition: 'left 0.2s',
+              }} />
+            </button>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>MSO Account</div>
+              <div style={{ fontSize: 11, color: C.textMuted }}>Has individual shops as sub-accounts</div>
+            </div>
+          </div>
+        )}
 
         {/* Supplier types */}
         <div>
@@ -396,7 +438,7 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts })
         </div>
 
         {/* Parent account */}
-        {accounts && accounts.length > 0 && (
+        {!defaultParentId && accounts && accounts.length > 0 && (
           <div>
             <FL>Part of <span style={{ fontWeight: 400, color: C.textMuted }}>(optional)</span></FL>
             <ChipDropdown

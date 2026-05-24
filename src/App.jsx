@@ -219,6 +219,7 @@ export default function App() {
             onPipPrefillHandled={function () { setPipPrefill(null); }}
             revenueHistory={revenueHistory}
             shopMetrics={shopMetrics}
+            onAddAccount={addAccount}
           />
         </div>
       );

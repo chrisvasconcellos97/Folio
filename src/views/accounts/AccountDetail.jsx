@@ -14,23 +14,29 @@ import { ItemsTab } from "./tabs/ItemsTab";
 import { ContactsTab } from "./tabs/ContactsTab";
 import { CadenceTab } from "./tabs/CadenceTab";
 import { ProjectsTab } from "./tabs/ProjectsTab";
+import { ShopsTab } from "./tabs/ShopsTab";
+import { AddAccountModal } from "./AddAccountModal";
 import { LogMeetingModal } from "./LogMeetingModal";
 import { QuickMeetingModal } from "./QuickMeetingModal";
 import { AddItemModal } from "./AddItemModal";
 import { AddContactModal } from "./AddContactModal";
 
-var TABS = ["overview", "meetings", "tasks", "contacts", "cadence", "projects"];
 var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red };
 var STATUS_LABELS = { green: "Healthy", yellow: "Watch", red: "At Risk" };
 var TIER_COLORS   = { Major: C.blue, Mid: C.purple, Growth: C.green };
 
-export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDelete, onUpdate, onSelectAccount, pipPrefill, onPipPrefillHandled, revenueHistory, shopMetrics }) {
+export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDelete, onUpdate, onSelectAccount, pipPrefill, onPipPrefillHandled, revenueHistory, shopMetrics, onAddAccount }) {
+  var TABS = account.account_type === 'mso'
+    ? ["overview", "shops", "meetings", "tasks", "contacts", "cadence", "projects"]
+    : ["overview", "meetings", "tasks", "contacts", "cadence", "projects"];
+
   var [tab, setTab]               = useState("overview");
   var [tabSlideDir, setTabSlideDir] = useState("right");
   var [showMeetingModal, setMeetingModal] = useState(false);
   var [showQuickModal, setQuickModal]     = useState(false);
   var [showItemModal, setItemModal]       = useState(false);
   var [showContactModal, setContactModal] = useState(false);
+  var [showAddShopModal, setAddShopModal] = useState(false);
   var [confirmDelete, setConfirmDelete]   = useState(false);
 
   var [cadencePrefill, setCadencePrefill] = useState(null);
@@ -140,6 +146,11 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
                 })}
               </div>
             )}
+            {account.address && (
+              <div style={{ fontSize: 12, color: C.textMuted, marginTop: 6 }}>
+                {account.address}
+              </div>
+            )}
           </div>
 
           <div style={{ textAlign: "right", flexShrink: 0 }}>
@@ -238,7 +249,20 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
                 border: "1px solid " + (active ? (isGauge ? "rgba(123,108,246,0.2)" : C.border) : "transparent"),
               }}
             >
-              {isGauge ? "gauge" : t}
+              {isGauge ? "gauge" : t === "shops" ? (
+                <span>
+                  shops
+                  {subAccounts.length > 0 && (
+                    <span style={{
+                      marginLeft: 4, fontSize: 9, fontWeight: 700,
+                      background: "rgba(74,155,130,0.15)", color: C.accent,
+                      borderRadius: 8, padding: "1px 5px",
+                    }}>
+                      {subAccounts.length}
+                    </span>
+                  )}
+                </span>
+              ) : t}
             </button>
           );
         })}
@@ -264,6 +288,14 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
           onSelectAccount={onSelectAccount}
           revenueHistory={revenueHistory || []}
           shopMetrics={shopMetrics || []}
+        />
+      )}
+
+      {tab === "shops" && (
+        <ShopsTab
+          shops={subAccounts.sort(function (a, b) { return a.name.localeCompare(b.name); })}
+          onAddShop={function () { setAddShopModal(true); }}
+          onSelectShop={function (shop) { onSelectAccount && onSelectAccount(shop); }}
         />
       )}
 
@@ -382,6 +414,26 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
             return addContact(data).then(function (c) { showToast("Contact added"); return c; });
           }}
           onClose={function () { setContactModal(false); }}
+        />
+      )}
+
+      {showAddShopModal && onAddAccount && (
+        <AddAccountModal
+          userId={userId}
+          accounts={accounts}
+          defaultType="shop"
+          defaultParentId={account.id}
+          onSave={function (data) {
+            return onAddAccount(Object.assign({}, data, {
+              account_type: 'shop',
+              parent_account_id: account.id,
+            })).then(function (shop) {
+              showToast("Shop added");
+              setAddShopModal(false);
+              return shop;
+            });
+          }}
+          onClose={function () { setAddShopModal(false); }}
         />
       )}
     </div>

@@ -108,7 +108,9 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
         .filter(function (a) { return a.parent_account_id === parent.id; })
         .sort(function (a, b) { return a.name.localeCompare(b.name); })
         .forEach(function (child) {
-          list.push({ account: child, isChild: true });
+          if (parent.account_type !== 'mso') {
+            list.push({ account: child, isChild: true });
+          }
           addedIds[child.id] = true;
         });
     });
@@ -117,6 +119,16 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
     });
     return list;
   }, [filtered]);
+
+  var shopCounts = useMemo(function () {
+    var counts = {};
+    accounts.forEach(function (a) {
+      if (a.parent_account_id) {
+        counts[a.parent_account_id] = (counts[a.parent_account_id] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [accounts]);
 
   return (
     <div>
@@ -525,6 +537,22 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                   {daysLabel}
                 </div>
               </div>
+              {a.account_type === 'mso' && shopCounts[a.id] > 0 && (
+                <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <div style={{
+                    fontSize: 10, fontWeight: 700, color: C.accent,
+                    background: 'rgba(74,155,130,0.1)', border: '1px solid rgba(74,155,130,0.2)',
+                    borderRadius: 10, padding: '2px 8px', letterSpacing: '0.04em',
+                  }}>
+                    {shopCounts[a.id]} {shopCounts[a.id] === 1 ? 'shop' : 'shops'}
+                  </div>
+                </div>
+              )}
+              {a.address && (
+                <div style={{ fontSize: 10, color: C.textMuted, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {a.address}
+                </div>
+              )}
             </div>
           );
 
