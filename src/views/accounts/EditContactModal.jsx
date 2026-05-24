@@ -141,6 +141,8 @@ export function EditContactModal({ contact, onSave, onClose }) {
 
         {error && (
           <div
+            role="alert"
+            aria-live="polite"
             style={{
               background: "rgba(248,113,113,0.1)",
               border: "1px solid rgba(248,113,113,0.2)",

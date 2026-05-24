@@ -486,6 +486,9 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
           var card = (
             <div
               onClick={function () { onSelect(a); }}
+              role="button"
+              tabIndex={0}
+              onKeyDown={function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(a); } }}
               style={{
                 flex: isChild ? 1 : undefined,
                 background: C.bgCard,

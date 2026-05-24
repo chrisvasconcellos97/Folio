@@ -482,14 +482,18 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
         </div>
 
         {error && (
-          <div style={{
-            background: "rgba(248,113,113,0.1)",
-            border: "1px solid rgba(248,113,113,0.2)",
-            borderRadius: 8,
-            padding: "8px 12px",
-            fontSize: 12,
-            color: C.red,
-          }}>
+          <div
+            role="alert"
+            aria-live="polite"
+            style={{
+              background: "rgba(248,113,113,0.1)",
+              border: "1px solid rgba(248,113,113,0.2)",
+              borderRadius: 8,
+              padding: "8px 12px",
+              fontSize: 12,
+              color: C.red,
+            }}
+          >
             {error}
           </div>
         )}

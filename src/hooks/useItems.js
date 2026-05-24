@@ -39,7 +39,7 @@ export function useItems(userId, accountId) {
           supabase.from("folio_accounts")
             .update({ last_interaction_at: new Date().toISOString() })
             .eq("id", data.account_id)
-            .then()
+            .then(function (r) { if (r && r.error) console.error("Metadata update failed:", r.error.message); })
             .catch(function (err) { console.error("Metadata update failed:", err); });
         }
         fetch();

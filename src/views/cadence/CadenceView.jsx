@@ -201,6 +201,9 @@ function CalendarView({ year, month, events, onPrev, onNext, onSelectAccount }) 
             <div
               key={date.toISOString().slice(0, 10)}
               onClick={function () { if (evts.length > 0) setSelectedDay(selected ? null : date); }}
+              role={evts.length > 0 ? "button" : undefined}
+              tabIndex={evts.length > 0 ? 0 : undefined}
+              onKeyDown={evts.length > 0 ? function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedDay(selected ? null : date); } } : undefined}
               style={{
                 minHeight: 58,
                 background: selected ? 'rgba(74,155,130,0.07)' : 'rgba(255,255,255,0.02)',
@@ -330,6 +333,9 @@ function WeekView({ weekStart, weekEnd, events, onPrev, onNext, onSelectAccount 
                   return (
                     <div key={ev.cadence.id + "-" + j}
                       onClick={function () { onSelectAccount && onSelectAccount(ev.cadence.account_id); }}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectAccount && onSelectAccount(ev.cadence.account_id); } }}
                       style={{
                         background: col + '18', border: '1px solid ' + col + '44',
                         borderRadius: 5, padding: '4px 5px', cursor: 'pointer',
