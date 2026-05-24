@@ -170,11 +170,11 @@ function CalendarView({ year, month, events, onPrev, onNext, onSelectAccount }) 
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-        <button onClick={onPrev} style={navBtnStyle}>‹</button>
+        <button onClick={onPrev} aria-label="Previous" style={navBtnStyle}>‹</button>
         <span style={{ fontSize: 14, fontWeight: 600, color: C.text }}>
           {MONTHS[month] + ' ' + year}
         </span>
-        <button onClick={onNext} style={navBtnStyle}>›</button>
+        <button onClick={onNext} aria-label="Next" style={navBtnStyle}>›</button>
       </div>
 
       {/* Day headers */}
@@ -289,9 +289,9 @@ function WeekView({ weekStart, weekEnd, events, onPrev, onNext, onSelectAccount 
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-        <button onClick={onPrev} style={navBtnStyle}>‹</button>
+        <button onClick={onPrev} aria-label="Previous" style={navBtnStyle}>‹</button>
         <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{wLabel}</span>
-        <button onClick={onNext} style={navBtnStyle}>›</button>
+        <button onClick={onNext} aria-label="Next" style={navBtnStyle}>›</button>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>

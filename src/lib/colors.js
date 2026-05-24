@@ -50,6 +50,9 @@ export const C = {
   // ── Borders ──────────────────────────────────────────────────────────────
   border:       "#1e3530",
   borderBright: "#2a4a42",
+
+  // ── Dropdown ─────────────────────────────────────────────────────────────
+  bgDropdown:   "#1a2b28",
 };
 
 export function hexToRgb(hex) {

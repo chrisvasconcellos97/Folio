@@ -4,6 +4,7 @@ import { Modal } from "../../components/Modal";
 import { AmberBtn, SecBtn } from "../../components/Buttons";
 import { FL } from "../../components/FieldLabel";
 import { InputField } from "../../components/InputField";
+import { ChipDropdown } from "../../components/ChipDropdown";
 
 var DAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -52,8 +53,6 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues, acco
   var [monthlyOrdinal, setMonthlyOrdinal] = useState(seed.monthly_ordinal || 'first');
   var [selectedAccountId,  setSelectedAccountId]  = useState(null);
   var [selectedAccountIds, setSelectedAccountIds] = useState([]);
-  var [acctDropOpen,       setAcctDropOpen]       = useState(false);
-  var [meetingAcctDropOpen, setMeetingAcctDropOpen] = useState(false);
   var [defaultAttendees, setDefaultAttendees]   = useState(existing ? (existing.default_attendees || []) : []);
   var [hour,   setHour]   = useState(init.hour);
   var [minute, setMinute] = useState(init.minute);
@@ -155,65 +154,23 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues, acco
 
         {/* Account picker (global cadence view — meetings) */}
         {accounts && accounts.length > 0 && type === 'meeting' && (
-          <div style={{ position: 'relative' }}>
+          <div>
             <FL>Account</FL>
-            <button
-              type="button"
-              onClick={function () { setMeetingAcctDropOpen(function (o) { return !o; }); }}
-              style={{
-                width: '100%', background: 'rgba(255,255,255,0.04)',
-                border: '1px solid ' + (meetingAcctDropOpen ? 'rgba(74,155,130,0.4)' : C.border),
-                borderRadius: 8, padding: '9px 12px',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontSize: 13,
-                color: selectedAccountId ? C.text : C.textMuted,
+            <ChipDropdown
+              options={accounts.map(function (a) { return a.name; })}
+              value={selectedAccountId ? (accounts.find(function (a) { return a.id === selectedAccountId; }) || {}).name || '' : ''}
+              onSelect={function (name) {
+                var acct = accounts.find(function (a) { return a.name === name; });
+                if (acct) setSelectedAccountId(acct.id);
               }}
-            >
-              <span>
-                {selectedAccountId
-                  ? (accounts.find(function (a) { return a.id === selectedAccountId; }) || {}).name || 'Select...'
-                  : 'Select an account...'}
-              </span>
-              <span style={{ fontSize: 10, color: C.textMuted }}>{meetingAcctDropOpen ? '▲' : '▼'}</span>
-            </button>
-            {meetingAcctDropOpen && (
-              <>
-                <div onClick={function () { setMeetingAcctDropOpen(false); }} style={{ position: 'fixed', inset: 0, zIndex: 10 }} />
-                <div style={{
-                  position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
-                  background: '#1a2b28', border: '1px solid ' + C.border,
-                  borderRadius: 10, padding: 10, zIndex: 11,
-                  maxHeight: 240, overflowY: 'auto',
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-                }}>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                    {accounts.map(function (a) {
-                      var on = selectedAccountId === a.id;
-                      return (
-                        <button key={a.id} type="button"
-                          onClick={function () { setSelectedAccountId(a.id); setMeetingAcctDropOpen(false); }}
-                          style={{
-                            background: on ? 'rgba(74,155,130,0.18)' : 'rgba(255,255,255,0.04)',
-                            color: on ? C.accent : C.textMuted,
-                            border: '1px solid ' + (on ? 'rgba(74,155,130,0.45)' : C.border),
-                            borderRadius: 6, padding: '5px 11px', fontSize: 12,
-                            fontWeight: on ? 700 : 400,
-                            fontFamily: "'DM Sans', sans-serif", cursor: 'pointer',
-                          }}>
-                          {on ? '✓ ' : ''}{a.name}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </>
-            )}
+              placeholder="Select an account..."
+            />
           </div>
         )}
 
         {/* Multi-account picker for tasks */}
         {accounts && accounts.length > 0 && type === 'task' && (
-          <div style={{ position: 'relative' }}>
+          <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
               <FL style={{ marginBottom: 0 }}>Accounts</FL>
               {selectedAccountIds.length > 0 && (
@@ -223,74 +180,19 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues, acco
                 </button>
               )}
             </div>
-            <button
-              type="button"
-              onClick={function () { setAcctDropOpen(function (o) { return !o; }); }}
-              style={{
-                width: '100%', background: 'rgba(255,255,255,0.04)',
-                border: '1px solid ' + (acctDropOpen ? 'rgba(74,155,130,0.4)' : C.border),
-                borderRadius: 8, padding: '9px 12px',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontSize: 13,
-                color: selectedAccountIds.length > 0 ? C.text : C.textMuted,
+            <ChipDropdown
+              multi
+              options={accounts.map(function (a) { return a.name; })}
+              values={selectedAccountIds.map(function (id) {
+                var acct = accounts.find(function (a) { return a.id === id; });
+                return acct ? acct.name : id;
+              })}
+              onSelect={function (name) {
+                var acct = accounts.find(function (a) { return a.name === name; });
+                if (acct) toggleAccountId(acct.id);
               }}
-            >
-              <span>
-                {selectedAccountIds.length === 0 && 'Select accounts...'}
-                {selectedAccountIds.length === 1 && accounts.find(function (a) { return a.id === selectedAccountIds[0]; })?.name}
-                {selectedAccountIds.length > 1 && selectedAccountIds.length + ' accounts selected'}
-              </span>
-              <span style={{ fontSize: 10, color: C.textMuted }}>{acctDropOpen ? '▲' : '▼'}</span>
-            </button>
-
-            {acctDropOpen && (
-              <>
-                <div onClick={function () { setAcctDropOpen(false); }} style={{ position: 'fixed', inset: 0, zIndex: 10 }} />
-                <div style={{
-                  position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
-                  background: '#1a2b28', border: '1px solid ' + C.border,
-                  borderRadius: 10, padding: 10, zIndex: 11,
-                  maxHeight: 240, overflowY: 'auto',
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-                }}>
-                  <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
-                    <button type="button"
-                      onClick={function () {
-                        setSelectedAccountIds(
-                          selectedAccountIds.length === accounts.length ? [] : accounts.map(function (a) { return a.id; })
-                        );
-                      }}
-                      style={{
-                        background: selectedAccountIds.length === accounts.length ? 'rgba(74,155,130,0.15)' : 'rgba(74,155,130,0.06)',
-                        color: C.accent,
-                        border: '1px solid rgba(74,155,130,' + (selectedAccountIds.length === accounts.length ? '0.4' : '0.2') + ')',
-                        borderRadius: 6, padding: '4px 12px', fontSize: 11, fontWeight: 700,
-                        fontFamily: "'DM Sans', sans-serif", cursor: 'pointer',
-                      }}>
-                      {selectedAccountIds.length === accounts.length ? '✓ All accounts' : 'Select all'}
-                    </button>
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                    {accounts.map(function (a) {
-                      var on = selectedAccountIds.includes(a.id);
-                      return (
-                        <button key={a.id} type="button" onClick={function () { toggleAccountId(a.id); }}
-                          style={{
-                            background: on ? 'rgba(74,155,130,0.18)' : 'rgba(255,255,255,0.04)',
-                            color: on ? C.accent : C.textMuted,
-                            border: '1px solid ' + (on ? 'rgba(74,155,130,0.45)' : C.border),
-                            borderRadius: 6, padding: '5px 11px', fontSize: 12,
-                            fontWeight: on ? 700 : 400,
-                            fontFamily: "'DM Sans', sans-serif", cursor: 'pointer',
-                          }}>
-                          {on ? '✓ ' : ''}{a.name}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </>
-            )}
+              placeholder="Select accounts..."
+            />
             {selectedAccountIds.length > 0 && accounts && selectedAccountIds.length === accounts.length && (
               <div style={{ fontSize: 11, color: C.accent, marginTop: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
                 <span>↻</span>

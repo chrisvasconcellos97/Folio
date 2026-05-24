@@ -160,12 +160,14 @@ export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAd
             return (
               <div key={item.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, background: C.bgCard, border: "1px solid " + C.border, borderRadius: 10, padding: "11px 13px", marginBottom: 6 }}>
                 <div style={{ paddingTop: 2 }}>
-                  <div
+                  <button
+                    type="button"
                     onClick={function () { handleClose(item.id); }}
-                    style={{ padding: 8, margin: -8, display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+                    aria-label="Mark complete"
+                    style={{ padding: 8, margin: -8, display: "inline-flex", alignItems: "center", justifyContent: "center", background: "none", border: "none" }}
                   >
                     <div style={{ width: 16, height: 16, borderRadius: 4, border: "1.5px solid " + C.accentDim, flexShrink: 0, background: "transparent" }} />
-                  </div>
+                  </button>
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 14, color: C.text, lineHeight: 1.4 }}>{item.text}</div>

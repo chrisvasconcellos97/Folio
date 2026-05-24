@@ -299,6 +299,7 @@ export function PipView({ accounts, meetings, tasks, addTask, updateTask, onActi
             <button
               onClick={function () { setAudio(function (v) { if (!v) window.speechSynthesis && window.speechSynthesis.cancel(); return !v; }); }}
               title={audioEnabled ? "Mute Pip's voice" : "Unmute Pip's voice"}
+              aria-label={audioEnabled ? "Mute Pip voice" : "Unmute Pip voice"}
               style={{ background: "none", border: "none", cursor: "pointer", padding: "2px 4px", opacity: audioEnabled ? 1 : 0.4, lineHeight: 1 }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.textMuted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -314,6 +315,8 @@ export function PipView({ accounts, meetings, tasks, addTask, updateTask, onActi
 
       {/* Messages */}
       <div
+        aria-live="polite"
+        aria-label="Conversation"
         style={{
           flex: 1,
           overflowY: "auto",
@@ -474,6 +477,7 @@ export function PipView({ accounts, meetings, tasks, addTask, updateTask, onActi
             onClick={listening ? stopListening : startListening}
             className={listening ? "pip-pulse" : ""}
             title={listening ? "Stop listening" : "Speak to Pip"}
+            aria-label={listening ? "Stop listening" : "Speak to Pip"}
             style={{
               width: 38, height: 38, borderRadius: "50%", flexShrink: 0,
               background: listening ? "rgba(224,92,92,0.15)" : C.accentGlow,
@@ -493,6 +497,7 @@ export function PipView({ accounts, meetings, tasks, addTask, updateTask, onActi
         <AmberBtn
           onClick={function () { send(); }}
           disabled={loading || !input.trim()}
+          aria-label="Send message"
           style={{ flexShrink: 0, padding: "10px 16px" }}
         >
           →

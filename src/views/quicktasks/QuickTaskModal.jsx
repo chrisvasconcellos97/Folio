@@ -4,6 +4,7 @@ import { Modal } from "../../components/Modal";
 import { AmberBtn, SecBtn, DangerBtn } from "../../components/Buttons";
 import { InputField, TextArea } from "../../components/InputField";
 import { FL } from "../../components/FieldLabel";
+import { ChipDropdown } from "../../components/ChipDropdown";
 
 var PRESETS = [
   { label: "30 min", minutes: 30  },
@@ -17,7 +18,6 @@ export function QuickTaskModal({ existing, accounts, onSave, onDelete, onClose }
   var [title, setTitle]         = useState(existing ? existing.title : "");
   var [notes, setNotes]         = useState(existing ? (existing.notes || "") : "");
   var [accountId, setAccountId] = useState(existing ? (existing.account_id || "") : "");
-  var [acctDropOpen, setAcctDropOpen] = useState(false);
   var [reminderMinutes, setReminderMinutes] = useState(null);
   var [clearReminder, setClearReminder]     = useState(false);
   var [saving, setSaving]           = useState(false);
@@ -96,71 +96,18 @@ export function QuickTaskModal({ existing, accounts, onSave, onDelete, onClose }
           />
         </div>
 
-        <div style={{ position: "relative" }}>
+        <div>
           <FL>Account (optional)</FL>
-          <button
-            type="button"
-            onClick={function () { setAcctDropOpen(function (o) { return !o; }); }}
-            style={{
-              width: "100%", background: "rgba(255,255,255,0.04)",
-              border: "1px solid " + (acctDropOpen ? "rgba(74,155,130,0.4)" : C.border),
-              borderRadius: 8, padding: "9px 12px",
-              display: "flex", alignItems: "center", justifyContent: "space-between",
-              cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontSize: 13,
-              color: accountId ? C.text : C.textMuted,
+          <ChipDropdown
+            options={["— No account —"].concat(sortedAccounts.map(function (a) { return a.name; }))}
+            value={accountId ? (sortedAccounts.find(function (a) { return a.id === accountId; }) || {}).name || "" : "— No account —"}
+            onSelect={function (name) {
+              if (name === "— No account —") { setAccountId(""); return; }
+              var acct = sortedAccounts.find(function (a) { return a.name === name; });
+              if (acct) setAccountId(acct.id);
             }}
-          >
-            <span>
-              {accountId
-                ? (sortedAccounts.find(function (a) { return a.id === accountId; }) || {}).name || "Select..."
-                : "— No account —"}
-            </span>
-            <span style={{ fontSize: 10, color: C.textMuted }}>{acctDropOpen ? "▲" : "▼"}</span>
-          </button>
-          {acctDropOpen && (
-            <>
-              <div onClick={function () { setAcctDropOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 10 }} />
-              <div style={{
-                position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0,
-                background: "#1a2b28", border: "1px solid " + C.border,
-                borderRadius: 10, padding: 10, zIndex: 11,
-                maxHeight: 240, overflowY: "auto",
-                boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
-              }}>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-                  <button type="button"
-                    onClick={function () { setAccountId(""); setAcctDropOpen(false); }}
-                    style={{
-                      background: !accountId ? "rgba(74,155,130,0.18)" : "rgba(255,255,255,0.04)",
-                      color: !accountId ? C.accent : C.textMuted,
-                      border: "1px solid " + (!accountId ? "rgba(74,155,130,0.45)" : C.border),
-                      borderRadius: 6, padding: "5px 11px", fontSize: 12,
-                      fontWeight: !accountId ? 700 : 400,
-                      fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
-                    }}>
-                    {!accountId ? "✓ " : ""}No account
-                  </button>
-                  {sortedAccounts.map(function (a) {
-                    var on = accountId === a.id;
-                    return (
-                      <button key={a.id} type="button"
-                        onClick={function () { setAccountId(a.id); setAcctDropOpen(false); }}
-                        style={{
-                          background: on ? "rgba(74,155,130,0.18)" : "rgba(255,255,255,0.04)",
-                          color: on ? C.accent : C.textMuted,
-                          border: "1px solid " + (on ? "rgba(74,155,130,0.45)" : C.border),
-                          borderRadius: 6, padding: "5px 11px", fontSize: 12,
-                          fontWeight: on ? 700 : 400,
-                          fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
-                        }}>
-                        {on ? "✓ " : ""}{a.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </>
-          )}
+            placeholder="— No account —"
+          />
         </div>
 
         <div>
