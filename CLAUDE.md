@@ -1,12 +1,10 @@
 # Folio — Claude Development Context
 
 ## Deployment Rule
-**Vercel production branch is `claude/build-folio-desktop-app-XzvZ5`.** Always push to both `main` AND this branch on every commit:
+**Push to `main` only.** Vercel deploys automatically from `main`. Do NOT push to any other branches — every branch push counts toward Vercel's 100 deployments/day free tier limit.
 ```
 git push origin HEAD:main
-git push origin HEAD:claude/build-folio-desktop-app-XzvZ5
 ```
-Never push to only one of them. **Do NOT push to any other branches** (session feature branches, etc.) — Vercel counts every branch push toward its 100 deployments/day free tier limit.
 
 ## The Briefcase Suite
 
