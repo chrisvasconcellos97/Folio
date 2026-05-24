@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabase";
 export function useCadences(userId, accountId) {
   var [cadences, setCadences] = useState([]);
   var [loading, setLoading]   = useState(false);
+  var [error, setError]       = useState(null);
 
   var fetch = useCallback(function () {
     if (!userId) return;
@@ -16,7 +17,12 @@ export function useCadences(userId, accountId) {
     if (accountId) query = query.or("account_id.eq." + accountId + ",is_global.eq.true");
     query.then(function (result) {
       setLoading(false);
-      if (!result.error) setCadences(result.data || []);
+      if (result.error) {
+        setError(result.error.message);
+      } else {
+        setError(null);
+        setCadences(result.data || []);
+      }
     });
   }, [userId, accountId]);
 
@@ -56,5 +62,5 @@ export function useCadences(userId, accountId) {
       });
   }
 
-  return { cadences, loading, refetch: fetch, addCadence, updateCadence, deleteCadence };
+  return { cadences, loading, error, refetch: fetch, addCadence, updateCadence, deleteCadence };
 }

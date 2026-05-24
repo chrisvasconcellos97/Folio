@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabase";
 export function useContacts(userId, accountId) {
   var [contacts, setContacts] = useState([]);
   var [loading, setLoading]   = useState(false);
+  var [error, setError]       = useState(null);
 
   var fetch = useCallback(function () {
     if (!userId || !accountId) return;
@@ -15,7 +16,12 @@ export function useContacts(userId, accountId) {
       .order("name")
       .then(function (result) {
         setLoading(false);
-        if (!result.error) setContacts(result.data || []);
+        if (result.error) {
+          setError(result.error.message);
+        } else {
+          setError(null);
+          setContacts(result.data || []);
+        }
       });
   }, [userId, accountId]);
 
@@ -31,7 +37,9 @@ export function useContacts(userId, accountId) {
         if (accountId) {
           supabase.from("folio_accounts")
             .update({ last_interaction_at: new Date().toISOString() })
-            .eq("id", accountId).then();
+            .eq("id", accountId)
+            .then()
+            .catch(function (err) { console.error("Metadata update failed:", err); });
         }
         fetch();
         return result.data[0];
@@ -60,5 +68,5 @@ export function useContacts(userId, accountId) {
       });
   }
 
-  return { contacts, loading, refetch: fetch, addContact, updateContact, deleteContact };
+  return { contacts, loading, error, refetch: fetch, addContact, updateContact, deleteContact };
 }

@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabase";
 export function useMeetings(userId, accountId) {
   var [meetings, setMeetings] = useState([]);
   var [loading, setLoading]   = useState(false);
+  var [error, setError]       = useState(null);
 
   var fetch = useCallback(function () {
     if (!userId) return;
@@ -16,7 +17,12 @@ export function useMeetings(userId, accountId) {
     if (accountId) query = query.eq("account_id", accountId);
     query.then(function (result) {
       setLoading(false);
-      if (!result.error) setMeetings(result.data || []);
+      if (result.error) {
+        setError(result.error.message);
+      } else {
+        setError(null);
+        setMeetings(result.data || []);
+      }
     });
   }, [userId, accountId]);
 
@@ -33,7 +39,9 @@ export function useMeetings(userId, accountId) {
         if (data.account_id && data.meeting_date) {
           supabase.from("folio_accounts")
             .update({ last_meeting: data.meeting_date, last_interaction_at: new Date().toISOString() })
-            .eq("id", data.account_id).then();
+            .eq("id", data.account_id)
+            .then()
+            .catch(function (err) { console.error("Metadata update failed:", err); });
         }
         fetch();
         return meeting;
@@ -62,5 +70,5 @@ export function useMeetings(userId, accountId) {
       });
   }
 
-  return { meetings, loading, refetch: fetch, addMeeting, updateMeeting, deleteMeeting };
+  return { meetings, loading, error, refetch: fetch, addMeeting, updateMeeting, deleteMeeting };
 }

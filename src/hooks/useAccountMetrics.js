@@ -5,6 +5,7 @@ export function useAccountMetrics(userId) {
   var [revenueHistory, setRevenueHistory] = useState([]);
   var [shopMetrics, setShopMetrics]       = useState([]);
   var [loading, setLoading]               = useState(false);
+  var [error, setError]                   = useState(null);
 
   var fetch = useCallback(function () {
     if (!userId) return;
@@ -14,8 +15,17 @@ export function useAccountMetrics(userId) {
       supabase.from("folio_shop_metrics").select("*").eq("user_id", userId).order("year").order("month"),
     ]).then(function (results) {
       setLoading(false);
+      var hasError = results[0].error || results[1].error;
+      if (hasError) {
+        setError((results[0].error || results[1].error).message);
+      } else {
+        setError(null);
+      }
       if (!results[0].error) setRevenueHistory(results[0].data || []);
       if (!results[1].error) setShopMetrics(results[1].data || []);
+    }).catch(function (err) {
+      setLoading(false);
+      setError(err.message || "Failed to load metrics");
     });
   }, [userId]);
 
@@ -47,5 +57,5 @@ export function useAccountMetrics(userId) {
       });
   }
 
-  return { revenueHistory, shopMetrics, loading, upsertRevenue, upsertShopMetrics, refetch: fetch };
+  return { revenueHistory, shopMetrics, loading, error, upsertRevenue, upsertShopMetrics, refetch: fetch };
 }

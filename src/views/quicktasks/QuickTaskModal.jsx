@@ -218,7 +218,7 @@ export function QuickTaskModal({ existing, accounts, onSave, onDelete, onClose }
           <div style={{ display: "flex", gap: 8 }}>
             <SecBtn onClick={onClose}>Cancel</SecBtn>
             <AmberBtn onClick={handleSave} disabled={saving || !title.trim()}>
-              {existing ? "Save" : "Add Task"}
+              {saving ? "Saving…" : existing ? "Save" : "Add Task"}
             </AmberBtn>
           </div>
         </div>

@@ -152,8 +152,10 @@ export function ItemsTab({ items, taskCadences, accountId, onClose, onAdd, onGoT
                 <div style={{ paddingTop: 2 }}>
                   <div
                     onClick={function () { onClose(item.id); }}
-                    style={{ width: 16, height: 16, borderRadius: 4, border: "1.5px solid " + C.accentDim, cursor: "pointer", flexShrink: 0, background: "transparent" }}
-                  />
+                    style={{ padding: 8, margin: -8, display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+                  >
+                    <div style={{ width: 16, height: 16, borderRadius: 4, border: "1.5px solid " + C.accentDim, flexShrink: 0, background: "transparent" }} />
+                  </div>
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 12, color: C.text, lineHeight: 1.4 }}>{item.text}</div>
@@ -175,8 +177,20 @@ export function ItemsTab({ items, taskCadences, accountId, onClose, onAdd, onGoT
       )}
 
       {tasks.length === 0 && open.length === 0 && (
-        <div style={{ textAlign: "center", padding: "24px 0 8px", color: C.green, fontSize: 13 }}>
-          All clear. No open tasks or items.
+        <div style={{ textAlign: "center", padding: "24px 0 8px" }}>
+          <div style={{ color: C.green, fontSize: 13, marginBottom: 10 }}>All clear. No open tasks or items.</div>
+          {onAdd && (
+            <button
+              onClick={onAdd}
+              style={{
+                background: "rgba(74,155,130,0.12)", border: "1px solid rgba(74,155,130,0.3)",
+                borderRadius: 8, padding: "6px 16px", fontSize: 12, fontWeight: 600,
+                color: C.accent, fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
+              }}
+            >
+              + Add Action Item
+            </button>
+          )}
         </div>
       )}
 

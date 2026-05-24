@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabase";
 export function useProjects(userId, accountId) {
   var [projects, setProjects]   = useState([]);
   var [loading, setLoading]     = useState(false);
+  var [error, setError]         = useState(null);
 
   var fetch = useCallback(function () {
     if (!userId) return;
@@ -16,7 +17,12 @@ export function useProjects(userId, accountId) {
     if (accountId) query = query.eq("account_id", accountId);
     query.then(function (result) {
       setLoading(false);
-      if (!result.error) setProjects(result.data || []);
+      if (result.error) {
+        setError(result.error.message);
+      } else {
+        setError(null);
+        setProjects(result.data || []);
+      }
     });
   }, [userId, accountId]);
 
@@ -56,5 +62,5 @@ export function useProjects(userId, accountId) {
       });
   }
 
-  return { projects, loading, refetch: fetch, addProject, updateProject, deleteProject };
+  return { projects, loading, error, refetch: fetch, addProject, updateProject, deleteProject };
 }
