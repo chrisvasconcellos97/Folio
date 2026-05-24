@@ -12,7 +12,6 @@ export function useProjects(userId, accountId) {
     var query = supabase
       .from("gauge_projects")
       .select("*")
-      .eq("user_id", userId)
       .order("created_at", { ascending: false });
     if (accountId) query = query.eq("account_id", accountId);
     query.then(function (result) {

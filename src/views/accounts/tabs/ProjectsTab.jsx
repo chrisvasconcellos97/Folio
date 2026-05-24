@@ -28,7 +28,8 @@ var PRIORITY_COLORS = {
   low:    C.green,
 };
 
-var GB_BDR = "rgba(123,108,246,0.2)";
+var GB     = "rgba(103,200,249,0.12)";
+var GB_BDR = "rgba(103,200,249,0.25)";
 
 function fmt(dateStr) {
   if (!dateStr) return null;
@@ -143,9 +144,9 @@ export function ProjectsTab({ projects, accounts, accountId, userId, addProject,
 
         <button
           onClick={function () { setShowAdd(true); }}
-          style={{ background: "rgba(123,108,246,0.1)", border: "1px solid " + GB_BDR, borderRadius: 20, padding: "5px 13px", color: C.blue, fontSize: 11, fontWeight: 600, fontFamily: "'DM Sans', sans-serif", cursor: "pointer" }}
+          style={{ background: GB, border: "1px solid " + GB_BDR, borderRadius: 20, padding: "5px 13px", color: "rgba(103,200,249,0.9)", fontSize: 11, fontWeight: 600, fontFamily: "'DM Sans', sans-serif", cursor: "pointer" }}
         >
-          + Add to Gauge
+          + New Request
         </button>
       </div>
 

@@ -269,6 +269,7 @@ export default function App() {
     mainContent = (
       <GaugeView
         userId={userId}
+        userEmail={session && session.user ? session.user.email : null}
         accounts={accounts}
       />
     );

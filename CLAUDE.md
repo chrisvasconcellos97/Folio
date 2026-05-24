@@ -170,15 +170,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
     - **Surface in "Brief me"** — pre-call brief includes what was delivered since the last meeting.
     - **Surface in Pip context** — feed active project statuses and recent completions into Pip's system prompt.
 
-15. **Gauge — full build (multi-user, custom columns, request workflow):**
-    - **Core columns (hardcoded)** — Priority, Date of Request (auto), Owner/Assigned To, Linked Folio Account, Status, Due Date, Notes.
-    - **Custom columns** — user-defined fields per project type. Types: Text, Number, Date, Dropdown, Checkbox, URL. Stored in `project_fields` + `task_field_values` tables — no DB migrations when a column is added. For Trax: # of Shops, Connection Macro Date, Integration Macro Date, Email Thread, Initiative.
-    - **Task stages** — sequential stages with individual completion dates (e.g. Connection → Integration → Complete).
-    - **Continuous project type** — open-ended project with no fixed end date. Tasks trickle in over time (e.g. LKQ integrations).
-    - **Request submission from Folio** — "New Request" button on the Gauge tab within an account detail. Pre-fills the linked account.
-    - **Coworker queue view** — a personal task list across all accounts showing everything assigned to that user, sorted by priority and due date.
-    - **Multi-user access** — coworker needs a login. Org/team layer required — design data model with `org_id` and `assigned_to` from day one.
-    - **Completion feeds change log** — completing a task automatically creates a dated entry on the linked Folio account's change log (item 14 above).
+15. *(shipped — see Already shipped)*
 
 16. **Route Builder — territory routing for MSO field visits:**
 
@@ -212,6 +204,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
     4. Leaflet map layer (can ship 3 without 4 and it's still fully functional)
 
 **Already shipped (drop from list):**
+- ✅ Gauge V2 — stages, requested_by, assignee multi-user RLS, My Queue filter, New Request from Folio, status values fixed (planned/in_progress/blocked/complete/on_hold)
 - ✅ Quick Tasks — tray on main page, modal with account dropdown + reminder presets, Pip integration (surface open tasks on load, complete/add via natural language)
 - ✅ Sub-accounts — UI + migration (`parent_account_id` column live), nested display with faded ↳ arrow on accounts list
 - ✅ Pip Summarize with date range (30d / 90d / all time presets, saves to account)
