@@ -191,6 +191,14 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
                   meetings: meetings.slice(0, 5),
                   openItems: items.filter(function (i) { return !i.done; }),
                   contacts: contacts,
+                  recentDeliveries: items
+                    .filter(function(i) { return i.done && i.text && i.text.indexOf("✓ Delivered:") === 0; })
+                    .sort(function(a, b) { return (b.closed_at || "") > (a.closed_at || "") ? 1 : -1; })
+                    .slice(0, 5)
+                    .map(function(i) { return { title: i.text.replace("✓ Delivered: ", ""), date: i.closed_at ? new Date(i.closed_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null }; }),
+                  activeProjects: (projects || [])
+                    .filter(function(p) { return p.status === "in_progress" || p.status === "blocked"; })
+                    .map(function(p) { return { title: p.title, status: p.status, due_date: p.due_date }; }),
                 }).then(function (data) {
                   setBriefLoading(false);
                   setBriefText(data.brief || "Pip couldn't generate a brief right now.");
@@ -353,6 +361,7 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
           onSelectAccount={onSelectAccount}
           revenueHistory={revenueHistory || []}
           shopMetrics={shopMetrics || []}
+          projects={projects}
         />
       )}
 

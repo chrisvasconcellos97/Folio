@@ -18,7 +18,7 @@ var RANGES = [
   { label: "All Time", days: null },
 ];
 
-function buildPipInsight(account, openItems, revenueHistory, shopMetrics) {
+function buildPipInsight(account, openItems, revenueHistory, shopMetrics, projects) {
   var rh = revenueHistory || [];
   var sm = shopMetrics    || [];
 
@@ -136,6 +136,22 @@ function buildPipInsight(account, openItems, revenueHistory, shopMetrics) {
     ]));
   }
 
+  // Projects signal
+  var prjs = projects || [];
+  var blocked = prjs.filter(function(p) { return p.status === "blocked"; });
+  var active  = prjs.filter(function(p) { return p.status === "in_progress"; });
+  if (blocked.length > 0 && parts.length < 3) {
+    parts.push(pickV(seed + "gp", [
+      blocked.length + " Gauge project" + (blocked.length !== 1 ? "s are" : " is") + " blocked — flag it on your next call.",
+      blocked.length + " project" + (blocked.length !== 1 ? "s" : "") + " blocked in Gauge. Worth addressing.",
+    ]));
+  } else if (active.length > 0 && parts.length < 3) {
+    parts.push(pickV(seed + "gp", [
+      active.length + " project" + (active.length !== 1 ? "s" : "") + " in flight in Gauge.",
+      "Tracking " + active.length + " active Gauge project" + (active.length !== 1 ? "s" : "") + " for this account.",
+    ]));
+  }
+
   return parts.join(" ");
 }
 
@@ -171,10 +187,10 @@ function MiniSparkline({ records }) {
   );
 }
 
-export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLogMeeting, onAddItem, onSaveSummary, subAccounts, onSelectAccount, revenueHistory, shopMetrics, onUpdateAccount }) {
+export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLogMeeting, onAddItem, onSaveSummary, subAccounts, onSelectAccount, revenueHistory, shopMetrics, onUpdateAccount, projects }) {
   var pipInsight = useMemo(function () {
-    return buildPipInsight(account, openItems, revenueHistory, shopMetrics);
-  }, [account, openItems, revenueHistory, shopMetrics]);
+    return buildPipInsight(account, openItems, revenueHistory, shopMetrics, projects);
+  }, [account, openItems, revenueHistory, shopMetrics, projects]);
   var [range, setRange]       = useState(RANGES[0]);
   var [generating, setGen]    = useState(false);
   var [pipError, setPipError] = useState(null);
@@ -524,6 +540,42 @@ export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLo
               </Card>
             )}
           </>
+        );
+      })()}
+
+      {/* Recent Deliveries */}
+      {(function() {
+        var deliveries = (openItems || [])
+          .filter(function(i) { return i.done && i.text && i.text.indexOf("✓ Delivered:") === 0; })
+          .sort(function(a, b) { return (b.closed_at || "") > (a.closed_at || "") ? 1 : -1; })
+          .slice(0, 5);
+        if (deliveries.length === 0) return null;
+        return (
+          <Card>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <FL>Recent Deliveries</FL>
+              <div style={{ fontSize: 10, color: C.textMuted }}>{deliveries.length} completed</div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {deliveries.map(function(item) {
+                var title = item.text.replace("✓ Delivered: ", "");
+                var dateStr = item.closed_at
+                  ? new Date(item.closed_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                  : null;
+                return (
+                  <div key={item.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                      <span style={{ fontSize: 11, color: C.green }}>✓</span>
+                      <span style={{ fontSize: 12, color: C.textSub }}>{title}</span>
+                    </div>
+                    {dateStr && (
+                      <span style={{ fontSize: 11, color: C.textMuted, fontVariantNumeric: "tabular-nums", flexShrink: 0 }}>{dateStr}</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
         );
       })()}
 
