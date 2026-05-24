@@ -141,8 +141,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 3. **Feature completeness:** *(no open items)*
 
-4. **Native feel — one remaining fix:**
-   - **Cursor consistency** — some interactive divs (chip dropdowns, calendar cells, account cards) are missing `cursor: pointer`. Audit and standardize.
+4. **Native feel:** *(no open items)*
 
 5. **Overview tab redesign + account intelligence:** *(no open items)*
 
@@ -154,9 +153,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
     - **Consistent label spacing** — uppercase tracking labels (`font-size: 9px`, `letter-spacing: 0.08em`) are used inconsistently. Define one standard and apply it everywhere.
     - **Line height audit** — dense info cards (account cards, meeting rows) have inconsistent line heights.
 
-8. **Copy & tone — two remaining:**
-    - **Button labels** — "Save" → "Got it", confirms should feel deliberate not clinical.
-    - **Section headers** — labels like "YTD Revenue", "Open Items", "Last Interaction" are functional but terse. Light copy polish makes the app feel more considered.
+8. **Copy & tone:** *(no open items)*
 
 9. **Search & discoverability:**
     - **Global search** — extend search beyond account names to hit contacts, meeting notes, open items, and tags.
@@ -267,6 +264,9 @@ This app is currently single-user but should be built with multi-tenancy in mind
 - ✅ Staggered list load — `list-item` + `animationDelay` on account cards, meeting rows, contact entries
 - ✅ Mobile sheet modal — `modal-sheet` CSS class on Modal.jsx inner panel, sheetUp keyframe in index.html
 - ✅ Crossfade view transitions — replaced directional slide with 0.18s opacity fade; cards phase in via list-item stagger
+- ✅ Cursor consistency — `cursor: pointer` + `role="button"` audited across all interactive divs; GaugeView project rows fixed
+- ✅ Button labels — "Save Meeting" → "Log Meeting", edit-mode saves → "Done", add-mode labels already correct
+- ✅ Section headers — "Auto Health" → "Health", "Follow-up" → "Follow-up Due", "YTD Revenue" → "Revenue YTD"
 - ✅ Persistent filter prefs — filter state persisted to localStorage in AccountsView
 - ✅ Empty state copy — "Nothing here yet — add your first account and I'll get to work"
 - ✅ Error message copy — "Couldn't delete/save — check your connection" across MeetingsTab, ContactsTab, ItemsTab
