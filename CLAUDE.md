@@ -302,13 +302,12 @@ This app is currently single-user but should be built with multi-tenancy in mind
     - Saved routes: store route as a `folio_routes` record (name, stop order, date) so you can re-use a regular weekly territory run
 
     **DB additions needed:**
-    - `folio_accounts`: `address text`, `lat float8`, `lng float8`, `account_type text`
     - `folio_routes`: `id, user_id, name, date, stops jsonb (ordered array of account_ids + visit_duration), created_at`
 
     **Build order:**
-    1. DB migration: address/lat/lng/account_type on accounts, folio_routes table
-    2. Address entry in AddAccountModal and account edit — with geocode-on-save
-    3. MSO parent view with shops list (item 24 above)
+    1. DB migration: folio_routes table (address/lat/lng/account_type/account_number already live)
+    2. Geocode-on-save in AddAccountModal (Nominatim, cache result in lat/lng)
+    3. MSO parent view with shops list — ✅ already shipped (see below)
     4. Route Builder view: account selector + optimizer + schedule sidebar
     5. Leaflet map layer (can ship 4 without 5 and it's still fully functional)
 
@@ -318,6 +317,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
 - ✅ Pip Summarize with date range (30d / 90d / all time presets, saves to account)
 - ✅ Cadence (full nav item, per-account editor, calendar view, open items carry forward)
 - ✅ Last interaction tracking (`last_interaction_at` drives days counter on account cards)
+- ✅ MSO prep — `account_type text`, `address text`, `lat float8`, `lng float8`, `account_number text` columns live on `folio_accounts`. Account type toggle (Standard / MSO) in AddAccountModal. MSO accounts get a Shops tab in AccountDetail showing child shops with address, status, last-visit. Shop count chip on MSO cards in accounts list. Standard sub-accounts keep existing ↳ indent. Address and account number display in account detail header.
 
 **Security hardening — shipped in code, two items need Supabase dashboard toggle:**
 
