@@ -107,6 +107,11 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
             >
               {account.name}
             </div>
+            {account.account_number && (
+              <div style={{ fontSize: 11, color: C.textMuted, fontVariantNumeric: "tabular-nums", marginBottom: 6 }}>
+                #{account.account_number}
+              </div>
+            )}
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               {account.tier && (
                 <Pill color={TIER_COLORS[account.tier] || C.textSub}>

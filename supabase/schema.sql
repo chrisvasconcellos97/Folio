@@ -21,6 +21,7 @@ create table if not exists folio_accounts (
   market_scope            text,
   parent_account_id       uuid references folio_accounts,
   account_type            text DEFAULT 'standard',
+  account_number          text,
   address                 text,
   lat                     float8,
   lng                     float8,

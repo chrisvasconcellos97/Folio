@@ -74,8 +74,9 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
   var [parentAccountId, setParentAccountId] = useState(
     existing ? (existing.parent_account_id || '') : (defaultParentId || '')
   );
-  var [accountType, setAccountType] = useState(existing ? (existing.account_type || 'standard') : (defaultType || 'standard'));
-  var [address, setAddress]         = useState(existing ? (existing.address || '') : '');
+  var [accountType, setAccountType]     = useState(existing ? (existing.account_type || 'standard') : (defaultType || 'standard'));
+  var [address, setAddress]             = useState(existing ? (existing.address || '') : '');
+  var [accountNumber, setAccountNumber] = useState(existing ? (existing.account_number || '') : '');
   var [loading, setLoading] = useState(false);
   var [error, setError]     = useState(null);
 
@@ -121,6 +122,7 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
       parent_account_id: parentAccountId || null,
       account_type:      accountType || 'standard',
       address:           address.trim() || null,
+      account_number:    accountNumber.trim() || null,
     })
       .then(function () { setLoading(false); onClose(); })
       .catch(function (err) { setLoading(false); setError(err.message); });
@@ -134,6 +136,12 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
         <div>
           <FL htmlFor="account-name">Account Name</FL>
           <InputField id="account-name" value={name} onChange={function (e) { setName(e.target.value); }} placeholder="Company name" />
+        </div>
+
+        {/* Account Number */}
+        <div>
+          <FL htmlFor="account-number">Account # <span style={{ fontWeight: 400, color: C.textMuted }}>(optional)</span></FL>
+          <InputField id="account-number" value={accountNumber} onChange={function (e) { setAccountNumber(e.target.value); }} placeholder="e.g. 10042" />
         </div>
 
         {/* Revenue */}
