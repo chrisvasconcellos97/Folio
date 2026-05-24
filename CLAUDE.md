@@ -1,10 +1,12 @@
 # Folio — Claude Development Context
 
 ## Deployment Rule
-**Push to `main` only.** Vercel deploys automatically from `main`. Do NOT push to any other branches — every branch push counts toward Vercel's 100 deployments/day free tier limit.
+**Vercel production branch is `claude/build-folio-desktop-app-XzvZ5`.** Always push to both `main` AND this branch on every commit:
 ```
 git push origin HEAD:main
+git push origin HEAD:claude/build-folio-desktop-app-XzvZ5
 ```
+**Do NOT push to any other branches** — every branch push counts toward Vercel's deployment limit. Now on Pro plan so limit is much higher, but still avoid unnecessary branch pushes.
 
 ## Patch — Background Build Agent
 
