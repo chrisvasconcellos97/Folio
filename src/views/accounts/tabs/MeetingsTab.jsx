@@ -9,6 +9,7 @@ import { callAskPip } from "../../../lib/pip";
 import { pickV } from "../../../lib/metricsUtils";
 import { showToast } from "../../../components/Toast";
 import { EditMeetingModal } from "../EditMeetingModal";
+import { supabase } from "../../../lib/supabase";
 
 var STARS = [1, 2, 3, 4, 5];
 
@@ -109,7 +110,23 @@ function CopyBtn({ text }) {
   );
 }
 
-export function MeetingsTab({ meetings, accountName, onLogMeeting, onDelete, onUpdateMeeting }) {
+function sendToGauge(meeting, userId) {
+  supabase
+    .from("gauge_projects")
+    .insert([{
+      user_id:    userId,
+      account_id: meeting.account_id,
+      meeting_id: meeting.id,
+      title:      meeting.commitments.slice(0, 120),
+      status:     "planned",
+    }])
+    .then(function (result) {
+      if (result.error) { showToast("Failed to send to Gauge", "error"); return; }
+      showToast("Project added to Gauge");
+    });
+}
+
+export function MeetingsTab({ meetings, accountName, userId, onLogMeeting, onDelete, onUpdateMeeting }) {
   var [loadingPip, setLoadingPip] = useState({});
   var [pipErrors, setPipErrors]   = useState({});
   var [confirmDeleteId, setConfirmDeleteId] = useState(null);
@@ -220,7 +237,27 @@ export function MeetingsTab({ meetings, accountName, onLogMeeting, onDelete, onU
 
             {m.commitments && (
               <div style={{ marginBottom: 10 }}>
-                <FL>Commitments</FL>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
+                  <FL style={{ marginBottom: 0 }}>Commitments</FL>
+                  {userId && (
+                    <button
+                      onClick={function (e) { e.stopPropagation(); sendToGauge(m, userId); }}
+                      style={{
+                        background: "rgba(103,200,249,0.08)",
+                        border: "1px solid rgba(103,200,249,0.2)",
+                        borderRadius: 6,
+                        padding: "2px 8px",
+                        fontSize: 10,
+                        fontWeight: 600,
+                        color: C.blue,
+                        fontFamily: "'DM Sans', sans-serif",
+                        cursor: "pointer",
+                      }}
+                    >
+                      → Gauge
+                    </button>
+                  )}
+                </div>
                 <div style={{ fontSize: 14, color: C.blue, lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{m.commitments}</div>
               </div>
             )}

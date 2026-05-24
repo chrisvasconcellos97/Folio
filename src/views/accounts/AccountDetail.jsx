@@ -324,6 +324,7 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
           projects={projects}
           accounts={accounts}
           accountId={account.id}
+          userId={userId}
           addProject={addProject}
           updateProject={updateProject}
           deleteProject={deleteProject}

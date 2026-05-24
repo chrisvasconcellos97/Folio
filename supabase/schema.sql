@@ -137,19 +137,20 @@ create table if not exists gauge_projects (
   meeting_id  uuid references folio_meetings on delete set null,
   title       text not null,
   description text,
-  status      text default 'active'
-              check (status in ('active', 'on_hold', 'completed', 'cancelled')),
+  status      text default 'planned'
+              check (status in ('planned', 'in_progress', 'blocked', 'complete', 'on_hold')),
   priority    text default 'medium'
               check (priority in ('high', 'medium', 'low')),
   due_date    date,
+  assignee    text,
   created_at  timestamptz default now(),
   updated_at  timestamptz default now()
 );
 
 alter table gauge_projects enable row level security;
-create policy "Users manage own projects"
+create policy "Authenticated users access projects"
   on gauge_projects for all
-  using (auth.uid() = user_id);
+  using (auth.uid() is not null);
 
 -- Auto-update updated_at trigger (shared)
 create or replace function update_updated_at()

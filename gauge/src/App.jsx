@@ -130,6 +130,8 @@ export function App() {
         addProject={addProject}
         updateProject={updateProject}
         deleteProject={deleteProject}
+        userId={userId}
+        userMeta={userMeta}
       />
     );
 

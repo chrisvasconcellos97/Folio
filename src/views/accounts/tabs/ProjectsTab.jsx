@@ -4,19 +4,22 @@ import { GaugeIcon } from "../../../components/GaugeIcon";
 import { PipInsightCard } from "../../../components/PipInsightCard";
 import { ProjectModal } from "../../gauge/ProjectModal";
 import { pickV } from "../../../lib/metricsUtils";
+import { supabase } from "../../../lib/supabase";
 
 var STATUS_COLORS = {
-  active:    C.blue,
-  on_hold:   C.yellow,
-  completed: C.green,
-  cancelled: C.textMuted,
+  planned:     "rgba(103,200,249,0.9)",
+  in_progress: "rgba(74,155,130,0.9)",
+  blocked:     "rgba(224,92,92,0.9)",
+  complete:    "rgba(78,222,128,0.9)",
+  on_hold:     "rgba(251,191,36,0.9)",
 };
 
 var STATUS_LABELS = {
-  active:    "Active",
-  on_hold:   "On Hold",
-  completed: "Completed",
-  cancelled: "Cancelled",
+  planned:     "Planned",
+  in_progress: "In Progress",
+  blocked:     "Blocked",
+  complete:    "Complete",
+  on_hold:     "On Hold",
 };
 
 var PRIORITY_COLORS = {
@@ -42,70 +45,87 @@ function buildProjectsInsight(projects, accountId) {
     ]);
   }
 
-  var active    = projects.filter(function (p) { return p.status === "active"; });
-  var completed = projects.filter(function (p) { return p.status === "completed"; });
-  var onHold    = projects.filter(function (p) { return p.status === "on_hold"; });
-  var today     = new Date().toISOString().split("T")[0];
-  var overdue   = active.filter(function (p) { return p.due_date && p.due_date < today; });
-  var highPri   = active.filter(function (p) { return p.priority === "high"; });
+  var inProgress = projects.filter(function (p) { return p.status === "in_progress"; });
+  var complete   = projects.filter(function (p) { return p.status === "complete"; });
+  var onHold     = projects.filter(function (p) { return p.status === "on_hold"; });
+  var blocked    = projects.filter(function (p) { return p.status === "blocked"; });
+  var today      = new Date().toISOString().split("T")[0];
+  var overdue    = inProgress.filter(function (p) { return p.due_date && p.due_date < today; });
+  var highPri    = inProgress.filter(function (p) { return p.priority === "high"; });
 
-  if (active.length === 0 && completed.length > 0) {
+  if (inProgress.length === 0 && complete.length > 0) {
     return pickV(seed + "pr0", [
-      "All " + completed.length + " project" + (completed.length !== 1 ? "s" : "") + " wrapped up. Nothing active right now.",
-      "No active projects — " + completed.length + " completed. Clean slate.",
+      "All " + complete.length + " project" + (complete.length !== 1 ? "s" : "") + " wrapped up. Nothing active right now.",
+      "No active projects — " + complete.length + " completed. Clean slate.",
     ]);
   }
 
   var parts = [];
 
-  // Lead
-  if (overdue.length > 0) {
+  if (blocked.length > 0) {
+    parts.push(pickV(seed + "prb", [
+      blocked.length + " project" + (blocked.length !== 1 ? "s are" : " is") + " blocked. That needs attention before the next call.",
+      blocked.length + " blocked project" + (blocked.length !== 1 ? "s" : "") + " here — worth flagging.",
+    ]));
+  } else if (overdue.length > 0) {
     parts.push(pickV(seed + "prl", [
-      overdue.length + " active project" + (overdue.length !== 1 ? "s are" : " is") + " past the due date. That needs attention.",
+      overdue.length + " in-progress project" + (overdue.length !== 1 ? "s are" : " is") + " past the due date. That needs attention.",
       overdue.length + " overdue project" + (overdue.length !== 1 ? "s" : "") + " here — flag it on your next call.",
     ]));
   } else if (highPri.length > 0) {
     parts.push(pickV(seed + "prl", [
-      highPri.length + " high-priority project" + (highPri.length !== 1 ? "s" : "") + " active. Keep those moving.",
-      active.length + " active project" + (active.length !== 1 ? "s" : "") + ", " + highPri.length + " marked high priority.",
+      highPri.length + " high-priority project" + (highPri.length !== 1 ? "s" : "") + " in progress. Keep those moving.",
+      inProgress.length + " in-progress project" + (inProgress.length !== 1 ? "s" : "") + ", " + highPri.length + " marked high priority.",
     ]));
   } else {
     parts.push(pickV(seed + "prl", [
-      active.length + " active project" + (active.length !== 1 ? "s" : "") + " for this account.",
-      "Tracking " + active.length + " project" + (active.length !== 1 ? "s" : "") + " in Gauge.",
+      inProgress.length + " project" + (inProgress.length !== 1 ? "s" : "") + " in progress for this account.",
+      "Tracking " + inProgress.length + " active project" + (inProgress.length !== 1 ? "s" : "") + " in Gauge.",
     ]));
   }
 
-  // Secondary
   if (onHold.length > 0) {
     parts.push(pickV(seed + "prs", [
       onHold.length + " on hold — worth checking if those can move.",
       onHold.length + " project" + (onHold.length !== 1 ? "s" : "") + " on hold. Might be worth a conversation.",
     ]));
-  } else if (completed.length > 0) {
+  } else if (complete.length > 0) {
     parts.push(pickV(seed + "prs", [
-      completed.length + " already completed — good track record here.",
-      completed.length + " done, " + active.length + " in flight. Good momentum.",
+      complete.length + " already completed — good track record here.",
+      complete.length + " done, " + inProgress.length + " in flight. Good momentum.",
     ]));
   }
 
   return parts.join(" ");
 }
 
-export function ProjectsTab({ projects, accounts, accountId, addProject, updateProject, deleteProject }) {
+export function ProjectsTab({ projects, accounts, accountId, userId, addProject, updateProject, deleteProject }) {
   var [showAdd, setShowAdd] = useState(false);
   var [editing, setEditing] = useState(null);
 
-  var active   = projects.filter(function (p) { return p.status === "active"; });
-  var inactive = projects.filter(function (p) { return p.status !== "active"; });
-  var ordered  = active.concat(inactive);
+  var inProgress = projects.filter(function (p) { return p.status === "in_progress"; });
+  var other      = projects.filter(function (p) { return p.status !== "in_progress"; });
+  var ordered    = inProgress.concat(other);
 
   function handleSaveNew(data) {
     return addProject(Object.assign({}, data, { account_id: accountId }));
   }
 
   function handleSaveEdit(data) {
-    return updateProject(editing.id, data);
+    var wasNotComplete = editing && editing.status !== "complete";
+    var isNowComplete  = data.status === "complete";
+    return updateProject(editing.id, data).then(function (result) {
+      if (wasNotComplete && isNowComplete && accountId && userId) {
+        supabase.from("folio_items").insert([{
+          account_id: accountId,
+          user_id:    userId,
+          text:       "✓ Delivered: " + (data.title || editing.title),
+          done:       true,
+          closed_at:  new Date().toISOString(),
+        }]).then();
+      }
+      return result;
+    });
   }
 
   return (
@@ -137,17 +157,26 @@ export function ProjectsTab({ projects, accounts, accountId, addProject, updateP
 
       <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
         {ordered.map(function (p) {
-          var dimmed = p.status === "completed" || p.status === "cancelled";
+          var dimmed  = p.status === "complete";
+          var blocked = p.status === "blocked";
           return (
             <div
               key={p.id}
               onClick={function () { setEditing(p); }}
-              style={{ background: C.bgCard, border: "1px solid " + (p.status === "active" ? GB_BDR : C.border), borderRadius: 10, padding: "11px 13px", cursor: "pointer", opacity: dimmed ? 0.6 : 1 }}
+              style={{
+                background: C.bgCard,
+                border: "1px solid " + (blocked ? "rgba(224,92,92,0.3)" : p.status === "in_progress" ? GB_BDR : C.border),
+                borderLeft: blocked ? "3px solid rgba(224,92,92,0.8)" : undefined,
+                borderRadius: 10,
+                padding: "11px 13px",
+                cursor: "pointer",
+                opacity: dimmed ? 0.6 : 1,
+              }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: p.description ? 5 : 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: C.text, flex: 1, lineHeight: 1.3 }}>{p.title}</div>
                 <div style={{ background: STATUS_COLORS[p.status] + "20", border: "1px solid " + STATUS_COLORS[p.status] + "40", borderRadius: 16, padding: "2px 9px", fontSize: 9, fontWeight: 600, color: STATUS_COLORS[p.status], flexShrink: 0, whiteSpace: "nowrap" }}>
-                  {STATUS_LABELS[p.status]}
+                  {STATUS_LABELS[p.status] || p.status}
                 </div>
               </div>
 
@@ -157,7 +186,7 @@ export function ProjectsTab({ projects, accounts, accountId, addProject, updateP
                 </div>
               )}
 
-              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
                 {p.priority && (
                   <span style={{ fontSize: 10, color: PRIORITY_COLORS[p.priority], display: "flex", alignItems: "center", gap: 3 }}>
                     <span style={{ width: 5, height: 5, borderRadius: "50%", background: PRIORITY_COLORS[p.priority], display: "inline-block" }} />
@@ -166,6 +195,9 @@ export function ProjectsTab({ projects, accounts, accountId, addProject, updateP
                 )}
                 {p.due_date && (
                   <span style={{ fontSize: 10, color: C.textMuted }}>Due · {fmt(p.due_date)}</span>
+                )}
+                {p.assignee && (
+                  <span style={{ fontSize: 10, color: C.textMuted }}>{"Owner: " + p.assignee}</span>
                 )}
               </div>
             </div>

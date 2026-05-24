@@ -11,7 +11,6 @@ export function useProjects(userId) {
     supabase
       .from("gauge_projects")
       .select("*")
-      .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .then(function (result) {
         setLoading(false);

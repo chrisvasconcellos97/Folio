@@ -3,17 +3,19 @@ import { C } from "../../lib/colors";
 import { ProjectModal } from "./ProjectModal";
 
 var STATUS_COLORS = {
-  active:    C.blue,
-  on_hold:   C.yellow,
-  completed: C.green,
-  cancelled: C.textMuted,
+  planned:     "rgba(103,200,249,0.9)",
+  in_progress: "rgba(74,155,130,0.9)",
+  blocked:     "rgba(224,92,92,0.9)",
+  complete:    "rgba(78,222,128,0.9)",
+  on_hold:     "rgba(251,191,36,0.9)",
 };
 
 var STATUS_LABELS = {
-  active:    "Active",
-  on_hold:   "On Hold",
-  completed: "Completed",
-  cancelled: "Cancelled",
+  planned:     "Planned",
+  in_progress: "In Progress",
+  blocked:     "Blocked",
+  complete:    "Complete",
+  on_hold:     "On Hold",
 };
 
 var PRIORITY_COLORS = {
@@ -23,11 +25,12 @@ var PRIORITY_COLORS = {
 };
 
 var FILTERS = [
-  { id: "all",       label: "All"       },
-  { id: "active",    label: "Active"    },
-  { id: "on_hold",   label: "On Hold"   },
-  { id: "completed", label: "Completed" },
-  { id: "cancelled", label: "Cancelled" },
+  { id: "all",         label: "All"         },
+  { id: "planned",     label: "Planned"     },
+  { id: "in_progress", label: "In Progress" },
+  { id: "blocked",     label: "Blocked"     },
+  { id: "complete",    label: "Complete"    },
+  { id: "on_hold",     label: "On Hold"     },
 ];
 
 var GB_BDR = "rgba(103,200,249,0.2)";
@@ -43,10 +46,11 @@ function isOverdue(dateStr) {
   return new Date(dateStr + "T00:00:00") < new Date(new Date().toDateString());
 }
 
-export function ProjectsView({ projects, loading, accounts, openAdd, onAddClosed, addProject, updateProject, deleteProject }) {
-  var [filter, setFilter]   = useState("all");
-  var [showAdd, setShowAdd] = useState(false);
-  var [editing, setEditing] = useState(null);
+export function ProjectsView({ projects, loading, accounts, openAdd, onAddClosed, addProject, updateProject, deleteProject, userId, userMeta }) {
+  var [filter, setFilter]     = useState("all");
+  var [showMine, setShowMine] = useState(false);
+  var [showAdd, setShowAdd]   = useState(false);
+  var [editing, setEditing]   = useState(null);
 
   useEffect(function () {
     if (openAdd) setShowAdd(true);
@@ -57,14 +61,24 @@ export function ProjectsView({ projects, loading, accounts, openAdd, onAddClosed
     if (onAddClosed) onAddClosed();
   }
 
-  var filtered = filter === "all"
-    ? projects
-    : projects.filter(function (p) { return p.status === filter; });
+  var mineFiltered = showMine
+    ? projects.filter(function (p) {
+        if (!p.assignee) return false;
+        var name  = (userMeta && userMeta.full_name) ? userMeta.full_name.toLowerCase() : "";
+        var email = (userMeta && userMeta.email) ? userMeta.email.toLowerCase() : "";
+        var a = p.assignee.toLowerCase();
+        return (name && a.indexOf(name) !== -1) || (email && a.indexOf(email) !== -1);
+      })
+    : projects;
 
-  var totalCount     = projects.length;
-  var activeCount    = projects.filter(function (p) { return p.status === "active"; }).length;
-  var onHoldCount    = projects.filter(function (p) { return p.status === "on_hold"; }).length;
-  var completedCount = projects.filter(function (p) { return p.status === "completed"; }).length;
+  var filtered = filter === "all"
+    ? mineFiltered
+    : mineFiltered.filter(function (p) { return p.status === filter; });
+
+  var plannedCount    = projects.filter(function (p) { return p.status === "planned"; }).length;
+  var inProgressCount = projects.filter(function (p) { return p.status === "in_progress"; }).length;
+  var blockedCount    = projects.filter(function (p) { return p.status === "blocked"; }).length;
+  var completeCount   = projects.filter(function (p) { return p.status === "complete"; }).length;
 
   function getAccountName(id) {
     if (!id) return null;
@@ -84,10 +98,10 @@ export function ProjectsView({ projects, loading, accounts, openAdd, onAddClosed
         }}
       >
         {[
-          { label: "Total",     value: totalCount,     color: C.textSub },
-          { label: "Active",    value: activeCount,    color: C.blue    },
-          { label: "On Hold",   value: onHoldCount,    color: C.yellow  },
-          { label: "Completed", value: completedCount, color: C.green   },
+          { label: "Planned",     value: plannedCount,    color: STATUS_COLORS.planned     },
+          { label: "In Progress", value: inProgressCount, color: STATUS_COLORS.in_progress },
+          { label: "Blocked",     value: blockedCount,    color: STATUS_COLORS.blocked      },
+          { label: "Complete",    value: completeCount,   color: STATUS_COLORS.complete     },
         ].map(function (s) {
           return (
             <div
@@ -127,6 +141,36 @@ export function ProjectsView({ projects, loading, accounts, openAdd, onAddClosed
         })}
       </div>
 
+      {/* Mine / All toggle */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+        {[
+          { id: false, label: "All Projects" },
+          { id: true,  label: "My Projects"  },
+        ].map(function (opt) {
+          var active = showMine === opt.id;
+          return (
+            <button
+              key={String(opt.id)}
+              onClick={function () { setShowMine(opt.id); }}
+              style={{
+                padding: "5px 14px",
+                borderRadius: 20,
+                cursor: "pointer",
+                fontSize: 11,
+                fontWeight: 600,
+                fontFamily: "'DM Sans', sans-serif",
+                background: active ? "rgba(103,200,249,0.12)" : "transparent",
+                color: active ? C.accent : C.textMuted,
+                border: "1px solid " + (active ? GB_BDR : C.border),
+                transition: "all 0.15s",
+              }}
+            >
+              {opt.label}
+            </button>
+          );
+        })}
+      </div>
+
       {/* Filter tabs */}
       <div
         style={{
@@ -156,7 +200,7 @@ export function ProjectsView({ projects, loading, accounts, openAdd, onAddClosed
                 fontWeight: 600,
                 fontFamily: "'DM Sans', sans-serif",
                 background: active ? C.bgCardAlt : "transparent",
-                color: active ? C.blue : C.textMuted,
+                color: active ? C.accent : C.textMuted,
                 border: "1px solid " + (active ? GB_BDR : "transparent"),
                 transition: "all 0.15s",
                 whiteSpace: "nowrap",
@@ -202,8 +246,9 @@ export function ProjectsView({ projects, loading, accounts, openAdd, onAddClosed
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {filtered.map(function (p) {
           var acctName = getAccountName(p.account_id);
-          var overdue  = p.status === "active" && isOverdue(p.due_date);
-          var dimmed   = p.status === "completed" || p.status === "cancelled";
+          var overdue  = p.status === "in_progress" && isOverdue(p.due_date);
+          var dimmed   = p.status === "complete";
+          var blocked  = p.status === "blocked";
 
           return (
             <div
@@ -211,7 +256,8 @@ export function ProjectsView({ projects, loading, accounts, openAdd, onAddClosed
               onClick={function () { setEditing(p); }}
               style={{
                 background: C.bgCard,
-                border: "1px solid " + (p.status === "active" ? GB_BDR : C.border),
+                border: "1px solid " + (blocked ? "rgba(224,92,92,0.3)" : p.status === "in_progress" ? GB_BDR : C.border),
+                borderLeft: blocked ? "3px solid rgba(224,92,92,0.8)" : "none",
                 borderRadius: 12,
                 padding: "14px 16px",
                 cursor: "pointer",
@@ -272,7 +318,7 @@ export function ProjectsView({ projects, loading, accounts, openAdd, onAddClosed
                     whiteSpace: "nowrap",
                   }}
                 >
-                  {STATUS_LABELS[p.status]}
+                  {STATUS_LABELS[p.status] || p.status}
                 </div>
               </div>
 
@@ -331,6 +377,12 @@ export function ProjectsView({ projects, loading, accounts, openAdd, onAddClosed
                   >
                     {overdue ? "Overdue · " : "Due · "}
                     {fmt(p.due_date)}
+                  </div>
+                )}
+
+                {p.assignee && (
+                  <div style={{ fontSize: 10, color: C.textMuted }}>
+                    {"Owner: " + p.assignee}
                   </div>
                 )}
               </div>

@@ -8,10 +8,11 @@ var GB     = "rgba(103,200,249,0.12)";
 var GB_BDR = "rgba(103,200,249,0.28)";
 
 var STATUS_OPTS = [
-  { value: "active",    label: "Active"    },
-  { value: "on_hold",   label: "On Hold"   },
-  { value: "completed", label: "Completed" },
-  { value: "cancelled", label: "Cancelled" },
+  { value: "planned",     label: "Planned"     },
+  { value: "in_progress", label: "In Progress" },
+  { value: "blocked",     label: "Blocked"     },
+  { value: "complete",    label: "Complete"    },
+  { value: "on_hold",     label: "On Hold"     },
 ];
 
 var PRIORITY_OPTS = [
@@ -23,10 +24,11 @@ var PRIORITY_OPTS = [
 export function ProjectModal({ existing, accounts, onSave, onDelete, onClose }) {
   var [title, setTitle]         = useState(existing ? existing.title             : "");
   var [description, setDesc]    = useState(existing ? existing.description || "" : "");
-  var [status, setStatus]       = useState(existing ? existing.status            : "active");
+  var [status, setStatus]       = useState(existing ? existing.status            : "planned");
   var [priority, setPriority]   = useState(existing ? existing.priority          : "medium");
   var [dueDate, setDueDate]     = useState(existing ? existing.due_date || ""    : "");
   var [accountId, setAccountId] = useState(existing ? existing.account_id || ""  : "");
+  var [assignee, setAssignee]   = useState(existing ? (existing.assignee || "")  : "");
   var [saving, setSaving]       = useState(false);
   var [confirmDel, setConfirm]  = useState(false);
 
@@ -40,6 +42,7 @@ export function ProjectModal({ existing, accounts, onSave, onDelete, onClose }) 
       priority,
       due_date:   dueDate || null,
       account_id: accountId || null,
+      assignee:   assignee.trim() || null,
     }).then(function () {
       setSaving(false);
       onClose();
@@ -88,6 +91,15 @@ export function ProjectModal({ existing, accounts, onSave, onDelete, onClose }) 
             onChange={function (e) { setDesc(e.target.value); }}
             placeholder="Scope, goals, context…"
             rows={3}
+          />
+        </div>
+
+        <div>
+          <FL>Assignee (optional)</FL>
+          <InputField
+            value={assignee}
+            onChange={function (e) { setAssignee(e.target.value); }}
+            placeholder="Who owns this?"
           />
         </div>
 
