@@ -113,6 +113,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
 - Items drop off the list after they ship
 - If items should be grouped for efficiency, suggest it before executing
 - Never execute immediately on a feature request — queue it first
+- **Before shipping items 11–14:** do a full layout audit first — review placement, spacing, and information hierarchy across every screen to make sure new features land cleanly into a well-organized foundation
 
 ---
 
