@@ -102,7 +102,7 @@ export function ContactsTab({ contacts, accountId, onAdd, onDelete, onUpdate }) 
 
       {contacts.length === 0 && (
         <div style={{ textAlign: "center", padding: "40px 20px", color: C.textMuted, fontSize: 13 }}>
-          <div style={{ marginBottom: 12 }}>No contacts yet.</div>
+          <div style={{ marginBottom: 12 }}>No contacts added yet. Who do you usually talk to here?</div>
           <AmberBtn onClick={onAdd} style={{ fontSize: 12 }}>+ Add Contact</AmberBtn>
         </div>
       )}
@@ -117,10 +117,10 @@ export function ContactsTab({ contacts, accountId, onAdd, onDelete, onUpdate }) 
               </div>
 
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 2, display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+                <div style={{ fontSize: 14, fontWeight: 500, color: C.text, marginBottom: 2, display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
                   {c.name}
                   {c.is_poc && (
-                    <span style={{ fontSize: 9, color: C.yellow, fontWeight: 600, letterSpacing: "0.06em", background: "rgba(251,191,36,0.12)", padding: "2px 6px", borderRadius: 10 }}>
+                    <span style={{ fontSize: 10, color: C.yellow, fontWeight: 600, letterSpacing: "0.06em", background: "rgba(251,191,36,0.12)", padding: "2px 6px", borderRadius: 10 }}>
                       POC
                     </span>
                   )}

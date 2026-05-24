@@ -154,10 +154,10 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
             </div>
             <div
               style={{
-                fontSize: 9,
+                fontSize: 10,
                 color: C.textMuted,
                 textTransform: "uppercase",
-                letterSpacing: "0.08em",
+                letterSpacing: "0.07em",
                 marginTop: 2,
               }}
             >
@@ -185,7 +185,7 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
                     onClick={onDelete}
                     style={{ fontSize: 11, padding: "5px 12px" }}
                   >
-                    Yes, Delete
+                    Delete it
                   </DangerBtn>
                   <SecBtn
                     onClick={function () { setConfirmDelete(false); }}

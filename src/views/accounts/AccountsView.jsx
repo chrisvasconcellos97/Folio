@@ -155,7 +155,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
       {openTasks.length > 0 && (
         <div style={{ marginBottom: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-            <div style={{ fontSize: 10, color: C.textSub, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            <div style={{ fontSize: 10, color: C.textSub, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em" }}>
               Quick Tasks
             </div>
             <div style={{
@@ -203,7 +203,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                     style={{ flex: 1, cursor: "pointer", minWidth: 0 }}
                   >
                     <div style={{
-                      fontSize: 13,
+                      fontSize: 14,
                       fontWeight: 500,
                       color: C.text,
                       overflow: "hidden",
@@ -227,7 +227,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                     )}
                     {t.notes && (
                       <div style={{
-                        fontSize: 11,
+                        fontSize: 12,
                         color: C.textMuted,
                         marginTop: 2,
                         overflow: "hidden",
@@ -272,7 +272,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
               <div style={{ fontSize: 22, fontWeight: 700, color: s.c, fontVariantNumeric: "tabular-nums" }}>
                 {s.v}
               </div>
-              <div style={{ fontSize: 9, color: C.textMuted, marginTop: 3, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              <div style={{ fontSize: 10, color: C.textMuted, marginTop: 3, textTransform: "uppercase", letterSpacing: "0.07em" }}>
                 {s.l}
               </div>
             </div>
@@ -285,7 +285,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
         <div style={{ marginBottom: 14 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
             <PipMark size={7} color={C.accent} glow pulse />
-            <div style={{ fontSize: 10, color: C.accent, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            <div style={{ fontSize: 10, color: C.accent, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em" }}>
               Pip — This Week
             </div>
           </div>
@@ -367,7 +367,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
       {/* Filter pills — supplier type tags */}
       {availableTags.length > 0 && (
         <div style={{ display: "flex", gap: 6, marginBottom: 6, overflowX: "auto", paddingBottom: 2, alignItems: "center" }}>
-          <span style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap", flexShrink: 0 }}>Type</span>
+          <span style={{ fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.07em", whiteSpace: "nowrap", flexShrink: 0 }}>Type</span>
           {availableTags.map(function (t) {
             var active = tagFilter === t;
             return (
@@ -397,7 +397,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
       {/* Filter pills — region */}
       {availableRegions.length > 0 && (
         <div style={{ display: "flex", gap: 6, marginBottom: 14, overflowX: "auto", paddingBottom: 2, alignItems: "center" }}>
-          <span style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap", flexShrink: 0 }}>Region</span>
+          <span style={{ fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.07em", whiteSpace: "nowrap", flexShrink: 0 }}>Region</span>
           {availableRegions.map(function (r) {
             var active = regionFilter === r;
             return (
@@ -435,7 +435,9 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
 
         {!loading && filtered.length === 0 && (
           <div style={{ textAlign: "center", padding: "40px 20px", color: C.textMuted, fontSize: 13 }}>
-            <div style={{ marginBottom: 12 }}>No accounts found.</div>
+            <div style={{ marginBottom: 12 }}>
+              {accounts.length === 0 ? "Nothing in the field yet." : "No accounts match that search."}
+            </div>
             {onAddAccount && accounts.length === 0 && (
               <button
                 onClick={onAddAccount}
@@ -445,7 +447,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                   color: C.accent, fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
                 }}
               >
-                + Add Account
+                Add your first account
               </button>
             )}
           </div>

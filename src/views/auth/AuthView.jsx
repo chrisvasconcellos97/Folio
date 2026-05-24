@@ -52,18 +52,20 @@ export function AuthView({ onSignIn, onSignUp }) {
       onSignIn(email, password)
         .then(function (result) {
           setLoading(false);
-          if (result.error) setError(result.error.message);
+          if (result.error) setError("Couldn't sign in. Check your email and password.");
         })
         .catch(function (err) {
           setLoading(false);
-          setError(err.message);
+          setError(err.message && err.message.toLowerCase().includes("network")
+            ? "Couldn't connect. Check your signal."
+            : "Something went wrong. Try again.");
         });
     } else {
       onSignUp(email, password, { full_name: name, title: title })
         .then(function (result) {
           setLoading(false);
           if (result.error) {
-            setError(result.error.message);
+            setError("Couldn't create account. " + (result.error.message || "Try again."));
           } else {
             setSuccess("Check your email to confirm your account, then sign in.");
             setMode("login");
@@ -71,7 +73,9 @@ export function AuthView({ onSignIn, onSignUp }) {
         })
         .catch(function (err) {
           setLoading(false);
-          setError(err.message);
+          setError(err.message && err.message.toLowerCase().includes("network")
+            ? "Couldn't connect. Check your signal."
+            : "Something went wrong. Try again.");
         });
     }
   }

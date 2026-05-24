@@ -229,17 +229,17 @@ export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLo
           <PipMark size={8} color={C.accent} glow pulse />
           <div
             style={{
-              fontSize: 9,
+              fontSize: 10,
               color: C.accent,
               fontWeight: 600,
               textTransform: "uppercase",
-              letterSpacing: "0.1em",
+              letterSpacing: "0.07em",
             }}
           >
             Pip
           </div>
         </div>
-        <div style={{ fontSize: 13, color: C.textSub, lineHeight: 1.65 }}>
+        <div style={{ fontSize: 14, color: C.textSub, lineHeight: 1.65 }}>
           {buildPipInsight(account, openItems, revenueHistory, shopMetrics)}
         </div>
       </div>
@@ -257,18 +257,18 @@ export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLo
           <PipMark size={7} color={C.accent} glow />
           <div
             style={{
-              fontSize: 9,
+              fontSize: 10,
               color: C.accent,
               fontWeight: 600,
               textTransform: "uppercase",
-              letterSpacing: "0.1em",
+              letterSpacing: "0.07em",
               flex: 1,
             }}
           >
             Relationship Summary
           </div>
           {summaryDateLabel && (
-            <div style={{ fontSize: 9, color: C.textMuted }}>{summaryDateLabel}</div>
+            <div style={{ fontSize: 10, color: C.textMuted }}>{summaryDateLabel}</div>
           )}
         </div>
 
@@ -334,7 +334,7 @@ export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLo
       {account.objective && (
         <Card>
           <FL>Notes</FL>
-          <div style={{ fontSize: 13, color: C.text, lineHeight: 1.6 }}>
+          <div style={{ fontSize: 14, color: C.text, lineHeight: 1.6 }}>
             {account.objective}
           </div>
         </Card>
@@ -344,7 +344,7 @@ export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLo
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
         <Card>
           <FL>Last Meeting</FL>
-          <div style={{ fontSize: 13, color: C.text }}>
+          <div style={{ fontSize: 14, color: C.text }}>
             {account.last_meeting
               ? new Date(account.last_meeting).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
               : "—"}
@@ -352,7 +352,7 @@ export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLo
         </Card>
         <Card>
           <FL>Next Meeting</FL>
-          <div style={{ fontSize: 13, color: account.next_meeting ? C.accent : C.textMuted }}>
+          <div style={{ fontSize: 14, color: account.next_meeting ? C.accent : C.textMuted }}>
             {account.next_meeting
               ? new Date(account.next_meeting).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
               : "Not scheduled"}
@@ -365,6 +365,7 @@ export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLo
               fontSize: 22,
               fontWeight: 600,
               color: openCount > 0 ? C.yellow : C.green,
+              fontVariantNumeric: "tabular-nums",
             }}
           >
             {openCount}
@@ -372,7 +373,7 @@ export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLo
         </Card>
         <Card>
           <FL>Revenue YTD</FL>
-          <div style={{ fontSize: 18, fontWeight: 700, color: C.accent }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: C.accent, fontVariantNumeric: "tabular-nums" }}>
             {account.revenue || "—"}
           </div>
         </Card>
@@ -400,7 +401,7 @@ export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLo
               <Card>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 2 }}>
                   <FL>Revenue Trend</FL>
-                  <div style={{ fontSize: 9, color: C.textMuted }}>{monthLabel}</div>
+                  <div style={{ fontSize: 10, color: C.textMuted }}>{monthLabel}</div>
                 </div>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 4 }}>
                   <div style={{ fontSize: 20, fontWeight: 700, color: C.accent, fontVariantNumeric: "tabular-nums" }}>
@@ -423,7 +424,7 @@ export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLo
               <Card>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
                   <FL>Shop Connections</FL>
-                  <div style={{ fontSize: 9, color: C.textMuted }}>{total} total · {shopLabel}</div>
+                  <div style={{ fontSize: 10, color: C.textMuted, fontVariantNumeric: "tabular-nums" }}>{total} total · {shopLabel}</div>
                 </div>
                 {[
                   { label: "Connected",     key: "connected",     color: C.yellow, delta: smMomConn },
@@ -489,7 +490,7 @@ export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLo
       {/* Sub-accounts */}
       {subAccounts && subAccounts.length > 0 && (
         <div style={{ marginTop: 8 }}>
-          <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+          <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 8 }}>
             Sub-accounts ({subAccounts.length})
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

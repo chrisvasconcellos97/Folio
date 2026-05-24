@@ -101,7 +101,7 @@ export function MeetingsView({ meetings, loading }) {
               fontSize: 10,
               color: C.textMuted,
               textTransform: "uppercase",
-              letterSpacing: "0.08em",
+              letterSpacing: "0.07em",
               marginBottom: 10,
             }}
           >
@@ -131,7 +131,7 @@ export function MeetingsView({ meetings, loading }) {
                       <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 3 }}>
                         {m.folio_accounts ? m.folio_accounts.name : "Account"}
                       </div>
-                      <div style={{ fontSize: 12, color: C.textSub, marginBottom: 6 }}>
+                      <div style={{ fontSize: 14, color: C.textSub, marginBottom: 6 }}>
                         {m.title || "Meeting"}
                       </div>
                       {daysOut <= 1 && (
@@ -160,7 +160,7 @@ export function MeetingsView({ meetings, loading }) {
                           day: "numeric",
                         })}
                       </div>
-                      <div style={{ fontSize: 9, color: C.textMuted, marginTop: 2 }}>
+                      <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>
                         {new Date(m.meeting_date).getFullYear()}
                       </div>
                     </div>
@@ -181,7 +181,7 @@ export function MeetingsView({ meetings, loading }) {
                 fontSize: 10,
                 color: C.textMuted,
                 textTransform: "uppercase",
-                letterSpacing: "0.08em",
+                letterSpacing: "0.07em",
                 marginBottom: 10,
               }}
             >
@@ -200,10 +200,10 @@ export function MeetingsView({ meetings, loading }) {
                       }}
                     >
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 2 }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 2 }}>
                           {m.folio_accounts ? m.folio_accounts.name : "Account"}
                         </div>
-                        <div style={{ fontSize: 11, color: C.textSub }}>
+                        <div style={{ fontSize: 12, color: C.textSub }}>
                           {m.title || "Meeting"}
                         </div>
                       </div>
@@ -246,7 +246,7 @@ export function MeetingsView({ meetings, loading }) {
             fontSize: 13,
           }}
         >
-          No meetings yet. Log one from any account.
+          No meetings logged yet. Head to an account to record one.
         </div>
       )}
     </div>

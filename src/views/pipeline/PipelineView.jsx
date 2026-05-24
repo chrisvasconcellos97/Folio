@@ -149,7 +149,7 @@ export function PipelineView({ accounts, loading, revenueHistory, shopMetrics })
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 5 }}>{a.name}</div>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: C.text, marginBottom: 5 }}>{a.name}</div>
                   {a.tier && (
                     <Pill color={TIER_COLORS[a.tier] || C.textSub} style={{ fontSize: 9 }}>{a.tier}</Pill>
                   )}
@@ -158,7 +158,7 @@ export function PipelineView({ accounts, loading, revenueHistory, shopMetrics })
                   <div style={{ fontSize: 18, fontWeight: 700, color: C.accent, fontVariantNumeric: "tabular-nums" }}>
                     {fmtRevenue(latest ? latest.revenue : null)}
                   </div>
-                  <div style={{ fontSize: 9, color: C.textMuted, marginBottom: 5 }}>{monthLabel}</div>
+                  <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 5 }}>{monthLabel}</div>
                   <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                     {mom !== null && (
                       <span style={{ fontSize: 11, fontWeight: 600, color: pctColor(mom) }}>
@@ -180,7 +180,7 @@ export function PipelineView({ accounts, loading, revenueHistory, shopMetrics })
 
         {/* Divider */}
         {withoutData.length > 0 && withData.length > 0 && (
-          <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", padding: "6px 2px 2px" }}>
+          <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em", padding: "6px 2px 2px" }}>
             No history yet
           </div>
         )}
@@ -200,7 +200,7 @@ export function PipelineView({ accounts, loading, revenueHistory, shopMetrics })
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: C.textSub, marginBottom: 5 }}>{a.name}</div>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: C.textSub, marginBottom: 5 }}>{a.name}</div>
                   {a.tier && (
                     <Pill color={TIER_COLORS[a.tier] || C.textSub} style={{ fontSize: 9 }}>{a.tier}</Pill>
                   )}
@@ -213,7 +213,7 @@ export function PipelineView({ accounts, loading, revenueHistory, shopMetrics })
 
         {accounts.length === 0 && (
           <div style={{ textAlign: "center", padding: "40px 20px", color: C.textMuted, fontSize: 13 }}>
-            No accounts yet.
+            No accounts in the pipeline yet.
           </div>
         )}
       </div>

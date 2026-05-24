@@ -93,7 +93,7 @@ export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAd
 
   var sectionLabel = {
     fontSize: 10, color: C.textMuted, textTransform: "uppercase",
-    letterSpacing: "0.08em", marginBottom: 8,
+    letterSpacing: "0.07em", marginBottom: 8,
   };
 
   function handleClose(id) {
@@ -168,7 +168,7 @@ export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAd
                   </div>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 12, color: C.text, lineHeight: 1.4 }}>{item.text}</div>
+                  <div style={{ fontSize: 14, color: C.text, lineHeight: 1.4 }}>{item.text}</div>
                   <div style={{ display: "flex", gap: 12, marginTop: 4, flexWrap: "wrap" }}>
                     {item.due_date && (
                       <div style={{ fontSize: 10, color: C.yellow }}>
@@ -196,7 +196,7 @@ export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAd
 
       {tasks.length === 0 && open.length === 0 && (
         <div style={{ textAlign: "center", padding: "24px 0 8px" }}>
-          <div style={{ color: C.green, fontSize: 13, marginBottom: 10 }}>All clear. No open tasks or items.</div>
+          <div style={{ color: C.green, fontSize: 13, marginBottom: 10 }}>No open items. You're caught up.</div>
           {onAdd && (
             <button
               onClick={onAdd}
@@ -222,7 +222,7 @@ export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAd
                   <span style={{ fontSize: 10, color: "#fff" }}>✓</span>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 12, color: C.textMuted, textDecoration: "line-through", lineHeight: 1.4 }}>{item.text}</div>
+                  <div style={{ fontSize: 14, color: C.textMuted, textDecoration: "line-through", lineHeight: 1.4 }}>{item.text}</div>
                   {item.closed_at && (
                     <div style={{ fontSize: 10, color: C.textMuted, marginTop: 3 }}>
                       {"Closed: " + new Date(item.closed_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
