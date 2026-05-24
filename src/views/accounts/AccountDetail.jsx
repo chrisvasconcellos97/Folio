@@ -276,8 +276,10 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
           items={items}
           taskCadences={cadences.filter(function (c) { return c.type === 'task'; })}
           accountId={account.id}
+          userId={userId}
           onClose={closeItem}
           onAdd={function () { setItemModal(true); }}
+          onUpdate={updateItem}
           onGoToCadence={function () { setTab("cadence"); }}
         />
       )}

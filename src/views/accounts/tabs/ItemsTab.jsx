@@ -1,8 +1,11 @@
+import { useState } from "react";
 import { C } from "../../../lib/colors";
-import { AmberBtn } from "../../../components/Buttons";
+import { AmberBtn, SecBtn } from "../../../components/Buttons";
 import { PipInsightCard } from "../../../components/PipInsightCard";
 import { pickV } from "../../../lib/metricsUtils";
 import { getNextOccurrence, getFrequencyLabel, daysUntil, formatDateFull } from "../../../lib/cadenceUtils";
+import { showToast } from "../../../components/Toast";
+import { AddItemModal } from "../AddItemModal";
 
 function buildItemsInsight(items, taskCadences, accountId) {
   var seed    = (accountId || "x") + new Date().getDate().toString();
@@ -73,7 +76,8 @@ function buildItemsInsight(items, taskCadences, accountId) {
   return parts.join(" ");
 }
 
-export function ItemsTab({ items, taskCadences, accountId, onClose, onAdd, onGoToCadence }) {
+export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAdd, onUpdate, onGoToCadence }) {
+  var [editingItem, setEditingItem] = useState(null);
   var open   = items.filter(function (i) { return !i.done; });
   var closed = items.filter(function (i) { return i.done; });
   var today  = new Date(); today.setHours(0, 0, 0, 0);
@@ -91,6 +95,12 @@ export function ItemsTab({ items, taskCadences, accountId, onClose, onAdd, onGoT
     fontSize: 10, color: C.textMuted, textTransform: "uppercase",
     letterSpacing: "0.08em", marginBottom: 8,
   };
+
+  function handleClose(id) {
+    onClose(id)
+      .then(function () { showToast("Item closed"); })
+      .catch(function (err) { showToast(err.message || "Failed", "error"); });
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -151,7 +161,7 @@ export function ItemsTab({ items, taskCadences, accountId, onClose, onAdd, onGoT
               <div key={item.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, background: C.bgCard, border: "1px solid " + C.border, borderRadius: 10, padding: "11px 13px", marginBottom: 6 }}>
                 <div style={{ paddingTop: 2 }}>
                   <div
-                    onClick={function () { onClose(item.id); }}
+                    onClick={function () { handleClose(item.id); }}
                     style={{ padding: 8, margin: -8, display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
                   >
                     <div style={{ width: 16, height: 16, borderRadius: 4, border: "1.5px solid " + C.accentDim, flexShrink: 0, background: "transparent" }} />
@@ -170,6 +180,14 @@ export function ItemsTab({ items, taskCadences, accountId, onClose, onAdd, onGoT
                     )}
                   </div>
                 </div>
+                {onUpdate && (
+                  <SecBtn
+                    onClick={function () { setEditingItem(item); }}
+                    style={{ fontSize: 10, padding: "4px 10px", flexShrink: 0 }}
+                  >
+                    Edit
+                  </SecBtn>
+                )}
               </div>
             );
           })}
@@ -220,6 +238,23 @@ export function ItemsTab({ items, taskCadences, accountId, onClose, onAdd, onGoT
       <AmberBtn style={{ width: "100%", fontSize: 13 }} onClick={onAdd}>
         + Add Action Item
       </AmberBtn>
+
+      {editingItem && (
+        <AddItemModal
+          existing={editingItem}
+          accountId={accountId}
+          userId={userId}
+          onSave={function (id, data) {
+            return onUpdate(id, data).then(function () {
+              showToast("Item updated");
+              setEditingItem(null);
+            }).catch(function (err) {
+              showToast(err.message || "Save failed", "error");
+            });
+          }}
+          onClose={function () { setEditingItem(null); }}
+        />
+      )}
     </div>
   );
 }
