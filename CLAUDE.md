@@ -270,6 +270,48 @@ This app is currently single-user but should be built with multi-tenancy in mind
     - **Multi-user access** — coworker needs a login. Sees tasks assigned to them and enough account context to execute. Doesn't need full Folio AM access. Org/team layer required — design data model with `org_id` and `assigned_to` from day one so it's not a rewrite later.
     - **Completion feeds change log** — when a task or stage is marked complete, it automatically creates a dated entry on the linked Folio account's change log (item 22 above).
 
+24. **MSO workflow improvements — prep for Route Builder (do first):**
+
+    The MSO team manages both the overall MSO parent account and each individual shop beneath it. They're the primary users for territory routing — they need Folio to handle the MSO + shops structure cleanly before the route feature is worth building. Adjustments needed before Route Builder:
+
+    - **Address fields on accounts** — add `address text`, `lat float8`, `lng float8` to `folio_accounts`. Address is entered manually on the account. Geocoding (address → lat/lng) happens once via Nominatim (OpenStreetMap, free, no API key) and the result is cached in `lat`/`lng` so we never geocode the same address twice. Show address in the account header and on the account card.
+    - **MSO parent view — shops list** — the parent MSO account's Overview tab (or a dedicated sub-tab) should show all child shops in a flat scannable list: name, address, last visit date, open items count, health indicator. MSO managers shouldn't have to navigate into each shop one by one to get the lay of the land.
+    - **Account type field** — add `account_type text` (values: `mso_parent`, `shop`, `distributor`, `other` — default `other`). Drives UI hints: shops are routable destinations, MSO parents are relationship anchors. Used by Route Builder to filter the "Load from MSO" shortcut.
+    - **"Load shops from MSO" shortcut in Route Builder** — when building a route, the MSO manager can tap their MSO account name and all child shops pre-populate as stops. Relies on `parent_account_id` already being in the schema.
+
+25. **Route Builder — territory routing for MSO field visits:**
+
+    **Primary users:** MSO team. They visit 5 shops/day on average, routes can be single-day or multi-day, starting point is flexible (home, office, or first stop).
+
+    **Technical approach (fully decided, no open questions):**
+    - **Map**: Leaflet + OpenStreetMap — free, no API key, ~200kb bundle add. Renders numbered pins and a polyline connecting the route in optimized order.
+    - **Geocoding**: Nominatim (OpenStreetMap geocoder) — free, no API key, rate-limited to 1 req/sec (fine for personal use). Address → lat/lng, cached on the account record. Never re-geocode a cached address.
+    - **Route optimization**: Brute-force TSP in pure JS. For ≤10 stops: try all N! orderings, keep shortest total Haversine distance. For >10 stops: nearest-neighbor greedy. No API needed. 5 stops = 120 permutations, trivial.
+    - **Navigation handoff**: "Open in Google Maps" button builds a `maps.google.com/dir/` URL with all waypoints in optimized order. Opens in Maps for actual turn-by-turn navigation. Apple Maps fallback for iOS.
+    - **No external routing API needed** — drive times are estimated from Haversine distance ÷ average speed (45mph). Good enough for schedule planning; actual navigation uses Google Maps.
+
+    **Feature shape:**
+    - New "Route" nav item (or accessible from accounts list via multi-select)
+    - Account selector: pick shops manually, or use "Load from MSO" to pull all shops under an MSO account
+    - Enter starting point (text address or "use my location")
+    - App geocodes un-geocoded shops, then runs optimizer
+    - **Map view**: Leaflet map with numbered pins (1→N) and a polyline tracing the route
+    - **Schedule sidebar**: set start time + visit duration per stop (default 45 min). Auto-fills the day: "Depart 9:00am → Shop A (9:20 arrive, 45 min visit) → Depart 10:05 → Shop B (10:35 arrive)..."
+    - **Multi-day**: Day 1 / Day 2 / Day 3 tabs. Drag stops between days. Each day gets its own map and schedule.
+    - **"Open in Maps"** button per day, hands off the full day's route to Google/Apple Maps
+    - Saved routes: store route as a `folio_routes` record (name, stop order, date) so you can re-use a regular weekly territory run
+
+    **DB additions needed:**
+    - `folio_accounts`: `address text`, `lat float8`, `lng float8`, `account_type text`
+    - `folio_routes`: `id, user_id, name, date, stops jsonb (ordered array of account_ids + visit_duration), created_at`
+
+    **Build order:**
+    1. DB migration: address/lat/lng/account_type on accounts, folio_routes table
+    2. Address entry in AddAccountModal and account edit — with geocode-on-save
+    3. MSO parent view with shops list (item 24 above)
+    4. Route Builder view: account selector + optimizer + schedule sidebar
+    5. Leaflet map layer (can ship 4 without 5 and it's still fully functional)
+
 **Already shipped (drop from list):**
 - ✅ Quick Tasks — tray on main page, modal with account dropdown + reminder presets, Pip integration (surface open tasks on load, complete/add via natural language)
 - ✅ Sub-accounts — UI + migration (`parent_account_id` column live), nested display with faded ↳ arrow on accounts list
