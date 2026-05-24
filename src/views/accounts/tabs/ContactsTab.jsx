@@ -78,7 +78,7 @@ function ContactLink({ href, label, color }) {
       href={href}
       target="_blank"
       rel="noreferrer"
-      style={{ fontSize: 11, color: color || C.accent, textDecoration: "none", background: "rgba(74,155,130,0.07)", padding: "2px 8px", borderRadius: 6, border: "1px solid rgba(74,155,130,0.15)", whiteSpace: "nowrap" }}
+      style={{ fontSize: 11, color: color || C.accent, textDecoration: "none", background: C.accentFaint, padding: "2px 8px", borderRadius: 6, border: "1px solid " + C.accentMid, whiteSpace: "nowrap" }}
     >
       {label}
     </a>
@@ -101,7 +101,7 @@ export function ContactsTab({ contacts, accountId, onAdd, onDelete, onAddContact
         } : null;
         showToast("Contact removed", "warning", onUndo);
       })
-      .catch(function (err) { showToast(err.message || "Delete failed", "error"); });
+      .catch(function (err) { showToast(err.message || "Couldn't delete — check your connection", "error"); });
     setConfirmDeleteId(null);
   }
 
@@ -116,12 +116,12 @@ export function ContactsTab({ contacts, accountId, onAdd, onDelete, onAddContact
         </div>
       )}
 
-      {contacts.map(function (c) {
+      {contacts.map(function (c, index) {
         var confirmDel = confirmDeleteId === c.id;
         return (
-          <Card key={c.id}>
+          <Card key={c.id} className="list-item" style={{ animationDelay: index * 0.04 + "s" }}>
             <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-              <div style={{ width: 40, height: 40, borderRadius: "50%", background: c.is_poc ? "rgba(74,155,130,0.2)" : "rgba(74,155,130,0.07)", border: "1px solid rgba(74,155,130,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 600, color: C.accent, flexShrink: 0, marginTop: 2 }}>
+              <div style={{ width: 40, height: 40, borderRadius: "50%", background: c.is_poc ? C.accentLine : C.accentFaint, border: "1px solid " + C.accentLine, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 600, color: C.accent, flexShrink: 0, marginTop: 2 }}>
                 {c.name ? c.name.charAt(0).toUpperCase() : "?"}
               </div>
 
@@ -210,7 +210,7 @@ export function ContactsTab({ contacts, accountId, onAdd, onDelete, onAddContact
               showToast("Contact updated");
               setEditingContact(null);
             }).catch(function (err) {
-              showToast(err.message || "Save failed", "error");
+              showToast(err.message || "Couldn't save — check your connection", "error");
             });
           }}
           onClose={function () { setEditingContact(null); }}

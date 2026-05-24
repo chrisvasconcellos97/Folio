@@ -89,8 +89,8 @@ export function LogMeetingModal({ accountId, userId, contacts, onSave, onClose }
                     type="button"
                     onClick={function () { toggleAttendee(c.name); }}
                     style={{
-                      background: active ? "rgba(74,155,130,0.15)" : "rgba(255,255,255,0.04)",
-                      border: "1px solid " + (active ? "rgba(74,155,130,0.4)" : C.border),
+                      background: active ? C.accentMid : "rgba(255,255,255,0.04)",
+                      border: "1px solid " + (active ? C.accentBorder : C.border),
                       borderRadius: 20,
                       padding: "5px 12px",
                       fontSize: 12,

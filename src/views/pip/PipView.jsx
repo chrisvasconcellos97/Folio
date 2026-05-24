@@ -280,11 +280,11 @@ export function PipView({ accounts, meetings, tasks, addTask, updateTask, onActi
               height: 56,
               borderRadius: "50%",
               background: C.accentGlow,
-              border: "1px solid rgba(74,155,130,0.35)",
+              border: "1px solid " + C.accentRing,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              boxShadow: "0 0 28px rgba(74,155,130,0.18)",
+              boxShadow: "0 0 28px " + C.accentLine,
             }}
           >
             <PipMark size={16} color={C.accent} glow pulse />
@@ -341,8 +341,8 @@ export function PipView({ accounts, meetings, tasks, addTask, updateTask, onActi
               <div
                 style={{
                   maxWidth: "82%",
-                  background: isPip ? C.bgCard : "rgba(74,155,130,0.12)",
-                  border: "1px solid " + (isPip ? C.border : "rgba(74,155,130,0.2)"),
+                  background: isPip ? C.bgCard : C.accentGlow,
+                  border: "1px solid " + (isPip ? C.border : C.accentLine),
                   borderRadius: isPip ? "4px 12px 12px 12px" : "12px 4px 12px 12px",
                   padding: "10px 14px",
                   fontSize: 13,
@@ -370,8 +370,8 @@ export function PipView({ accounts, meetings, tasks, addTask, updateTask, onActi
                 <button
                   onClick={function () { onAction(m.action, m.actionAccount); }}
                   style={{
-                    background: "rgba(74,155,130,0.12)",
-                    border: "1px solid rgba(74,155,130,0.35)",
+                    background: C.accentGlow,
+                    border: "1px solid " + C.accentRing,
                     borderRadius: 20,
                     padding: "7px 14px",
                     fontSize: 12,

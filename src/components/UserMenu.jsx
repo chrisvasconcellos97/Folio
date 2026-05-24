@@ -117,7 +117,7 @@ export function UserMenu({ userMeta, onSignOut, onTour, dropUp }) {
           style={{
             width: 32, height: 32, borderRadius: "50%",
             background: open ? C.accent : C.accentGlow,
-            border: "1px solid " + (open ? C.accent : "rgba(74,155,130,0.35)"),
+            border: "1px solid " + (open ? C.accent : C.accentRing),
             color: open ? "#091712" : C.accent,
             fontSize: 11, fontWeight: 700,
             fontFamily: "'DM Sans', sans-serif",

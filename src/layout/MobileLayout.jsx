@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { C } from "../lib/colors";
 import { FolioIcon } from "../components/FolioIcon";
 import { GaugeIcon } from "../components/GaugeIcon";
@@ -14,6 +15,12 @@ var NAV_ITEMS = [
 ];
 
 export function MobileLayout({ view, setView, slideClass, onAddAccount, onSignOut, onTour, userMeta, children }) {
+  var scrollRef = useRef(null);
+
+  useEffect(function () {
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
+  }, [view]);
+
   return (
     <div
       style={{
@@ -28,7 +35,7 @@ export function MobileLayout({ view, setView, slideClass, onAddAccount, onSignOu
         style={{
           background: C.bg,
           borderBottom: "1px solid " + C.border,
-          padding: "14px 18px 12px",
+          padding: "max(14px, env(safe-area-inset-top)) 18px 12px",
           position: "sticky",
           top: 0,
           zIndex: 50,
@@ -80,10 +87,11 @@ export function MobileLayout({ view, setView, slideClass, onAddAccount, onSignOu
 
       {/* Scrollable content */}
       <div
+        ref={scrollRef}
         style={{
           flex: 1,
           overflowY: "auto",
-          padding: "16px 18px 90px",
+          padding: "16px 18px calc(74px + env(safe-area-inset-bottom))",
         }}
       >
         <div key={view} className={slideClass || "view-fade-in"}>
@@ -100,7 +108,7 @@ export function MobileLayout({ view, setView, slideClass, onAddAccount, onSignOu
           right: 0,
           background: C.bgDark,
           borderTop: "1px solid " + C.border,
-          padding: "8px 16px 12px",
+          padding: "8px 16px max(12px, env(safe-area-inset-bottom))",
           zIndex: 50,
         }}
       >
@@ -121,9 +129,10 @@ export function MobileLayout({ view, setView, slideClass, onAddAccount, onSignOu
                 onClick={function () { setView(item.id); }}
                 style={{
                   flex: 1,
-                  padding: "7px 4px",
+                  padding: "10px 6px",
                   borderRadius: 8,
                   cursor: "pointer",
+                  userSelect: "none",
                   fontSize: 9,
                   fontWeight: 600,
                   fontFamily: "'DM Sans', sans-serif",

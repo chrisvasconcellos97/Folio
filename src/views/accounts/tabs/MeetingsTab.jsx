@@ -166,7 +166,7 @@ export function MeetingsTab({ meetings, accountName, userId, onLogMeeting, onDel
         } : null;
         showToast("Meeting deleted", "warning", onUndo);
       })
-      .catch(function (err) { showToast(err.message || "Delete failed", "error"); });
+      .catch(function (err) { showToast(err.message || "Couldn't delete — check your connection", "error"); });
     setConfirmDeleteId(null);
   }
 
@@ -181,12 +181,12 @@ export function MeetingsTab({ meetings, accountName, userId, onLogMeeting, onDel
         </div>
       )}
 
-      {meetings.map(function (m) {
+      {meetings.map(function (m, index) {
         var isLoading   = !!loadingPip[m.id];
         var pipErr      = pipErrors[m.id];
         var confirmDel  = confirmDeleteId === m.id;
         return (
-          <Card key={m.id}>
+          <Card key={m.id} className="list-item" style={{ animationDelay: index * 0.04 + "s" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10, gap: 12 }}>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 3 }}>
@@ -215,7 +215,7 @@ export function MeetingsTab({ meetings, accountName, userId, onLogMeeting, onDel
             </div>
 
             {m.pip_summary && (
-              <div style={{ background: C.accentGlow, border: "1px solid rgba(74,155,130,0.2)", borderRadius: 10, padding: "10px 12px", marginBottom: 10 }}>
+              <div style={{ background: C.accentGlow, border: "1px solid " + C.accentLine, borderRadius: 10, padding: "10px 12px", marginBottom: 10 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
                   <PipMark size={7} color={C.accent} glow />
                   <span style={{ fontSize: 10, color: C.accent, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em" }}>Pip Summary</span>
@@ -293,7 +293,7 @@ export function MeetingsTab({ meetings, accountName, userId, onLogMeeting, onDel
                       href={"mailto:?body=" + encodeURIComponent(m.pip_email)}
                       style={{
                         fontSize: 11, padding: "4px 10px",
-                        background: "rgba(74,155,130,0.1)", border: "1px solid rgba(74,155,130,0.25)",
+                        background: C.accentGlow, border: "1px solid " + C.accentSubtle,
                         borderRadius: 6, color: C.accent, textDecoration: "none",
                         fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
                         display: "inline-flex", alignItems: "center",
@@ -318,7 +318,7 @@ export function MeetingsTab({ meetings, accountName, userId, onLogMeeting, onDel
                 <button
                   onClick={function () { handleAskPip(m); }}
                   disabled={isLoading}
-                  style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "1px solid rgba(74,155,130,0.25)", borderRadius: 8, padding: "6px 12px", cursor: isLoading ? "not-allowed" : "pointer", opacity: isLoading ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
+                  style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "1px solid " + C.accentSubtle, borderRadius: 8, padding: "6px 12px", cursor: isLoading ? "not-allowed" : "pointer", opacity: isLoading ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
                 >
                   <PipMark size={6} color={C.accent} glow pulse={isLoading} />
                   <span style={{ fontSize: 11, color: C.accent, fontWeight: 600 }}>
@@ -381,7 +381,7 @@ export function MeetingsTab({ meetings, accountName, userId, onLogMeeting, onDel
               showToast("Meeting updated");
               setEditingMeeting(null);
             }).catch(function (err) {
-              showToast(err.message || "Save failed", "error");
+              showToast(err.message || "Couldn't save — check your connection", "error");
             });
           }}
           onClose={function () { setEditingMeeting(null); }}

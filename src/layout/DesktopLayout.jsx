@@ -98,7 +98,7 @@ export function DesktopLayout({
                   fontSize: 13,
                   background: active ? (item.id === "gauge" ? "rgba(123,108,246,0.08)" : C.bgPillActive) : "transparent",
                   color: active ? (item.id === "gauge" ? C.blue : C.accent) : C.textSub,
-                  border: "1px solid " + (active ? (item.id === "gauge" ? "rgba(123,108,246,0.2)" : "rgba(74,155,130,0.2)") : "transparent"),
+                  border: "1px solid " + (active ? (item.id === "gauge" ? "rgba(123,108,246,0.2)" : C.accentLine) : "transparent"),
                   textAlign: "left",
                 }}
               >

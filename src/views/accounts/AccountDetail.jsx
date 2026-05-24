@@ -133,7 +133,7 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
                 <button
                   onClick={function () { onSelectAccount && onSelectAccount(parentAccount); }}
                   style={{
-                    background: 'rgba(74,155,130,0.08)', border: '1px solid rgba(74,155,130,0.2)',
+                    background: C.accentFaint, border: '1px solid ' + C.accentLine,
                     borderRadius: 20, padding: '3px 10px', fontSize: 11, fontWeight: 600,
                     color: C.accent, fontFamily: "'DM Sans', sans-serif", cursor: 'pointer',
                   }}
@@ -260,7 +260,7 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
                   {subAccounts.length > 0 && (
                     <span style={{
                       marginLeft: 4, fontSize: 9, fontWeight: 700,
-                      background: "rgba(74,155,130,0.15)", color: C.accent,
+                      background: C.accentMid, color: C.accent,
                       borderRadius: 8, padding: "1px 5px",
                     }}>
                       {subAccounts.length}

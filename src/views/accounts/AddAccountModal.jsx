@@ -172,9 +172,9 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
                   <button key={t} type="button" onClick={function () { setTier(t); }}
                     style={{
                       flex: 1,
-                      background: on ? "rgba(74,155,130,0.15)" : "rgba(255,255,255,0.04)",
+                      background: on ? C.accentMid : "rgba(255,255,255,0.04)",
                       color: on ? C.accent : C.textMuted,
-                      border: "1px solid " + (on ? "rgba(74,155,130,0.35)" : C.border),
+                      border: "1px solid " + (on ? C.accentRing : C.border),
                       borderRadius: 8, padding: "9px 6px", fontSize: 12,
                       fontWeight: on ? 700 : 400,
                       fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
@@ -300,7 +300,7 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
             style={{
               width: "100%",
               background: "rgba(255,255,255,0.04)",
-              border: "1px solid " + (statePickerOpen ? "rgba(74,155,130,0.4)" : C.border),
+              border: "1px solid " + (statePickerOpen ? C.accentBorder : C.border),
               borderRadius: 8,
               padding: "9px 12px",
               display: "flex",
@@ -347,9 +347,9 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
                     type="button"
                     onClick={function () { setStates(states.length === ALL_STATES.length ? [] : ALL_STATES.slice()); }}
                     style={{
-                      background: states.length === ALL_STATES.length ? "rgba(74,155,130,0.15)" : "rgba(74,155,130,0.06)",
+                      background: states.length === ALL_STATES.length ? C.accentMid : C.accentFaint,
                       color: C.accent,
-                      border: "1px solid rgba(74,155,130," + (states.length === ALL_STATES.length ? "0.4" : "0.2") + ")",
+                      border: "1px solid " + (states.length === ALL_STATES.length ? C.accentBorder : C.accentLine),
                       borderRadius: 6,
                       padding: "5px 12px",
                       fontSize: 11,

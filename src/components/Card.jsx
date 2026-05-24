@@ -1,9 +1,10 @@
 import { C } from "../lib/colors";
 
-export function Card({ children, style, onClick }) {
+export function Card({ children, style, onClick, className }) {
   return (
     <div
       onClick={onClick}
+      className={className}
       style={Object.assign(
         {
           background: C.bgCard,

@@ -126,7 +126,7 @@ export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAd
                       {t.cadence.task_title}
                     </div>
                     {t.cadence.is_global && (
-                      <span style={{ fontSize: 9, color: C.accent, background: 'rgba(74,155,130,0.1)', border: '1px solid rgba(74,155,130,0.2)', borderRadius: 10, padding: '2px 7px', fontWeight: 600, letterSpacing: '0.04em' }}>
+                      <span style={{ fontSize: 9, color: C.accent, background: C.accentGlow, border: '1px solid ' + C.accentLine, borderRadius: 10, padding: '2px 7px', fontWeight: 600, letterSpacing: '0.04em' }}>
                         All Accounts
                       </span>
                     )}
@@ -203,7 +203,7 @@ export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAd
             <button
               onClick={onAdd}
               style={{
-                background: "rgba(74,155,130,0.12)", border: "1px solid rgba(74,155,130,0.3)",
+                background: C.accentGlow, border: "1px solid " + C.accentSubtle,
                 borderRadius: 8, padding: "6px 16px", fontSize: 12, fontWeight: 600,
                 color: C.accent, fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
               }}
@@ -251,7 +251,7 @@ export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAd
               showToast("Item updated");
               setEditingItem(null);
             }).catch(function (err) {
-              showToast(err.message || "Save failed", "error");
+              showToast(err.message || "Couldn't save — check your connection", "error");
             });
           }}
           onClose={function () { setEditingItem(null); }}

@@ -223,7 +223,7 @@ export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLo
       <div
         style={{
           background: C.accentGlow,
-          border: "1px solid rgba(74,155,130,0.2)",
+          border: "1px solid " + C.accentLine,
           borderRadius: 12,
           padding: "13px 15px",
         }}
@@ -286,7 +286,7 @@ export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLo
                 style={{
                   background: active ? C.bgPillActive : C.bgPill,
                   color: active ? C.accent : C.textMuted,
-                  border: "1px solid " + (active ? "rgba(74,155,130,0.3)" : C.border),
+                  border: "1px solid " + (active ? C.accentSubtle : C.border),
                   borderRadius: 20,
                   padding: "4px 10px",
                   fontSize: 10,

@@ -119,7 +119,7 @@ function CadenceCard({ cad, today, confirmDeleteId, setConfirmDeleteId, onDelete
         </div>
         <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' }}>
           {isGlobal ? (
-            <span style={{ fontSize: 10, color: C.accent, background: 'rgba(74,155,130,0.1)', border: '1px solid rgba(74,155,130,0.2)', borderRadius: 12, padding: '3px 9px', fontWeight: 600, letterSpacing: '0.04em' }}>
+            <span style={{ fontSize: 10, color: C.accent, background: C.accentGlow, border: '1px solid ' + C.accentLine, borderRadius: 12, padding: '3px 9px', fontWeight: 600, letterSpacing: '0.04em' }}>
               All Accounts
             </span>
           ) : (

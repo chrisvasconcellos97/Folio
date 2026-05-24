@@ -206,8 +206,8 @@ function CalendarView({ year, month, events, onPrev, onNext, onSelectAccount }) 
               onKeyDown={evts.length > 0 ? function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedDay(selected ? null : date); } } : undefined}
               style={{
                 minHeight: 58,
-                background: selected ? 'rgba(74,155,130,0.07)' : 'rgba(255,255,255,0.02)',
-                border: '1px solid ' + (selected ? 'rgba(74,155,130,0.3)' : C.border),
+                background: selected ? C.accentFaint : 'rgba(255,255,255,0.02)',
+                border: '1px solid ' + (selected ? C.accentSubtle : C.border),
                 borderRadius: 6,
                 padding: '5px 5px 4px',
                 cursor: evts.length > 0 ? 'pointer' : 'default',
@@ -306,7 +306,7 @@ function WeekView({ weekStart, weekEnd, events, onPrev, onNext, onSelectAccount 
           return (
             <div key={day.toISOString().slice(0, 10)} style={{
               background: 'rgba(255,255,255,0.02)',
-              border: '1px solid ' + (isToday ? 'rgba(74,155,130,0.3)' : C.border),
+              border: '1px solid ' + (isToday ? C.accentSubtle : C.border),
               borderRadius: 8,
               padding: '8px 5px',
               minHeight: 90,
@@ -477,7 +477,7 @@ export function CadenceView({ cadences, accounts, onSelectAccount, addCadence })
           <button
             onClick={function () { setShowAddModal(true); }}
             style={{
-              background: 'rgba(74,155,130,0.12)', border: '1px solid rgba(74,155,130,0.3)',
+              background: C.accentGlow, border: '1px solid ' + C.accentSubtle,
               borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 600,
               color: C.accent, fontFamily: "'DM Sans', sans-serif", cursor: 'pointer',
             }}
@@ -522,7 +522,7 @@ export function CadenceView({ cadences, accounts, onSelectAccount, addCadence })
         <button
           onClick={function () { setShowAddModal(true); }}
           style={{
-            background: 'rgba(74,155,130,0.12)', border: '1px solid rgba(74,155,130,0.3)',
+            background: C.accentGlow, border: '1px solid ' + C.accentSubtle,
             borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 600,
             color: C.accent, fontFamily: "'DM Sans', sans-serif", cursor: 'pointer',
           }}

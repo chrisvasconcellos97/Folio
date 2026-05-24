@@ -187,8 +187,8 @@ function PipPreview() {
         </div>
       </div>
       <div style={{
-        background: "rgba(74,155,130,0.07)",
-        border: "1px solid rgba(74,155,130,0.22)",
+        background: C.accentFaint,
+        border: "1px solid " + C.accentShadow,
         borderRadius: 10, borderTopLeftRadius: 2,
         padding: "9px 11px",
         fontSize: 11, color: C.textSub, lineHeight: 1.6,
@@ -335,14 +335,14 @@ export function OnboardingTour({ onComplete }) {
                   <div style={{
                     position: "absolute", top: "50%", left: "50%",
                     width: 80, height: 80, borderRadius: "50%",
-                    border: "1px solid rgba(74,155,130,0.3)",
+                    border: "1px solid " + C.accentSubtle,
                     animation: "tourSonar 3s ease-out infinite",
                     pointerEvents: "none",
                   }} />
                   <div style={{
                     position: "absolute", top: "50%", left: "50%",
                     width: 80, height: 80, borderRadius: "50%",
-                    border: "1px solid rgba(74,155,130,0.3)",
+                    border: "1px solid " + C.accentSubtle,
                     animation: "tourSonar 3s ease-out 1.5s infinite",
                     pointerEvents: "none",
                   }} />
@@ -350,9 +350,9 @@ export function OnboardingTour({ onComplete }) {
               )}
               <div style={{
                 width: 80, height: 80, borderRadius: "50%",
-                background: "rgba(74,155,130,0.1)",
-                border: "1px solid rgba(74,155,130,0.4)",
-                boxShadow: "0 0 32px rgba(74,155,130,0.28)",
+                background: C.accentGlow,
+                border: "1px solid " + C.accentBorder,
+                boxShadow: "0 0 32px " + C.accentSubtle,
                 display: "flex", alignItems: "center", justifyContent: "center",
                 animation: introRisen
                   ? "pipFloat 3s ease-in-out infinite"
@@ -395,9 +395,9 @@ export function OnboardingTour({ onComplete }) {
               width: pipSize,
               height: pipSize,
               borderRadius: "50%",
-              background: "rgba(74,155,130,0.1)",
-              border: "1px solid rgba(74,155,130,0.38)",
-              boxShadow: "0 0 " + (current.pipLarge ? "38px" : "22px") + " rgba(74,155,130,0.26)",
+              background: C.accentGlow,
+              border: "1px solid " + C.accentBorder,
+              boxShadow: "0 0 " + (current.pipLarge ? "38px" : "22px") + " " + C.accentSubtle,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -491,7 +491,7 @@ export function OnboardingTour({ onComplete }) {
               style={{
                 width: "100%",
                 background: current.isDone ? C.accent : C.accentGlow,
-                border: current.isDone ? "none" : "1px solid rgba(74,155,130,0.3)",
+                border: current.isDone ? "none" : "1px solid " + C.accentSubtle,
                 borderRadius: 24, padding: "14px",
                 fontSize: 13, fontWeight: 700,
                 color: current.isDone ? "#091712" : C.accent,

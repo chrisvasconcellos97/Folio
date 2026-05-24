@@ -53,6 +53,43 @@
       input, textarea { -webkit-appearance: none; }
       input:focus, textarea:focus { outline: none; }
 
+      /* Native feel */
+      * { -webkit-tap-highlight-color: transparent; }
+      html, body { overscroll-behavior: none; }
+
+      /* No text selection on UI chrome — applied per-component for content areas */
+      .no-select { user-select: none; -webkit-user-select: none; }
+
+      /* Staggered list entrance */
+      .list-item { animation: listFadeIn 0.25s ease-out both; }
+      @keyframes listFadeIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+
+      /* Active press states */
+      .pressable:active { opacity: 0.72; transform: scale(0.97); transition: opacity 0.08s, transform 0.08s; }
+
+      /* Mobile sheet modal */
+      @media (max-width: 640px) {
+        .modal-sheet {
+          position: fixed !important;
+          bottom: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          top: auto !important;
+          transform: none !important;
+          border-radius: 20px 20px 0 0 !important;
+          max-height: 92vh;
+          overflow-y: auto;
+          animation: sheetUp 0.28s cubic-bezier(0.32, 0.72, 0, 1) !important;
+        }
+        @keyframes sheetUp {
+          from { transform: translateY(100%); }
+          to   { transform: translateY(0); }
+        }
+      }
+
       /* Overlay / modal transition */
       .fade-in { animation: fadeIn 0.15s ease-out; }
       @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }

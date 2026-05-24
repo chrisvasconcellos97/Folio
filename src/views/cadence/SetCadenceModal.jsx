@@ -107,7 +107,7 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues, acco
   }
 
   var pill = {
-    active:   { border: '1px solid rgba(74,155,130,0.4)', background: 'rgba(74,155,130,0.12)', color: C.accent,    fontWeight: 700 },
+    active:   { border: '1px solid ' + C.accentBorder, background: C.accentGlow, color: C.accent,    fontWeight: 700 },
     inactive: { border: '1px solid ' + C.border,          background: 'rgba(255,255,255,0.03)', color: C.textMuted, fontWeight: 400 },
   };
 
@@ -357,7 +357,7 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues, acco
                 var active = defaultAttendees.includes(c.name);
                 return (
                   <button key={c.id} type="button" onClick={function () { toggleDefaultAttendee(c.name); }}
-                    style={{ background: active ? 'rgba(74,155,130,0.15)' : 'rgba(255,255,255,0.04)', border: '1px solid ' + (active ? 'rgba(74,155,130,0.4)' : C.border), borderRadius: 20, padding: '5px 12px', fontSize: 12, fontWeight: active ? 600 : 400, color: active ? C.accent : C.textMuted, fontFamily: "'DM Sans', sans-serif", cursor: 'pointer' }}>
+                    style={{ background: active ? C.accentMid : 'rgba(255,255,255,0.04)', border: '1px solid ' + (active ? C.accentBorder : C.border), borderRadius: 20, padding: '5px 12px', fontSize: 12, fontWeight: active ? 600 : 400, color: active ? C.accent : C.textMuted, fontFamily: "'DM Sans', sans-serif", cursor: 'pointer' }}>
                     {active ? '✓ ' : ''}{c.name}{c.title ? ' · ' + c.title : ''}
                   </button>
                 );

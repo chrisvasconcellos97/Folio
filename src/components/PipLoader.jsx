@@ -11,9 +11,9 @@ export function PipLoader({ label, height }) {
       <div className="pip-sonar" style={{
         width: 52, height: 52, borderRadius: "50%",
         background: C.accentGlow,
-        border: "1px solid rgba(74,155,130,0.4)",
+        border: "1px solid " + C.accentBorder,
         display: "flex", alignItems: "center", justifyContent: "center",
-        boxShadow: "0 0 20px rgba(74,155,130,0.22)",
+        boxShadow: "0 0 20px " + C.accentShadow,
       }}>
         <PipMark size={14} color={C.accent} glow pulse />
       </div>

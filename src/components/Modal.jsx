@@ -54,7 +54,7 @@ export function Modal({ title, onClose, children, width }) {
     >
       <div
         ref={innerRef}
-        className="fade-in"
+        className="fade-in modal-sheet"
         style={{
           background: C.bgCard,
           border: "1px solid " + C.border,

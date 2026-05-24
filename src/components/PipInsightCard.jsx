@@ -6,7 +6,7 @@ export function PipInsightCard({ text }) {
   return (
     <div style={{
       background: C.accentGlow,
-      border: "1px solid rgba(74,155,130,0.2)",
+      border: "1px solid " + C.accentLine,
       borderRadius: 12,
       padding: "13px 15px",
       marginBottom: 4,

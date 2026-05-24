@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { C } from "../../lib/colors";
 import { Pill } from "../../components/Pill";
 import { InputField } from "../../components/InputField";
@@ -40,12 +40,22 @@ function SkeletonCard() {
   );
 }
 
+var PREF_KEY = "folio_acct_prefs";
+function loadPrefs() {
+  try { return JSON.parse(localStorage.getItem(PREF_KEY) || "{}"); } catch(e) { return {}; }
+}
+function savePrefs(p) {
+  try { localStorage.setItem(PREF_KEY, JSON.stringify(p)); } catch(e) {}
+}
+
 export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks, addTask, updateTask, deleteTask }) {
   var [search, setSearch]           = useState("");
-  var [filter, setFilter]           = useState("All");
+  var [filter, setFilter]           = useState(function() { return loadPrefs().filter || "All"; });
   var [tagFilter, setTagFilter]     = useState(null);
   var [regionFilter, setRegionFilter] = useState(null);
   var [showAddTask, setShowAddTask] = useState(false);
+
+  useEffect(function() { savePrefs(Object.assign(loadPrefs(), { filter: filter })); }, [filter]);
   var [editingTask, setEditingTask] = useState(null);
 
   var openTasks = (tasks || []).filter(function (t) { return !t.done; });
@@ -313,7 +323,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                   onClick={function () { onSelect(a); }}
                   style={{
                     background: C.accentGlow,
-                    border: "1px solid rgba(74,155,130,0.2)",
+                    border: "1px solid " + C.accentLine,
                     borderLeft: "3px solid " + C.accent,
                     borderRadius: 10,
                     padding: "10px 14px",
@@ -360,7 +370,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
               style={{
                 background: active ? C.bgPillActive : C.bgPill,
                 color: active ? C.accent : C.textMuted,
-                border: "1px solid " + (active ? "rgba(74,155,130,0.3)" : C.border),
+                border: "1px solid " + (active ? C.accentSubtle : C.border),
                 borderRadius: 20,
                 padding: "5px 12px",
                 fontSize: 11,
@@ -417,9 +427,9 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                 key={r}
                 onClick={function () { setRegionFilter(active ? null : r); }}
                 style={{
-                  background: active ? "rgba(74,155,130,0.15)" : C.bgPill,
+                  background: active ? C.accentMid : C.bgPill,
                   color: active ? C.accent : C.textMuted,
-                  border: "1px solid " + (active ? "rgba(74,155,130,0.3)" : C.border),
+                  border: "1px solid " + (active ? C.accentSubtle : C.border),
                   borderRadius: 20,
                   padding: "5px 12px",
                   fontSize: 11,
@@ -448,13 +458,13 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
         {!loading && filtered.length === 0 && (
           <div style={{ textAlign: "center", padding: "40px 20px", color: C.textMuted, fontSize: 13 }}>
             <div style={{ marginBottom: 12 }}>
-              {accounts.length === 0 ? "Nothing in the field yet." : "No accounts match that search."}
+              {accounts.length === 0 ? "Nothing here yet — add your first account and I'll get to work." : "No accounts match that search."}
             </div>
             {onAddAccount && accounts.length === 0 && (
               <button
                 onClick={onAddAccount}
                 style={{
-                  background: "rgba(74,155,130,0.12)", border: "1px solid rgba(74,155,130,0.3)",
+                  background: C.accentGlow, border: "1px solid " + C.accentSubtle,
                   borderRadius: 8, padding: "8px 18px", fontSize: 12, fontWeight: 600,
                   color: C.accent, fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
                 }}
@@ -465,7 +475,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
           </div>
         )}
 
-        {!loading && displayList.map(function (item) {
+        {!loading && displayList.map(function (item, index) {
           var a           = item.account;
           var isChild     = item.isChild;
           var statusColor = STATUS_COLORS[a.status] || C.textSub;
@@ -497,6 +507,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                 borderRadius: 12,
                 padding: isChild ? "10px 12px" : "12px 14px",
                 cursor: "pointer",
+                userSelect: "none",
                 transition: "opacity 0.12s",
               }}
             >
@@ -544,7 +555,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                 <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
                   <div style={{
                     fontSize: 10, fontWeight: 700, color: C.accent,
-                    background: 'rgba(74,155,130,0.1)', border: '1px solid rgba(74,155,130,0.2)',
+                    background: C.accentGlow, border: '1px solid ' + C.accentLine,
                     borderRadius: 10, padding: '2px 8px', letterSpacing: '0.04em',
                   }}>
                     {shopCounts[a.id]} {shopCounts[a.id] === 1 ? 'shop' : 'shops'}
@@ -561,7 +572,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
 
           if (isChild) {
             return (
-              <div key={a.id} style={{ display: "flex", alignItems: "flex-start", gap: 0, marginTop: -2 }}>
+              <div key={a.id} className="list-item" style={{ display: "flex", alignItems: "flex-start", gap: 0, marginTop: -2, animationDelay: index * 0.04 + "s" }}>
                 <div style={{
                   width: 28,
                   flexShrink: 0,
@@ -576,7 +587,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
             );
           }
 
-          return <div key={a.id}>{card}</div>;
+          return <div key={a.id} className="list-item" style={{ animationDelay: index * 0.04 + "s" }}>{card}</div>;
         })}
       </div>
 

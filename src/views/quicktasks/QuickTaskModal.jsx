@@ -137,7 +137,7 @@ export function QuickTaskModal({ existing, accounts, onSave, onDelete, onClose }
                   style={{
                     background: active ? C.bgPillActive : C.bgPill,
                     color: active ? C.accent : C.textMuted,
-                    border: "1px solid " + (active ? "rgba(74,155,130,0.3)" : C.border),
+                    border: "1px solid " + (active ? C.accentSubtle : C.border),
                     borderRadius: 20,
                     padding: "5px 12px",
                     fontSize: 11,

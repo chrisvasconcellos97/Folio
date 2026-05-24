@@ -108,8 +108,8 @@ export function EditContactModal({ contact, onSave, onClose }) {
             gap: 10,
             cursor: "pointer",
             padding: "10px 14px",
-            background: poc ? "rgba(74,155,130,0.08)" : C.bgDark,
-            border: "1px solid " + (poc ? "rgba(74,155,130,0.3)" : C.border),
+            background: poc ? C.accentFaint : C.bgDark,
+            border: "1px solid " + (poc ? C.accentSubtle : C.border),
             borderRadius: 10,
             userSelect: "none",
           }}

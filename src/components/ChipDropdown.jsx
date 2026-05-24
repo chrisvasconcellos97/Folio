@@ -76,8 +76,8 @@ export function ChipDropdown({ label, options, value, values, onSelect, multi, p
                   type="button"
                   onClick={function () { handleSelect(opt); }}
                   style={{
-                    background: sel ? "rgba(74,155,130,0.2)" : "rgba(74,155,130,0.06)",
-                    border: "1px solid " + (sel ? "rgba(74,155,130,0.4)" : "rgba(74,155,130,0.15)"),
+                    background: sel ? C.accentLine : C.accentFaint,
+                    border: "1px solid " + (sel ? C.accentBorder : C.accentMid),
                     borderRadius: 20,
                     padding: "4px 12px",
                     fontSize: 12,

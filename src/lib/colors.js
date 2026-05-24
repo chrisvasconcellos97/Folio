@@ -23,6 +23,8 @@ export const C = {
   accentDim:    "#2E6B59",
   accentGlow:   "rgba(" + _accent + ",0.12)",
   accentFaint:  "rgba(" + _accent + ",0.08)",
+  accentMid:    "rgba(" + _accent + ",0.15)",
+  accentSubtle: "rgba(" + _accent + ",0.30)",
   accentLine:   "rgba(" + _accent + ",0.2)",
   accentRing:   "rgba(" + _accent + ",0.35)",
   accentBorder: "rgba(" + _accent + ",0.4)",

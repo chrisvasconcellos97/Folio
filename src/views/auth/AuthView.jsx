@@ -101,7 +101,7 @@ export function AuthView({ onSignIn, onSignUp }) {
                 height: 72,
                 borderRadius: 18,
                 background: C.accentGlow,
-                border: "1px solid rgba(74,155,130,0.3)",
+                border: "1px solid " + C.accentSubtle,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",

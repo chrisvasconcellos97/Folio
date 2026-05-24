@@ -80,22 +80,22 @@ export function ReturningWelcome({ userId, userName, accountCount, onDismiss }) 
         <div style={{
           position: "absolute", top: "50%", left: "50%",
           width: 80, height: 80, borderRadius: "50%",
-          border: "1px solid rgba(74,155,130,0.3)",
+          border: "1px solid " + C.accentSubtle,
           animation: "tourSonar 3s ease-out infinite",
           pointerEvents: "none",
         }} />
         <div style={{
           position: "absolute", top: "50%", left: "50%",
           width: 80, height: 80, borderRadius: "50%",
-          border: "1px solid rgba(74,155,130,0.3)",
+          border: "1px solid " + C.accentSubtle,
           animation: "tourSonar 3s ease-out 1.5s infinite",
           pointerEvents: "none",
         }} />
         <div style={{
           width: 80, height: 80, borderRadius: "50%",
-          background: "rgba(74,155,130,0.1)",
-          border: "1px solid rgba(74,155,130,0.4)",
-          boxShadow: "0 0 32px rgba(74,155,130,0.28)",
+          background: C.accentGlow,
+          border: "1px solid " + C.accentBorder,
+          boxShadow: "0 0 32px " + C.accentSubtle,
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
           <PipMark size={18} color={C.accent} glow />
