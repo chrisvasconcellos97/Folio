@@ -161,11 +161,9 @@ This app is currently single-user but should be built with multi-tenancy in mind
    - **Click-to-call** — wrap contact phone numbers in `tel:` links so tapping on mobile dials directly. One-line change per contact card.
    - **Multi-select email contacts** — checkboxes on the Contacts tab, "Email selected" button that builds `mailto:email1,email2` opening Outlook with all selected contacts in To. Option to pre-populate with Pip's draft email.
 
-6. **Motion design / transitions:**
-   - **Slide direction** — navigation should feel spatial: going "forward" slides content in from the right; going "back" slides from the left. Track nav direction in state and apply `slideInRight` vs `slideInLeft` keyframes instead of the generic fade.
+6. **Motion design / transitions — two remaining:**
    - **Mobile sheet modals** — on mobile breakpoint, modals should slide up from the bottom like a native iOS sheet. One CSS change to `src/components/Modal.jsx` conditioned on viewport width.
    - **Staggered list load** — account cards, meeting rows, and contact entries animate in one-by-one with a 50ms CSS `animation-delay` between each item when a view loads.
-   - **Directional back transition** — navigating back from account detail fades + slides right (reverse of forward). Requires the slide direction tracking above.
 
 7. **Typography & visual rhythm:**
     - **Consistent type scale** — standardize to 12 / 14 / 16 / 20 / 24px across the app. Currently uses 9, 11, 12, 13, 15, 22, 24px with no clear system.
@@ -283,6 +281,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
 - ✅ UX polish — actionable empty states (all 4 views), modal close padding, checkbox tap area all done
 - ✅ Error resilience — fire-and-forget metadata updates have `.catch()` error logging; error state in all hooks
 - ✅ a11y — calendar nav `‹›` aria-labels, `role="button"` on CadenceView cells/account cards/week-view events, `aria-live` on all error containers
+- ✅ Motion — slide direction tracked in state, `view-slide-left/right` + `tab-slide-left/right` CSS classes applied on all nav transitions and tab switches, directional back
 
 **Security hardening — shipped in code, two items need Supabase dashboard toggle:**
 
