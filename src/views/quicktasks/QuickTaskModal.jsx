@@ -20,8 +20,9 @@ export function QuickTaskModal({ existing, accounts, onSave, onDelete, onClose }
   var [acctDropOpen, setAcctDropOpen] = useState(false);
   var [reminderMinutes, setReminderMinutes] = useState(null);
   var [clearReminder, setClearReminder]     = useState(false);
-  var [saving, setSaving] = useState(false);
-  var [error, setError]   = useState(null);
+  var [saving, setSaving]           = useState(false);
+  var [error, setError]             = useState(null);
+  var [confirmDelete, setConfirmDelete] = useState(false);
 
   var existingReminderLabel = existing && existing.reminder_at
     ? new Date(existing.reminder_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
@@ -211,7 +212,16 @@ export function QuickTaskModal({ existing, accounts, onSave, onDelete, onClose }
             {existing && (
               <>
                 <AmberBtn onClick={handleMarkDone} disabled={saving}>✓ Done</AmberBtn>
-                <DangerBtn onClick={handleDelete}>Delete</DangerBtn>
+                {!confirmDelete && (
+                  <DangerBtn onClick={function () { setConfirmDelete(true); }}>Delete</DangerBtn>
+                )}
+                {confirmDelete && (
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <span style={{ fontSize: 11, color: C.red }}>Sure?</span>
+                    <DangerBtn onClick={handleDelete}>Delete it</DangerBtn>
+                    <SecBtn onClick={function () { setConfirmDelete(false); }}>No</SecBtn>
+                  </div>
+                )}
               </>
             )}
           </div>
