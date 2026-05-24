@@ -44,8 +44,8 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
   }, [pipPrefill]);
 
   var { meetings, addMeeting, updateMeeting, deleteMeeting } = useMeetings(userId, account.id);
-  var { items, addItem, closeItem }            = useItems(userId, account.id);
-  var { contacts, addContact, deleteContact }  = useContacts(userId, account.id);
+  var { items, addItem, closeItem, updateItem }            = useItems(userId, account.id);
+  var { contacts, addContact, updateContact, deleteContact }  = useContacts(userId, account.id);
   var { cadences, addCadence, updateCadence, deleteCadence } = useCadences(userId, account.id);
   var { projects, addProject, updateProject, deleteProject } = useProjects(userId, account.id);
 
@@ -288,6 +288,7 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
           accountId={account.id}
           onAdd={function () { setContactModal(true); }}
           onDelete={deleteContact}
+          onUpdate={updateContact}
         />
       )}
 

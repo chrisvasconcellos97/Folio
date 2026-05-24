@@ -2,19 +2,38 @@ import { supabase } from "./supabase";
 
 var PROXY_URL    = import.meta.env.VITE_PIP_PROXY_URL || "/api/pip";
 var ASK_PIP_URL  = "/api/ask-pip";
+var TIMEOUT_MS   = 25000;
+
+function fetchWithTimeout(url, options) {
+  var controller = new AbortController();
+  var timer = setTimeout(function () { controller.abort(); }, TIMEOUT_MS);
+  return fetch(url, Object.assign({}, options, { signal: controller.signal }))
+    .then(function (res) { clearTimeout(timer); return res; })
+    .catch(function (err) { clearTimeout(timer); throw err; });
+}
+
+function pipFetch(url, options, retried) {
+  return fetchWithTimeout(url, options).then(function (res) {
+    if (res.status === 429) {
+      return Promise.reject(new Error("Pip is busy, try again in a moment"));
+    }
+    if (res.status >= 500 && !retried) {
+      return pipFetch(url, options, true);
+    }
+    if (!res.ok) throw new Error("Pip proxy error: " + res.status);
+    return res.json();
+  });
+}
 
 export function askPip(messages, context) {
   return supabase.auth.getSession().then(function (result) {
     var token = result.data.session ? result.data.session.access_token : null;
     var headers = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = "Bearer " + token;
-    return fetch(PROXY_URL, {
+    return pipFetch(PROXY_URL, {
       method: "POST",
       headers: headers,
       body: JSON.stringify({ messages: messages, context: context || {} }),
-    }).then(function (res) {
-      if (!res.ok) throw new Error("Pip proxy error: " + res.status);
-      return res.json();
     });
   });
 }
@@ -24,13 +43,10 @@ export function callAskPip(payload) {
     var token = result.data.session ? result.data.session.access_token : null;
     var headers = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = "Bearer " + token;
-    return fetch(ASK_PIP_URL, {
+    return pipFetch(ASK_PIP_URL, {
       method: "POST",
       headers: headers,
       body: JSON.stringify(payload),
-    }).then(function (res) {
-      if (!res.ok) throw new Error("Ask Pip error: " + res.status);
-      return res.json();
     });
   });
 }

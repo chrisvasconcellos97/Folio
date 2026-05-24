@@ -5,24 +5,28 @@ import { AmberBtn, SecBtn } from "../../components/Buttons";
 import { InputField } from "../../components/InputField";
 import { FL } from "../../components/FieldLabel";
 
-export function AddItemModal({ accountId, userId, onSave, onClose }) {
-  var [text, setText]    = useState("");
-  var [due, setDue]      = useState("");
-  var [owner, setOwner]  = useState("");
+export function AddItemModal({ accountId, userId, existing, onSave, onClose }) {
+  var [text, setText]    = useState(existing ? (existing.text || "") : "");
+  var [due, setDue]      = useState(existing ? (existing.due_date || "") : "");
+  var [owner, setOwner]  = useState(existing ? (existing.owner || "") : "");
   var [loading, setLoading] = useState(false);
   var [error, setError]    = useState(null);
+
+  var isEdit = !!existing;
 
   function handleSave() {
     if (!text.trim()) { setError("Item description is required."); return; }
     setLoading(true);
     setError(null);
-    onSave({
-      account_id: accountId,
-      user_id:    userId,
-      text:       text.trim(),
-      due_date:   due || null,
-      owner:      owner.trim() || null,
-    })
+    var data = {
+      text:     text.trim(),
+      due_date: due || null,
+      owner:    owner.trim() || null,
+    };
+    var promise = isEdit
+      ? onSave(existing.id, data)
+      : onSave(Object.assign({ account_id: accountId, user_id: userId }, data));
+    promise
       .then(function () {
         setLoading(false);
         onClose();
@@ -34,7 +38,7 @@ export function AddItemModal({ accountId, userId, onSave, onClose }) {
   }
 
   return (
-    <Modal title="Add Open Item" onClose={onClose} width={400}>
+    <Modal title={isEdit ? "Edit Item" : "Add Open Item"} onClose={onClose} width={400}>
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <div>
           <FL>Description</FL>
@@ -80,7 +84,7 @@ export function AddItemModal({ accountId, userId, onSave, onClose }) {
 
         <div style={{ display: "flex", gap: 8 }}>
           <AmberBtn style={{ flex: 1 }} onClick={handleSave} disabled={loading}>
-            {loading ? "Saving..." : "Add Item"}
+            {loading ? "Saving..." : isEdit ? "Save Item" : "Add Item"}
           </AmberBtn>
           <SecBtn style={{ flex: 1 }} onClick={onClose}>
             Cancel
