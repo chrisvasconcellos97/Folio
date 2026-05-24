@@ -233,12 +233,12 @@ function CalendarView({ year, month, events, onPrev, onNext, onSelectAccount, on
                     background: C.accent, color: '#000',
                     width: 18, height: 18, borderRadius: '50%',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 10, fontWeight: 700,
+                    fontSize: 10, fontWeight: 700, fontVariantNumeric: "tabular-nums",
                   }}>
                     {date.getDate()}
                   </span>
                 ) : (
-                  <span style={{ fontSize: 11, color: C.textSub }}>{date.getDate()}</span>
+                  <span style={{ fontSize: 11, color: C.textSub, fontVariantNumeric: "tabular-nums" }}>{date.getDate()}</span>
                 )}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -332,6 +332,7 @@ function WeekView({ weekStart, weekEnd, events, onPrev, onNext, onSelectAccount 
                   fontSize: 14, marginTop: 2,
                   fontWeight: isToday ? 700 : 400,
                   color: isToday ? C.accent : C.text,
+                  fontVariantNumeric: "tabular-nums",
                 }}>
                   {day.getDate()}
                 </div>
@@ -409,7 +410,7 @@ function ListView({ cadences, onSelectAccount, onCreateItem }) {
       {filled.map(function (group) {
         return (
           <div key={group.key}>
-            <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 700, letterSpacing: '0.08em', marginBottom: 8 }}>
+            <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 700, letterSpacing: '0.07em', marginBottom: 8 }}>
               {group.label}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

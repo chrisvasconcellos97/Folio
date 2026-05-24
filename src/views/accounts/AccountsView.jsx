@@ -7,6 +7,8 @@ import { PipMark } from "../../components/PipMark";
 import { PipLoader } from "../../components/PipLoader";
 import { QuickTaskModal } from "../quicktasks/QuickTaskModal";
 
+var DENSITY_KEY = "folio_density";
+
 var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red };
 var STATUS_LABELS = { green: "Healthy", yellow: "Watch",  red: "At Risk" };
 var TIER_COLORS   = { Major: C.blue,   Mid: C.purple,    Growth: C.green };
@@ -54,8 +56,14 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
   var [tagFilter, setTagFilter]     = useState(null);
   var [regionFilter, setRegionFilter] = useState(null);
   var [showAddTask, setShowAddTask] = useState(false);
+  var [density, setDensity]         = useState(function() {
+    try { return localStorage.getItem(DENSITY_KEY) || "comfortable"; } catch(e) { return "comfortable"; }
+  });
 
   useEffect(function() { savePrefs(Object.assign(loadPrefs(), { filter: filter })); }, [filter]);
+  useEffect(function() {
+    try { localStorage.setItem(DENSITY_KEY, density); } catch(e) {}
+  }, [density]);
   var [editingTask, setEditingTask] = useState(null);
 
   var openTasks = (tasks || []).filter(function (t) { return !t.done; });
@@ -243,7 +251,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                       ) : null;
                     })()}
                     {t.reminder_at && (
-                      <div style={{ fontSize: 10, color: isOverdue ? C.red : C.textMuted, marginTop: 2 }}>
+                      <div style={{ fontSize: 10, color: isOverdue ? C.red : C.textMuted, marginTop: 2, fontVariantNumeric: "tabular-nums" }}>
                         {"Reminder · " + new Date(t.reminder_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
                       </div>
                     )}
@@ -336,12 +344,12 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 2 }}>{a.name}</div>
-                    <div style={{ fontSize: 10, color: C.textMuted }}>
+                    <div style={{ fontSize: 10, color: C.textMuted, fontVariantNumeric: "tabular-nums" }}>
                       {meetDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
                     </div>
                   </div>
                   <div style={{ textAlign: "right", flexShrink: 0 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, marginBottom: 4 }}>{dayLabel}</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, marginBottom: 4, fontVariantNumeric: "tabular-nums" }}>{dayLabel}</div>
                     <Pill color={statusColor}>{STATUS_LABELS[a.status] || a.status}</Pill>
                   </div>
                 </div>
@@ -351,13 +359,34 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
         </div>
       )}
 
-      {/* Search */}
-      <InputField
-        value={search}
-        onChange={function (e) { setSearch(e.target.value); }}
-        placeholder="Search accounts..."
-        style={{ marginBottom: 10 }}
-      />
+      {/* Search + density toggle */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "center" }}>
+        <div style={{ flex: 1 }}>
+          <InputField
+            value={search}
+            onChange={function (e) { setSearch(e.target.value); }}
+            placeholder="Search accounts..."
+          />
+        </div>
+        <button
+          onClick={function() { setDensity(function(d) { return d === "comfortable" ? "compact" : "comfortable"; }); }}
+          title={density === "comfortable" ? "Switch to compact view" : "Switch to comfortable view"}
+          style={{
+            background: "transparent",
+            border: "1px solid " + C.border,
+            borderRadius: 7,
+            padding: "5px 9px",
+            cursor: "pointer",
+            color: C.textMuted,
+            fontSize: 14,
+            fontFamily: "'DM Sans', sans-serif",
+            lineHeight: 1,
+            flexShrink: 0,
+          }}
+        >
+          {density === "comfortable" ? "⊟" : "⊞"}
+        </button>
+      </div>
 
       {/* Filter pills — tier / status */}
       <div style={{ display: "flex", gap: 6, marginBottom: 6, overflowX: "auto", paddingBottom: 2 }}>
@@ -493,6 +522,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
             daysColor = days <= 14 ? C.green : days <= 45 ? C.accent : C.red;
           }
 
+          var isCompact = density === "compact";
           var card = (
             <div
               onClick={function () { onSelect(a); }}
@@ -505,7 +535,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                 border: "1px solid " + C.border,
                 borderLeft: "3px solid " + statusColor,
                 borderRadius: 12,
-                padding: isChild ? "10px 12px" : "12px 14px",
+                padding: isChild ? (isCompact ? "6px 10px" : "10px 12px") : (isCompact ? "8px 12px" : "12px 14px"),
                 cursor: "pointer",
                 userSelect: "none",
                 transition: "opacity 0.12s",
@@ -526,7 +556,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                     </div>
                     {a.tier && <Pill color={TIER_COLORS[a.tier] || C.textSub}>{a.tier}</Pill>}
                   </div>
-                  {(a.revenue || a.next_meeting) && (
+                  {(a.revenue || a.next_meeting) && !isCompact && (
                     <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                       {a.revenue && (
                         <div style={{ fontSize: 11, color: C.textMuted, fontVariantNumeric: "tabular-nums" }}>
@@ -534,7 +564,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                         </div>
                       )}
                       {a.next_meeting && (
-                        <div style={{ fontSize: 11, color: C.textMuted }}>
+                        <div style={{ fontSize: 11, color: C.textMuted, fontVariantNumeric: "tabular-nums" }}>
                           {"Next · " + new Date(a.next_meeting + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                         </div>
                       )}
@@ -556,7 +586,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                   <Pill color={C.red}>Follow-up due</Pill>
                 </div>
               )}
-              {a.account_type === 'mso' && shopCounts[a.id] > 0 && (
+              {a.account_type === 'mso' && shopCounts[a.id] > 0 && !isCompact && (
                 <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
                   <div style={{
                     fontSize: 10, fontWeight: 700, color: C.accent,
@@ -567,7 +597,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                   </div>
                 </div>
               )}
-              {a.address && (
+              {a.address && !isCompact && (
                 <div style={{ fontSize: 10, color: C.textMuted, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {a.address}
                 </div>

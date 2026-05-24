@@ -392,7 +392,7 @@ export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLo
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
         <Card>
           <FL>Last Meeting</FL>
-          <div style={{ fontSize: 14, color: C.text }}>
+          <div style={{ fontSize: 14, color: C.text, fontVariantNumeric: "tabular-nums" }}>
             {account.last_meeting
               ? new Date(account.last_meeting).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
               : "—"}
@@ -400,7 +400,7 @@ export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLo
         </Card>
         <Card>
           <FL>Next Meeting</FL>
-          <div style={{ fontSize: 14, color: account.next_meeting ? C.accent : C.textMuted }}>
+          <div style={{ fontSize: 14, color: account.next_meeting ? C.accent : C.textMuted, fontVariantNumeric: "tabular-nums" }}>
             {account.next_meeting
               ? new Date(account.next_meeting).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
               : "Not scheduled"}
@@ -409,7 +409,7 @@ export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLo
         {followUp && (
           <Card>
             <FL>Follow-up Due</FL>
-            <div style={{ fontSize: 14, color: followUpOverdue ? C.red : C.accent }}>
+            <div style={{ fontSize: 14, color: followUpOverdue ? C.red : C.accent, fontVariantNumeric: "tabular-nums" }}>
               {new Date(followUp + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
               {followUpOverdue && <span style={{ fontSize: 10, color: C.red, marginLeft: 6, fontWeight: 700 }}>OVERDUE</span>}
             </div>
@@ -475,10 +475,10 @@ export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLo
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
                     {mom !== null && (
-                      <span style={{ fontSize: 11, fontWeight: 600, color: pctColor(mom) }}>{fmtPct(mom)} MoM</span>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: pctColor(mom), fontVariantNumeric: "tabular-nums" }}>{fmtPct(mom)} MoM</span>
                     )}
                     {yoy !== null && (
-                      <span style={{ fontSize: 11, fontWeight: 600, color: pctColor(yoy) }}>{fmtPct(yoy)} YoY</span>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: pctColor(yoy), fontVariantNumeric: "tabular-nums" }}>{fmtPct(yoy)} YoY</span>
                     )}
                   </div>
                 </div>
@@ -508,7 +508,7 @@ export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLo
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           {row.delta !== null && row.delta !== undefined && (
-                            <span style={{ fontSize: 11, fontWeight: 600, color: row.key === "no_connection" ? pctColor(-row.delta) : pctColor(row.delta) }}>
+                            <span style={{ fontSize: 11, fontWeight: 600, color: row.key === "no_connection" ? pctColor(-row.delta) : pctColor(row.delta), fontVariantNumeric: "tabular-nums" }}>
                               {fmtDelta(row.delta)} MoM
                             </span>
                           )}

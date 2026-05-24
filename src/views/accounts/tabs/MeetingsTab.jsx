@@ -192,7 +192,7 @@ export function MeetingsTab({ meetings, accountName, userId, onLogMeeting, onDel
                 <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 3 }}>
                   {m.title || "Meeting"}
                 </div>
-                <div style={{ fontSize: 11, color: C.textMuted }}>
+                <div style={{ fontSize: 11, color: C.textMuted, fontVariantNumeric: "tabular-nums" }}>
                   {m.meeting_date
                     ? new Date(m.meeting_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
                     : ""}

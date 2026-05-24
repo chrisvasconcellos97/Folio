@@ -101,6 +101,7 @@ export function MeetingsView({ meetings, loading }) {
           <div
             style={{
               fontSize: 10,
+              fontWeight: 700,
               color: C.textMuted,
               textTransform: "uppercase",
               letterSpacing: "0.07em",
@@ -156,13 +157,13 @@ export function MeetingsView({ meetings, loading }) {
                       )}
                     </div>
                     <div style={{ textAlign: "right", flexShrink: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: C.text, fontVariantNumeric: "tabular-nums" }}>
                         {new Date(m.meeting_date).toLocaleDateString("en-US", {
                           month: "short",
                           day: "numeric",
                         })}
                       </div>
-                      <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>
+                      <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2, fontVariantNumeric: "tabular-nums" }}>
                         {new Date(m.meeting_date).getFullYear()}
                       </div>
                     </div>
@@ -181,6 +182,7 @@ export function MeetingsView({ meetings, loading }) {
             <div
               style={{
                 fontSize: 10,
+                fontWeight: 700,
                 color: C.textMuted,
                 textTransform: "uppercase",
                 letterSpacing: "0.07em",
@@ -209,7 +211,7 @@ export function MeetingsView({ meetings, loading }) {
                           {m.title || "Meeting"}
                         </div>
                       </div>
-                      <div style={{ fontSize: 11, color: C.textMuted, flexShrink: 0 }}>
+                      <div style={{ fontSize: 11, color: C.textMuted, flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>
                         {new Date(m.meeting_date).toLocaleDateString("en-US", {
                           month: "short",
                           day: "numeric",
@@ -223,7 +225,7 @@ export function MeetingsView({ meetings, loading }) {
                           style={{
                             fontSize: 11,
                             color: C.yellow,
-                            lineHeight: 1.55,
+                            lineHeight: 1.6,
                             whiteSpace: "pre-wrap",
                           }}
                         >

@@ -164,15 +164,15 @@ export function PipelineView({ accounts, loading, revenueHistory, shopMetrics })
                   <div style={{ fontSize: 18, fontWeight: 700, color: C.accent, fontVariantNumeric: "tabular-nums" }}>
                     {fmtRevenue(latest ? latest.revenue : null)}
                   </div>
-                  <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 5 }}>{monthLabel}</div>
+                  <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 5, fontVariantNumeric: "tabular-nums" }}>{monthLabel}</div>
                   <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                     {mom !== null && (
-                      <span style={{ fontSize: 11, fontWeight: 600, color: pctColor(mom) }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: pctColor(mom), fontVariantNumeric: "tabular-nums" }}>
                         {fmtPct(mom)} MoM
                       </span>
                     )}
                     {yoy !== null && (
-                      <span style={{ fontSize: 11, fontWeight: 600, color: pctColor(yoy) }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: pctColor(yoy), fontVariantNumeric: "tabular-nums" }}>
                         {fmtPct(yoy)} YoY
                       </span>
                     )}
@@ -186,7 +186,7 @@ export function PipelineView({ accounts, loading, revenueHistory, shopMetrics })
 
         {/* Divider */}
         {withoutData.length > 0 && withData.length > 0 && (
-          <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em", padding: "6px 2px 2px" }}>
+          <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", padding: "6px 2px 2px" }}>
             No history yet
           </div>
         )}

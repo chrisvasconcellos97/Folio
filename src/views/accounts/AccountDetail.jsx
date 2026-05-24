@@ -28,12 +28,21 @@ var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red };
 var STATUS_LABELS = { green: "Healthy", yellow: "Watch", red: "At Risk" };
 var TIER_COLORS   = { Major: C.blue, Mid: C.purple, Growth: C.green };
 
+function getDefaultTab(accountId) {
+  try { return localStorage.getItem("folio_default_tab_" + accountId) || null; } catch(e) { return null; }
+}
+function setDefaultTab(accountId, tab) {
+  try { localStorage.setItem("folio_default_tab_" + accountId, tab); } catch(e) {}
+}
+
 export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDelete, onUpdate, onSelectAccount, pipPrefill, onPipPrefillHandled, revenueHistory, shopMetrics, onAddAccount }) {
   var TABS = account.account_type === 'mso'
     ? ["overview", "shops", "meetings", "tasks", "contacts", "cadence", "projects"]
     : ["overview", "meetings", "tasks", "contacts", "cadence", "projects"];
 
-  var [tab, setTab]               = useState("overview");
+  var [tab, setTab]               = useState(function() {
+    return getDefaultTab(account.id) || "overview";
+  });
   var [tabSlideDir, setTabSlideDir] = useState("right");
   var [showMeetingModal, setMeetingModal] = useState(false);
   var [showQuickModal, setQuickModal]     = useState(false);
@@ -135,7 +144,7 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
                 {STATUS_LABELS[account.status] || account.status}
               </Pill>
               {openCount > 0 && (
-                <Pill color={C.yellow}>
+                <Pill color={C.yellow} style={{ fontVariantNumeric: "tabular-nums" }}>
                   {openCount + " open"}
                 </Pill>
               )}
@@ -281,6 +290,7 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
                 var newIdx = TABS.indexOf(t);
                 setTabSlideDir(newIdx >= oldIdx ? "right" : "left");
                 setTab(t);
+                setDefaultTab(account.id, t);
               }}
               style={{
                 flex: 1,
