@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { C } from "../../../lib/colors";
 import { PipMark } from "../../../components/PipMark";
 import { AmberBtn, SecBtn } from "../../../components/Buttons";
@@ -172,6 +172,9 @@ function MiniSparkline({ records }) {
 }
 
 export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLogMeeting, onAddItem, onSaveSummary, subAccounts, onSelectAccount, revenueHistory, shopMetrics }) {
+  var pipInsight = useMemo(function () {
+    return buildPipInsight(account, openItems, revenueHistory, shopMetrics);
+  }, [account, openItems, revenueHistory, shopMetrics]);
   var [range, setRange]       = useState(RANGES[0]);
   var [generating, setGen]    = useState(false);
   var [pipError, setPipError] = useState(null);
@@ -240,7 +243,7 @@ export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLo
           </div>
         </div>
         <div style={{ fontSize: 14, color: C.textSub, lineHeight: 1.65 }}>
-          {buildPipInsight(account, openItems, revenueHistory, shopMetrics)}
+          {pipInsight}
         </div>
       </div>
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { C } from "../../lib/colors";
 import { PipMark } from "../../components/PipMark";
 import { PipInsightCard } from "../../components/PipInsightCard";
@@ -190,7 +190,7 @@ function CalendarView({ year, month, events, onPrev, onNext, onSelectAccount }) 
 
       {/* Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3 }}>
-        {grid.map(function (date, i) {
+        {grid.map(function (date) {
           var inMonth  = date.getMonth() === month;
           var isToday  = isSameDay(date, today);
           var evts     = dayEvents(date);
@@ -198,7 +198,7 @@ function CalendarView({ year, month, events, onPrev, onNext, onSelectAccount }) 
 
           return (
             <div
-              key={i}
+              key={date.toISOString().slice(0, 10)}
               onClick={function () { if (evts.length > 0) setSelectedDay(selected ? null : date); }}
               style={{
                 minHeight: 58,
@@ -295,12 +295,12 @@ function WeekView({ weekStart, weekEnd, events, onPrev, onNext, onSelectAccount 
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
-        {days.map(function (day, i) {
+        {days.map(function (day) {
           var isToday  = isSameDay(day, today);
           var evts     = dayEvents(day);
 
           return (
-            <div key={i} style={{
+            <div key={day.toISOString().slice(0, 10)} style={{
               background: 'rgba(255,255,255,0.02)',
               border: '1px solid ' + (isToday ? 'rgba(74,155,130,0.3)' : C.border),
               borderRadius: 8,
@@ -413,6 +413,7 @@ function ListView({ cadences, onSelectAccount }) {
 
 /* ---- Main CadenceView ---- */
 export function CadenceView({ cadences, accounts, onSelectAccount, addCadence }) {
+  var cadenceInsight = useMemo(function () { return buildGlobalCadenceInsight(cadences); }, [cadences]);
   var [viewMode, setViewMode] = useState('list');
   var [showAddModal, setShowAddModal] = useState(false);
   var [calDate,  setCalDate]  = useState(function () {
@@ -477,7 +478,7 @@ export function CadenceView({ cadences, accounts, onSelectAccount, addCadence })
             + Set Cadence
           </button>
         </div>
-        <PipInsightCard text={buildGlobalCadenceInsight(cadences)} />
+        <PipInsightCard text={cadenceInsight} />
         {viewToggle}
         <div style={{ textAlign: 'center', padding: '60px 0', color: C.textMuted }}>
           <PipMark size={16} color={C.accentDim} glow />

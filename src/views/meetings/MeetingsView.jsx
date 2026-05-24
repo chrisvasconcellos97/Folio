@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { C } from "../../lib/colors";
 import { PipMark } from "../../components/PipMark";
 import { PipInsightCard } from "../../components/PipInsightCard";
@@ -77,6 +78,7 @@ function buildMeetingsInsight(meetings) {
 }
 
 export function MeetingsView({ meetings, loading }) {
+  var meetingsInsight = useMemo(function () { return buildMeetingsInsight(meetings); }, [meetings]);
   var today      = new Date();
   var upcoming   = meetings.filter(function (m) { return m.meeting_date && new Date(m.meeting_date) >= today; });
   var past       = meetings.filter(function (m) { return !m.meeting_date || new Date(m.meeting_date) < today; });
@@ -92,7 +94,7 @@ export function MeetingsView({ meetings, loading }) {
 
   return (
     <div>
-      <PipInsightCard text={buildMeetingsInsight(meetings)} />
+      <PipInsightCard text={meetingsInsight} />
       {/* Upcoming */}
       {upcoming.length > 0 && (
         <div style={{ marginBottom: 24 }}>

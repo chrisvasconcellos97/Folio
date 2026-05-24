@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { C } from "../../lib/colors";
 import { PipInsightCard } from "../../components/PipInsightCard";
 import { PipLoader } from "../../components/PipLoader";
@@ -110,11 +111,16 @@ function buildPipelineInsight(accounts, revenueHistory) {
 }
 
 export function PipelineView({ accounts, loading, revenueHistory, shopMetrics }) {
+  var rev = revenueHistory || [];
+  var pipelineInsight = useMemo(function () {
+    return buildPipelineInsight(accounts, rev);
+  }, [accounts, rev]);
+
   if (loading) {
     return <PipLoader />;
   }
 
-  revenueHistory = revenueHistory || [];
+  revenueHistory = rev;
 
   var withData    = accounts.filter(function (a) { return latestRecord(revenueHistory, a.id) !== null; });
   var withoutData = accounts.filter(function (a) { return latestRecord(revenueHistory, a.id) === null; });
@@ -126,7 +132,7 @@ export function PipelineView({ accounts, loading, revenueHistory, shopMetrics })
   return (
     <div>
       {/* Pip analysis */}
-      <PipInsightCard text={buildPipelineInsight(accounts, revenueHistory)} />
+      <PipInsightCard text={pipelineInsight} />
 
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {/* Accounts with revenue history */}
