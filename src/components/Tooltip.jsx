@@ -1,19 +1,48 @@
 import { useState, useEffect } from "react";
 import { C } from "../lib/colors";
 
+// Module-level queue — only one tooltip visible at a time
+var _registered = []; // [{id, key}] in mount order
+var _setters = {};    // id -> setState fn
+var _activeId = null;
+
+function activateNext() {
+  for (var i = 0; i < _registered.length; i++) {
+    var item = _registered[i];
+    try {
+      if (!localStorage.getItem(item.key)) {
+        _activeId = item.id;
+        if (_setters[item.id]) _setters[item.id](true);
+        return;
+      }
+    } catch(e) {}
+  }
+  _activeId = null;
+}
+
 export function FirstRunTooltip({ id, text, children }) {
   var key = "folio_tooltip_" + id;
   var [visible, setVisible] = useState(false);
 
   useEffect(function() {
-    try {
-      if (!localStorage.getItem(key)) setVisible(true);
-    } catch(e) {}
+    _registered.push({ id: id, key: key });
+    _setters[id] = setVisible;
+
+    if (_activeId === null) activateNext();
+
+    return function() {
+      _registered = _registered.filter(function(r) { return r.id !== id; });
+      delete _setters[id];
+      if (_activeId === id) { _activeId = null; activateNext(); }
+    };
   }, []);
 
   function dismiss() {
     setVisible(false);
     try { localStorage.setItem(key, "1"); } catch(e) {}
+    _activeId = null;
+    if (_setters[id]) _setters[id](false);
+    setTimeout(activateNext, 300);
   }
 
   return (
