@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { C } from "../../../lib/colors";
 import { PipMark } from "../../../components/PipMark";
 import { AmberBtn, SecBtn } from "../../../components/Buttons";
@@ -171,15 +171,50 @@ function MiniSparkline({ records }) {
   );
 }
 
-export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLogMeeting, onAddItem, onSaveSummary, subAccounts, onSelectAccount, revenueHistory, shopMetrics }) {
+export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLogMeeting, onAddItem, onSaveSummary, subAccounts, onSelectAccount, revenueHistory, shopMetrics, onUpdateAccount }) {
   var pipInsight = useMemo(function () {
     return buildPipInsight(account, openItems, revenueHistory, shopMetrics);
   }, [account, openItems, revenueHistory, shopMetrics]);
   var [range, setRange]       = useState(RANGES[0]);
   var [generating, setGen]    = useState(false);
   var [pipError, setPipError] = useState(null);
+  var [notesDraft, setNotesDraft] = useState(account.objective || "");
+
+  useEffect(function () { setNotesDraft(account.objective || ""); }, [account.id]);
 
   var openCount = openItems.filter(function (i) { return !i.done; }).length;
+
+  var lastMeeting = meetings && meetings.length > 0 ? meetings[0] : null;
+  var followUp = lastMeeting && lastMeeting.follow_up_date ? lastMeeting.follow_up_date : null;
+  var today = new Date().toISOString().slice(0, 10);
+  var followUpOverdue = followUp && followUp < today;
+
+  var healthScore = (function () {
+    var flags = [];
+
+    // Days since last interaction
+    if (account.last_interaction_at) {
+      var days = Math.floor((Date.now() - new Date(account.last_interaction_at)) / 86400000);
+      if (days > 60) flags.push("red");
+      else if (days > 30) flags.push("yellow");
+    } else {
+      flags.push("yellow");
+    }
+
+    // Overdue open items
+    var overdueItems = openItems.filter(function (i) {
+      return !i.done && i.due_date && i.due_date < today;
+    });
+    if (overdueItems.length > 3) flags.push("red");
+    else if (overdueItems.length > 0) flags.push("yellow");
+
+    // Follow-up overdue
+    if (followUpOverdue) flags.push("yellow");
+
+    if (flags.indexOf("red") !== -1) return "red";
+    if (flags.indexOf("yellow") !== -1) return "yellow";
+    return "green";
+  })();
 
   var cutoffDate = range.days
     ? new Date(Date.now() - range.days * 86400000).toISOString().split("T")[0]
@@ -333,15 +368,25 @@ export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLo
         </AmberBtn>
       </div>
 
-      {/* Notes */}
-      {account.objective && (
-        <Card>
-          <FL>Notes</FL>
-          <div style={{ fontSize: 14, color: C.text, lineHeight: 1.6 }}>
-            {account.objective}
-          </div>
-        </Card>
-      )}
+      {/* Notes — always visible, editable scratchpad */}
+      <Card>
+        <FL>Notes</FL>
+        <textarea
+          value={notesDraft}
+          onChange={function (e) { setNotesDraft(e.target.value); }}
+          onBlur={function () {
+            if (onUpdateAccount && notesDraft !== (account.objective || "")) {
+              onUpdateAccount({ objective: notesDraft });
+            }
+          }}
+          placeholder="Quick thoughts, reminders, anything that doesn't belong to a specific meeting…"
+          style={{
+            width: "100%", background: "transparent", border: "none", resize: "none",
+            color: C.text, fontSize: 14, fontFamily: "'DM Sans', sans-serif",
+            lineHeight: 1.6, outline: "none", minHeight: 72, padding: 0,
+          }}
+        />
+      </Card>
 
       {/* Stats grid */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -361,6 +406,15 @@ export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLo
               : "Not scheduled"}
           </div>
         </Card>
+        {followUp && (
+          <Card>
+            <FL>Follow-up</FL>
+            <div style={{ fontSize: 14, color: followUpOverdue ? C.red : C.accent }}>
+              {new Date(followUp + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+              {followUpOverdue && <span style={{ fontSize: 10, color: C.red, marginLeft: 6, fontWeight: 700 }}>OVERDUE</span>}
+            </div>
+          </Card>
+        )}
         <Card>
           <FL>Open Items</FL>
           <div
@@ -372,6 +426,15 @@ export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLo
             }}
           >
             {openCount}
+          </div>
+        </Card>
+        <Card>
+          <FL>Auto Health</FL>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 2 }}>
+            <div style={{ width: 10, height: 10, borderRadius: "50%", background: healthScore === "green" ? C.green : healthScore === "yellow" ? C.yellow : C.red }} />
+            <span style={{ fontSize: 14, color: healthScore === "green" ? C.green : healthScore === "yellow" ? C.yellow : C.red, fontWeight: 500, textTransform: "capitalize" }}>
+              {healthScore === "green" ? "Healthy" : healthScore === "yellow" ? "Watch" : "At Risk"}
+            </span>
           </div>
         </Card>
         <Card>

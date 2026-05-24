@@ -3,11 +3,14 @@ import { C } from "../../lib/colors";
 import { showToast } from "../../components/Toast";
 import { Pill } from "../../components/Pill";
 import { AmberBtn, SecBtn, DangerBtn } from "../../components/Buttons";
+import { Modal } from "../../components/Modal";
+import { PipMark } from "../../components/PipMark";
 import { useMeetings } from "../../hooks/useMeetings";
 import { useItems } from "../../hooks/useItems";
 import { useContacts } from "../../hooks/useContacts";
 import { useCadences } from "../../hooks/useCadences";
 import { useProjects } from "../../hooks/useProjects";
+import { callBriefMePip } from "../../lib/pip";
 import { OverviewTab } from "./tabs/OverviewTab";
 import { MeetingsTab } from "./tabs/MeetingsTab";
 import { ItemsTab } from "./tabs/ItemsTab";
@@ -41,6 +44,11 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
 
   var [cadencePrefill, setCadencePrefill] = useState(null);
 
+  var [showBriefModal, setBriefModal]   = useState(false);
+  var [briefText, setBriefText]         = useState(null);
+  var [briefLoading, setBriefLoading]   = useState(false);
+  var [briefError, setBriefError]       = useState(null);
+
   useEffect(function () {
     if (!pipPrefill) return;
     if (pipPrefill.tab) setTab(pipPrefill.tab);
@@ -50,6 +58,11 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
     if (pipPrefill.modal === "set_cadence")  setCadencePrefill(pipPrefill.data || {});
     if (onPipPrefillHandled) onPipPrefillHandled();
   }, [pipPrefill]);
+
+  useEffect(function () {
+    setBriefText(null);
+    setBriefError(null);
+  }, [account.id]);
 
   var { meetings, addMeeting, updateMeeting, deleteMeeting } = useMeetings(userId, account.id);
   var { items, addItem, closeItem, updateItem }            = useItems(userId, account.id);
@@ -156,6 +169,35 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
                 {account.address}
               </div>
             )}
+            <button
+              onClick={function () {
+                setBriefModal(true);
+                if (briefText) return;
+                setBriefLoading(true);
+                setBriefError(null);
+                callBriefMePip({
+                  mode: "brief",
+                  account: account,
+                  meetings: meetings.slice(0, 5),
+                  openItems: items.filter(function (i) { return !i.done; }),
+                  contacts: contacts,
+                }).then(function (data) {
+                  setBriefLoading(false);
+                  setBriefText(data.brief || "Pip couldn't generate a brief right now.");
+                }).catch(function () {
+                  setBriefLoading(false);
+                  setBriefError("Pip is unavailable right now.");
+                });
+              }}
+              style={{
+                background: C.accentGlow, border: "1px solid " + C.accentLine,
+                borderRadius: 8, padding: "5px 12px", fontSize: 11, fontWeight: 600,
+                color: C.accent, fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
+                marginTop: 10, display: "flex", alignItems: "center", gap: 5,
+              }}
+            >
+              <span style={{ fontSize: 13 }}>✦</span> Brief Me
+            </button>
           </div>
 
           <div style={{ textAlign: "right", flexShrink: 0 }}>
@@ -289,6 +331,7 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
               pip_account_summary_at: new Date().toISOString(),
             });
           }}
+          onUpdateAccount={onUpdate}
           subAccounts={subAccounts}
           onSelectAccount={onSelectAccount}
           revenueHistory={revenueHistory || []}
@@ -440,6 +483,24 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
           }}
           onClose={function () { setAddShopModal(false); }}
         />
+      )}
+
+      {showBriefModal && (
+        <Modal title="Pre-Call Brief" onClose={function () { setBriefModal(false); }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <PipMark size={8} color={C.accent} glow pulse />
+            <span style={{ fontSize: 11, color: C.accent, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em" }}>Pip</span>
+          </div>
+          {briefLoading && (
+            <div style={{ color: C.textMuted, fontSize: 14, textAlign: "center", padding: "20px 0" }}>Pip is pulling your brief…</div>
+          )}
+          {briefError && (
+            <div style={{ color: C.red, fontSize: 13 }}>{briefError}</div>
+          )}
+          {briefText && (
+            <div style={{ fontSize: 14, color: C.textSub, lineHeight: 1.75, whiteSpace: "pre-wrap" }}>{briefText}</div>
+          )}
+        </Modal>
       )}
     </div>
   );

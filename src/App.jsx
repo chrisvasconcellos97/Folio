@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { supabase } from "./lib/supabase";
 import { useAuth } from "./hooks/useAuth";
 import { useAccounts } from "./hooks/useAccounts";
 import { useMeetings } from "./hooks/useMeetings";
@@ -279,6 +280,17 @@ export default function App() {
             setView("accounts");
             setPipPrefill({ tab: "cadence" });
           }
+        }}
+        onCreateItem={function (cadence) {
+          var today = new Date().toISOString().slice(0, 10);
+          var acct = accounts.find(function (a) { return a.id === cadence.account_id; });
+          supabase.from("folio_items")
+            .insert([{ user_id: userId, account_id: cadence.account_id, text: cadence.task_title || "Cadence task", due_date: today }])
+            .then(function (r) {
+              if (r && r.error) { showToast(r.error.message || "Couldn't create task", "error"); return; }
+              showToast("Task logged" + (acct ? " for " + acct.name : ""));
+            })
+            .catch(function (err) { showToast(err.message || "Couldn't create task", "error"); });
         }}
       />
     );

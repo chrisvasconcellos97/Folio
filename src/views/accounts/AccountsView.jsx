@@ -551,6 +551,11 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                   {daysLabel}
                 </div>
               </div>
+              {a.next_meeting && a.next_meeting < todayStr && (
+                <div style={{ marginTop: 4 }}>
+                  <Pill color={C.red}>Follow-up due</Pill>
+                </div>
+              )}
               {a.account_type === 'mso' && shopCounts[a.id] > 0 && (
                 <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
                   <div style={{

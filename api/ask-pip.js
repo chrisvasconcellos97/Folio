@@ -26,7 +26,7 @@ export default async function handler(req, res) {
   if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
   if (isRateLimited(user.id)) return res.status(429).json({ error: "Too many requests." });
 
-  var { mode, meeting, accountName, meetings, rangeLabel } = req.body || {};
+  var { mode, meeting, accountName, meetings, rangeLabel, account: acct, openItems: bItems, contacts: bContacts } = req.body || {};
   var client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
   try {
@@ -81,6 +81,32 @@ export default async function handler(req, res) {
       });
 
       return res.status(200).json({ summary: acctResponse.content[0]?.text || "" });
+    }
+
+    if (mode === "brief") {
+      var bMeetings = meetings || [];
+      var lastMeeting = bMeetings.length > 0 ? bMeetings[0] : null;
+      var briefPrompt =
+        "You are Pip. Give me a quick pre-call brief for " + (acct ? acct.name : "this account") + ".\n\n" +
+        "Format:\n" +
+        "1. **Last time** — what happened at the last meeting (or flag if it's been a while)\n" +
+        "2. **Open items** — anything outstanding they committed to or you committed to\n" +
+        "3. **Who you're seeing** — contacts list\n" +
+        "4. **Walk in knowing** — one sharp observation or thing to watch for\n\n" +
+        "Keep it tight — this is a parking lot read, not a novel. Max 5 short paragraphs.\n\n" +
+        (lastMeeting ? "Last meeting (" + lastMeeting.meeting_date + "): " + (lastMeeting.title || "Untitled") + "\n" +
+          (lastMeeting.notes ? "Notes: " + lastMeeting.notes + "\n" : "") +
+          (lastMeeting.action_items ? "Action items: " + lastMeeting.action_items + "\n" : "") +
+          (lastMeeting.follow_up_date ? "Follow-up date: " + lastMeeting.follow_up_date + "\n" : "") : "No meetings logged yet.\n") +
+        "\nOpen items: " + ((bItems || []).filter(function (i) { return !i.done; }).map(function (i) { return i.text + (i.due_date ? " (due " + i.due_date + ")" : ""); }).join("; ") || "None") + "\n" +
+        "Contacts: " + ((bContacts || []).map(function (c) { return c.name + (c.title ? " (" + c.title + ")" : "") + (c.is_poc ? " [POC]" : ""); }).join(", ") || "None logged");
+
+      var briefResponse = await client.messages.create({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 600,
+        messages: [{ role: "user", content: briefPrompt }],
+      });
+      return res.status(200).json({ brief: briefResponse.content[0]?.text || "" });
     }
 
     return res.status(400).json({ error: "Invalid mode" });

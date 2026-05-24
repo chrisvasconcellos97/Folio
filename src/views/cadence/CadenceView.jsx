@@ -98,7 +98,7 @@ var navBtnStyle = {
 };
 
 /* ---- Shared event card ---- */
-function CadenceEventCard({ event, onSelectAccount, showDate }) {
+function CadenceEventCard({ event, onSelectAccount, onCreateItem, showDate }) {
   var cadence = event.cadence;
   var account = event.account;
   var col     = eventColor(event);
@@ -135,6 +135,19 @@ function CadenceEventCard({ event, onSelectAccount, showDate }) {
             {cadence.meeting_time ? ' · ' + formatTime(cadence.meeting_time) : ''}
           </div>
         )}
+        {cadence.type === 'task' && onCreateItem && (
+          <button
+            onClick={function (e) { e.stopPropagation(); onCreateItem(cadence); }}
+            style={{
+              background: C.accentFaint, border: '1px solid ' + C.accentLine,
+              borderRadius: 6, padding: '3px 10px', fontSize: 11, fontWeight: 600,
+              color: C.accent, fontFamily: "'DM Sans', sans-serif", cursor: 'pointer',
+              marginTop: 6, display: 'block',
+            }}
+          >
+            + Log Task
+          </button>
+        )}
       </div>
       {onSelectAccount && !isGlobal && (
         <button
@@ -159,7 +172,7 @@ function CadenceEventCard({ event, onSelectAccount, showDate }) {
 }
 
 /* ---- Calendar view ---- */
-function CalendarView({ year, month, events, onPrev, onNext, onSelectAccount }) {
+function CalendarView({ year, month, events, onPrev, onNext, onSelectAccount, onCreateItem }) {
   var today    = new Date();
   var grid     = getCalendarGrid(year, month);
   var [selectedDay, setSelectedDay] = useState(null);
@@ -262,7 +275,7 @@ function CalendarView({ year, month, events, onPrev, onNext, onSelectAccount }) 
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {dayEvents(selectedDay).map(function (ev, i) {
-              return <CadenceEventCard key={ev.cadence.id + "-sel-" + i} event={ev} onSelectAccount={onSelectAccount} />;
+              return <CadenceEventCard key={ev.cadence.id + "-sel-" + i} event={ev} onSelectAccount={onSelectAccount} onCreateItem={onCreateItem} />;
             })}
           </div>
         </div>
@@ -358,7 +371,7 @@ function WeekView({ weekStart, weekEnd, events, onPrev, onNext, onSelectAccount 
 }
 
 /* ---- List view ---- */
-function ListView({ cadences, onSelectAccount }) {
+function ListView({ cadences, onSelectAccount, onCreateItem }) {
   var today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -406,6 +419,7 @@ function ListView({ cadences, onSelectAccount }) {
                     key={item.cadence.id}
                     event={{ cadence: item.cadence, date: item.next, account: item.account }}
                     onSelectAccount={onSelectAccount}
+                    onCreateItem={onCreateItem}
                     showDate
                   />
                 );
@@ -419,7 +433,7 @@ function ListView({ cadences, onSelectAccount }) {
 }
 
 /* ---- Main CadenceView ---- */
-export function CadenceView({ cadences, accounts, onSelectAccount, addCadence }) {
+export function CadenceView({ cadences, accounts, onSelectAccount, addCadence, onCreateItem }) {
   var cadenceInsight = useMemo(function () { return buildGlobalCadenceInsight(cadences); }, [cadences]);
   var [viewMode, setViewMode] = useState('list');
   var [showAddModal, setShowAddModal] = useState(false);
@@ -539,6 +553,7 @@ export function CadenceView({ cadences, accounts, onSelectAccount, addCadence })
           onPrev={function () { setCalDate(new Date(calYear, calMonth - 1, 1)); }}
           onNext={function () { setCalDate(new Date(calYear, calMonth + 1, 1)); }}
           onSelectAccount={onSelectAccount}
+          onCreateItem={onCreateItem}
         />
       )}
 
@@ -552,7 +567,7 @@ export function CadenceView({ cadences, accounts, onSelectAccount, addCadence })
       )}
 
       {viewMode === 'list' && (
-        <ListView cadences={cadences} onSelectAccount={onSelectAccount} />
+        <ListView cadences={cadences} onSelectAccount={onSelectAccount} onCreateItem={onCreateItem} />
       )}
 
       {showAddModal && (

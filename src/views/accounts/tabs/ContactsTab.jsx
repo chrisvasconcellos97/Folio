@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { C } from "../../../lib/colors";
 import { AmberBtn, DangerBtn, SecBtn } from "../../../components/Buttons";
 import { Card } from "../../../components/Card";
@@ -88,6 +88,9 @@ function ContactLink({ href, label, color }) {
 export function ContactsTab({ contacts, accountId, onAdd, onDelete, onAddContact, onUpdate }) {
   var [confirmDeleteId, setConfirmDeleteId] = useState(null);
   var [editingContact, setEditingContact]   = useState(null);
+  var [selected, setSelected]               = useState({});
+
+  useEffect(function () { setSelected({}); }, [contacts.length]);
 
   function handleDelete(id) {
     var contact = contacts.find(function (c) { return c.id === id; });
@@ -121,6 +124,22 @@ export function ContactsTab({ contacts, accountId, onAdd, onDelete, onAddContact
         return (
           <Card key={c.id} className="list-item" style={{ animationDelay: index * 0.04 + "s" }}>
             <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+              {c.email && (
+                <input
+                  type="checkbox"
+                  checked={!!selected[c.id]}
+                  onChange={function (e) {
+                    setSelected(function (prev) {
+                      var next = Object.assign({}, prev);
+                      if (e.target.checked) next[c.id] = c.email;
+                      else delete next[c.id];
+                      return next;
+                    });
+                  }}
+                  style={{ marginTop: 12, accentColor: C.accent, cursor: "pointer", flexShrink: 0 }}
+                  aria-label={"Select " + c.name}
+                />
+              )}
               <div style={{ width: 40, height: 40, borderRadius: "50%", background: c.is_poc ? C.accentLine : C.accentFaint, border: "1px solid " + C.accentLine, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 600, color: C.accent, flexShrink: 0, marginTop: 2 }}>
                 {c.name ? c.name.charAt(0).toUpperCase() : "?"}
               </div>
@@ -197,6 +216,34 @@ export function ContactsTab({ contacts, accountId, onAdd, onDelete, onAddContact
           </Card>
         );
       })}
+
+      {Object.keys(selected).length > 0 && (
+        <div style={{ background: C.accentFaint, border: "1px solid " + C.accentLine, borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+          <span style={{ fontSize: 12, color: C.accent, fontWeight: 500 }}>
+            {Object.keys(selected).length} selected
+          </span>
+          <div style={{ display: "flex", gap: 8 }}>
+            <a
+              href={"mailto:" + Object.values(selected).join(",")}
+              style={{
+                background: C.accent, color: "#fff", borderRadius: 7, padding: "5px 14px",
+                fontSize: 12, fontWeight: 600, textDecoration: "none", fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              Email Selected
+            </a>
+            <button
+              onClick={function () { setSelected({}); }}
+              style={{
+                background: "transparent", border: "1px solid " + C.border, borderRadius: 7,
+                padding: "5px 10px", fontSize: 12, color: C.textMuted, fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
+              }}
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
 
       <AmberBtn style={{ width: "100%", fontSize: 13 }} onClick={onAdd}>
         + Add Contact
