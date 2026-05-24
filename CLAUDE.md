@@ -122,7 +122,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
 - Items drop off the list after they ship
 - If items should be grouped for efficiency, suggest it before executing
 - Never execute immediately on a feature request — queue it first
-- **Before shipping items 5–8:** do a full layout audit first — review placement, spacing, and information hierarchy across every screen to make sure new features land cleanly into a well-organized foundation
+- **Before shipping items 4–7:** do a full layout audit first — review placement, spacing, and information hierarchy across every screen to make sure new features land cleanly into a well-organized foundation
 
 ---
 
@@ -136,18 +136,14 @@ This app is currently single-user but should be built with multi-tenancy in mind
    - **Pip context** — revenue trend and shop metrics fed into Pip system prompt per account for richer pre-call briefs.
    - **Data entry workflow** — Chris runs monthly reports externally, pastes numbers into chat, Claude upserts rows directly via Supabase. No complex input UI needed for now.
 
-2. **Accessibility (a11y) — two remaining fixes:**
-   - **Interactive divs need button semantics** — CadenceView calendar day cells, account list cards, and week-view event divs are `<div onClick>` with no `role="button"` or `tabIndex`. Add role + tabIndex + onKeyDown.
-   - **aria-live on error containers** — form error divs in auth and all modals have no `aria-live` announcement. Add `role="alert"` + `aria-live="polite"` to each.
-
-3. **Code quality — two remaining fixes:**
+2. **Code quality — two remaining fixes:**
    - **Consolidate rgba opacity scale** — 78 hardcoded `rgba(74,155,130,0.*)` values still in source files. Tokens exist in `src/lib/colors.js` (`C.accentGlow`, `C.accentFaint`, `C.accentLine`, etc.) but components still use raw strings. Replace all with C tokens.
    - **Split oversized files** — CadenceView.jsx (573 lines), AccountsView.jsx (598 lines), and OverviewTab.jsx (535 lines) each mix 3–5 sub-components inline. Extract CalendarView, WeekView, and ListView out of CadenceView as a starting point.
 
-4. **Feature completeness:**
+3. **Feature completeness:**
    - **Cadence carry-forward not implemented** — items are independent records with no link to cadence occurrences. No trigger or logic auto-creates an item when a recurring task cadence fires. Either build a scheduled function or add a manual "create item from cadence" button as a stopgap.
 
-5. **Native feel / micro-polish:**
+4. **Native feel / micro-polish:**
    - **Prevent overscroll bounce** — add `overscroll-behavior: none` to content scroll containers so iOS rubber-band doesn't expose the dark background behind the app.
    - **Reset scroll on view change** — when navigating between views, scroll position stays wherever it was left. Reset to top on view change.
    - **Remove tap highlight** — add `-webkit-tap-highlight-color: transparent` globally so tapping buttons/cards doesn't flash the default blue iOS highlight.
@@ -157,7 +153,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
    - **No text selection on UI chrome** — account names, labels, nav items, and buttons highlight on long-press/drag. Add `user-select: none` to nav, headers, and card chrome; leave it on actual content (notes, emails).
    - **Cursor consistency** — some interactive divs (chip dropdowns, calendar cells, account cards) are missing `cursor: pointer`. Audit and standardize.
 
-6. **Overview tab redesign + account intelligence:**
+5. **Overview tab redesign + account intelligence:**
    - **Account health auto-score** — calculated indicator (green/yellow/red) based on days since last contact, open items age, cadence compliance, and revenue trend. Replaces the manually-set status as the primary health signal, or sits alongside it.
    - **Quick notes scratchpad** — a free-form text area on the Overview tab for thoughts that don't belong to a specific meeting. Fast capture, auto-saves.
    - **Follow-up due date on Overview** — surface the follow-up date from the last meeting prominently on Overview with a visual indicator if it's overdue. Badge on the account card in the list if follow-up is past due.
@@ -165,57 +161,57 @@ This app is currently single-user but should be built with multi-tenancy in mind
    - **Click-to-call** — wrap contact phone numbers in `tel:` links so tapping on mobile dials directly. One-line change per contact card.
    - **Multi-select email contacts** — checkboxes on the Contacts tab, "Email selected" button that builds `mailto:email1,email2` opening Outlook with all selected contacts in To. Option to pre-populate with Pip's draft email.
 
-7. **Motion design / transitions:**
+6. **Motion design / transitions:**
    - **Slide direction** — navigation should feel spatial: going "forward" slides content in from the right; going "back" slides from the left. Track nav direction in state and apply `slideInRight` vs `slideInLeft` keyframes instead of the generic fade.
    - **Mobile sheet modals** — on mobile breakpoint, modals should slide up from the bottom like a native iOS sheet. One CSS change to `src/components/Modal.jsx` conditioned on viewport width.
    - **Staggered list load** — account cards, meeting rows, and contact entries animate in one-by-one with a 50ms CSS `animation-delay` between each item when a view loads.
    - **Directional back transition** — navigating back from account detail fades + slides right (reverse of forward). Requires the slide direction tracking above.
 
-8. **Typography & visual rhythm:**
+7. **Typography & visual rhythm:**
     - **Consistent type scale** — standardize to 12 / 14 / 16 / 20 / 24px across the app. Currently uses 9, 11, 12, 13, 15, 22, 24px with no clear system.
     - **Tabular nums on all figures** — revenue, counts, and dates should use `font-variant-numeric: tabular-nums`. Already on the revenue header; needs to be everywhere.
     - **Consistent label spacing** — uppercase tracking labels (`font-size: 9px`, `letter-spacing: 0.08em`) are used inconsistently. Define one standard and apply it everywhere.
     - **Line height audit** — dense info cards (account cards, meeting rows) have inconsistent line heights.
 
-9. **Copy & tone:**
+8. **Copy & tone:**
     - **Empty states** — replace flat "No accounts", "No meetings", "No contacts yet" with copy that sounds like Pip is waiting. Sets the personality from the first moment and tells the user what to do next.
     - **Button labels** — "Save" → "Got it", confirms should feel deliberate not clinical.
     - **Error messages** — Supabase errors and network failures currently surface as raw or generic text. Rewrite to be human and actionable: "Couldn't save — check your connection" instead of "Error 500".
     - **Section headers** — labels like "YTD Revenue", "Open Items", "Last Interaction" are functional but terse. Light copy polish makes the app feel more considered.
 
-10. **Search & discoverability:**
+9. **Search & discoverability:**
     - **Global search** — extend search beyond account names to hit contacts, meeting notes, open items, and tags.
     - **Desktop command palette** — ⌘K opens a quick-jump overlay to navigate anywhere: accounts, views, modals.
     - **Search history** — remember the last 5 searches in localStorage.
 
-11. **Onboarding & contextual help:**
+10. **Onboarding & contextual help:**
     - **First-run empty states** — when a new user has no accounts/meetings/contacts, guide them through adding their first one. Smarter empty states with a clear CTA and one-line explanation.
     - **Contextual tooltips** — less obvious features (cadence, Pip, Gauge tab) get a one-time tooltip on first encounter. Dismissed on tap, stored in localStorage.
     - **New user checklist** — add your first account, log a meeting, set a cadence. Disappears once all three are done.
 
-12. **Export & sharing:**
+11. **Export & sharing:**
     - **PDF account sheet** — one-tap export of an account's overview: name, status, contacts, last meeting summary, open items, active projects.
     - **Export contacts to CSV** — download all contacts for an account.
     - **Share meeting summary** — copy-ready text block from a meeting's notes + action items.
 
-13. **Personalization:**
+12. **Personalization:**
     - **Persistent sort and filter preferences** — remember preferred account sort order, active filters, and cadence calendar view. Stored in localStorage per user.
     - **Default tab per account** — let users pin a default tab so opening an account always lands on Meetings, Contacts, or Overview.
     - **Dashboard density toggle** — compact vs. comfortable view on the accounts list.
 
-14. **Data visualization:**
+13. **Data visualization:**
     - **Sparklines on account cards** — a tiny 8-point revenue trend line on each account card. Only shown if revenue history data exists.
-    - **Health score indicator** — a green/yellow/red dot with a trend arrow (↑↓→) on the account card and detail header. Derived from the auto-score logic in item 8.
+    - **Health score indicator** — a green/yellow/red dot with a trend arrow (↑↓→) on the account card and detail header. Derived from the auto-score logic in item 5.
     - **Meeting frequency bars** — a small bar chart on the account detail header showing meeting cadence over the last 6 months.
     - **Pipeline event markers** — completed Gauge projects overlaid as markers on the revenue trend chart in Pipeline view.
 
-15. **Gauge + account change log:**
+14. **Gauge + account change log:**
     - **Account change log** — every completed Gauge task or project creates a dated entry on the account: what was done, when. Not a task list — a delivery record.
     - **Surface in Overview** — "Recent Deliveries" section on the account Overview tab showing the last 3–5 completed items with dates.
     - **Surface in "Brief me"** — pre-call brief includes what was delivered since the last meeting.
     - **Surface in Pip context** — feed active project statuses and recent completions into Pip's system prompt.
 
-16. **Gauge — full build (multi-user, custom columns, request workflow):**
+15. **Gauge — full build (multi-user, custom columns, request workflow):**
     - **Core columns (hardcoded)** — Priority, Date of Request (auto), Owner/Assigned To, Linked Folio Account, Status, Due Date, Notes.
     - **Custom columns** — user-defined fields per project type. Types: Text, Number, Date, Dropdown, Checkbox, URL. Stored in `project_fields` + `task_field_values` tables — no DB migrations when a column is added. For Trax: # of Shops, Connection Macro Date, Integration Macro Date, Email Thread, Initiative.
     - **Task stages** — sequential stages with individual completion dates (e.g. Connection → Integration → Complete).
@@ -223,9 +219,9 @@ This app is currently single-user but should be built with multi-tenancy in mind
     - **Request submission from Folio** — "New Request" button on the Gauge tab within an account detail. Pre-fills the linked account.
     - **Coworker queue view** — a personal task list across all accounts showing everything assigned to that user, sorted by priority and due date.
     - **Multi-user access** — coworker needs a login. Org/team layer required — design data model with `org_id` and `assigned_to` from day one.
-    - **Completion feeds change log** — completing a task automatically creates a dated entry on the linked Folio account's change log (item 15 above).
+    - **Completion feeds change log** — completing a task automatically creates a dated entry on the linked Folio account's change log (item 14 above).
 
-17. **Route Builder — territory routing for MSO field visits:**
+16. **Route Builder — territory routing for MSO field visits:**
 
     **Primary users:** MSO team. They visit 5 shops/day on average, routes can be single-day or multi-day, starting point is flexible (home, office, or first stop).
 
@@ -286,7 +282,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
 - ✅ Schema sync — `phone`, `email`, `linkedin` live on `folio_contacts`; `schema.sql` is canonical
 - ✅ UX polish — actionable empty states (all 4 views), modal close padding, checkbox tap area all done
 - ✅ Error resilience — fire-and-forget metadata updates have `.catch()` error logging; error state in all hooks
-- ✅ a11y — calendar nav `‹›` aria-labels done
+- ✅ a11y — calendar nav `‹›` aria-labels, `role="button"` on CadenceView cells/account cards/week-view events, `aria-live` on all error containers
 
 **Security hardening — shipped in code, two items need Supabase dashboard toggle:**
 
