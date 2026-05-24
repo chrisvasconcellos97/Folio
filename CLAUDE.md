@@ -139,18 +139,12 @@ This app is currently single-user but should be built with multi-tenancy in mind
 2. **Code quality — one remaining fix:**
    - **Split oversized files** — CadenceView.jsx (573 lines), AccountsView.jsx (598 lines), and OverviewTab.jsx (535 lines) each mix 3–5 sub-components inline. Extract CalendarView, WeekView, and ListView out of CadenceView as a starting point.
 
-3. **Feature completeness:**
-   - **Cadence carry-forward not implemented** — items are independent records with no link to cadence occurrences. No trigger or logic auto-creates an item when a recurring task cadence fires. Either build a scheduled function or add a manual "create item from cadence" button as a stopgap.
+3. **Feature completeness:** *(no open items)*
 
 4. **Native feel — one remaining fix:**
    - **Cursor consistency** — some interactive divs (chip dropdowns, calendar cells, account cards) are missing `cursor: pointer`. Audit and standardize.
 
-5. **Overview tab redesign + account intelligence:**
-   - **Account health auto-score** — calculated indicator (green/yellow/red) based on days since last contact, open items age, cadence compliance, and revenue trend. Replaces the manually-set status as the primary health signal, or sits alongside it.
-   - **Quick notes scratchpad** — a free-form text area on the Overview tab for thoughts that don't belong to a specific meeting. Fast capture, auto-saves.
-   - **Follow-up due date on Overview** — surface the follow-up date from the last meeting prominently on Overview with a visual indicator if it's overdue. Badge on the account card in the list if follow-up is past due.
-   - **"Brief me" Pip modal** — a button on the account detail header that opens a clean Pip-powered pre-call brief: last meeting summary, open items, contacts you're seeing, follow-up from last time. Designed to be read in a parking lot before walking in.
-   - **Multi-select email contacts** — checkboxes on the Contacts tab, "Email selected" button that builds `mailto:email1,email2` opening Outlook with all selected contacts in To. Option to pre-populate with Pip's draft email.
+5. **Overview tab redesign + account intelligence:** *(no open items)*
 
 6. **Motion design / transitions:**
    - **Mobile sheet modals** — on mobile breakpoint, modals should slide up from the bottom like a native iOS sheet. One CSS change to `src/components/Modal.jsx` conditioned on viewport width.
@@ -277,6 +271,12 @@ This app is currently single-user but should be built with multi-tenancy in mind
 - ✅ Empty state copy — "Nothing here yet — add your first account and I'll get to work"
 - ✅ Error message copy — "Couldn't delete/save — check your connection" across MeetingsTab, ContactsTab, ItemsTab
 - ✅ Click-to-call — phone numbers wrapped in `tel:` links in ContactsTab
+- ✅ Cadence carry-forward stopgap — "Log Task" button on task cadences in CadenceView (List, Calendar views)
+- ✅ Quick notes scratchpad — editable textarea for `account.objective` on Overview tab, auto-saves on blur
+- ✅ Follow-up due date — surfaces `follow_up_date` from last meeting on Overview; overdue badge on account cards
+- ✅ Health auto-score — calculated green/yellow/red from days since last contact, overdue items, follow-up status; shown alongside manual status on Overview
+- ✅ Brief Me modal — "✦ Brief Me" button on account detail header; Pip generates pre-call brief (last meeting, open items, contacts, sharp observation); caches per account
+- ✅ Multi-select email contacts — checkboxes on Contacts tab; "Email Selected" builds mailto with all checked addresses
 
 **Security hardening — shipped in code, two items need Supabase dashboard toggle:**
 
