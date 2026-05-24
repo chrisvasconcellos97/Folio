@@ -21,6 +21,7 @@ export function DesktopLayout({
   onSignOut,
   onTour,
   userMeta,
+  slideClass,
   accountsPane,
   detailPane,
   children,
@@ -151,7 +152,7 @@ export function DesktopLayout({
           padding: "24px 32px",
         }}
       >
-        <div key={view} className="view-fade-in">
+        <div key={view} className={slideClass || "view-fade-in"}>
           {detailPane || children}
         </div>
       </div>

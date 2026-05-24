@@ -13,7 +13,7 @@ var NAV_ITEMS = [
   { id: "gauge",    label: "Gauge",    icon: "gauge"  },
 ];
 
-export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, userMeta, children }) {
+export function MobileLayout({ view, setView, slideClass, onAddAccount, onSignOut, onTour, userMeta, children }) {
   return (
     <div
       style={{
@@ -86,7 +86,7 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, u
           padding: "16px 18px 90px",
         }}
       >
-        <div key={view} className="view-fade-in">
+        <div key={view} className={slideClass || "view-fade-in"}>
           {children}
         </div>
       </div>

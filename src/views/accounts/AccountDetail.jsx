@@ -25,6 +25,7 @@ var TIER_COLORS   = { Major: C.blue, Mid: C.purple, Growth: C.green };
 
 export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDelete, onUpdate, onSelectAccount, pipPrefill, onPipPrefillHandled, revenueHistory, shopMetrics }) {
   var [tab, setTab]               = useState("overview");
+  var [tabSlideDir, setTabSlideDir] = useState("right");
   var [showMeetingModal, setMeetingModal] = useState(false);
   var [showQuickModal, setQuickModal]     = useState(false);
   var [showItemModal, setItemModal]       = useState(false);
@@ -216,7 +217,12 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
           return (
             <button
               key={t}
-              onClick={function () { setTab(t); }}
+              onClick={function () {
+                var oldIdx = TABS.indexOf(tab);
+                var newIdx = TABS.indexOf(t);
+                setTabSlideDir(newIdx >= oldIdx ? "right" : "left");
+                setTab(t);
+              }}
               style={{
                 flex: 1,
                 padding: "7px 4px",
@@ -238,7 +244,7 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
       </div>
 
       {/* Tab content */}
-      <div key={tab} className="tab-fade-in">
+      <div key={tab} className={tabSlideDir === "left" ? "tab-slide-left" : "tab-slide-right"}>
       {tab === "overview" && (
         <OverviewTab
           account={account}
