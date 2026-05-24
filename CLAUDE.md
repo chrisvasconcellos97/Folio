@@ -190,7 +190,15 @@ This app is currently single-user but should be built with multi-tenancy in mind
     - **No text selection on UI chrome** — account names, labels, nav items, and buttons all highlight on long-press/drag. Add `user-select: none` to nav, headers, and card chrome; leave it on actual content (notes, emails).
     - **Cursor consistency** — some interactive divs (chip dropdowns, calendar cells, account cards) are missing `cursor: pointer`. Audit and standardize.
 
-12. **Motion design / transitions:**
+13. **Overview tab redesign + account intelligence:**
+    - **Account health auto-score** — calculated indicator (green/yellow/red) based on days since last contact, open items age, cadence compliance, and revenue trend. Replaces the manually-set status as the primary health signal, or sits alongside it.
+    - **Quick notes scratchpad** — a free-form text area on the Overview tab for thoughts that don't belong to a specific meeting. "Heard they're switching suppliers." "CFO leaving in Q3." Fast capture, auto-saves.
+    - **Follow-up due date on Overview** — surface the follow-up date from the last meeting prominently on Overview with a visual indicator if it's overdue. Badge on the account card in the list if follow-up is past due.
+    - **"Brief me" Pip modal** — a button on the account detail header that opens a clean Pip-powered pre-call brief: last meeting summary, open items, contacts you're seeing, follow-up from last time. Designed to be read in a parking lot before walking in. Tap, read, close.
+    - **Click-to-call** — wrap contact phone numbers in `tel:` links so tapping on mobile dials directly. One-line change per contact card.
+    - **Multi-select email contacts** — checkboxes on the Contacts tab, "Email selected" button that builds `mailto:email1,email2` opening Outlook with all selected contacts in To. Option to pre-populate with Pip's draft email.
+
+14. **Motion design / transitions:**
     - **Slide direction** — navigation should feel spatial: going "forward" (accounts → detail, list → tab) slides content in from the right; going "back" slides from the left. Track nav direction in state and apply `slideInRight` vs `slideInLeft` keyframes instead of the generic fade. Makes the app feel like real pages, not just swaps.
     - **Mobile sheet modals** — on mobile breakpoint, modals should slide up from the bottom like a native iOS sheet instead of appearing centered on screen. One CSS change to `src/components/Modal.jsx` conditioned on viewport width.
     - **Staggered list load** — account cards, meeting rows, and contact entries animate in one-by-one with a 50ms CSS `animation-delay` between each item when a view loads. Done with CSS `animation-delay` (not JS timers) so it's GPU-free and doesn't stutter.
@@ -240,6 +248,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
 - [ ] **Separate repo: `chrisvasconcellos97/Briefcase`** — standalone marketing/intro page for the full suite. Interactive icon selector to preview each app, live link to Folio, suite overview. Pitch line: "From the conference floor to year-round relationships. One suite. Powered by Pip." Reference image saved in Chris's previous Claude chat showing the three-app layout with Folio center, Lanyard left, Gauge right, SYNC connectors between them.
 
 ### Future / bigger features
+- [ ] **Director view** — a read-only leadership layer built on the same Supabase data. High-level portfolio health across all accounts: which accounts are going cold, open item counts by account, revenue trend summaries, cadence compliance. A director doesn't log meetings or set cadences — they just need the pulse. Same data, different lens. Requires team/org support first so accounts can be scoped to a rep.
 - [ ] **Team support** — org layer, multiple users per account, shared accounts
 - [ ] **Lanyard real auth** — connect Lanyard users to Folio users via Supabase Auth
 - [ ] **Lanyard → Folio live sync** — post-conference notes flow into Folio automatically once auth is shared
