@@ -3,6 +3,7 @@ import { useAuth } from "./hooks/useAuth";
 import { useAccounts } from "./hooks/useAccounts";
 import { useMeetings } from "./hooks/useMeetings";
 import { useCadences } from "./hooks/useCadences";
+import { useCadenceSync } from "./hooks/useCadenceSync";
 import { useQuickTasks } from "./hooks/useQuickTasks";
 import { useAccountMetrics } from "./hooks/useAccountMetrics";
 import { AuthView } from "./views/auth/AuthView";
@@ -78,7 +79,8 @@ export default function App() {
     }
   }, [session]);
   var { meetings, loading: meetLoading } = useMeetings(userId);
-  var { cadences, addCadence } = useCadences(userId);
+  var { cadences, loading: cadenceLoading, addCadence } = useCadences(userId);
+  useCadenceSync(userId, cadences, cadenceLoading);
   var { tasks, addTask, updateTask, deleteTask } = useQuickTasks(userId);
   var { revenueHistory, shopMetrics, upsertRevenue, upsertShopMetrics } = useAccountMetrics(userId);
 
