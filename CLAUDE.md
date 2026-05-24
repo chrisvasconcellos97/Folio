@@ -146,8 +146,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 5. **Overview tab redesign + account intelligence:** *(no open items)*
 
-6. **Motion design / transitions:**
-   - **Mobile sheet modals** — on mobile breakpoint, modals should slide up from the bottom like a native iOS sheet. One CSS change to `src/components/Modal.jsx` conditioned on viewport width.
+6. **Motion design / transitions:** *(no open items)*
 
 7. **Typography & visual rhythm:**
     - **Consistent type scale** — standardize to 12 / 14 / 16 / 20 / 24px across the app. Currently uses 9, 11, 12, 13, 15, 22, 24px with no clear system.
@@ -267,6 +266,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
 - ✅ Native feel — overscroll-behavior, tap-highlight, safe area insets, 16px inputs, user-select:none, active/pressed states, scroll reset on view change all shipped
 - ✅ Staggered list load — `list-item` + `animationDelay` on account cards, meeting rows, contact entries
 - ✅ Mobile sheet modal — `modal-sheet` CSS class on Modal.jsx inner panel, sheetUp keyframe in index.html
+- ✅ Crossfade view transitions — replaced directional slide with 0.18s opacity fade; cards phase in via list-item stagger
 - ✅ Persistent filter prefs — filter state persisted to localStorage in AccountsView
 - ✅ Empty state copy — "Nothing here yet — add your first account and I'll get to work"
 - ✅ Error message copy — "Couldn't delete/save — check your connection" across MeetingsTab, ContactsTab, ItemsTab
