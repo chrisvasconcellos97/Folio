@@ -6,6 +6,8 @@ export function useAccounts(userId) {
   var [loading, setLoading]   = useState(false);
   var [error, setError]       = useState(null);
 
+  var cacheKey = "folio_accts_" + userId;
+
   var fetch = useCallback(function () {
     if (!userId) return;
     setLoading(true);
@@ -16,10 +18,17 @@ export function useAccounts(userId) {
       .order("name")
       .then(function (result) {
         setLoading(false);
-        if (result.error) { setError(result.error.message); return; }
+        if (result.error) {
+          setError(result.error.message);
+          var cached = localStorage.getItem(cacheKey);
+          if (cached) { try { setAccounts(JSON.parse(cached)); } catch (e) {} }
+          return;
+        }
+        setError(null);
         setAccounts(result.data || []);
+        localStorage.setItem(cacheKey, JSON.stringify(result.data || []));
       });
-  }, [userId]);
+  }, [userId, cacheKey]);
 
   useEffect(function () { fetch(); }, [fetch]);
 

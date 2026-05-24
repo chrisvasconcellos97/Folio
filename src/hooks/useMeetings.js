@@ -6,6 +6,8 @@ export function useMeetings(userId, accountId) {
   var [loading, setLoading]   = useState(false);
   var [error, setError]       = useState(null);
 
+  var cacheKey = accountId ? null : "folio_meetings_" + userId;
+
   var fetch = useCallback(function () {
     if (!userId) return;
     setLoading(true);
@@ -19,12 +21,17 @@ export function useMeetings(userId, accountId) {
       setLoading(false);
       if (result.error) {
         setError(result.error.message);
+        if (cacheKey) {
+          var cached = localStorage.getItem(cacheKey);
+          if (cached) { try { setMeetings(JSON.parse(cached)); } catch (e) {} }
+        }
       } else {
         setError(null);
         setMeetings(result.data || []);
+        if (cacheKey) localStorage.setItem(cacheKey, JSON.stringify(result.data || []));
       }
     });
-  }, [userId, accountId]);
+  }, [userId, accountId, cacheKey]);
 
   useEffect(function () { fetch(); }, [fetch]);
 
