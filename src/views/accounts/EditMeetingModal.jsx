@@ -42,8 +42,9 @@ export function EditMeetingModal({ meeting, onSave, onClose }) {
     <Modal title="Edit Meeting" onClose={onClose} width={520}>
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <div>
-          <FL>Meeting Title</FL>
+          <FL htmlFor="edit-meeting-title">Meeting Title</FL>
           <InputField
+            id="edit-meeting-title"
             value={title}
             onChange={function (e) { setTitle(e.target.value); }}
             placeholder="e.g. Quarterly Business Review"
@@ -51,8 +52,9 @@ export function EditMeetingModal({ meeting, onSave, onClose }) {
         </div>
 
         <div>
-          <FL>Date</FL>
+          <FL htmlFor="edit-meeting-date">Date</FL>
           <InputField
+            id="edit-meeting-date"
             type="date"
             value={date}
             onChange={function (e) { setDate(e.target.value); }}
@@ -60,8 +62,9 @@ export function EditMeetingModal({ meeting, onSave, onClose }) {
         </div>
 
         <div>
-          <FL>Notes</FL>
+          <FL htmlFor="edit-meeting-notes">Notes</FL>
           <TextArea
+            id="edit-meeting-notes"
             value={notes}
             onChange={function (e) { setNotes(e.target.value); }}
             placeholder="What happened? General observations..."
@@ -70,8 +73,9 @@ export function EditMeetingModal({ meeting, onSave, onClose }) {
         </div>
 
         <div>
-          <FL>Talking Points</FL>
+          <FL htmlFor="edit-meeting-talking-points">Talking Points</FL>
           <TextArea
+            id="edit-meeting-talking-points"
             value={talkingPoints}
             onChange={function (e) { setTalking(e.target.value); }}
             placeholder="Key topics discussed..."
@@ -80,8 +84,9 @@ export function EditMeetingModal({ meeting, onSave, onClose }) {
         </div>
 
         <div>
-          <FL>Action Items</FL>
+          <FL htmlFor="edit-meeting-action-items">Action Items</FL>
           <TextArea
+            id="edit-meeting-action-items"
             value={actionItems}
             onChange={function (e) { setActions(e.target.value); }}
             placeholder="Who does what by when..."
@@ -90,8 +95,9 @@ export function EditMeetingModal({ meeting, onSave, onClose }) {
         </div>
 
         <div>
-          <FL>Commitments / Promises Made</FL>
+          <FL htmlFor="edit-meeting-commitments">Commitments / Promises Made</FL>
           <TextArea
+            id="edit-meeting-commitments"
             value={commitments}
             onChange={function (e) { setCommit(e.target.value); }}
             placeholder="Anything promised or committed..."
@@ -100,8 +106,9 @@ export function EditMeetingModal({ meeting, onSave, onClose }) {
         </div>
 
         <div>
-          <FL>Follow-up Date</FL>
+          <FL htmlFor="edit-meeting-follow-up">Follow-up Date</FL>
           <InputField
+            id="edit-meeting-follow-up"
             type="date"
             value={followUp}
             onChange={function (e) { setFollowUp(e.target.value); }}

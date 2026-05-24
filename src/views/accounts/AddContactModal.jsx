@@ -45,8 +45,9 @@ export function AddContactModal({ accountId, userId, onSave, onClose }) {
     <Modal title="Add Contact" onClose={onClose} width={400}>
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <div>
-          <FL>Name</FL>
+          <FL htmlFor="contact-name">Name</FL>
           <InputField
+            id="contact-name"
             value={name}
             onChange={function (e) { setName(e.target.value); }}
             placeholder="Full name"
@@ -54,8 +55,9 @@ export function AddContactModal({ accountId, userId, onSave, onClose }) {
         </div>
 
         <div>
-          <FL>Title / Role</FL>
+          <FL htmlFor="contact-title">Title / Role</FL>
           <InputField
+            id="contact-title"
             value={title}
             onChange={function (e) { setTitle(e.target.value); }}
             placeholder="e.g. VP of Sales"
@@ -63,8 +65,9 @@ export function AddContactModal({ accountId, userId, onSave, onClose }) {
         </div>
 
         <div>
-          <FL>Phone</FL>
+          <FL htmlFor="contact-phone">Phone</FL>
           <InputField
+            id="contact-phone"
             value={phone}
             onChange={function (e) { setPhone(e.target.value); }}
             placeholder="e.g. (555) 123-4567"
@@ -73,8 +76,9 @@ export function AddContactModal({ accountId, userId, onSave, onClose }) {
         </div>
 
         <div>
-          <FL>Email</FL>
+          <FL htmlFor="contact-email">Email</FL>
           <InputField
+            id="contact-email"
             value={email}
             onChange={function (e) { setEmail(e.target.value); }}
             placeholder="work@company.com"
@@ -83,8 +87,9 @@ export function AddContactModal({ accountId, userId, onSave, onClose }) {
         </div>
 
         <div>
-          <FL>LinkedIn</FL>
+          <FL htmlFor="contact-linkedin">LinkedIn</FL>
           <InputField
+            id="contact-linkedin"
             value={linkedin}
             onChange={function (e) { setLinkedin(e.target.value); }}
             placeholder="linkedin.com/in/username"
@@ -92,8 +97,9 @@ export function AddContactModal({ accountId, userId, onSave, onClose }) {
         </div>
 
         <div>
-          <FL>Notes</FL>
+          <FL htmlFor="contact-notes">Notes</FL>
           <TextArea
+            id="contact-notes"
             value={notes}
             onChange={function (e) { setNotes(e.target.value); }}
             placeholder="Personal notes, preferred comm style, etc."

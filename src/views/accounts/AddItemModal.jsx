@@ -41,8 +41,9 @@ export function AddItemModal({ accountId, userId, existing, onSave, onClose }) {
     <Modal title={isEdit ? "Edit Item" : "Add Open Item"} onClose={onClose} width={400}>
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <div>
-          <FL>Description</FL>
+          <FL htmlFor="item-description">Description</FL>
           <InputField
+            id="item-description"
             value={text}
             onChange={function (e) { setText(e.target.value); }}
             placeholder="What needs to happen?"
@@ -50,8 +51,9 @@ export function AddItemModal({ accountId, userId, existing, onSave, onClose }) {
         </div>
 
         <div>
-          <FL>Due Date</FL>
+          <FL htmlFor="item-due-date">Due Date</FL>
           <InputField
+            id="item-due-date"
             type="date"
             value={due}
             onChange={function (e) { setDue(e.target.value); }}
@@ -59,8 +61,9 @@ export function AddItemModal({ accountId, userId, existing, onSave, onClose }) {
         </div>
 
         <div>
-          <FL>Owner</FL>
+          <FL htmlFor="item-owner">Owner</FL>
           <InputField
+            id="item-owner"
             value={owner}
             onChange={function (e) { setOwner(e.target.value); }}
             placeholder="Who owns this?"

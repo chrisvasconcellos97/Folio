@@ -126,14 +126,14 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts })
 
         {/* Name */}
         <div>
-          <FL>Account Name</FL>
-          <InputField value={name} onChange={function (e) { setName(e.target.value); }} placeholder="Company name" />
+          <FL htmlFor="account-name">Account Name</FL>
+          <InputField id="account-name" value={name} onChange={function (e) { setName(e.target.value); }} placeholder="Company name" />
         </div>
 
         {/* Revenue */}
         <div>
-          <FL>Revenue (YTD)</FL>
-          <InputField value={revenue} onChange={function (e) { setRevenue(e.target.value); }} placeholder="e.g. $4.9M" />
+          <FL htmlFor="account-revenue">Revenue (YTD)</FL>
+          <InputField id="account-revenue" value={revenue} onChange={function (e) { setRevenue(e.target.value); }} placeholder="e.g. $4.9M" />
         </div>
 
         {/* Tier + Status */}
@@ -421,8 +421,9 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts })
 
         {/* Notes */}
         <div>
-          <FL>Notes</FL>
+          <FL htmlFor="account-notes">Notes</FL>
           <TextArea
+            id="account-notes"
             value={notes}
             onChange={function (e) { setNotes(e.target.value); }}
             placeholder="Who they are, what they sell, any context worth knowing..."

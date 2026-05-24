@@ -1,17 +1,19 @@
 import { C } from "../lib/colors";
 
-export function FL({ children }) {
+export function FL({ children, htmlFor }) {
   return (
-    <div
+    <label
+      htmlFor={htmlFor}
       style={{
         fontSize: 10,
         color: C.textMuted,
         marginBottom: 4,
         textTransform: "uppercase",
         letterSpacing: "0.08em",
+        display: "block",
       }}
     >
       {children}
-    </div>
+    </label>
   );
 }

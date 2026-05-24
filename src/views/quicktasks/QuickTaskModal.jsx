@@ -77,8 +77,9 @@ export function QuickTaskModal({ existing, accounts, onSave, onDelete, onClose }
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
 
         <div>
-          <FL>Task</FL>
+          <FL htmlFor="task-title">Task</FL>
           <InputField
+            id="task-title"
             value={title}
             onChange={function (e) { setTitle(e.target.value); }}
             placeholder="What needs to get done?"
@@ -87,8 +88,9 @@ export function QuickTaskModal({ existing, accounts, onSave, onDelete, onClose }
         </div>
 
         <div>
-          <FL>Notes (optional)</FL>
+          <FL htmlFor="task-notes">Notes (optional)</FL>
           <TextArea
+            id="task-notes"
             value={notes}
             onChange={function (e) { setNotes(e.target.value); }}
             placeholder="Customer name, phone, details..."

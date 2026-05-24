@@ -13,9 +13,10 @@ var baseStyle = {
   boxSizing: "border-box",
 };
 
-export function InputField({ value, onChange, placeholder, type, style, onKeyDown, autoFocus }) {
+export function InputField({ id, value, onChange, placeholder, type, style, onKeyDown, autoFocus }) {
   return (
     <input
+      id={id}
       type={type || "text"}
       value={value}
       onChange={onChange}
@@ -27,9 +28,10 @@ export function InputField({ value, onChange, placeholder, type, style, onKeyDow
   );
 }
 
-export function TextArea({ value, onChange, placeholder, rows, style, autoFocus }) {
+export function TextArea({ id, value, onChange, placeholder, rows, style, autoFocus }) {
   return (
     <textarea
+      id={id}
       value={value}
       onChange={onChange}
       placeholder={placeholder}
@@ -43,9 +45,10 @@ export function TextArea({ value, onChange, placeholder, rows, style, autoFocus 
   );
 }
 
-export function SelectField({ value, onChange, children, style }) {
+export function SelectField({ id, value, onChange, children, style }) {
   return (
     <select
+      id={id}
       value={value}
       onChange={onChange}
       style={Object.assign({}, baseStyle, {

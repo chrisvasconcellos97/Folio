@@ -38,8 +38,9 @@ export function EditContactModal({ contact, onSave, onClose }) {
     <Modal title="Edit Contact" onClose={onClose} width={400}>
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <div>
-          <FL>Name</FL>
+          <FL htmlFor="edit-contact-name">Name</FL>
           <InputField
+            id="edit-contact-name"
             value={name}
             onChange={function (e) { setName(e.target.value); }}
             placeholder="Full name"
@@ -47,8 +48,9 @@ export function EditContactModal({ contact, onSave, onClose }) {
         </div>
 
         <div>
-          <FL>Title / Role</FL>
+          <FL htmlFor="edit-contact-title">Title / Role</FL>
           <InputField
+            id="edit-contact-title"
             value={title}
             onChange={function (e) { setTitle(e.target.value); }}
             placeholder="e.g. VP of Sales"
@@ -56,8 +58,9 @@ export function EditContactModal({ contact, onSave, onClose }) {
         </div>
 
         <div>
-          <FL>Phone</FL>
+          <FL htmlFor="edit-contact-phone">Phone</FL>
           <InputField
+            id="edit-contact-phone"
             value={phone}
             onChange={function (e) { setPhone(e.target.value); }}
             placeholder="e.g. (555) 123-4567"
@@ -66,8 +69,9 @@ export function EditContactModal({ contact, onSave, onClose }) {
         </div>
 
         <div>
-          <FL>Email</FL>
+          <FL htmlFor="edit-contact-email">Email</FL>
           <InputField
+            id="edit-contact-email"
             value={email}
             onChange={function (e) { setEmail(e.target.value); }}
             placeholder="work@company.com"
@@ -76,8 +80,9 @@ export function EditContactModal({ contact, onSave, onClose }) {
         </div>
 
         <div>
-          <FL>LinkedIn</FL>
+          <FL htmlFor="edit-contact-linkedin">LinkedIn</FL>
           <InputField
+            id="edit-contact-linkedin"
             value={linkedin}
             onChange={function (e) { setLinkedin(e.target.value); }}
             placeholder="linkedin.com/in/username"
@@ -85,8 +90,9 @@ export function EditContactModal({ contact, onSave, onClose }) {
         </div>
 
         <div>
-          <FL>Notes</FL>
+          <FL htmlFor="edit-contact-notes">Notes</FL>
           <TextArea
+            id="edit-contact-notes"
             value={notes}
             onChange={function (e) { setNotes(e.target.value); }}
             placeholder="Personal notes, preferred comm style, etc."

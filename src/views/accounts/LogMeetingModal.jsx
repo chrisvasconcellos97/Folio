@@ -58,8 +58,9 @@ export function LogMeetingModal({ accountId, userId, contacts, onSave, onClose }
     <Modal title="Log Meeting" onClose={onClose} width={520}>
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <div>
-          <FL>Meeting Title</FL>
+          <FL htmlFor="log-title">Meeting Title</FL>
           <InputField
+            id="log-title"
             value={title}
             onChange={function (e) { setTitle(e.target.value); }}
             placeholder="e.g. Quarterly Business Review"
@@ -67,8 +68,9 @@ export function LogMeetingModal({ accountId, userId, contacts, onSave, onClose }
         </div>
 
         <div>
-          <FL>Date</FL>
+          <FL htmlFor="log-date">Date</FL>
           <InputField
+            id="log-date"
             type="date"
             value={date}
             onChange={function (e) { setDate(e.target.value); }}
@@ -108,8 +110,9 @@ export function LogMeetingModal({ accountId, userId, contacts, onSave, onClose }
         )}
 
         <div>
-          <FL>Notes</FL>
+          <FL htmlFor="log-notes">Notes</FL>
           <TextArea
+            id="log-notes"
             value={notes}
             onChange={function (e) { setNotes(e.target.value); }}
             placeholder="What happened? General observations..."
@@ -118,8 +121,9 @@ export function LogMeetingModal({ accountId, userId, contacts, onSave, onClose }
         </div>
 
         <div>
-          <FL>Talking Points</FL>
+          <FL htmlFor="log-talking-points">Talking Points</FL>
           <TextArea
+            id="log-talking-points"
             value={talkingPoints}
             onChange={function (e) { setTalking(e.target.value); }}
             placeholder="Key topics discussed..."
@@ -128,8 +132,9 @@ export function LogMeetingModal({ accountId, userId, contacts, onSave, onClose }
         </div>
 
         <div>
-          <FL>Action Items</FL>
+          <FL htmlFor="log-action-items">Action Items</FL>
           <TextArea
+            id="log-action-items"
             value={actionItems}
             onChange={function (e) { setActions(e.target.value); }}
             placeholder="Who does what by when..."
@@ -138,8 +143,9 @@ export function LogMeetingModal({ accountId, userId, contacts, onSave, onClose }
         </div>
 
         <div>
-          <FL>Commitments / Promises Made</FL>
+          <FL htmlFor="log-commitments">Commitments / Promises Made</FL>
           <TextArea
+            id="log-commitments"
             value={commitments}
             onChange={function (e) { setCommit(e.target.value); }}
             placeholder="Anything promised or committed..."
@@ -148,8 +154,9 @@ export function LogMeetingModal({ accountId, userId, contacts, onSave, onClose }
         </div>
 
         <div>
-          <FL>Follow-up Date</FL>
+          <FL htmlFor="log-follow-up">Follow-up Date</FL>
           <InputField
+            id="log-follow-up"
             type="date"
             value={followUp}
             onChange={function (e) { setFollowUp(e.target.value); }}
