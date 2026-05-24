@@ -21,6 +21,7 @@ import { ReturningWelcome } from "./views/welcome/ReturningWelcome";
 import { DesktopLayout } from "./layout/DesktopLayout";
 import { MobileLayout } from "./layout/MobileLayout";
 import { PipMark } from "./components/PipMark";
+import { CommandPalette } from "./components/CommandPalette";
 import { Toast, showToast } from "./components/Toast";
 import { C } from "./lib/colors";
 
@@ -52,6 +53,7 @@ export default function App() {
   var [showOnboarding, setShowOnboarding] = useState(false);
   var [showReturning, setShowReturning]   = useState(false);
   var [pipTransition, setPipTransition] = useState("idle");
+  var [showPalette, setShowPalette]     = useState(false);
   var welcomeShown = useRef(false);
 
   function replayTour() {
@@ -76,6 +78,17 @@ export default function App() {
       setShowReturning(true);
     }
   }, [session]);
+  useEffect(function() {
+    function handleKeyDown(e) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setShowPalette(function(p) { return !p; });
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return function() { window.removeEventListener("keydown", handleKeyDown); };
+  }, []);
+
   var { meetings, loading: meetLoading } = useMeetings(userId);
   var { cadences, loading: cadenceLoading, addCadence } = useCadences(userId);
   useCadenceSync(userId, cadences, cadenceLoading);
@@ -190,6 +203,8 @@ export default function App() {
       addTask={addTask}
       updateTask={updateTask}
       deleteTask={deleteTask}
+      hasMeetings={meetings.length > 0}
+      hasCadences={cadences.length > 0}
     />
   );
 
@@ -357,6 +372,14 @@ export default function App() {
             userName={userMeta ? userMeta.full_name : ""}
             accountCount={accounts.length}
             onDismiss={function () { setShowReturning(false); }}
+          />
+        )}
+        {isDesktop && showPalette && (
+          <CommandPalette
+            accounts={accounts}
+            onSelectAccount={function(a) { setSelected(a); setView("accounts"); setShowPalette(false); }}
+            onNavigate={function(v) { handleSetView(v); setShowPalette(false); }}
+            onClose={function() { setShowPalette(false); }}
           />
         )}
       </>

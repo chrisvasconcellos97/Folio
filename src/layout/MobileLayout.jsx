@@ -5,6 +5,13 @@ import { GaugeIcon } from "../components/GaugeIcon";
 import { PipMark } from "../components/PipMark";
 import { AmberBtn } from "../components/Buttons";
 import { UserMenu } from "../components/UserMenu";
+import { FirstRunTooltip } from "../components/Tooltip";
+
+var TOOLTIP_TIPS = {
+  cadence: "Set recurring meeting schedules so you never lose track of an account.",
+  gauge:   "Track projects and commitments tied to your accounts.",
+  pip:     "Your AI field analyst — ask anything about your accounts.",
+};
 
 var NAV_ITEMS = [
   { id: "accounts", label: "Accounts", icon: "▣"     },
@@ -123,7 +130,7 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, u
         >
           {NAV_ITEMS.map(function (item) {
             var active = view === item.id;
-            return (
+            var btn = (
               <button
                 key={item.id}
                 onClick={function () { setView(item.id); }}
@@ -155,6 +162,14 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, u
                 {item.label}
               </button>
             );
+            if (TOOLTIP_TIPS[item.id]) {
+              return (
+                <FirstRunTooltip key={item.id} id={item.id} text={TOOLTIP_TIPS[item.id]}>
+                  {btn}
+                </FirstRunTooltip>
+              );
+            }
+            return btn;
           })}
         </div>
       </div>

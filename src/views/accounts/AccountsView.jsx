@@ -6,8 +6,20 @@ import { Card } from "../../components/Card";
 import { PipMark } from "../../components/PipMark";
 import { PipLoader } from "../../components/PipLoader";
 import { QuickTaskModal } from "../quicktasks/QuickTaskModal";
+import { AmberBtn } from "../../components/Buttons";
 
 var DENSITY_KEY = "folio_density";
+
+function loadSearchHistory() {
+  try { return JSON.parse(localStorage.getItem("folio_search_history") || "[]"); } catch(e) { return []; }
+}
+function saveSearchHistory(query) {
+  if (!query || !query.trim()) return;
+  var history = loadSearchHistory().filter(function(h) { return h !== query.trim(); });
+  history.unshift(query.trim());
+  history = history.slice(0, 5);
+  try { localStorage.setItem("folio_search_history", JSON.stringify(history)); } catch(e) {}
+}
 
 var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red };
 var STATUS_LABELS = { green: "Healthy", yellow: "Watch",  red: "At Risk" };
@@ -50,8 +62,9 @@ function savePrefs(p) {
   try { localStorage.setItem(PREF_KEY, JSON.stringify(p)); } catch(e) {}
 }
 
-export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks, addTask, updateTask, deleteTask }) {
+export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks, addTask, updateTask, deleteTask, hasMeetings, hasCadences }) {
   var [search, setSearch]           = useState("");
+  var [searchFocused, setSearchFocused] = useState(false);
   var [filter, setFilter]           = useState(function() { return loadPrefs().filter || "All"; });
   var [tagFilter, setTagFilter]     = useState(null);
   var [regionFilter, setRegionFilter] = useState(null);
@@ -65,6 +78,18 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
     try { localStorage.setItem(DENSITY_KEY, density); } catch(e) {}
   }, [density]);
   var [editingTask, setEditingTask] = useState(null);
+
+  // Checklist logic
+  var checklistDone = (function() {
+    try { return !!localStorage.getItem("folio_checklist_done"); } catch(e) { return true; }
+  })();
+  var allDone = accounts.length > 0 && !!hasMeetings && !!hasCadences;
+  useEffect(function() {
+    if (allDone) {
+      try { localStorage.setItem("folio_checklist_done", "1"); } catch(e) {}
+    }
+  }, [allDone]);
+  var showChecklist = !checklistDone && !allDone;
 
   var openTasks = (tasks || []).filter(function (t) { return !t.done; });
 
@@ -100,7 +125,13 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
   var filtered = useMemo(function () {
     return accounts
       .filter(function (a) {
-        var matchSearch = a.name.toLowerCase().includes(search.toLowerCase());
+        var q = search.trim().toLowerCase();
+        var matchSearch = !q
+          || a.name.toLowerCase().includes(q)
+          || (a.tags && a.tags.some(function(t) { return t.toLowerCase().includes(q); }))
+          || (a.region && a.region.toLowerCase().includes(q))
+          || (a.account_number && a.account_number.toLowerCase().includes(q))
+          || (a.objective && a.objective.toLowerCase().includes(q));
         var matchFilter =
           filter === "All" ||
           (filter === "At Risk" ? a.status === "red" : a.tier === filter);
@@ -360,32 +391,58 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
       )}
 
       {/* Search + density toggle */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "center" }}>
-        <div style={{ flex: 1 }}>
-          <InputField
-            value={search}
-            onChange={function (e) { setSearch(e.target.value); }}
-            placeholder="Search accounts..."
-          />
+      <div style={{ marginBottom: 10 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <div style={{ flex: 1 }}>
+            <InputField
+              value={search}
+              onChange={function (e) { setSearch(e.target.value); }}
+              placeholder="Search accounts, tags, regions..."
+              onFocus={function() { setSearchFocused(true); }}
+              onBlur={function() {
+                setTimeout(function() { setSearchFocused(false); }, 150);
+                saveSearchHistory(search);
+              }}
+            />
+          </div>
+          <button
+            onClick={function() { setDensity(function(d) { return d === "comfortable" ? "compact" : "comfortable"; }); }}
+            title={density === "comfortable" ? "Switch to compact view" : "Switch to comfortable view"}
+            style={{
+              background: "transparent",
+              border: "1px solid " + C.border,
+              borderRadius: 7,
+              padding: "5px 9px",
+              cursor: "pointer",
+              color: C.textMuted,
+              fontSize: 14,
+              fontFamily: "'DM Sans', sans-serif",
+              lineHeight: 1,
+              flexShrink: 0,
+            }}
+          >
+            {density === "comfortable" ? "⊟" : "⊞"}
+          </button>
         </div>
-        <button
-          onClick={function() { setDensity(function(d) { return d === "comfortable" ? "compact" : "comfortable"; }); }}
-          title={density === "comfortable" ? "Switch to compact view" : "Switch to comfortable view"}
-          style={{
-            background: "transparent",
-            border: "1px solid " + C.border,
-            borderRadius: 7,
-            padding: "5px 9px",
-            cursor: "pointer",
-            color: C.textMuted,
-            fontSize: 14,
-            fontFamily: "'DM Sans', sans-serif",
-            lineHeight: 1,
-            flexShrink: 0,
-          }}
-        >
-          {density === "comfortable" ? "⊟" : "⊞"}
-        </button>
+        {searchFocused && !search && loadSearchHistory().length > 0 && (
+          <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 6 }}>
+            {loadSearchHistory().map(function(h) {
+              return (
+                <button
+                  key={h}
+                  onClick={function() { setSearch(h); }}
+                  style={{
+                    background: C.bgPill, border: "1px solid " + C.border,
+                    borderRadius: 20, padding: "3px 10px", fontSize: 11,
+                    color: C.textSub, fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
+                  }}
+                >
+                  {h}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Filter pills — tier / status */}
@@ -480,27 +537,63 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
         <div style={{ marginBottom: 8 }} />
       )}
 
+      {/* New user checklist */}
+      {showChecklist && (
+        <div style={{
+          background: C.accentFaint, border: "1px solid " + C.accentLine,
+          borderRadius: 12, padding: "14px 16px", marginBottom: 12,
+        }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 10 }}>
+            Getting started
+          </div>
+          {[
+            { label: "Add your first account", done: accounts.length > 0 },
+            { label: "Log a meeting", done: !!hasMeetings },
+            { label: "Set a cadence", done: !!hasCadences },
+          ].map(function(item) {
+            return (
+              <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <div style={{
+                  width: 16, height: 16, borderRadius: "50%", flexShrink: 0,
+                  background: item.done ? C.accent : "transparent",
+                  border: "1.5px solid " + (item.done ? C.accent : C.accentLine),
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  {item.done && <span style={{ fontSize: 9, color: "#fff", fontWeight: 700 }}>✓</span>}
+                </div>
+                <span style={{ fontSize: 13, color: item.done ? C.textMuted : C.text, textDecoration: item.done ? "line-through" : "none" }}>
+                  {item.label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* Account list */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {loading && <PipLoader height={300} />}
 
-        {!loading && filtered.length === 0 && (
-          <div style={{ textAlign: "center", padding: "40px 20px", color: C.textMuted, fontSize: 13 }}>
-            <div style={{ marginBottom: 12 }}>
-              {accounts.length === 0 ? "Nothing here yet — add your first account and I'll get to work." : "No accounts match that search."}
+        {!loading && accounts.length === 0 && (
+          <div style={{ textAlign: "center", padding: "60px 20px" }}>
+            <div style={{ fontSize: 32, marginBottom: 16 }}>📋</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 8 }}>
+              Nothing in the field yet.
             </div>
-            {onAddAccount && accounts.length === 0 && (
-              <button
-                onClick={onAddAccount}
-                style={{
-                  background: C.accentGlow, border: "1px solid " + C.accentSubtle,
-                  borderRadius: 8, padding: "8px 18px", fontSize: 12, fontWeight: 600,
-                  color: C.accent, fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
-                }}
-              >
-                Add your first account
-              </button>
+            <div style={{ fontSize: 14, color: C.textMuted, lineHeight: 1.6, marginBottom: 24, maxWidth: 280, margin: "0 auto 24px" }}>
+              Add your first account and Pip will get to work. Start with your most important relationship.
+            </div>
+            {onAddAccount && (
+              <AmberBtn onClick={onAddAccount} style={{ fontSize: 14, padding: "10px 24px" }}>
+                + Add Your First Account
+              </AmberBtn>
             )}
+          </div>
+        )}
+
+        {!loading && accounts.length > 0 && displayList.length === 0 && (
+          <div style={{ textAlign: "center", padding: "40px 20px", color: C.textMuted, fontSize: 13 }}>
+            No accounts match — try a different search or filter.
           </div>
         )}
 
