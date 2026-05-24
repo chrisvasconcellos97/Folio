@@ -177,6 +177,7 @@ export default function App() {
       accounts={accounts}
       loading={acctLoading}
       onSelect={handleSelectAccount}
+      onAddAccount={function () { setShowAddAccount(true); }}
       tasks={tasks}
       addTask={addTask}
       updateTask={updateTask}
