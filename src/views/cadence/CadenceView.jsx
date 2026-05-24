@@ -231,7 +231,7 @@ function CalendarView({ year, month, events, onPrev, onNext, onSelectAccount }) 
                     ? ('✓ ' + (ev.cadence.task_title || '?')).slice(0, 11)
                     : (ev.account && ev.account.name ? ev.account.name.slice(0, 9) : '?');
                   return (
-                    <div key={j} style={{
+                    <div key={ev.cadence.id + "-" + j} style={{
                       background: col + '22', color: col,
                       borderRadius: 3, padding: '1px 4px',
                       fontSize: 9, fontWeight: 600,
@@ -258,7 +258,7 @@ function CalendarView({ year, month, events, onPrev, onNext, onSelectAccount }) 
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {dayEvents(selectedDay).map(function (ev, i) {
-              return <CadenceEventCard key={i} event={ev} onSelectAccount={onSelectAccount} />;
+              return <CadenceEventCard key={ev.cadence.id + "-sel-" + i} event={ev} onSelectAccount={onSelectAccount} />;
             })}
           </div>
         </div>
@@ -327,7 +327,7 @@ function WeekView({ weekStart, weekEnd, events, onPrev, onNext, onSelectAccount 
                     : (ev.account && ev.account.name ? ev.account.name : '?');
                   var time = ev.cadence.meeting_time ? formatTime(ev.cadence.meeting_time) : '';
                   return (
-                    <div key={j}
+                    <div key={ev.cadence.id + "-" + j}
                       onClick={function () { onSelectAccount && onSelectAccount(ev.cadence.account_id); }}
                       style={{
                         background: col + '18', border: '1px solid ' + col + '44',
@@ -393,10 +393,10 @@ function ListView({ cadences, onSelectAccount }) {
               {group.label}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {group.items.map(function (item, i) {
+              {group.items.map(function (item) {
                 return (
                   <CadenceEventCard
-                    key={i}
+                    key={item.cadence.id}
                     event={{ cadence: item.cadence, date: item.next, account: item.account }}
                     onSelectAccount={onSelectAccount}
                     showDate

@@ -40,7 +40,7 @@ function SkeletonCard() {
   );
 }
 
-export function AccountsView({ accounts, loading, onSelect, tasks, addTask, updateTask, deleteTask }) {
+export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks, addTask, updateTask, deleteTask }) {
   var [search, setSearch]           = useState("");
   var [filter, setFilter]           = useState("All");
   var [tagFilter, setTagFilter]     = useState(null);
@@ -55,41 +55,50 @@ export function AccountsView({ accounts, loading, onSelect, tasks, addTask, upda
     var d = new Date(); d.setDate(d.getDate() + 7); return d.toISOString().split("T")[0];
   })();
 
-  var availableTags = loading ? [] : (function () {
+  var availableTags = useMemo(function () {
+    if (loading) return [];
     var seen = {};
     accounts.forEach(function (a) { (a.tags || []).forEach(function (t) { seen[t] = true; }); });
     return Object.keys(seen).sort();
-  })();
+  }, [loading, accounts]);
 
-  var availableRegions = loading ? [] : accounts
-    .map(function (a) { return a.region; })
-    .filter(function (r, i, arr) { return r && arr.indexOf(r) === i; })
-    .sort();
+  var availableRegions = useMemo(function () {
+    if (loading) return [];
+    return accounts
+      .map(function (a) { return a.region; })
+      .filter(function (r, i, arr) { return r && arr.indexOf(r) === i; })
+      .sort();
+  }, [loading, accounts]);
 
-  var upcoming = loading ? [] : accounts
-    .filter(function (a) {
-      return a.next_meeting && a.next_meeting >= todayStr && a.next_meeting <= in7DaysStr;
-    })
-    .sort(function (a, b) { return a.next_meeting.localeCompare(b.next_meeting); });
+  var upcoming = useMemo(function () {
+    if (loading) return [];
+    return accounts
+      .filter(function (a) {
+        return a.next_meeting && a.next_meeting >= todayStr && a.next_meeting <= in7DaysStr;
+      })
+      .sort(function (a, b) { return a.next_meeting.localeCompare(b.next_meeting); });
+  }, [loading, accounts, todayStr, in7DaysStr]);
 
-  var filtered = accounts
-    .filter(function (a) {
-      var matchSearch = a.name.toLowerCase().includes(search.toLowerCase());
-      var matchFilter =
-        filter === "All" ||
-        (filter === "At Risk" ? a.status === "red" : a.tier === filter);
-      var matchTag    = !tagFilter    || (a.tags && a.tags.includes(tagFilter));
-      var matchRegion = !regionFilter || a.region === regionFilter;
-      return matchSearch && matchFilter && matchTag && matchRegion;
-    })
-    .sort(function (a, b) {
-      var tierDiff = (TIER_ORDER[a.tier] || 9) - (TIER_ORDER[b.tier] || 9);
-      if (tierDiff !== 0) return tierDiff;
-      return a.name.localeCompare(b.name);
-    });
+  var filtered = useMemo(function () {
+    return accounts
+      .filter(function (a) {
+        var matchSearch = a.name.toLowerCase().includes(search.toLowerCase());
+        var matchFilter =
+          filter === "All" ||
+          (filter === "At Risk" ? a.status === "red" : a.tier === filter);
+        var matchTag    = !tagFilter    || (a.tags && a.tags.includes(tagFilter));
+        var matchRegion = !regionFilter || a.region === regionFilter;
+        return matchSearch && matchFilter && matchTag && matchRegion;
+      })
+      .sort(function (a, b) {
+        var tierDiff = (TIER_ORDER[a.tier] || 9) - (TIER_ORDER[b.tier] || 9);
+        if (tierDiff !== 0) return tierDiff;
+        return a.name.localeCompare(b.name);
+      });
+  }, [accounts, search, filter, tagFilter, regionFilter]);
 
   // Build display list: parents in sort order, children nested immediately below
-  var displayList = (function () {
+  var displayList = useMemo(function () {
     var list      = [];
     var addedIds  = {};
     filtered.filter(function (a) { return !a.parent_account_id; }).forEach(function (parent) {
@@ -107,7 +116,7 @@ export function AccountsView({ accounts, loading, onSelect, tasks, addTask, upda
       if (!addedIds[a.id]) list.push({ account: a, isChild: false });
     });
     return list;
-  })();
+  }, [filtered]);
 
   return (
     <div>
@@ -426,7 +435,19 @@ export function AccountsView({ accounts, loading, onSelect, tasks, addTask, upda
 
         {!loading && filtered.length === 0 && (
           <div style={{ textAlign: "center", padding: "40px 20px", color: C.textMuted, fontSize: 13 }}>
-            No accounts found.
+            <div style={{ marginBottom: 12 }}>No accounts found.</div>
+            {onAddAccount && accounts.length === 0 && (
+              <button
+                onClick={onAddAccount}
+                style={{
+                  background: "rgba(74,155,130,0.12)", border: "1px solid rgba(74,155,130,0.3)",
+                  borderRadius: 8, padding: "8px 18px", fontSize: 12, fontWeight: 600,
+                  color: C.accent, fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
+                }}
+              >
+                + Add Account
+              </button>
+            )}
           </div>
         )}
 

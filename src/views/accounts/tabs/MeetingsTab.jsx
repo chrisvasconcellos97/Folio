@@ -7,6 +7,8 @@ import { PipMark } from "../../../components/PipMark";
 import { PipInsightCard } from "../../../components/PipInsightCard";
 import { callAskPip } from "../../../lib/pip";
 import { pickV } from "../../../lib/metricsUtils";
+import { showToast } from "../../../components/Toast";
+import { EditMeetingModal } from "../EditMeetingModal";
 
 var STARS = [1, 2, 3, 4, 5];
 
@@ -110,6 +112,8 @@ function CopyBtn({ text }) {
 export function MeetingsTab({ meetings, accountName, onLogMeeting, onDelete, onUpdateMeeting }) {
   var [loadingPip, setLoadingPip] = useState({});
   var [pipErrors, setPipErrors]   = useState({});
+  var [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  var [editingMeeting, setEditingMeeting]   = useState(null);
 
   function handleAskPip(m) {
     if (loadingPip[m.id]) return;
@@ -122,12 +126,21 @@ export function MeetingsTab({ meetings, accountName, onLogMeeting, onDelete, onU
     }).then(function (data) {
       setLoadingPip(function (prev) { return Object.assign({}, prev, { [m.id]: false }); });
       if (data.summary && onUpdateMeeting) {
-        onUpdateMeeting(m.id, { pip_summary: data.summary, pip_email: data.email || null });
+        onUpdateMeeting(m.id, { pip_summary: data.summary, pip_email: data.email || null })
+          .then(function () { showToast("Pip summary saved"); })
+          .catch(function (err) { console.error("Pip save failed:", err); });
       }
     }).catch(function () {
       setLoadingPip(function (prev) { return Object.assign({}, prev, { [m.id]: false }); });
       setPipErrors(function (prev) { return Object.assign({}, prev, { [m.id]: "Pip is unavailable right now." }); });
     });
+  }
+
+  function handleDelete(id) {
+    onDelete(id)
+      .then(function () { showToast("Meeting deleted", "warning"); })
+      .catch(function (err) { showToast(err.message || "Delete failed", "error"); });
+    setConfirmDeleteId(null);
   }
 
   return (
@@ -136,13 +149,15 @@ export function MeetingsTab({ meetings, accountName, onLogMeeting, onDelete, onU
 
       {meetings.length === 0 && (
         <div style={{ textAlign: "center", padding: "40px 20px", color: C.textMuted, fontSize: 13 }}>
-          No meetings logged yet.
+          <div style={{ marginBottom: 12 }}>No meetings logged yet.</div>
+          <AmberBtn onClick={onLogMeeting} style={{ fontSize: 12 }}>+ Log a Meeting</AmberBtn>
         </div>
       )}
 
       {meetings.map(function (m) {
-        var isLoading = !!loadingPip[m.id];
-        var pipErr    = pipErrors[m.id];
+        var isLoading   = !!loadingPip[m.id];
+        var pipErr      = pipErrors[m.id];
+        var confirmDel  = confirmDeleteId === m.id;
         return (
           <Card key={m.id}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10, gap: 12 }}>
@@ -226,7 +241,21 @@ export function MeetingsTab({ meetings, accountName, onLogMeeting, onDelete, onU
                     <PipMark size={7} color={C.accent} glow />
                     <FL style={{ marginBottom: 0 }}>Draft Follow-Up Email</FL>
                   </div>
-                  <CopyBtn text={m.pip_email} />
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <a
+                      href={"mailto:?body=" + encodeURIComponent(m.pip_email)}
+                      style={{
+                        fontSize: 11, padding: "4px 10px",
+                        background: "rgba(74,155,130,0.1)", border: "1px solid rgba(74,155,130,0.25)",
+                        borderRadius: 6, color: C.accent, textDecoration: "none",
+                        fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
+                        display: "inline-flex", alignItems: "center",
+                      }}
+                    >
+                      Open in Mail
+                    </a>
+                    <CopyBtn text={m.pip_email} />
+                  </div>
                 </div>
                 <div style={{ background: "rgba(0,0,0,0.2)", border: "1px solid " + C.border, borderRadius: 8, padding: "10px 12px", fontSize: 12, color: C.textSub, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
                   {m.pip_email}
@@ -252,11 +281,41 @@ export function MeetingsTab({ meetings, accountName, onLogMeeting, onDelete, onU
               </div>
             )}
 
-            {onDelete && (
-              <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
-                <DangerBtn onClick={function () { onDelete(m.id); }} style={{ fontSize: 11, padding: "5px 12px" }}>
-                  Delete
-                </DangerBtn>
+            {(onDelete || onUpdateMeeting) && (
+              <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end", gap: 6, alignItems: "center" }}>
+                {onUpdateMeeting && (
+                  <SecBtn
+                    onClick={function () { setEditingMeeting(m); }}
+                    style={{ fontSize: 11, padding: "5px 12px" }}
+                  >
+                    Edit
+                  </SecBtn>
+                )}
+                {onDelete && !confirmDel && (
+                  <DangerBtn
+                    onClick={function () { setConfirmDeleteId(m.id); }}
+                    style={{ fontSize: 11, padding: "5px 12px" }}
+                  >
+                    Delete
+                  </DangerBtn>
+                )}
+                {onDelete && confirmDel && (
+                  <>
+                    <span style={{ fontSize: 11, color: C.red }}>Sure?</span>
+                    <DangerBtn
+                      onClick={function () { handleDelete(m.id); }}
+                      style={{ fontSize: 11, padding: "5px 12px" }}
+                    >
+                      Yes
+                    </DangerBtn>
+                    <SecBtn
+                      onClick={function () { setConfirmDeleteId(null); }}
+                      style={{ fontSize: 11, padding: "5px 12px" }}
+                    >
+                      No
+                    </SecBtn>
+                  </>
+                )}
               </div>
             )}
           </Card>
@@ -266,6 +325,21 @@ export function MeetingsTab({ meetings, accountName, onLogMeeting, onDelete, onU
       <AmberBtn style={{ width: "100%", fontSize: 13 }} onClick={onLogMeeting}>
         + Log New Meeting
       </AmberBtn>
+
+      {editingMeeting && (
+        <EditMeetingModal
+          meeting={editingMeeting}
+          onSave={function (id, data) {
+            return onUpdateMeeting(id, data).then(function () {
+              showToast("Meeting updated");
+              setEditingMeeting(null);
+            }).catch(function (err) {
+              showToast(err.message || "Save failed", "error");
+            });
+          }}
+          onClose={function () { setEditingMeeting(null); }}
+        />
+      )}
     </div>
   );
 }

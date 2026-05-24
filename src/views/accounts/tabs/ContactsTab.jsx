@@ -1,8 +1,11 @@
+import { useState } from "react";
 import { C } from "../../../lib/colors";
-import { AmberBtn, DangerBtn } from "../../../components/Buttons";
+import { AmberBtn, DangerBtn, SecBtn } from "../../../components/Buttons";
 import { Card } from "../../../components/Card";
 import { PipInsightCard } from "../../../components/PipInsightCard";
 import { pickV } from "../../../lib/metricsUtils";
+import { showToast } from "../../../components/Toast";
+import { EditContactModal } from "../EditContactModal";
 
 function buildContactsInsight(contacts, accountId) {
   var seed = (accountId || "x") + new Date().getDate().toString();
@@ -82,18 +85,30 @@ function ContactLink({ href, label, color }) {
   );
 }
 
-export function ContactsTab({ contacts, accountId, onAdd, onDelete }) {
+export function ContactsTab({ contacts, accountId, onAdd, onDelete, onUpdate }) {
+  var [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  var [editingContact, setEditingContact]   = useState(null);
+
+  function handleDelete(id) {
+    onDelete(id)
+      .then(function () { showToast("Contact removed", "warning"); })
+      .catch(function (err) { showToast(err.message || "Delete failed", "error"); });
+    setConfirmDeleteId(null);
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <PipInsightCard text={buildContactsInsight(contacts, accountId)} />
 
       {contacts.length === 0 && (
         <div style={{ textAlign: "center", padding: "40px 20px", color: C.textMuted, fontSize: 13 }}>
-          No contacts yet.
+          <div style={{ marginBottom: 12 }}>No contacts yet.</div>
+          <AmberBtn onClick={onAdd} style={{ fontSize: 12 }}>+ Add Contact</AmberBtn>
         </div>
       )}
 
       {contacts.map(function (c) {
+        var confirmDel = confirmDeleteId === c.id;
         return (
           <Card key={c.id}>
             <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
@@ -134,11 +149,41 @@ export function ContactsTab({ contacts, accountId, onAdd, onDelete }) {
                 )}
               </div>
 
-              {onDelete && (
-                <DangerBtn onClick={function () { onDelete(c.id); }} style={{ fontSize: 10, padding: "4px 10px", flexShrink: 0 }}>
-                  Remove
-                </DangerBtn>
-              )}
+              <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
+                {onUpdate && (
+                  <SecBtn
+                    onClick={function () { setEditingContact(c); }}
+                    style={{ fontSize: 10, padding: "4px 10px" }}
+                  >
+                    Edit
+                  </SecBtn>
+                )}
+                {onDelete && !confirmDel && (
+                  <DangerBtn
+                    onClick={function () { setConfirmDeleteId(c.id); }}
+                    style={{ fontSize: 10, padding: "4px 10px" }}
+                  >
+                    Remove
+                  </DangerBtn>
+                )}
+                {onDelete && confirmDel && (
+                  <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+                    <span style={{ fontSize: 11, color: C.red }}>Sure?</span>
+                    <DangerBtn
+                      onClick={function () { handleDelete(c.id); }}
+                      style={{ fontSize: 10, padding: "4px 10px" }}
+                    >
+                      Yes
+                    </DangerBtn>
+                    <SecBtn
+                      onClick={function () { setConfirmDeleteId(null); }}
+                      style={{ fontSize: 10, padding: "4px 10px" }}
+                    >
+                      No
+                    </SecBtn>
+                  </div>
+                )}
+              </div>
             </div>
           </Card>
         );
@@ -147,6 +192,21 @@ export function ContactsTab({ contacts, accountId, onAdd, onDelete }) {
       <AmberBtn style={{ width: "100%", fontSize: 13 }} onClick={onAdd}>
         + Add Contact
       </AmberBtn>
+
+      {editingContact && (
+        <EditContactModal
+          contact={editingContact}
+          onSave={function (id, data) {
+            return onUpdate(id, data).then(function () {
+              showToast("Contact updated");
+              setEditingContact(null);
+            }).catch(function (err) {
+              showToast(err.message || "Save failed", "error");
+            });
+          }}
+          onClose={function () { setEditingContact(null); }}
+        />
+      )}
     </div>
   );
 }
