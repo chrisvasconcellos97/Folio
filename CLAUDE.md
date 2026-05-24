@@ -6,6 +6,15 @@
 git push origin HEAD:main
 ```
 
+## Patch — Background Build Agent
+
+**Patch** is the name for the background agent used to execute large batch builds. When a batch of queued items is ready to ship, spawn Patch via the Agent tool with `isolation: "worktree"` so it works in a clean copy of the repo without disrupting the main conversation.
+
+- Patch handles the building, Claude handles the thinking
+- Use Patch for multi-file batches (5+ files) to keep the main context clean
+- Patch commits and pushes to `main` when done — one clean commit per batch
+- The stop hook has a 10-minute grace period so Patch can work without triggering mid-batch commits
+
 ## The Briefcase Suite
 
 Briefcase is a suite of three apps built around account management, conference work, and project tracking. Folio is the hub — Lanyard and Gauge are spokes that punch out from Folio and feed data back.
