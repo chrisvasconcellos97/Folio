@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { C } from "../../../lib/colors";
+import { showToast } from "../../../components/Toast";
 import { AmberBtn, SecBtn, DangerBtn } from "../../../components/Buttons";
 import { PipInsightCard } from "../../../components/PipInsightCard";
 import { SetCadenceModal } from "../../cadence/SetCadenceModal";
@@ -76,7 +77,7 @@ function buildCadenceInsight(cadences, account) {
   return parts.join(" ");
 }
 
-function CadenceCard({ cad, today, confirmDeleteId, setConfirmDeleteId, onDeleteCadence, setEditingCad, setShowModal }) {
+function CadenceCard({ cad, today, confirmDeleteId, setConfirmDeleteId, onDeleteCadence, onAddCadence, setEditingCad, setShowModal }) {
   var isTask  = cad.type === 'task';
   var next    = getNextOccurrence(cad, today);
   var confirm = confirmDeleteId === cad.id;
@@ -133,7 +134,14 @@ function CadenceCard({ cad, today, confirmDeleteId, setConfirmDeleteId, onDelete
               ) : (
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                   <span style={{ fontSize: 11, color: C.red }}>Sure?</span>
-                  <DangerBtn onClick={function () { onDeleteCadence(cad.id); setConfirmDeleteId(null); }} style={{ fontSize: 11, padding: '5px 10px' }}>Yes</DangerBtn>
+                  <DangerBtn onClick={function () {
+                    var data = Object.assign({}, cad);
+                    delete data.id;
+                    delete data.created_at;
+                    onDeleteCadence(cad.id);
+                    setConfirmDeleteId(null);
+                    showToast("Cadence removed", "warning", onAddCadence ? function () { onAddCadence(data); } : null);
+                  }} style={{ fontSize: 11, padding: '5px 10px' }}>Yes</DangerBtn>
                   <SecBtn onClick={function () { setConfirmDeleteId(null); }} style={{ fontSize: 11, padding: '5px 10px' }}>No</SecBtn>
                 </div>
               )}
@@ -173,7 +181,7 @@ export function CadenceTab({ account, cadences, items, meetings, contacts, onAdd
     letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8,
   };
 
-  var cardProps = { today, confirmDeleteId, setConfirmDeleteId, onDeleteCadence, setEditingCad, setShowModal };
+  var cardProps = { today, confirmDeleteId, setConfirmDeleteId, onDeleteCadence, onAddCadence, setEditingCad, setShowModal };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

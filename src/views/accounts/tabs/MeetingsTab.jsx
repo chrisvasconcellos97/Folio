@@ -126,7 +126,7 @@ function sendToGauge(meeting, userId) {
     });
 }
 
-export function MeetingsTab({ meetings, accountName, userId, onLogMeeting, onDelete, onUpdateMeeting }) {
+export function MeetingsTab({ meetings, accountName, userId, onLogMeeting, onDelete, onAddMeeting, onUpdateMeeting }) {
   var [loadingPip, setLoadingPip] = useState({});
   var [pipErrors, setPipErrors]   = useState({});
   var [confirmDeleteId, setConfirmDeleteId] = useState(null);
@@ -154,8 +154,18 @@ export function MeetingsTab({ meetings, accountName, userId, onLogMeeting, onDel
   }
 
   function handleDelete(id) {
+    var meeting = meetings.find(function (m) { return m.id === id; });
     onDelete(id)
-      .then(function () { showToast("Meeting deleted", "warning"); })
+      .then(function () {
+        var onUndo = onAddMeeting && meeting ? function () {
+          var data = Object.assign({}, meeting);
+          delete data.id;
+          delete data.created_at;
+          delete data.folio_accounts;
+          onAddMeeting(data);
+        } : null;
+        showToast("Meeting deleted", "warning", onUndo);
+      })
       .catch(function (err) { showToast(err.message || "Delete failed", "error"); });
     setConfirmDeleteId(null);
   }

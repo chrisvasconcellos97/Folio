@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { C } from "../../lib/colors";
+import { showToast } from "../../components/Toast";
 import { Modal } from "../../components/Modal";
 import { AmberBtn, SecBtn, DangerBtn } from "../../components/Buttons";
 import { InputField, TextArea } from "../../components/InputField";
@@ -54,6 +55,7 @@ export function QuickTaskModal({ existing, accounts, onSave, onDelete, onClose }
       reminder_at: buildReminderAt(),
     }).then(function () {
       setSaving(false);
+      if (!existing) showToast("Task added");
       onClose();
     }).catch(function (e) {
       setSaving(false);

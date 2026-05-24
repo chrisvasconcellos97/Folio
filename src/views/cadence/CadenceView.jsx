@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { C } from "../../lib/colors";
+import { showToast } from "../../components/Toast";
 import { PipMark } from "../../components/PipMark";
 import { PipInsightCard } from "../../components/PipInsightCard";
 import { SetCadenceModal } from "./SetCadenceModal";
@@ -494,12 +495,12 @@ export function CadenceView({ cadences, accounts, onSelectAccount, addCadence })
               delete rest.account_ids;
               if (ids && accounts && ids.length === accounts.length && rest.type === 'task') {
                 return addCadence(Object.assign({}, rest, { is_global: true, account_id: null }))
-                  .then(function () { setShowAddModal(false); });
+                  .then(function () { setShowAddModal(false); showToast("Cadence set"); });
               }
               var saves = ids
                 ? ids.map(function (id) { return addCadence(Object.assign({}, rest, { account_id: id })); })
                 : [addCadence(data)];
-              return Promise.all(saves).then(function () { setShowAddModal(false); });
+              return Promise.all(saves).then(function () { setShowAddModal(false); showToast("Cadence set"); });
             }}
             onClose={function () { setShowAddModal(false); }}
           />
@@ -557,12 +558,12 @@ export function CadenceView({ cadences, accounts, onSelectAccount, addCadence })
             delete rest.account_ids;
             if (ids && accounts && ids.length === accounts.length && rest.type === 'task') {
               return addCadence(Object.assign({}, rest, { is_global: true, account_id: null }))
-                .then(function () { setShowAddModal(false); });
+                .then(function () { setShowAddModal(false); showToast("Cadence set"); });
             }
             var saves = ids
               ? ids.map(function (id) { return addCadence(Object.assign({}, rest, { account_id: id })); })
               : [addCadence(data)];
-            return Promise.all(saves).then(function () { setShowAddModal(false); });
+            return Promise.all(saves).then(function () { setShowAddModal(false); showToast("Cadence set"); });
           }}
           onClose={function () { setShowAddModal(false); }}
         />

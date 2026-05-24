@@ -20,7 +20,7 @@ import { ReturningWelcome } from "./views/welcome/ReturningWelcome";
 import { DesktopLayout } from "./layout/DesktopLayout";
 import { MobileLayout } from "./layout/MobileLayout";
 import { PipMark } from "./components/PipMark";
-import { Toast } from "./components/Toast";
+import { Toast, showToast } from "./components/Toast";
 import { C } from "./lib/colors";
 
 function useBreakpoint() {
@@ -129,7 +129,10 @@ export default function App() {
   }
 
   function handleAddAccount(data) {
-    return addAccount(data);
+    return addAccount(data).then(function (acct) {
+      showToast("Account added");
+      return acct;
+    });
   }
 
   function handleEditAccount(data) {
@@ -138,6 +141,7 @@ export default function App() {
       if (selectedAccount && selectedAccount.id === editingAccount.id) {
         setSelected(Object.assign({}, selectedAccount, data));
       }
+      showToast("Account updated");
     });
   }
 
@@ -152,6 +156,7 @@ export default function App() {
     if (!selectedAccount) return;
     deleteAccount(selectedAccount.id).then(function () {
       setSelected(null);
+      showToast("Account deleted", "warning");
     });
   }
 

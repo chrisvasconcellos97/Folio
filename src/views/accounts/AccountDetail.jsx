@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { C } from "../../lib/colors";
+import { showToast } from "../../components/Toast";
 import { Pill } from "../../components/Pill";
 import { AmberBtn, SecBtn, DangerBtn } from "../../components/Buttons";
 import { useMeetings } from "../../hooks/useMeetings";
@@ -273,6 +274,7 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
           userId={userId}
           onLogMeeting={function () { setMeetingModal(true); }}
           onDelete={deleteMeeting}
+          onAddMeeting={addMeeting}
           onUpdateMeeting={updateMeeting}
         />
       )}
@@ -296,6 +298,7 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
           accountId={account.id}
           onAdd={function () { setContactModal(true); }}
           onDelete={deleteContact}
+          onAddContact={addContact}
           onUpdate={updateContact}
         />
       )}
@@ -307,7 +310,9 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
           items={items}
           meetings={meetings}
           contacts={contacts}
-          onAddCadence={addCadence}
+          onAddCadence={function (data) {
+            return addCadence(data).then(function (c) { showToast("Cadence set"); return c; });
+          }}
           onUpdateCadence={updateCadence}
           onDeleteCadence={deleteCadence}
           onAddItem={function () { setItemModal(true); }}
@@ -339,7 +344,9 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
           userId={userId}
           accountName={account.name}
           contacts={contacts}
-          onSave={addMeeting}
+          onSave={function (data) {
+            return addMeeting(data).then(function (m) { showToast("Meeting logged"); return m; });
+          }}
           onClose={function () { setQuickModal(false); }}
         />
       )}
@@ -349,7 +356,9 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
           accountId={account.id}
           userId={userId}
           contacts={contacts}
-          onSave={addMeeting}
+          onSave={function (data) {
+            return addMeeting(data).then(function (m) { showToast("Meeting logged"); return m; });
+          }}
           onClose={function () { setMeetingModal(false); }}
         />
       )}
@@ -358,7 +367,9 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
         <AddItemModal
           accountId={account.id}
           userId={userId}
-          onSave={addItem}
+          onSave={function (data) {
+            return addItem(data).then(function (i) { showToast("Item added"); return i; });
+          }}
           onClose={function () { setItemModal(false); }}
         />
       )}
@@ -367,7 +378,9 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
         <AddContactModal
           accountId={account.id}
           userId={userId}
-          onSave={addContact}
+          onSave={function (data) {
+            return addContact(data).then(function (c) { showToast("Contact added"); return c; });
+          }}
           onClose={function () { setContactModal(false); }}
         />
       )}

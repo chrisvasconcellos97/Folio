@@ -85,13 +85,22 @@ function ContactLink({ href, label, color }) {
   );
 }
 
-export function ContactsTab({ contacts, accountId, onAdd, onDelete, onUpdate }) {
+export function ContactsTab({ contacts, accountId, onAdd, onDelete, onAddContact, onUpdate }) {
   var [confirmDeleteId, setConfirmDeleteId] = useState(null);
   var [editingContact, setEditingContact]   = useState(null);
 
   function handleDelete(id) {
+    var contact = contacts.find(function (c) { return c.id === id; });
     onDelete(id)
-      .then(function () { showToast("Contact removed", "warning"); })
+      .then(function () {
+        var onUndo = onAddContact && contact ? function () {
+          var data = Object.assign({}, contact);
+          delete data.id;
+          delete data.created_at;
+          onAddContact(data);
+        } : null;
+        showToast("Contact removed", "warning", onUndo);
+      })
       .catch(function (err) { showToast(err.message || "Delete failed", "error"); });
     setConfirmDeleteId(null);
   }
