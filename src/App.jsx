@@ -52,10 +52,7 @@ export default function App() {
   var [showOnboarding, setShowOnboarding] = useState(false);
   var [showReturning, setShowReturning]   = useState(false);
   var [pipTransition, setPipTransition] = useState("idle");
-  var [slideDir, setSlideDir] = useState("right");
   var welcomeShown = useRef(false);
-
-  var NAV_ORDER = ["accounts", "meetings", "pipeline", "cadence", "gauge", "pip"];
 
   function replayTour() {
     setShowReturning(false);
@@ -86,20 +83,15 @@ export default function App() {
   var { revenueHistory, shopMetrics, upsertRevenue, upsertShopMetrics } = useAccountMetrics(userId);
 
   function handleSelectAccount(a) {
-    setSlideDir("right");
     setSelected(a);
   }
 
   function handleBack() {
-    setSlideDir("left");
     setSelected(null);
   }
 
   function handleSetView(v) {
     if (v === view) return;
-    var oldIdx = NAV_ORDER.indexOf(view);
-    var newIdx = NAV_ORDER.indexOf(v);
-    setSlideDir(newIdx >= oldIdx ? "right" : "left");
     setPipTransition("out");
     setTimeout(function () {
       setView(v);
@@ -206,7 +198,7 @@ export default function App() {
   if (view === "accounts") {
     if (selectedAccount) {
       mainContent = (
-        <div key={selectedAccount.id} className={slideDir === "left" ? "view-slide-left" : "view-slide-right"}>
+        <div key={selectedAccount.id} className="view-fade-in">
           <AccountDetail
             account={selectedAccount}
             userId={userId}
@@ -319,7 +311,6 @@ export default function App() {
           onSignOut={signOut}
           onTour={replayTour}
           userMeta={userMeta}
-          slideClass={slideDir === "left" ? "view-slide-left" : "view-slide-right"}
           accountsPane={view === "accounts" ? accountsListPane : null}
           detailPane={mainContent}
         />
@@ -378,7 +369,6 @@ export default function App() {
       <MobileLayout
         view={view}
         setView={handleSetView}
-        slideClass={slideDir === "left" ? "view-slide-left" : "view-slide-right"}
         onAddAccount={function () { setShowAddAccount(true); }}
         onSignOut={signOut}
         onTour={replayTour}

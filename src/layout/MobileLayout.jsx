@@ -14,7 +14,7 @@ var NAV_ITEMS = [
   { id: "gauge",    label: "Gauge",    icon: "gauge"  },
 ];
 
-export function MobileLayout({ view, setView, slideClass, onAddAccount, onSignOut, onTour, userMeta, children }) {
+export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, userMeta, children }) {
   var scrollRef = useRef(null);
 
   useEffect(function () {
@@ -94,7 +94,7 @@ export function MobileLayout({ view, setView, slideClass, onAddAccount, onSignOu
           padding: "16px 18px calc(74px + env(safe-area-inset-bottom))",
         }}
       >
-        <div key={view} className={slideClass || "view-fade-in"}>
+        <div key={view} className="view-fade-in">
           {children}
         </div>
       </div>
