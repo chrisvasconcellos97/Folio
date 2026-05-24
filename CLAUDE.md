@@ -251,6 +251,16 @@ This app is currently single-user but should be built with multi-tenancy in mind
     - **Surface in Pip context** — feed active project statuses and recent completions into Pip's system prompt. "Two projects in progress, one blocked" changes the tone of a pre-call brief entirely.
     - **Multi-user Gauge** — coworkers should be able to use Gauge on shared accounts. Requires the org/team layer but the data model should be designed for it from the start so it's not a rewrite later.
 
+23. **Gauge — full build (multi-user, custom columns, request workflow):**
+    - **Core columns (hardcoded)** — Priority, Date of Request (auto), Owner/Assigned To, Linked Folio Account, Status, Due Date, Notes. Universal across every company.
+    - **Custom columns** — user-defined fields per project type. Types: Text, Number, Date, Dropdown, Checkbox, URL. Stored in a `project_fields` table (schema) + `task_field_values` table (values) — no DB migrations when a column is added. For Trax: # of Shops, Connection Macro Date, Integration Macro Date, Email Thread, Initiative.
+    - **Task stages** — tasks can have sequential stages with individual completion dates (e.g. Connection → Integration → Complete). Stage completion auto-logs the date.
+    - **Continuous project type** — open-ended project with no fixed end date. Tasks trickle in over time (e.g. LKQ integrations). Not a cadence (no schedule) — just an ongoing queue. Tasks added as requests come in.
+    - **Request submission from Folio** — "New Request" button on the Gauge tab within an account detail. Pre-fills the linked account. Lands in the assigned coworker's queue.
+    - **Coworker queue view** — a personal task list across all accounts showing everything assigned to that user, sorted by priority and due date. The primary view for the admin/executor role.
+    - **Multi-user access** — coworker needs a login. Sees tasks assigned to them and enough account context to execute. Doesn't need full Folio AM access. Org/team layer required — design data model with `org_id` and `assigned_to` from day one so it's not a rewrite later.
+    - **Completion feeds change log** — when a task or stage is marked complete, it automatically creates a dated entry on the linked Folio account's change log (item 22 above).
+
 **Already shipped (drop from list):**
 - ✅ Quick Tasks — tray on main page, modal with account dropdown + reminder presets, Pip integration (surface open tasks on load, complete/add via natural language)
 - ✅ Sub-accounts — UI + migration (`parent_account_id` column live), nested display with faded ↳ arrow on accounts list
