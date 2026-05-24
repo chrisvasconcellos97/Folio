@@ -151,15 +151,9 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 8. **Copy & tone:** *(no open items)*
 
-9. **Search & discoverability:**
-    - **Global search** — extend search beyond account names to hit contacts, meeting notes, open items, and tags.
-    - **Desktop command palette** — ⌘K opens a quick-jump overlay to navigate anywhere: accounts, views, modals.
-    - **Search history** — remember the last 5 searches in localStorage.
+9. **Search & discoverability:** *(no open items)*
 
-10. **Onboarding & contextual help:**
-    - **First-run empty states** — when a new user has no accounts/meetings/contacts, guide them through adding their first one. Smarter empty states with a clear CTA and one-line explanation.
-    - **Contextual tooltips** — less obvious features (cadence, Pip, Gauge tab) get a one-time tooltip on first encounter. Dismissed on tap, stored in localStorage.
-    - **New user checklist** — add your first account, log a meeting, set a cadence. Disappears once all three are done.
+10. **Onboarding & contextual help:** *(no open items)*
 
 11. **Export & sharing:**
     - **PDF account sheet** — one-tap export of an account's overview: name, status, contacts, last meeting summary, open items, active projects.
@@ -266,6 +260,12 @@ This app is currently single-user but should be built with multi-tenancy in mind
 - ✅ Line height audit — multi-line text containers standardized to 1.5/1.6
 - ✅ Default tab per account — localStorage remembers last tab per account (`folio_default_tab_<id>`)
 - ✅ Dashboard density toggle — ⊟/⊞ toggle on accounts list, compact mode tightens cards and hides secondary info
+- ✅ Global search — name, tags, region, account number, and notes/objective all searchable from accounts list
+- ✅ Search history — last 5 queries in localStorage, shown as chips when search is focused and empty
+- ✅ Desktop command palette — ⌘K/Ctrl+K overlay, searches accounts + nav, arrow-key navigable
+- ✅ First-run empty states — guided empty state with CTA when zero accounts; terse "no match" when filtered empty
+- ✅ Contextual tooltips — one-time first-encounter tooltips on Cadence, Gauge, Pip nav buttons (mobile)
+- ✅ New user checklist — "Add account / Log meeting / Set cadence" auto-dismisses when all three done
 - ✅ Persistent filter prefs — filter state persisted to localStorage in AccountsView
 - ✅ Empty state copy — "Nothing here yet — add your first account and I'll get to work"
 - ✅ Error message copy — "Couldn't delete/save — check your connection" across MeetingsTab, ContactsTab, ItemsTab
