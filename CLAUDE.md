@@ -205,6 +205,52 @@ This app is currently single-user but should be built with multi-tenancy in mind
     - **Staggered list load** — account cards, meeting rows, and contact entries animate in one-by-one with a 50ms CSS `animation-delay` between each item when a view loads. Done with CSS `animation-delay` (not JS timers) so it's GPU-free and doesn't stutter.
     - **Directional back transition** — navigating back from account detail fades + slides right (reverse of forward). Requires knowing the transition direction, which the slide direction work above will already track.
 
+15. **Typography & visual rhythm:**
+    - **Consistent type scale** — standardize to 12 / 14 / 16 / 20 / 24px across the app. Currently uses 9, 11, 12, 13, 15, 22, 24px with no clear system. Makes every screen feel designed rather than assembled.
+    - **Tabular nums on all figures** — revenue, counts, and dates should use `font-variant-numeric: tabular-nums` so numbers don't shift width when values change. Already on the revenue header; needs to be everywhere.
+    - **Consistent label spacing** — uppercase tracking labels (`font-size: 9px`, `letter-spacing: 0.08em`) are used inconsistently. Define one standard and apply it everywhere section headers, field labels, and metadata appear.
+    - **Line height audit** — dense info cards (account cards, meeting rows) have inconsistent line heights. Tighter on compact elements, more breathing room on primary content.
+
+16. **Copy & tone:**
+    - **Empty states** — replace flat "No accounts", "No meetings", "No contacts yet" with copy that sounds like Pip is waiting. Sets the personality from the first moment and tells the user what to do next.
+    - **Button labels** — "Save" → "Got it", "Delete" → confirms should feel deliberate not clinical. Small words, big feel difference.
+    - **Error messages** — Supabase errors and network failures currently surface as raw or generic text. Rewrite to be human and actionable: "Couldn't save — check your connection" instead of "Error 500".
+    - **Section headers** — labels like "YTD Revenue", "Open Items", "Last Interaction" are functional but terse. Light copy polish makes the app feel more considered without adding clutter.
+
+17. **Search & discoverability:**
+    - **Global search** — extend search beyond account names to hit contacts, meeting notes, open items, and tags. Search "John" and see every John across all accounts. Search "integration" and surface every account with that word in any note.
+    - **Desktop command palette** — ⌘K opens a quick-jump overlay to navigate anywhere: accounts, views, modals. Power user feature that makes desktop use significantly faster.
+    - **Search history** — remember the last 5 searches so you can re-run them quickly. Stored in localStorage, no backend needed.
+
+18. **Onboarding & contextual help:**
+    - **First-run empty states** — when a new user has no accounts, no meetings, no contacts, the app should guide them through adding their first one. Not a wizard, just smarter empty states with a clear CTA and a one-line explanation of what belongs here.
+    - **Contextual tooltips** — less obvious features (cadence, Pip, Gauge tab) get a one-time tooltip on first encounter. Dismissed on tap, never shown again. Stored in localStorage.
+    - **New user checklist** — a lightweight "getting started" checklist: add your first account, log a meeting, set a cadence. Disappears once all three are done. Useful when handing the app to a new team member.
+
+19. **Export & sharing:**
+    - **PDF account sheet** — one-tap export of an account's overview: name, status, contacts, last meeting summary, open items, active projects. Useful before a quarterly review or manager check-in.
+    - **Export contacts to CSV** — download all contacts for an account. Useful for mail merges, Outlook imports, or handing off to a colleague.
+    - **Share meeting summary** — generate a shareable link or copy-ready text block from a meeting's notes + action items. No login required to view. Useful for sending a recap to someone who isn't in Folio.
+
+20. **Personalization:**
+    - **Persistent sort and filter preferences** — remember each user's preferred account sort order, active filters, and cadence calendar view (week vs. month). Stored in localStorage per user. No backend changes needed.
+    - **Default tab per account** — let users pin a default tab so opening an account always lands on Meetings, or Contacts, or Overview, based on how they work.
+    - **Dashboard density toggle** — compact vs. comfortable view on the accounts list. Compact shows more accounts per screen; comfortable shows more detail per card.
+
+21. **Data visualization:**
+    - **Sparklines on account cards** — a tiny 8-point revenue trend line on each account card. At a glance: is this account trending up or down? Only shown if revenue history data exists.
+    - **Health score indicator** — a green/yellow/red dot with a trend arrow (↑↓→) on the account card and detail header. Derived from the auto-score logic in item 13. Makes portfolio health scannable without opening anything.
+    - **Meeting frequency bars** — a small bar chart on the account detail header showing meeting cadence over the last 6 months. Instantly surfaces which accounts are getting attention and which are going cold.
+    - **Pipeline event markers** — completed Gauge projects overlaid as markers on the revenue trend chart in Pipeline view. Correlate delivery dates with performance changes visually.
+
+22. **Gauge + account change log:**
+    - **Project statuses in Gauge** — Gauge projects should have a clear status: Planned / In Progress / Blocked / Complete / On Hold. Blocked is the most important to surface — it means something needs attention.
+    - **Account change log** — every completed Gauge task or project creates a dated entry on the account: what was done, when. Not a task list — a delivery record. Feeds the update calendar concept so you can correlate work with performance changes.
+    - **Surface in Overview** — "Recent Deliveries" section on the account Overview tab showing the last 3–5 completed items with dates. Always visible without opening Gauge.
+    - **Surface in "Brief me"** — pre-call brief includes what was delivered since the last meeting. Walk in ready to say "since we last spoke, here's what we completed."
+    - **Surface in Pip context** — feed active project statuses and recent completions into Pip's system prompt. "Two projects in progress, one blocked" changes the tone of a pre-call brief entirely.
+    - **Multi-user Gauge** — coworkers should be able to use Gauge on shared accounts. Requires the org/team layer but the data model should be designed for it from the start so it's not a rewrite later.
+
 **Already shipped (drop from list):**
 - ✅ Quick Tasks — tray on main page, modal with account dropdown + reminder presets, Pip integration (surface open tasks on load, complete/add via natural language)
 - ✅ Sub-accounts — UI + migration (`parent_account_id` column live), nested display with faded ↳ arrow on accounts list
