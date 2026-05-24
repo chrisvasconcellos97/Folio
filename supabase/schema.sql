@@ -136,26 +136,38 @@ create policy "Users manage own quick tasks"
 
 -- Gauge Projects
 create table if not exists gauge_projects (
-  id          uuid primary key default gen_random_uuid(),
-  user_id     uuid references auth.users not null,
-  account_id  uuid references folio_accounts on delete cascade,
-  meeting_id  uuid references folio_meetings on delete set null,
-  title       text not null,
-  description text,
-  status      text default 'planned'
-              check (status in ('planned', 'in_progress', 'blocked', 'complete', 'on_hold')),
-  priority    text default 'medium'
-              check (priority in ('high', 'medium', 'low')),
-  due_date    date,
-  assignee    text,
-  created_at  timestamptz default now(),
-  updated_at  timestamptz default now()
+  id           uuid primary key default gen_random_uuid(),
+  user_id      uuid references auth.users not null,
+  account_id   uuid references folio_accounts on delete cascade,
+  meeting_id   uuid references folio_meetings on delete set null,
+  title        text not null,
+  description  text,
+  status       text default 'planned'
+               check (status in ('planned', 'in_progress', 'blocked', 'complete', 'on_hold')),
+  priority     text default 'medium'
+               check (priority in ('high', 'medium', 'low')),
+  due_date     date,
+  assignee     text,
+  stages       jsonb default '[]',
+  requested_at timestamptz default now(),
+  requested_by text,
+  created_at   timestamptz default now(),
+  updated_at   timestamptz default now()
 );
 
 alter table gauge_projects enable row level security;
-create policy "Authenticated users access projects"
+-- Owner: full access to own projects
+create policy "Gauge owner access"
   on gauge_projects for all
-  using (auth.uid() is not null);
+  using (auth.uid() = user_id);
+-- Assignee: can select/update projects assigned to their email
+create policy "Gauge assignee select"
+  on gauge_projects for select
+  using (assignee = auth.email());
+create policy "Gauge assignee update"
+  on gauge_projects for update
+  using (assignee = auth.email())
+  with check (assignee = auth.email());
 
 -- Auto-update updated_at trigger (shared)
 create or replace function update_updated_at()
