@@ -136,21 +136,13 @@ This app is currently single-user but should be built with multi-tenancy in mind
    - **Pip context** — revenue trend and shop metrics fed into Pip system prompt per account for richer pre-call briefs.
    - **Data entry workflow** — Chris runs monthly reports externally, pastes numbers into chat, Claude upserts rows directly via Supabase. No complex input UI needed for now.
 
-2. **Code quality — two remaining fixes:**
-   - **Consolidate rgba opacity scale** — 78 hardcoded `rgba(74,155,130,0.*)` values still in source files. Tokens exist in `src/lib/colors.js` (`C.accentGlow`, `C.accentFaint`, `C.accentLine`, etc.) but components still use raw strings. Replace all with C tokens.
+2. **Code quality — one remaining fix:**
    - **Split oversized files** — CadenceView.jsx (573 lines), AccountsView.jsx (598 lines), and OverviewTab.jsx (535 lines) each mix 3–5 sub-components inline. Extract CalendarView, WeekView, and ListView out of CadenceView as a starting point.
 
 3. **Feature completeness:**
    - **Cadence carry-forward not implemented** — items are independent records with no link to cadence occurrences. No trigger or logic auto-creates an item when a recurring task cadence fires. Either build a scheduled function or add a manual "create item from cadence" button as a stopgap.
 
-4. **Native feel / micro-polish:**
-   - **Prevent overscroll bounce** — add `overscroll-behavior: none` to content scroll containers so iOS rubber-band doesn't expose the dark background behind the app.
-   - **Reset scroll on view change** — when navigating between views, scroll position stays wherever it was left. Reset to top on view change.
-   - **Remove tap highlight** — add `-webkit-tap-highlight-color: transparent` globally so tapping buttons/cards doesn't flash the default blue iOS highlight.
-   - **Active/pressed states** — interactive cards and nav buttons have no visual press feedback. Add subtle `opacity: 0.75` or `transform: scale(0.97)` on `:active`.
-   - **Safe area insets** — on iPhone with notch/home bar, content can be obscured. Apply `padding-bottom: env(safe-area-inset-bottom)` to the bottom nav and `padding-top: env(safe-area-inset-top)` to the header.
-   - **Input font-size 16px minimum** — any `<input>` with `font-size < 16px` triggers iOS auto-zoom on focus. Audit all inputs and enforce `font-size: 16px` minimum.
-   - **No text selection on UI chrome** — account names, labels, nav items, and buttons highlight on long-press/drag. Add `user-select: none` to nav, headers, and card chrome; leave it on actual content (notes, emails).
+4. **Native feel — one remaining fix:**
    - **Cursor consistency** — some interactive divs (chip dropdowns, calendar cells, account cards) are missing `cursor: pointer`. Audit and standardize.
 
 5. **Overview tab redesign + account intelligence:**
@@ -158,12 +150,10 @@ This app is currently single-user but should be built with multi-tenancy in mind
    - **Quick notes scratchpad** — a free-form text area on the Overview tab for thoughts that don't belong to a specific meeting. Fast capture, auto-saves.
    - **Follow-up due date on Overview** — surface the follow-up date from the last meeting prominently on Overview with a visual indicator if it's overdue. Badge on the account card in the list if follow-up is past due.
    - **"Brief me" Pip modal** — a button on the account detail header that opens a clean Pip-powered pre-call brief: last meeting summary, open items, contacts you're seeing, follow-up from last time. Designed to be read in a parking lot before walking in.
-   - **Click-to-call** — wrap contact phone numbers in `tel:` links so tapping on mobile dials directly. One-line change per contact card.
    - **Multi-select email contacts** — checkboxes on the Contacts tab, "Email selected" button that builds `mailto:email1,email2` opening Outlook with all selected contacts in To. Option to pre-populate with Pip's draft email.
 
-6. **Motion design / transitions — two remaining:**
+6. **Motion design / transitions:**
    - **Mobile sheet modals** — on mobile breakpoint, modals should slide up from the bottom like a native iOS sheet. One CSS change to `src/components/Modal.jsx` conditioned on viewport width.
-   - **Staggered list load** — account cards, meeting rows, and contact entries animate in one-by-one with a 50ms CSS `animation-delay` between each item when a view loads.
 
 7. **Typography & visual rhythm:**
     - **Consistent type scale** — standardize to 12 / 14 / 16 / 20 / 24px across the app. Currently uses 9, 11, 12, 13, 15, 22, 24px with no clear system.
@@ -171,10 +161,8 @@ This app is currently single-user but should be built with multi-tenancy in mind
     - **Consistent label spacing** — uppercase tracking labels (`font-size: 9px`, `letter-spacing: 0.08em`) are used inconsistently. Define one standard and apply it everywhere.
     - **Line height audit** — dense info cards (account cards, meeting rows) have inconsistent line heights.
 
-8. **Copy & tone:**
-    - **Empty states** — replace flat "No accounts", "No meetings", "No contacts yet" with copy that sounds like Pip is waiting. Sets the personality from the first moment and tells the user what to do next.
+8. **Copy & tone — two remaining:**
     - **Button labels** — "Save" → "Got it", confirms should feel deliberate not clinical.
-    - **Error messages** — Supabase errors and network failures currently surface as raw or generic text. Rewrite to be human and actionable: "Couldn't save — check your connection" instead of "Error 500".
     - **Section headers** — labels like "YTD Revenue", "Open Items", "Last Interaction" are functional but terse. Light copy polish makes the app feel more considered.
 
 9. **Search & discoverability:**
@@ -192,8 +180,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
     - **Export contacts to CSV** — download all contacts for an account.
     - **Share meeting summary** — copy-ready text block from a meeting's notes + action items.
 
-12. **Personalization:**
-    - **Persistent sort and filter preferences** — remember preferred account sort order, active filters, and cadence calendar view. Stored in localStorage per user.
+12. **Personalization — two remaining:**
     - **Default tab per account** — let users pin a default tab so opening an account always lands on Meetings, Contacts, or Overview.
     - **Dashboard density toggle** — compact vs. comfortable view on the accounts list.
 
@@ -282,6 +269,14 @@ This app is currently single-user but should be built with multi-tenancy in mind
 - ✅ Error resilience — fire-and-forget metadata updates have `.catch()` error logging; error state in all hooks
 - ✅ a11y — calendar nav `‹›` aria-labels, `role="button"` on CadenceView cells/account cards/week-view events, `aria-live` on all error containers
 - ✅ Motion — slide direction tracked in state, `view-slide-left/right` + `tab-slide-left/right` CSS classes applied on all nav transitions and tab switches, directional back
+- ✅ rgba consolidation — all 78+ hardcoded `rgba(74,155,130,*)` values replaced with C tokens across 28 files
+- ✅ Native feel — overscroll-behavior, tap-highlight, safe area insets, 16px inputs, user-select:none, active/pressed states, scroll reset on view change all shipped
+- ✅ Staggered list load — `list-item` + `animationDelay` on account cards, meeting rows, contact entries
+- ✅ Mobile sheet modal — `modal-sheet` CSS class on Modal.jsx inner panel, sheetUp keyframe in index.html
+- ✅ Persistent filter prefs — filter state persisted to localStorage in AccountsView
+- ✅ Empty state copy — "Nothing here yet — add your first account and I'll get to work"
+- ✅ Error message copy — "Couldn't delete/save — check your connection" across MeetingsTab, ContactsTab, ItemsTab
+- ✅ Click-to-call — phone numbers wrapped in `tel:` links in ContactsTab
 
 **Security hardening — shipped in code, two items need Supabase dashboard toggle:**
 
