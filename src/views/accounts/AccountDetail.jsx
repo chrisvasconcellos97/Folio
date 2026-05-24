@@ -220,7 +220,7 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
                 marginTop: 2,
               }}
             >
-              YTD Revenue
+              Revenue YTD
             </div>
             <div style={{ display: "flex", gap: 6, marginTop: 8, justifyContent: "flex-end" }}>
               <SecBtn

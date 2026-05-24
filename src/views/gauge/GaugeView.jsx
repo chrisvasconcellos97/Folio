@@ -253,6 +253,9 @@ export function GaugeView({ userId, accounts }) {
             <div
               key={p.id}
               onClick={function () { setEditing(p); }}
+              role="button"
+              tabIndex={0}
+              onKeyDown={function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditing(p); } }}
               style={{
                 background: C.bgCard,
                 border: "1px solid " + (p.status === "active" ? GB_BDR : C.border),

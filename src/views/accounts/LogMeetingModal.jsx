@@ -204,7 +204,7 @@ export function LogMeetingModal({ accountId, userId, contacts, onSave, onClose }
 
         <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
           <AmberBtn style={{ flex: 1 }} onClick={handleSave} disabled={loading}>
-            {loading ? "Saving..." : "Save Meeting"}
+            {loading ? "Saving..." : "Log Meeting"}
           </AmberBtn>
           <SecBtn style={{ flex: 1 }} onClick={onClose}>
             Cancel

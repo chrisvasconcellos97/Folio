@@ -158,7 +158,7 @@ export function EditContactModal({ contact, onSave, onClose }) {
 
         <div style={{ display: "flex", gap: 8 }}>
           <AmberBtn style={{ flex: 1 }} onClick={handleSave} disabled={loading}>
-            {loading ? "Saving..." : "Save Contact"}
+            {loading ? "Saving..." : "Done"}
           </AmberBtn>
           <SecBtn style={{ flex: 1 }} onClick={onClose}>
             Cancel

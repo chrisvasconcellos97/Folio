@@ -89,7 +89,7 @@ export function AddItemModal({ accountId, userId, existing, onSave, onClose }) {
 
         <div style={{ display: "flex", gap: 8 }}>
           <AmberBtn style={{ flex: 1 }} onClick={handleSave} disabled={loading}>
-            {loading ? "Saving..." : isEdit ? "Save Item" : "Add Item"}
+            {loading ? "Saving..." : isEdit ? "Done" : "Add Item"}
           </AmberBtn>
           <SecBtn style={{ flex: 1 }} onClick={onClose}>
             Cancel

@@ -408,7 +408,7 @@ export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLo
         </Card>
         {followUp && (
           <Card>
-            <FL>Follow-up</FL>
+            <FL>Follow-up Due</FL>
             <div style={{ fontSize: 14, color: followUpOverdue ? C.red : C.accent }}>
               {new Date(followUp + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
               {followUpOverdue && <span style={{ fontSize: 10, color: C.red, marginLeft: 6, fontWeight: 700 }}>OVERDUE</span>}
@@ -429,7 +429,7 @@ export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLo
           </div>
         </Card>
         <Card>
-          <FL>Auto Health</FL>
+          <FL>Health</FL>
           <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 2 }}>
             <div style={{ width: 10, height: 10, borderRadius: "50%", background: healthScore === "green" ? C.green : healthScore === "yellow" ? C.yellow : C.red }} />
             <span style={{ fontSize: 14, color: healthScore === "green" ? C.green : healthScore === "yellow" ? C.yellow : C.red, fontWeight: 500, textTransform: "capitalize" }}>
