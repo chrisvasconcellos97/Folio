@@ -23,6 +23,7 @@ import { LogMeetingModal } from "./LogMeetingModal";
 import { QuickMeetingModal } from "./QuickMeetingModal";
 import { AddItemModal } from "./AddItemModal";
 import { AddContactModal } from "./AddContactModal";
+import { PrintAccountSheet } from "../../components/PrintAccountSheet";
 
 var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red };
 var STATUS_LABELS = { green: "Healthy", yellow: "Watch", red: "At Risk" };
@@ -233,6 +234,12 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
             </div>
             <div style={{ display: "flex", gap: 6, marginTop: 8, justifyContent: "flex-end" }}>
               <SecBtn
+                onClick={function () { window.print(); }}
+                style={{ fontSize: 11, padding: "5px 12px" }}
+              >
+                Print
+              </SecBtn>
+              <SecBtn
                 onClick={onEdit}
                 style={{ fontSize: 11, padding: "5px 12px" }}
               >
@@ -386,6 +393,7 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
         <ContactsTab
           contacts={contacts}
           accountId={account.id}
+          accountName={account.name}
           onAdd={function () { setContactModal(true); }}
           onDelete={deleteContact}
           onAddContact={addContact}
@@ -512,6 +520,13 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
           )}
         </Modal>
       )}
+
+      <PrintAccountSheet
+        account={account}
+        contacts={contacts}
+        meetings={meetings}
+        items={items}
+      />
     </div>
   );
 }

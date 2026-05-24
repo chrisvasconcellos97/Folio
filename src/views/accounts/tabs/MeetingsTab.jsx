@@ -126,6 +126,20 @@ function sendToGauge(meeting, userId) {
     });
 }
 
+function copySummary(meeting, accountName) {
+  var lines = [];
+  lines.push((accountName ? accountName + " — " : "") + (meeting.title || "Meeting") + " (" + meeting.meeting_date + ")");
+  if (meeting.notes)          lines.push("\nNotes:\n" + meeting.notes);
+  if (meeting.action_items)   lines.push("\nAction Items:\n" + meeting.action_items);
+  if (meeting.commitments)    lines.push("\nCommitments:\n" + meeting.commitments);
+  if (meeting.follow_up_date) lines.push("\nFollow-up: " + meeting.follow_up_date);
+  navigator.clipboard.writeText(lines.join("\n")).then(function () {
+    showToast("Summary copied");
+  }).catch(function () {
+    showToast("Copy failed", "error");
+  });
+}
+
 export function MeetingsTab({ meetings, accountName, userId, onLogMeeting, onDelete, onAddMeeting, onUpdateMeeting }) {
   var [loadingPip, setLoadingPip] = useState({});
   var [pipErrors, setPipErrors]   = useState({});
@@ -330,6 +344,12 @@ export function MeetingsTab({ meetings, accountName, userId, onLogMeeting, onDel
 
             {(onDelete || onUpdateMeeting) && (
               <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end", gap: 6, alignItems: "center" }}>
+                <SecBtn
+                  onClick={function () { copySummary(m, accountName); }}
+                  style={{ fontSize: 10, padding: "3px 8px" }}
+                >
+                  Copy Summary
+                </SecBtn>
                 {onUpdateMeeting && (
                   <SecBtn
                     onClick={function () { setEditingMeeting(m); }}

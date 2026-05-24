@@ -85,7 +85,30 @@ function ContactLink({ href, label, color }) {
   );
 }
 
-export function ContactsTab({ contacts, accountId, onAdd, onDelete, onAddContact, onUpdate }) {
+function exportContacts(contacts, accountName) {
+  var headers = ["Name", "Title", "Phone", "Email", "LinkedIn", "POC", "Notes"];
+  var rows = contacts.map(function (c) {
+    return [
+      c.name || "",
+      c.title || "",
+      c.phone || "",
+      c.email || "",
+      c.linkedin || "",
+      c.is_poc ? "Yes" : "No",
+      (c.notes || "").replace(/"/g, '""'),
+    ].map(function (v) { return '"' + v + '"'; }).join(",");
+  });
+  var csv = [headers.join(",")].concat(rows).join("\n");
+  var blob = new Blob([csv], { type: "text/csv" });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = (accountName || "contacts") + "-contacts.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export function ContactsTab({ contacts, accountId, accountName, onAdd, onDelete, onAddContact, onUpdate }) {
   var [confirmDeleteId, setConfirmDeleteId] = useState(null);
   var [editingContact, setEditingContact]   = useState(null);
   var [selected, setSelected]               = useState({});
@@ -243,6 +266,15 @@ export function ContactsTab({ contacts, accountId, onAdd, onDelete, onAddContact
             </button>
           </div>
         </div>
+      )}
+
+      {contacts.length > 0 && (
+        <SecBtn
+          onClick={function () { exportContacts(contacts, accountName); }}
+          style={{ width: "100%", fontSize: 12 }}
+        >
+          Export CSV
+        </SecBtn>
       )}
 
       <AmberBtn style={{ width: "100%", fontSize: 13 }} onClick={onAdd}>
