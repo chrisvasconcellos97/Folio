@@ -19,6 +19,7 @@ import { ReturningWelcome } from "./views/welcome/ReturningWelcome";
 import { DesktopLayout } from "./layout/DesktopLayout";
 import { MobileLayout } from "./layout/MobileLayout";
 import { PipMark } from "./components/PipMark";
+import { Toast } from "./components/Toast";
 import { C } from "./lib/colors";
 
 function useBreakpoint() {
@@ -281,6 +282,7 @@ export default function App() {
   if (isDesktop) {
     return (
       <>
+        <Toast />
         <DesktopLayout
           view={view}
           setView={handleSetView}
@@ -342,6 +344,7 @@ export default function App() {
 
   return (
     <>
+      <Toast />
       <MobileLayout
         view={view}
         setView={handleSetView}

@@ -1,6 +1,12 @@
+import { useEffect } from "react";
 import { C } from "../lib/colors";
 
 export function Modal({ title, onClose, children, width }) {
+  useEffect(function() {
+    function handleKey(e) { if (e.key === "Escape") onClose(); }
+    document.addEventListener("keydown", handleKey);
+    return function() { document.removeEventListener("keydown", handleKey); };
+  }, [onClose]);
   function handleBackdrop(e) {
     if (e.target === e.currentTarget) onClose();
   }
@@ -54,8 +60,9 @@ export function Modal({ title, onClose, children, width }) {
               fontSize: 20,
               fontFamily: "'DM Sans', sans-serif",
               lineHeight: 1,
-              padding: "0 4px",
+              padding: "4px 8px",
             }}
+            aria-label="Close"
           >
             ×
           </button>
