@@ -136,8 +136,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
    - **Pip context** — revenue trend and shop metrics fed into Pip system prompt per account for richer pre-call briefs.
    - **Data entry workflow** — Chris runs monthly reports externally, pastes numbers into chat, Claude upserts rows directly via Supabase. No complex input UI needed for now.
 
-2. **Code quality — one remaining fix:**
-   - **Split oversized files** — CadenceView.jsx (573 lines), AccountsView.jsx (598 lines), and OverviewTab.jsx (535 lines) each mix 3–5 sub-components inline. Extract CalendarView, WeekView, and ListView out of CadenceView as a starting point.
+2. **Code quality:** *(no open items)*
 
 3. **Feature completeness:** *(no open items)*
 
@@ -155,10 +154,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 10. **Onboarding & contextual help:** *(no open items)*
 
-11. **Export & sharing:**
-    - **PDF account sheet** — one-tap export of an account's overview: name, status, contacts, last meeting summary, open items, active projects.
-    - **Export contacts to CSV** — download all contacts for an account.
-    - **Share meeting summary** — copy-ready text block from a meeting's notes + action items.
+11. **Export & sharing:** *(no open items)*
 
 12. **Personalization:** *(no open items)*
 
@@ -266,6 +262,10 @@ This app is currently single-user but should be built with multi-tenancy in mind
 - ✅ First-run empty states — guided empty state with CTA when zero accounts; terse "no match" when filtered empty
 - ✅ Contextual tooltips — one-time first-encounter tooltips on Cadence, Gauge, Pip nav buttons (mobile)
 - ✅ New user checklist — "Add account / Log meeting / Set cadence" auto-dismisses when all three done
+- ✅ Share meeting summary — "Copy Summary" button on meeting cards, clipboard text block with notes + action items
+- ✅ Export contacts to CSV — "Export CSV" button on Contacts tab, properly quoted CSV download
+- ✅ Print account sheet — "Print" button in account header, hidden print-only layout via @media print
+- ✅ CadenceView file split — CalendarView, WeekView, ListView, cadenceShared extracted; CadenceView.jsx down to ~200 lines
 - ✅ Persistent filter prefs — filter state persisted to localStorage in AccountsView
 - ✅ Empty state copy — "Nothing here yet — add your first account and I'll get to work"
 - ✅ Error message copy — "Couldn't delete/save — check your connection" across MeetingsTab, ContactsTab, ItemsTab
