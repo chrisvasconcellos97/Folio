@@ -13,6 +13,7 @@ var NAV_ITEMS = [
   { id: "gauge",     label: "Gauge",     icon: "gauge" },
   { id: "pip",       label: "Pip",       icon: null },
   { id: "settings",  label: "Team",      icon: "◈"  },
+  { id: "routes",    label: "Route",     icon: "⊕"  },
 ];
 
 export function DesktopLayout({

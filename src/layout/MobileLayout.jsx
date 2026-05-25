@@ -19,6 +19,7 @@ var NAV_ITEMS = [
   { id: "pipeline", label: "Pipeline", icon: "▦"     },
   { id: "cadence",  label: "Cadence",  icon: "↻"     },
   { id: "gauge",    label: "Gauge",    icon: "gauge"  },
+  { id: "routes",   label: "Route",    icon: "⊕"     },
 ];
 
 export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, onSettings, userMeta, children }) {

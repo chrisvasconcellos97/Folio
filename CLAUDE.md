@@ -128,13 +128,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 ## Pending Updates
 
-1. **Pipeline V2 + Revenue History + Shop Metrics** — one batch build, three connected pieces:
-   - **`folio_revenue_history`** table: `id, user_id, account_id, month int, year int, revenue numeric, created_at`. Unique on `(account_id, month, year)`. Monthly snapshots, upserted manually when Chris runs reports.
-   - **`folio_shop_metrics`** table: `id, user_id, account_id, month int, year int, connected int, integrated int, no_connection int, created_at`. Same pattern. Tracks shop connection status counts per supplier account per month.
-   - **Pipeline view redesign** — replaces current revenue bar view. Shows all accounts with MoM/YoY revenue deltas. Desktop: Recharts bar/line chart (12-month view). Mobile: table with MoM/YoY columns. "Log Month" entry mode for bulk monthly input.
-   - **Account detail** — new section showing that account's revenue history sparkline + MoM/YoY, and shop metrics counts with MoM deltas (Connected ↑2 / Integrated ↑4 / No Connection ↓1). Only shown if data exists for that account.
-   - **Pip context** — revenue trend and shop metrics fed into Pip system prompt per account for richer pre-call briefs.
-   - **Data entry workflow** — Chris runs monthly reports externally, pastes numbers into chat, Claude upserts rows directly via Supabase. No complex input UI needed for now.
+1. **Pipeline V2 + Revenue History + Shop Metrics:** *(no open items)*
 
 2. **Code quality:** *(no open items)*
 
@@ -158,50 +152,13 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 12. **Personalization:** *(no open items)*
 
-13. **Data visualization:**
-    - **Sparklines on account cards** — a tiny 8-point revenue trend line on each account card. Only shown if revenue history data exists.
-    - **Health score indicator** — a green/yellow/red dot with a trend arrow (↑↓→) on the account card and detail header. Derived from the auto-score logic in item 5.
-    - **Meeting frequency bars** — a small bar chart on the account detail header showing meeting cadence over the last 6 months.
-    - **Pipeline event markers** — completed Gauge projects overlaid as markers on the revenue trend chart in Pipeline view.
+13. **Data visualization:** *(no open items)*
 
-14. **Gauge + account change log:**
-    - **Account change log** — every completed Gauge task or project creates a dated entry on the account: what was done, when. Not a task list — a delivery record.
-    - **Surface in Overview** — "Recent Deliveries" section on the account Overview tab showing the last 3–5 completed items with dates.
-    - **Surface in "Brief me"** — pre-call brief includes what was delivered since the last meeting.
-    - **Surface in Pip context** — feed active project statuses and recent completions into Pip's system prompt.
+14. **Gauge + account change log:** *(no open items)*
 
 15. *(shipped — see Already shipped)*
 
-16. **Route Builder — territory routing for MSO field visits:**
-
-    **Primary users:** MSO team. They visit 5 shops/day on average, routes can be single-day or multi-day, starting point is flexible (home, office, or first stop).
-
-    **Technical approach (fully decided, no open questions):**
-    - **Map**: Leaflet + OpenStreetMap — free, no API key, ~200kb bundle add. Renders numbered pins and a polyline connecting the route in optimized order.
-    - **Geocoding**: Nominatim (OpenStreetMap geocoder) — free, no API key, rate-limited to 1 req/sec (fine for personal use). Address → lat/lng, cached on the account record. Never re-geocode a cached address.
-    - **Route optimization**: Brute-force TSP in pure JS. For ≤10 stops: try all N! orderings, keep shortest total Haversine distance. For >10 stops: nearest-neighbor greedy. No API needed.
-    - **Navigation handoff**: "Open in Google Maps" button builds a `maps.google.com/dir/` URL with all waypoints in optimized order. Apple Maps fallback for iOS.
-    - **No external routing API needed** — drive times are estimated from Haversine distance ÷ average speed (45mph). Good enough for schedule planning; actual navigation uses Google Maps.
-
-    **Feature shape:**
-    - New "Route" nav item (or accessible from accounts list via multi-select)
-    - Account selector: pick shops manually, or use "Load from MSO" to pull all shops under an MSO account
-    - Enter starting point (text address or "use my location")
-    - App geocodes un-geocoded shops, then runs optimizer
-    - **Map view**: Leaflet map with numbered pins (1→N) and a polyline tracing the route
-    - **Schedule sidebar**: set start time + visit duration per stop (default 45 min). Auto-fills the day: "Depart 9:00am → Shop A (9:20 arrive, 45 min visit) → Depart 10:05 → Shop B (10:35 arrive)..."
-    - **Multi-day**: Day 1 / Day 2 / Day 3 tabs. Drag stops between days. Each day gets its own map and schedule.
-    - **"Open in Maps"** button per day, hands off the full day's route to Google/Apple Maps
-    - Saved routes: store route as a `folio_routes` record (name, stop order, date) so you can re-use a regular weekly territory run
-
-    **DB additions needed:**
-    - `folio_routes`: `id, user_id, name, date, stops jsonb (ordered array of account_ids + visit_duration), created_at`
-
-    **Build order:**
-    1. DB migration: folio_routes table (address/lat/lng/account_type/account_number already live)
-    2. Geocode-on-save in AddAccountModal (Nominatim, cache result in lat/lng)
-    3. Route Builder view: account selector + optimizer + schedule sidebar
-    4. Leaflet map layer (can ship 3 without 4 and it's still fully functional)
+16. **Route Builder:** *(no open items)*
 
 17. *(shipped — see Already shipped)*
 
