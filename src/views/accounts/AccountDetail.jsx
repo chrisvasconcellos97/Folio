@@ -240,6 +240,37 @@ export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit
             >
               Revenue YTD
             </div>
+            {(function() {
+              if (meetings.length === 0) return null;
+              var now = new Date();
+              var bars = [];
+              for (var i = 5; i >= 0; i--) {
+                var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                var m = d.getMonth(); var y = d.getFullYear();
+                var count = meetings.filter(function(mt) {
+                  if (!mt.meeting_date) return false;
+                  var md = new Date(mt.meeting_date);
+                  return md.getFullYear() === y && md.getMonth() === m;
+                }).length;
+                bars.push({ count: count, label: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][m] });
+              }
+              var maxCount = Math.max.apply(null, bars.map(function(b) { return b.count; }));
+              if (maxCount === 0) return null;
+              return (
+                <div style={{ marginTop: 10, marginBottom: 4 }}>
+                  <div style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 4 }}>Meeting Cadence</div>
+                  <div style={{ display: "flex", gap: 2, alignItems: "flex-end", height: 20, justifyContent: "flex-end" }}>
+                    {bars.map(function(b, i) {
+                      var h = b.count === 0 ? 2 : Math.max(3, Math.round((b.count / maxCount) * 20));
+                      var isLast = i === bars.length - 1;
+                      return (
+                        <div key={i} title={b.label + ": " + b.count} style={{ width: 8, height: h, background: isLast ? C.accent : C.accentDim, borderRadius: 1, opacity: isLast ? 0.9 : (b.count > 0 ? 0.5 : 0.15) }} />
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
             <div style={{ display: "flex", gap: 6, marginTop: 8, justifyContent: "flex-end" }}>
               <SecBtn
                 onClick={function () { window.print(); }}

@@ -105,11 +105,27 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
     });
   }
 
+  function geocodeAddress(addr) {
+    return fetch(
+      "https://nominatim.openstreetmap.org/search?format=json&limit=1&q=" + encodeURIComponent(addr),
+      { headers: { "Accept-Language": "en", "User-Agent": "Folio/1.0" } }
+    )
+      .then(function(r) { return r.json(); })
+      .then(function(results) {
+        if (results && results.length > 0) {
+          return { lat: parseFloat(results[0].lat), lng: parseFloat(results[0].lon) };
+        }
+        return null;
+      })
+      .catch(function() { return null; });
+  }
+
   function handleSave() {
     if (!name.trim()) { setError("Account name is required."); return; }
     setLoading(true);
     setError(null);
-    onSave({
+
+    var data = {
       name:              name.trim(),
       revenue:           revenue.trim() || null,
       tier:              tier,
@@ -123,9 +139,20 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
       account_type:      accountType || 'standard',
       address:           address.trim() || null,
       account_number:    accountNumber.trim() || null,
+    };
+
+    var needsGeocode = address.trim() && (!existing || existing.address !== address.trim()) && !(existing && existing.lat);
+    var geoPromise = needsGeocode ? geocodeAddress(address.trim()) : Promise.resolve(null);
+
+    geoPromise.then(function(coords) {
+      if (coords) {
+        data.lat = coords.lat;
+        data.lng = coords.lng;
+      }
+      return onSave(data);
     })
-      .then(function () { setLoading(false); onClose(); })
-      .catch(function (err) { setLoading(false); setError(err.message); });
+      .then(function() { setLoading(false); onClose(); })
+      .catch(function(err) { setLoading(false); setError(err.message); });
   }
 
   return (

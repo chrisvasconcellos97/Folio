@@ -27,7 +27,7 @@ function buildTasksGreeting(openTasks, accounts) {
   return "Hey — " + n + " quick tasks open:\n" + list + "\n\nWant to run through them or focus on something else?";
 }
 
-export function PipView({ accounts, meetings, tasks, addTask, updateTask, onAction, revenueHistory, shopMetrics, cadences }) {
+export function PipView({ accounts, meetings, tasks, addTask, updateTask, onAction, revenueHistory, shopMetrics, cadences, projects }) {
   var openTasks = useMemo(function () {
     return (tasks || []).filter(function (t) { return !t.done; });
   }, [tasks]);
@@ -152,6 +152,28 @@ export function PipView({ accounts, meetings, tasks, addTask, updateTask, onActi
           daysUntil: days,
         };
       }),
+      activeGaugeProjects: (projects || [])
+        .filter(function(p) { return p.status === "in_progress" || p.status === "blocked"; })
+        .map(function(p) {
+          var acct = accounts.find(function(a) { return a.id === p.account_id; });
+          return {
+            title:   p.title,
+            status:  p.status,
+            account: acct ? acct.name : null,
+            due_date: p.due_date || null,
+          };
+        }),
+      recentDeliveries: (projects || [])
+        .filter(function(p) { return p.status === "complete"; })
+        .sort(function(a, b) { return (b.updated_at || "") > (a.updated_at || "") ? 1 : -1; })
+        .slice(0, 5)
+        .map(function(p) {
+          var acct = accounts.find(function(a) { return a.id === p.account_id; });
+          return {
+            title:   p.title,
+            account: acct ? acct.name : null,
+          };
+        }),
     };
   }
 
