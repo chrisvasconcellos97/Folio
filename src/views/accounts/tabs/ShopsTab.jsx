@@ -1,4 +1,4 @@
-import { C } from "../../../lib/colors";
+import { C, glass } from "../../../lib/colors";
 import { AmberBtn } from "../../../components/Buttons";
 
 var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red };
@@ -43,9 +43,7 @@ export function ShopsTab({ shops, onAddShop, onSelectShop }) {
           <div
             key={shop.id}
             onClick={function () { onSelectShop(shop); }}
-            style={{
-              background: C.bgCard,
-              border: "1px solid " + C.border,
+            style={Object.assign({}, glass, {
               borderLeft: "3px solid " + statusColor,
               borderRadius: 12,
               padding: "12px 14px",
@@ -54,7 +52,7 @@ export function ShopsTab({ shops, onAddShop, onSelectShop }) {
               justifyContent: "space-between",
               alignItems: "center",
               gap: 10,
-            }}
+            })}
           >
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: shop.address ? 3 : 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>

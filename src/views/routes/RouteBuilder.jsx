@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { C } from "../../lib/colors";
+import { C, glass } from "../../lib/colors";
 import { AmberBtn, SecBtn } from "../../components/Buttons";
 import { InputField } from "../../components/InputField";
 import { FL } from "../../components/FieldLabel";
@@ -310,7 +310,7 @@ export function RouteBuilder({ accounts, userId }) {
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {optimized.schedule.map(function(item, i) {
                 return (
-                  <div key={i} style={{ background: C.bgCard, border: "1px solid " + C.border, borderRadius: 10, padding: "10px 12px" }}>
+                  <div key={i} style={Object.assign({}, glass, { borderRadius: 10, padding: "10px 12px" })}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                       <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
                         <div style={{ width: 20, height: 20, borderRadius: "50%", background: C.accentMid, border: "1px solid " + C.accentLine, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>

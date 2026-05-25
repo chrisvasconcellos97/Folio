@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { C } from "../../lib/colors";
+import { C, glass } from "../../lib/colors";
 import { GaugeIcon } from "../../components/GaugeIcon";
 import { useProjects } from "../../hooks/useProjects";
 import { ProjectModal } from "./ProjectModal";
@@ -167,13 +167,11 @@ export function GaugeView({ userId, userEmail, accounts }) {
           return (
             <div
               key={s.label}
-              style={{
-                background: C.bgCard,
-                border: "1px solid " + C.border,
+              style={Object.assign({}, glass, {
                 borderRadius: 10,
                 padding: "12px 14px",
                 textAlign: "center",
-              }}
+              })}
             >
               <div
                 style={{
@@ -274,16 +272,15 @@ export function GaugeView({ userId, userEmail, accounts }) {
               role="button"
               tabIndex={0}
               onKeyDown={function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setEditing(p); } }}
-              style={{
-                background: C.bgCard,
-                border: "1px solid " + (p.status === "in_progress" ? GB_BDR : p.status === "blocked" ? "rgba(224,92,92,0.3)" : C.border),
+              style={Object.assign({}, glass, {
+                border: "1px solid " + (p.status === "in_progress" ? GB_BDR : p.status === "blocked" ? "rgba(224,92,92,0.3)" : "rgba(255,255,255,0.06)"),
                 borderLeft: p.status === "blocked" ? "3px solid rgba(224,92,92,0.8)" : undefined,
                 borderRadius: 12,
                 padding: "14px 16px",
                 cursor: "pointer",
                 opacity: dimmed ? 0.65 : 1,
                 transition: "border-color 0.15s",
-              }}
+              })}
             >
               {/* Top row */}
               <div

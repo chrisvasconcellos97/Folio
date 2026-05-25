@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { C } from "../../../lib/colors";
+import { C, glass } from "../../../lib/colors";
 import { AmberBtn, SecBtn } from "../../../components/Buttons";
 import { PipInsightCard } from "../../../components/PipInsightCard";
 import { pickV } from "../../../lib/metricsUtils";
@@ -158,7 +158,7 @@ export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAd
           <div style={sectionLabel}>Action Items</div>
           {open.map(function (item) {
             return (
-              <div key={item.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, background: C.bgCard, border: "1px solid " + C.border, borderRadius: 10, padding: "11px 13px", marginBottom: 6 }}>
+              <div key={item.id} style={Object.assign({}, glass, { display: "flex", alignItems: "flex-start", gap: 10, borderRadius: 10, padding: "11px 13px", marginBottom: 6 })}>
                 <div style={{ paddingTop: 2 }}>
                   <button
                     type="button"
@@ -219,7 +219,7 @@ export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAd
           <div style={sectionLabel}>Closed</div>
           {closed.map(function (item) {
             return (
-              <div key={item.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, background: C.bgCard, border: "1px solid " + C.border, borderRadius: 10, padding: "11px 13px", marginBottom: 6, opacity: 0.5 }}>
+              <div key={item.id} style={Object.assign({}, glass, { display: "flex", alignItems: "flex-start", gap: 10, borderRadius: 10, padding: "11px 13px", marginBottom: 6, opacity: 0.5 })}>
                 <div style={{ width: 16, height: 16, borderRadius: 4, border: "1.5px solid " + C.accentDim, background: C.accentDim, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", marginTop: 2 }}>
                   <span style={{ fontSize: 10, color: "#fff" }}>✓</span>
                 </div>

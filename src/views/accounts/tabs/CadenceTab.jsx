@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { C } from "../../../lib/colors";
+import { C, glass } from "../../../lib/colors";
 import { showToast } from "../../../components/Toast";
 import { AmberBtn, SecBtn, DangerBtn } from "../../../components/Buttons";
 import { PipInsightCard } from "../../../components/PipInsightCard";
@@ -84,14 +84,12 @@ function CadenceCard({ cad, today, confirmDeleteId, setConfirmDeleteId, onDelete
   var isGlobal = cad.is_global;
 
   return (
-    <div style={{
-      background: C.bgCard,
-      border: '1px solid ' + C.border,
+    <div style={Object.assign({}, glass, {
       borderLeft: '3px solid ' + (isTask ? C.yellow : C.accent),
       borderRadius: 10,
       padding: '13px 15px',
       marginBottom: 8,
-    }}>
+    })}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 10, color: isTask ? C.yellow : C.textMuted, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 5 }}>
@@ -234,7 +232,7 @@ export function CadenceTab({ account, cadences, items, meetings, contacts, onAdd
         ) : (
           openItems.map(function (item) {
             return (
-              <div key={item.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, background: C.bgCard, border: '1px solid ' + C.border, borderRadius: 10, padding: '10px 13px', marginBottom: 6 }}>
+              <div key={item.id} style={Object.assign({}, glass, { display: 'flex', alignItems: 'flex-start', gap: 10, borderRadius: 10, padding: '10px 13px', marginBottom: 6 })}>
                 <div onClick={function () { onCloseItem(item.id); }} style={{ width: 16, height: 16, borderRadius: 4, border: '1.5px solid ' + C.accentDim, cursor: 'pointer', flexShrink: 0, marginTop: 2 }} />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 12, color: C.text }}>{item.text}</div>
@@ -263,7 +261,7 @@ export function CadenceTab({ account, cadences, items, meetings, contacts, onAdd
         ) : (
           meetings.map(function (m) {
             return (
-              <div key={m.id} style={{ background: C.bgCard, border: '1px solid ' + C.border, borderRadius: 10, padding: '11px 14px', marginBottom: 6 }}>
+              <div key={m.id} style={Object.assign({}, glass, { borderRadius: 10, padding: '11px 14px', marginBottom: 6 })}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 11, color: C.textMuted }}>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { C } from "../../../lib/colors";
+import { C, glass } from "../../../lib/colors";
 import { GaugeIcon } from "../../../components/GaugeIcon";
 import { PipInsightCard } from "../../../components/PipInsightCard";
 import { ProjectModal } from "../../gauge/ProjectModal";
@@ -164,15 +164,14 @@ export function ProjectsTab({ projects, accounts, accountId, userId, addProject,
             <div
               key={p.id}
               onClick={function () { setEditing(p); }}
-              style={{
-                background: C.bgCard,
-                border: "1px solid " + (blocked ? "rgba(224,92,92,0.3)" : p.status === "in_progress" ? GB_BDR : C.border),
+              style={Object.assign({}, glass, {
+                border: "1px solid " + (blocked ? "rgba(224,92,92,0.3)" : p.status === "in_progress" ? GB_BDR : "rgba(255,255,255,0.06)"),
                 borderLeft: blocked ? "3px solid rgba(224,92,92,0.8)" : undefined,
                 borderRadius: 10,
                 padding: "11px 13px",
                 cursor: "pointer",
                 opacity: dimmed ? 0.6 : 1,
-              }}
+              })}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: p.description ? 5 : 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: C.text, flex: 1, lineHeight: 1.3 }}>{p.title}</div>

@@ -1,4 +1,4 @@
-import { C } from "../../lib/colors";
+import { C, glass } from "../../lib/colors";
 import { getFrequencyLabel, formatTime, daysUntil, formatDateFull } from "../../lib/cadenceUtils";
 
 export var ACCOUNT_COLORS = [C.accent, C.green, C.blue, C.purple];
@@ -35,9 +35,7 @@ export function CadenceEventCard({ event, onSelectAccount, onCreateItem, showDat
     : (account && account.name ? account.name : 'Unknown');
 
   return (
-    <div style={{
-      background: C.bgCard,
-      border: '1px solid ' + C.border,
+    <div style={Object.assign({}, glass, {
       borderLeft: '3px solid ' + col,
       borderRadius: 8,
       padding: '11px 14px',
@@ -45,7 +43,7 @@ export function CadenceEventCard({ event, onSelectAccount, onCreateItem, showDat
       alignItems: 'center',
       justifyContent: 'space-between',
       gap: 12,
-    }}>
+    })}>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{name}</div>
         {cadence.type === 'task' && (
