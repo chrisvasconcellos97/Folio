@@ -57,6 +57,14 @@ export const C = {
   bgDropdown:   "#1a2b28",
 };
 
+export var glass = {
+  background: "rgba(18,40,36,0.82)",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  border: "1px solid rgba(255,255,255,0.06)",
+  boxShadow: "0 4px 20px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.07)",
+};
+
 export function hexToRgb(hex) {
   if (!hex || hex[0] !== "#") return "0,0,0";
   var r = parseInt(hex.slice(1, 3), 16);
