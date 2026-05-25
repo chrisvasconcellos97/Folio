@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
+import { logActivity } from "../lib/activity";
 
-export function useContacts(userId, accountId) {
+export function useContacts(userId, accountId, orgId) {
   var [contacts, setContacts] = useState([]);
   var [loading, setLoading]   = useState(false);
   var [error, setError]       = useState(null);
@@ -41,6 +42,7 @@ export function useContacts(userId, accountId) {
             .then(function (r) { if (r && r.error) console.error("Metadata update failed:", r.error.message); })
             .catch(function (err) { console.error("Metadata update failed:", err); });
         }
+        logActivity(orgId, userId, accountId, "contact_added", { name: data.name });
         fetch();
         return result.data[0];
       });

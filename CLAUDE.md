@@ -203,77 +203,10 @@ This app is currently single-user but should be built with multi-tenancy in mind
     3. Route Builder view: account selector + optimizer + schedule sidebar
     4. Leaflet map layer (can ship 3 without 4 and it's still fully functional)
 
-17. **Team/Org Layer + Director View — multi-user support with leadership visibility:**
-
-    **Context:** Currently Folio is single-user — all tables are RLS-scoped to `auth.uid() = user_id`. This build adds a proper org/team layer so multiple users can collaborate on the same account portfolio, with a read-only Director view for leadership oversight.
-
-    **Roles (three tiers):**
-    - **Owner** (Chris, Sr. AM) — full access to everything, sees all org activity
-    - **Member** (admin AM, junior rep) — full access to shared accounts, logs their own meetings/items/Gauge projects, writes their own per-account notes
-    - **Director** (leadership) — read-only, no editing, sees the high-level portfolio health dashboard only
-
-    **New DB tables:**
-
-    `folio_orgs`: `id uuid, name text, owner_id uuid references auth.users, created_at`
-
-    `folio_org_members`: `id uuid, org_id uuid references folio_orgs, user_id uuid references auth.users, role text check (role in ('owner','member','director')), invited_email text, accepted boolean default false, created_at`
-
-    `folio_account_notes`: `id uuid, org_id uuid, account_id uuid references folio_accounts on delete cascade, user_id uuid references auth.users, notes text, updated_at` — replaces the personal notes scratchpad on `folio_accounts.objective`. Each user gets their own notes row per account; nobody sees another user's notes.
-
-    `folio_activity`: `id uuid, org_id uuid, user_id uuid references auth.users, account_id uuid references folio_accounts on delete cascade, event_type text, payload jsonb, created_at` — log of meaningful events across the org. Event types: `meeting_logged`, `item_added`, `item_completed`, `gauge_status_changed`, `account_status_changed`, `contact_added`. Written on every relevant create/update.
-
-    **Schema changes to existing tables:**
-    - Add `org_id uuid references folio_orgs` to `folio_accounts` (nullable for backwards compat — existing accounts stay personal until org is set up)
-    - RLS on `folio_accounts` updated: `auth.uid() = user_id OR (org_id IS NOT NULL AND org_id IN (SELECT org_id FROM folio_org_members WHERE user_id = auth.uid() AND accepted = true))`
-    - All child tables (`folio_meetings`, `folio_contacts`, `folio_items`, `folio_cadences`, `gauge_projects`) inherit access via account — RLS stays as-is since they reference account_id, but queries join through the account. Directors get select-only.
-
-    **Invite flow (Settings page):**
-    - Owner opens Settings → Team tab → enters email address + role (Member or Director)
-    - Inserts a `folio_org_members` row with `accepted: false`
-    - Invitee signs up / logs in → sees a "You've been invited to [Org name]" banner → accepts → `accepted` flips to true, their new data automatically scoped to the org
-    - Owner can revoke access (delete the member row)
-
-    **Personal notes migration:**
-    - On first load after this ships, if `account.objective` is non-null, auto-migrate it into a `folio_account_notes` row for that user and clear `objective`
-    - `OverviewTab` reads from `folio_account_notes` for the current user instead of `account.objective`
-    - Directors see no notes scratchpad (read-only, and notes are private anyway)
-
-    **Activity feed:**
-    - Every write operation (addMeeting, closeItem, updateProject, etc.) fires a background insert into `folio_activity` with the event type and a minimal payload (account name, what changed). Fire-and-forget, never blocks the main action.
-    - New **Activity** nav item (or panel in PipView) shows the org's recent activity: "Chris logged a meeting with Acme Corp · 2h ago", "Admin marked Gauge project X complete · Yesterday"
-    - Owner and Members see the full feed. Directors see it too (read-only fits here).
-    - No email/push notifications in this build — in-app feed only. A badge on the nav item shows unread count (tracked in localStorage by last-seen timestamp).
-
-    **Director View (`/views/director/DirectorView.jsx`):**
-    - Only visible when the logged-in user's role is `director` (or owner toggling into it)
-    - Replaces the normal nav entirely for directors — they get one view, no sidebar nav
-    - Layout: full-width dashboard, no account list panel
-    - **Portfolio health grid** — all org accounts as cards: name, tier, status dot (green/yellow/red), days since last contact, open item count. Sortable by status / days cold / open items.
-    - **Going cold** — accounts with no interaction in 30+ days highlighted with a warning chip
-    - **Open items summary** — total open items across all accounts, count by account (top 5 heaviest)
-    - **Revenue snapshot** — if `folio_revenue_history` data exists, show MoM delta per account in a compact table
-    - **Cadence compliance** — accounts with active cadences vs. drifting (last cadence event > expected interval)
-    - **Recent activity feed** — last 10 org activity events
-    - No edit buttons, no modals, no create actions — strictly read
-
-    **Build order:**
-    1. DB migration: `folio_orgs`, `folio_org_members`, `folio_account_notes`, `folio_activity` tables + `org_id` on `folio_accounts`. Run in Supabase.
-    2. `useOrg` hook — fetches current user's org membership, exposes `orgId`, `role`, `members`
-    3. Settings page (new view) — Team tab with invite UI, member list, revoke button
-    4. Update `folio_accounts` RLS to org-aware policy
-    5. `folio_account_notes` hook — replaces `account.objective` read/write in `OverviewTab`
-    6. Activity logging — add fire-and-forget `folio_activity` inserts to all write hooks
-    7. Activity feed component + nav badge
-    8. Director View — read-only portfolio dashboard
-    9. Role-aware rendering in App.jsx — directors get DirectorView, everyone else gets normal nav
-
-    **Notes for the build session:**
-    - Keep `account.objective` column in place (don't drop it) — used as migration source, nulled after migrating
-    - Directors must never see edit buttons, modals, or destructive actions anywhere
-    - Activity logging is fire-and-forget — always `.catch(function() {})`, never surfaces errors to the user
-    - `org_id` on accounts is nullable — accounts without an org_id are personal and invisible to org members
+17. *(shipped — see Already shipped)*
 
 **Already shipped (drop from list):**
+- ✅ Team/Org Layer + Director View — `folio_orgs`, `folio_org_members`, `folio_account_notes`, `folio_activity` tables + migration SQL (`supabase/team_org_layer.sql`). `useOrg` hook, `useAccountNotes` hook (migrates from `account.objective`), fire-and-forget `logActivity` in all write hooks. Settings view with create-team + invite/revoke UI. Director view (full-width read-only portfolio dashboard). Invite banner on login. Role-aware rendering: directors get DirectorView; everyone else gets normal app. "Team" nav item on desktop sidebar. "Team & Org" in UserMenu (mobile).
 - ✅ Gauge V2 — stages, requested_by, assignee multi-user RLS, My Queue filter, New Request from Folio, status values fixed (planned/in_progress/blocked/complete/on_hold)
 - ✅ Quick Tasks — tray on main page, modal with account dropdown + reminder presets, Pip integration (surface open tasks on load, complete/add via natural language)
 - ✅ Sub-accounts — UI + migration (`parent_account_id` column live), nested display with faded ↳ arrow on accounts list

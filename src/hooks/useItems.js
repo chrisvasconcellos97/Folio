@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
+import { logActivity } from "../lib/activity";
 
-export function useItems(userId, accountId) {
+export function useItems(userId, accountId, orgId) {
   var [items, setItems]   = useState([]);
   var [loading, setLoading] = useState(false);
   var [error, setError]     = useState(null);
@@ -42,6 +43,7 @@ export function useItems(userId, accountId) {
             .then(function (r) { if (r && r.error) console.error("Metadata update failed:", r.error.message); })
             .catch(function (err) { console.error("Metadata update failed:", err); });
         }
+        logActivity(orgId, userId, data.account_id, "item_added", { text: data.text });
         fetch();
         return result.data[0];
       });
@@ -54,6 +56,7 @@ export function useItems(userId, accountId) {
       .eq("id", id)
       .then(function (result) {
         if (result.error) throw result.error;
+        logActivity(orgId, userId, accountId, "item_completed", { id: id });
         fetch();
       });
   }

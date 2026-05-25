@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
+import { logActivity } from "../lib/activity";
 
-export function useMeetings(userId, accountId) {
+export function useMeetings(userId, accountId, orgId) {
   var [meetings, setMeetings] = useState([]);
   var [loading, setLoading]   = useState(false);
   var [error, setError]       = useState(null);
@@ -50,6 +51,7 @@ export function useMeetings(userId, accountId) {
             .then(function (r) { if (r && r.error) console.error("Metadata update failed:", r.error.message); })
             .catch(function (err) { console.error("Metadata update failed:", err); });
         }
+        logActivity(orgId, userId, data.account_id, "meeting_logged", { title: data.title || "Meeting" });
         fetch();
         return meeting;
       });

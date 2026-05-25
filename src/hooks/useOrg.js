@@ -1,0 +1,149 @@
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "../lib/supabase";
+
+export function useOrg(userId, userEmail) {
+  var [org, setOrg]                   = useState(null);
+  var [role, setRole]                 = useState(null);
+  var [members, setMembers]           = useState([]);
+  var [pendingInvites, setPending]    = useState([]);
+  var [myInvite, setMyInvite]         = useState(null); // invite waiting for this user to accept
+  var [loading, setLoading]           = useState(false);
+  var [error, setError]               = useState(null);
+
+  var fetch = useCallback(function () {
+    if (!userId) return;
+    setLoading(true);
+
+    // Look for an accepted membership
+    supabase
+      .from("folio_org_members")
+      .select("*, folio_orgs(*)")
+      .eq("user_id", userId)
+      .eq("accepted", true)
+      .maybeSingle()
+      .then(function (result) {
+        if (result.error) {
+          setLoading(false);
+          setError(result.error.message);
+          return;
+        }
+
+        if (result.data) {
+          var membership = result.data;
+          setOrg(membership.folio_orgs);
+          setRole(membership.role);
+
+          // Load all members + pending invites in this org
+          supabase
+            .from("folio_org_members")
+            .select("*")
+            .eq("org_id", membership.org_id)
+            .order("created_at")
+            .then(function (r) {
+              setLoading(false);
+              if (r.error) return;
+              setMembers(r.data.filter(function (m) { return m.accepted; }));
+              setPending(r.data.filter(function (m) { return !m.accepted; }));
+            });
+        } else {
+          // No accepted membership — check for a pending invite by email
+          setOrg(null);
+          setRole(null);
+          setMembers([]);
+          setPending([]);
+
+          if (userEmail) {
+            supabase
+              .from("folio_org_members")
+              .select("*, folio_orgs(*)")
+              .eq("invited_email", userEmail)
+              .eq("accepted", false)
+              .maybeSingle()
+              .then(function (r) {
+                setLoading(false);
+                if (!r.error && r.data) setMyInvite(r.data);
+                else setMyInvite(null);
+              });
+          } else {
+            setLoading(false);
+          }
+        }
+      });
+  }, [userId, userEmail]);
+
+  useEffect(function () { fetch(); }, [fetch]);
+
+  function createOrg(name) {
+    return supabase
+      .from("folio_orgs")
+      .insert([{ name: name.trim(), owner_id: userId }])
+      .select()
+      .then(function (result) {
+        if (result.error) throw result.error;
+        var newOrg = result.data[0];
+        return supabase
+          .from("folio_org_members")
+          .insert([{ org_id: newOrg.id, user_id: userId, role: "owner", invited_email: userEmail || null, accepted: true }])
+          .then(function (r) {
+            if (r.error) throw r.error;
+            fetch();
+            return newOrg;
+          });
+      });
+  }
+
+  function inviteMember(email, memberRole) {
+    if (!org) return Promise.reject(new Error("No org"));
+    return supabase
+      .from("folio_org_members")
+      .insert([{ org_id: org.id, user_id: null, role: memberRole, invited_email: email.trim().toLowerCase(), accepted: false }])
+      .then(function (result) {
+        if (result.error) throw result.error;
+        fetch();
+      });
+  }
+
+  function revokeMember(memberId) {
+    return supabase
+      .from("folio_org_members")
+      .delete()
+      .eq("id", memberId)
+      .then(function (result) {
+        if (result.error) throw result.error;
+        fetch();
+      });
+  }
+
+  function acceptInvite(inviteId) {
+    return supabase
+      .from("folio_org_members")
+      .update({ user_id: userId, accepted: true })
+      .eq("id", inviteId)
+      .then(function (result) {
+        if (result.error) throw result.error;
+        setMyInvite(null);
+        fetch();
+      });
+  }
+
+  function dismissInvite() {
+    setMyInvite(null);
+  }
+
+  return {
+    org,
+    orgId:         org ? org.id : null,
+    role,
+    members,
+    pendingInvites,
+    myInvite,
+    loading,
+    error,
+    refetch:       fetch,
+    createOrg,
+    inviteMember,
+    revokeMember,
+    acceptInvite,
+    dismissInvite,
+  };
+}

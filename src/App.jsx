@@ -7,6 +7,7 @@ import { useCadences } from "./hooks/useCadences";
 import { useCadenceSync } from "./hooks/useCadenceSync";
 import { useQuickTasks } from "./hooks/useQuickTasks";
 import { useAccountMetrics } from "./hooks/useAccountMetrics";
+import { useOrg } from "./hooks/useOrg";
 import { AuthView } from "./views/auth/AuthView";
 import { AccountsView } from "./views/accounts/AccountsView";
 import { AccountDetail } from "./views/accounts/AccountDetail";
@@ -16,6 +17,8 @@ import { PipelineView } from "./views/pipeline/PipelineView";
 import { PipView } from "./views/pip/PipView";
 import { CadenceView } from "./views/cadence/CadenceView";
 import { GaugeView } from "./views/gauge/GaugeView";
+import { SettingsView } from "./views/settings/SettingsView";
+import { DirectorView } from "./views/director/DirectorView";
 import { OnboardingTour } from "./views/welcome/OnboardingTour";
 import { ReturningWelcome } from "./views/welcome/ReturningWelcome";
 import { DesktopLayout } from "./layout/DesktopLayout";
@@ -41,8 +44,9 @@ function useBreakpoint() {
 
 export default function App() {
   var { session, loading: authLoading, signIn, signUp, signOut } = useAuth();
-  var userId   = session ? session.user.id : null;
-  var userMeta = session ? session.user.user_metadata : null;
+  var userId    = session ? session.user.id : null;
+  var userEmail = session ? session.user.email : null;
+  var userMeta  = session ? session.user.user_metadata : null;
   var isDesktop = useBreakpoint();
 
   var [view, setView]                   = useState("accounts");
@@ -62,6 +66,7 @@ export default function App() {
   }
 
   var { accounts, loading: acctLoading, addAccount, updateAccount, deleteAccount } = useAccounts(userId);
+  var { org, orgId, role, members, pendingInvites, myInvite, createOrg, inviteMember, revokeMember, acceptInvite, dismissInvite } = useOrg(userId, userEmail);
 
   useEffect(function () {
     if (!session || welcomeShown.current) return;
@@ -191,6 +196,22 @@ export default function App() {
     );
   }
 
+  // Directors get a completely different read-only view
+  if (role === "director") {
+    return (
+      <>
+        <Toast />
+        <DirectorView
+          org={org}
+          orgId={orgId}
+          userId={userId}
+          userMeta={userMeta}
+          onSignOut={signOut}
+        />
+      </>
+    );
+  }
+
   /* ---------- Content panes ---------- */
 
   var accountsListPane = (
@@ -217,6 +238,7 @@ export default function App() {
           <AccountDetail
             account={selectedAccount}
             userId={userId}
+            orgId={orgId}
             accounts={accounts}
             onBack={handleBack}
             onEdit={function () { setEditingAccount(selectedAccount); }}
@@ -304,6 +326,24 @@ export default function App() {
     );
   }
 
+  if (view === "settings") {
+    mainContent = (
+      <SettingsView
+        userId={userId}
+        userEmail={userEmail}
+        userMeta={userMeta}
+        org={org}
+        orgId={orgId}
+        role={role}
+        members={members}
+        pendingInvites={pendingInvites}
+        onCreateOrg={createOrg}
+        onInvite={inviteMember}
+        onRevoke={revokeMember}
+      />
+    );
+  }
+
   /* ---------- Render ---------- */
 
   var addAccountModal = (showAddAccount || editingAccount) && (
@@ -316,10 +356,48 @@ export default function App() {
     />
   );
 
+  var inviteBanner = myInvite && (
+    <div style={{
+      position: "fixed", top: 0, left: 0, right: 0, zIndex: 200,
+      background: C.bgCard, borderBottom: "1px solid " + C.accentLine,
+      padding: "12px 24px",
+      display: "flex", alignItems: "center", justifyContent: "space-between",
+      gap: 12,
+    }}>
+      <div style={{ fontSize: 13, color: C.text }}>
+        You've been invited to join <span style={{ color: C.accent, fontWeight: 600 }}>{myInvite.folio_orgs ? myInvite.folio_orgs.name : "a team"}</span> as{" "}
+        <span style={{ color: C.textSub }}>{myInvite.role}</span>.
+      </div>
+      <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+        <button
+          onClick={function () { acceptInvite(myInvite.id).then(function () { showToast("Joined the team!"); }).catch(function (e) { showToast(e.message || "Couldn't accept invite", "error"); }); }}
+          style={{
+            background: C.accent, border: "none", borderRadius: 8, padding: "6px 16px",
+            fontSize: 12, fontWeight: 700, color: "#fff", cursor: "pointer",
+            fontFamily: "'DM Sans', sans-serif",
+          }}
+        >
+          Accept
+        </button>
+        <button
+          onClick={dismissInvite}
+          style={{
+            background: "none", border: "1px solid " + C.border, borderRadius: 8,
+            padding: "6px 12px", fontSize: 12, color: C.textSub, cursor: "pointer",
+            fontFamily: "'DM Sans', sans-serif",
+          }}
+        >
+          Dismiss
+        </button>
+      </div>
+    </div>
+  );
+
   if (isDesktop) {
     return (
       <>
         <Toast />
+        {inviteBanner}
         <DesktopLayout
           view={view}
           setView={handleSetView}
@@ -390,12 +468,14 @@ export default function App() {
   return (
     <>
       <Toast />
+      {inviteBanner}
       <MobileLayout
         view={view}
         setView={handleSetView}
         onAddAccount={function () { setShowAddAccount(true); }}
         onSignOut={signOut}
         onTour={replayTour}
+        onSettings={function () { handleSetView("settings"); }}
         userMeta={userMeta}
       >
         {mainContent}

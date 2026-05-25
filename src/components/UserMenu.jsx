@@ -75,12 +75,12 @@ function ProfileModal({ userMeta, onClose }) {
 var MENU_ITEMS = [
   { id: "profile",       label: "Profile",       icon: "◎" },
   { id: "tour",          label: "App Tour",       icon: "◉" },
+  { id: "org",           label: "Team & Org",     icon: "◻" },
   { id: "notifications", label: "Notifications",  icon: "◎", soon: true },
   { id: "preferences",   label: "Preferences",    icon: "⊙", soon: true },
-  { id: "org",           label: "My Org",         icon: "◻", soon: true },
 ];
 
-export function UserMenu({ userMeta, onSignOut, onTour, dropUp }) {
+export function UserMenu({ userMeta, onSignOut, onTour, onSettings, dropUp }) {
   var [open, setOpen]           = useState(false);
   var [showProfile, setProfile] = useState(false);
   var menuRef                   = useRef(null);
@@ -105,6 +105,7 @@ export function UserMenu({ userMeta, onSignOut, onTour, dropUp }) {
     setOpen(false);
     if (id === "profile") { setProfile(true); return; }
     if (id === "tour")    { onTour && onTour(); return; }
+    if (id === "org")     { onSettings && onSettings(); return; }
     if (id === "signout") { onSignOut && onSignOut(); return; }
   }
 

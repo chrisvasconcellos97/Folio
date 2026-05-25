@@ -21,7 +21,7 @@ var NAV_ITEMS = [
   { id: "gauge",    label: "Gauge",    icon: "gauge"  },
 ];
 
-export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, userMeta, children }) {
+export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, onSettings, userMeta, children }) {
   var scrollRef = useRef(null);
 
   useEffect(function () {
@@ -87,7 +87,7 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, u
             <AmberBtn onClick={onAddAccount} style={{ fontSize: 11, padding: "6px 13px" }}>
               + Account
             </AmberBtn>
-            <UserMenu userMeta={userMeta} onSignOut={onSignOut} onTour={onTour} />
+            <UserMenu userMeta={userMeta} onSignOut={onSignOut} onTour={onTour} onSettings={onSettings} />
           </div>
         </div>
       </div>

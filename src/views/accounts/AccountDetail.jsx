@@ -36,7 +36,7 @@ function setDefaultTab(accountId, tab) {
   try { localStorage.setItem("folio_default_tab_" + accountId, tab); } catch(e) {}
 }
 
-export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDelete, onUpdate, onSelectAccount, pipPrefill, onPipPrefillHandled, revenueHistory, shopMetrics, onAddAccount }) {
+export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit, onDelete, onUpdate, onSelectAccount, pipPrefill, onPipPrefillHandled, revenueHistory, shopMetrics, onAddAccount }) {
   var TABS = account.account_type === 'mso'
     ? ["overview", "shops", "meetings", "tasks", "contacts", "cadence", "projects"]
     : ["overview", "meetings", "tasks", "contacts", "cadence", "projects"];
@@ -74,11 +74,11 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
     setBriefError(null);
   }, [account.id]);
 
-  var { meetings, addMeeting, updateMeeting, deleteMeeting } = useMeetings(userId, account.id);
-  var { items, addItem, closeItem, updateItem }            = useItems(userId, account.id);
-  var { contacts, addContact, updateContact, deleteContact }  = useContacts(userId, account.id);
+  var { meetings, addMeeting, updateMeeting, deleteMeeting } = useMeetings(userId, account.id, orgId);
+  var { items, addItem, closeItem, updateItem }            = useItems(userId, account.id, orgId);
+  var { contacts, addContact, updateContact, deleteContact }  = useContacts(userId, account.id, orgId);
   var { cadences, addCadence, updateCadence, deleteCadence } = useCadences(userId, account.id);
-  var { projects, addProject, updateProject, deleteProject } = useProjects(userId, account.id);
+  var { projects, addProject, updateProject, deleteProject } = useProjects(userId, account.id, orgId);
 
   var allAccounts   = accounts || [];
   var subAccounts   = allAccounts.filter(function (a) { return a.parent_account_id === account.id; });
@@ -345,6 +345,8 @@ export function AccountDetail({ account, userId, accounts, onBack, onEdit, onDel
       {tab === "overview" && (
         <OverviewTab
           account={account}
+          userId={userId}
+          orgId={orgId}
           openItems={items}
           meetings={meetings}
           onQuickMeeting={function () { setQuickModal(true); }}

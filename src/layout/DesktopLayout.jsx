@@ -6,12 +6,13 @@ import { AmberBtn } from "../components/Buttons";
 import { UserMenu } from "../components/UserMenu";
 
 var NAV_ITEMS = [
-  { id: "accounts", label: "Accounts",  icon: "▣"  },
-  { id: "meetings", label: "Meetings",  icon: "◷"  },
-  { id: "pipeline", label: "Pipeline",  icon: "▦"  },
-  { id: "cadence",  label: "Cadence",   icon: "↻"  },
-  { id: "gauge",    label: "Gauge",     icon: "gauge" },
-  { id: "pip",      label: "Pip",       icon: null },
+  { id: "accounts",  label: "Accounts",  icon: "▣"  },
+  { id: "meetings",  label: "Meetings",  icon: "◷"  },
+  { id: "pipeline",  label: "Pipeline",  icon: "▦"  },
+  { id: "cadence",   label: "Cadence",   icon: "↻"  },
+  { id: "gauge",     label: "Gauge",     icon: "gauge" },
+  { id: "pip",       label: "Pip",       icon: null },
+  { id: "settings",  label: "Team",      icon: "◈"  },
 ];
 
 export function DesktopLayout({
@@ -124,7 +125,7 @@ export function DesktopLayout({
 
         {/* User menu */}
         <div style={{ borderTop: "1px solid " + C.border, paddingTop: 14, marginTop: 4 }}>
-          <UserMenu userMeta={userMeta} onSignOut={onSignOut} onTour={onTour} dropUp />
+          <UserMenu userMeta={userMeta} onSignOut={onSignOut} onTour={onTour} onSettings={function () { setView("settings"); }} dropUp />
         </div>
       </div>
 

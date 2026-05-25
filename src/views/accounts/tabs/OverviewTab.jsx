@@ -5,6 +5,7 @@ import { AmberBtn, SecBtn } from "../../../components/Buttons";
 import { Card } from "../../../components/Card";
 import { FL } from "../../../components/FieldLabel";
 import { callAskPip } from "../../../lib/pip";
+import { useAccountNotes } from "../../../hooks/useAccountNotes";
 import {
   latestRecord, accountRecords,
   momPct, yoyPct, momDelta,
@@ -187,16 +188,18 @@ function MiniSparkline({ records }) {
   );
 }
 
-export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLogMeeting, onAddItem, onSaveSummary, subAccounts, onSelectAccount, revenueHistory, shopMetrics, onUpdateAccount, projects }) {
+export function OverviewTab({ account, userId, orgId, openItems, meetings, onQuickMeeting, onLogMeeting, onAddItem, onSaveSummary, subAccounts, onSelectAccount, revenueHistory, shopMetrics, onUpdateAccount, projects }) {
   var pipInsight = useMemo(function () {
     return buildPipInsight(account, openItems, revenueHistory, shopMetrics, projects);
   }, [account, openItems, revenueHistory, shopMetrics, projects]);
   var [range, setRange]       = useState(RANGES[0]);
   var [generating, setGen]    = useState(false);
   var [pipError, setPipError] = useState(null);
-  var [notesDraft, setNotesDraft] = useState(account.objective || "");
 
-  useEffect(function () { setNotesDraft(account.objective || ""); }, [account.id]);
+  var { notes: savedNotes, saveNotes } = useAccountNotes(userId, account.id, orgId, account.objective, onUpdateAccount);
+  var [notesDraft, setNotesDraft] = useState(savedNotes || account.objective || "");
+
+  useEffect(function () { setNotesDraft(savedNotes || account.objective || ""); }, [account.id, savedNotes]);
 
   var openCount = openItems.filter(function (i) { return !i.done; }).length;
 
@@ -391,9 +394,7 @@ export function OverviewTab({ account, openItems, meetings, onQuickMeeting, onLo
           value={notesDraft}
           onChange={function (e) { setNotesDraft(e.target.value); }}
           onBlur={function () {
-            if (onUpdateAccount && notesDraft !== (account.objective || "")) {
-              onUpdateAccount({ objective: notesDraft });
-            }
+            saveNotes(notesDraft);
           }}
           placeholder="Quick thoughts, reminders, anything that doesn't belong to a specific meeting…"
           style={{

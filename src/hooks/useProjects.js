@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
+import { logActivity } from "../lib/activity";
 
-export function useProjects(userId, accountId) {
+export function useProjects(userId, accountId, orgId) {
   var [projects, setProjects]   = useState([]);
   var [loading, setLoading]     = useState(false);
   var [error, setError]         = useState(null);
@@ -46,6 +47,9 @@ export function useProjects(userId, accountId) {
       .eq("id", id)
       .then(function (result) {
         if (result.error) throw result.error;
+        if (data.status) {
+          logActivity(orgId, userId, data.account_id || accountId, "gauge_status_changed", { title: data.title, status: data.status });
+        }
         fetch();
       });
   }
