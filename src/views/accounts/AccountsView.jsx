@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { C } from "../../lib/colors";
+import { latestRecord, accountRecords, momPct } from "../../lib/metricsUtils";
 import { Pill } from "../../components/Pill";
 import { InputField } from "../../components/InputField";
 import { Card } from "../../components/Card";
@@ -62,7 +63,7 @@ function savePrefs(p) {
   try { localStorage.setItem(PREF_KEY, JSON.stringify(p)); } catch(e) {}
 }
 
-export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks, addTask, updateTask, deleteTask, hasMeetings, hasCadences }) {
+export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks, addTask, updateTask, deleteTask, hasMeetings, hasCadences, revenueHistory }) {
   var [search, setSearch]           = useState("");
   var [searchFocused, setSearchFocused] = useState(false);
   var [filter, setFilter]           = useState(function() { return loadPrefs().filter || "All"; });
@@ -690,6 +691,33 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                   </div>
                 </div>
               )}
+              {!isCompact && (function() {
+                var recs = accountRecords(revenueHistory || [], a.id).slice(-8);
+                if (recs.length === 0) return null;
+                var maxRev = Math.max.apply(null, recs.map(function(r) { return r.revenue; }));
+                if (maxRev === 0) return null;
+                var mom = momPct(revenueHistory || [], a.id, "revenue");
+                var trendColor = mom === null ? C.textMuted : mom >= 0 ? C.green : C.red;
+                var trendArrow = mom === null ? null : mom >= 0 ? "↑" : "↓";
+                return (
+                  <div style={{ display: "flex", alignItems: "flex-end", gap: 6, marginTop: 6 }}>
+                    <div style={{ display: "flex", alignItems: "flex-end", gap: 1, height: 16 }}>
+                      {recs.map(function(r, i) {
+                        var h = Math.max(2, Math.round((r.revenue / maxRev) * 16));
+                        var isLast = i === recs.length - 1;
+                        return (
+                          <div key={i} style={{ width: 3, height: h, background: isLast ? C.accent : C.accentDim, borderRadius: 1, opacity: isLast ? 0.9 : 0.4 }} />
+                        );
+                      })}
+                    </div>
+                    {trendArrow && (
+                      <span style={{ fontSize: 10, fontWeight: 700, color: trendColor, fontVariantNumeric: "tabular-nums" }}>
+                        {trendArrow}{Math.abs(mom)}%
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
               {a.address && !isCompact && (
                 <div style={{ fontSize: 10, color: C.textMuted, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {a.address}

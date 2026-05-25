@@ -7,6 +7,7 @@ import { useCadences } from "./hooks/useCadences";
 import { useCadenceSync } from "./hooks/useCadenceSync";
 import { useQuickTasks } from "./hooks/useQuickTasks";
 import { useAccountMetrics } from "./hooks/useAccountMetrics";
+import { useProjects } from "./hooks/useProjects";
 import { useOrg } from "./hooks/useOrg";
 import { AuthView } from "./views/auth/AuthView";
 import { AccountsView } from "./views/accounts/AccountsView";
@@ -17,6 +18,7 @@ import { PipelineView } from "./views/pipeline/PipelineView";
 import { PipView } from "./views/pip/PipView";
 import { CadenceView } from "./views/cadence/CadenceView";
 import { GaugeView } from "./views/gauge/GaugeView";
+import { RouteBuilder } from "./views/routes/RouteBuilder";
 import { SettingsView } from "./views/settings/SettingsView";
 import { DirectorView } from "./views/director/DirectorView";
 import { OnboardingTour } from "./views/welcome/OnboardingTour";
@@ -98,6 +100,7 @@ export default function App() {
   var { cadences, loading: cadenceLoading, addCadence } = useCadences(userId);
   useCadenceSync(userId, cadences, cadenceLoading);
   var { tasks, addTask, updateTask, deleteTask } = useQuickTasks(userId);
+  var { projects: allProjects } = useProjects(userId);
   var { revenueHistory, shopMetrics, upsertRevenue, upsertShopMetrics } = useAccountMetrics(userId);
 
   function handleSelectAccount(a) {
@@ -226,6 +229,7 @@ export default function App() {
       deleteTask={deleteTask}
       hasMeetings={meetings.length > 0}
       hasCadences={cadences.length > 0}
+      revenueHistory={revenueHistory}
     />
   );
 
@@ -280,11 +284,11 @@ export default function App() {
   }
 
   if (view === "pipeline") {
-    mainContent = <PipelineView accounts={accounts} loading={acctLoading} revenueHistory={revenueHistory} shopMetrics={shopMetrics} />;
+    mainContent = <PipelineView accounts={accounts} loading={acctLoading} revenueHistory={revenueHistory} shopMetrics={shopMetrics} onUpsertRevenue={upsertRevenue} onUpsertShopMetrics={upsertShopMetrics} />;
   }
 
   if (view === "pip") {
-    mainContent = <PipView accounts={accounts} meetings={meetings} tasks={tasks} addTask={addTask} updateTask={updateTask} onAction={handlePipAction} revenueHistory={revenueHistory} shopMetrics={shopMetrics} cadences={cadences} />;
+    mainContent = <PipView accounts={accounts} meetings={meetings} tasks={tasks} addTask={addTask} updateTask={updateTask} onAction={handlePipAction} revenueHistory={revenueHistory} shopMetrics={shopMetrics} cadences={cadences} projects={allProjects} />;
   }
 
   if (view === "gauge") {
@@ -324,6 +328,10 @@ export default function App() {
         }}
       />
     );
+  }
+
+  if (view === "routes") {
+    mainContent = <RouteBuilder accounts={accounts} userId={userId} />;
   }
 
   if (view === "settings") {
