@@ -163,6 +163,10 @@ This app is currently single-user but should be built with multi-tenancy in mind
 17. *(shipped — see Already shipped)*
 
 **Already shipped (drop from list):**
+- ✅ Pipeline V2 + Revenue History + Shop Metrics — Log Month modal, MoM/YoY deltas, sparklines, shop metrics dots on pipeline cards
+- ✅ Data Visualization — 8-point sparklines + MoM trend arrows on account cards; 6-month meeting frequency bars on account detail header
+- ✅ Gauge + Account Change Log — deliveries in Brief Me, active projects fed into Pip context, Recent Deliveries on Overview (already shipped)
+- ✅ Route Builder — TSP optimizer, Nominatim geocoding, schedule sidebar with arrival times and drive estimates, Google Maps handoff, save routes to DB
 - ✅ Team/Org Layer + Director View — `folio_orgs`, `folio_org_members`, `folio_account_notes`, `folio_activity` tables + migration SQL (`supabase/team_org_layer.sql`). `useOrg` hook, `useAccountNotes` hook (migrates from `account.objective`), fire-and-forget `logActivity` in all write hooks. Settings view with create-team + invite/revoke UI. Director view (full-width read-only portfolio dashboard). Invite banner on login. Role-aware rendering: directors get DirectorView; everyone else gets normal app. "Team" nav item on desktop sidebar. "Team & Org" in UserMenu (mobile).
 - ✅ Gauge V2 — stages, requested_by, assignee multi-user RLS, My Queue filter, New Request from Folio, status values fixed (planned/in_progress/blocked/complete/on_hold)
 - ✅ Quick Tasks — tray on main page, modal with account dropdown + reminder presets, Pip integration (surface open tasks on load, complete/add via natural language)
