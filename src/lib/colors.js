@@ -4,7 +4,7 @@
 // needs touching for a full recolor.
 // ─────────────────────────────────────────────────────────────────────────────
 
-var _accent = "74,155,130";   // #4A9B82
+var _accent = "78,175,135";   // #4EAF87
 var _red    = "224,92,92";    // #E05C5C
 var _yellow = "232,168,56";   // #E8A838
 var _blue   = "123,108,246";  // #7B6CF6
@@ -19,8 +19,8 @@ export const C = {
   bgPillActive: "#2a4a42",
 
   // ── Accent ───────────────────────────────────────────────────────────────
-  accent:       "#4A9B82",
-  accentDim:    "#2E6B59",
+  accent:       "#4EAF87",
+  accentDim:    "#2D7A5A",
   accentGlow:   "rgba(" + _accent + ",0.12)",
   accentFaint:  "rgba(" + _accent + ",0.08)",
   accentMid:    "rgba(" + _accent + ",0.15)",
@@ -31,7 +31,7 @@ export const C = {
   accentShadow: "rgba(" + _accent + ",0.22)",
 
   // ── Status ───────────────────────────────────────────────────────────────
-  green:  "#4A9B82",
+  green:  "#4EAF87",
   yellow: "#E8A838",
   red:    "#E05C5C",
   blue:   "#7B6CF6",
@@ -47,7 +47,7 @@ export const C = {
   // ── Text ─────────────────────────────────────────────────────────────────
   text:      "#E8F0EC",
   textSub:   "#8BA89E",
-  textMuted: "#4A6A60",
+  textMuted: "#567A70",
 
   // ── Borders ──────────────────────────────────────────────────────────────
   border:       "#1e3530",
