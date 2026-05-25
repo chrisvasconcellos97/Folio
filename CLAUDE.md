@@ -124,6 +124,9 @@ This app is currently single-user but should be built with multi-tenancy in mind
 - Never execute immediately on a feature request — queue it first
 - **Before shipping items 4–7:** do a full layout audit first — review placement, spacing, and information hierarchy across every screen to make sure new features land cleanly into a well-organized foundation
 
+### Progress notifications during batch builds
+When building multiple items in one session, report progress at 25% intervals with a single line: `▶ 25% — item 1 done, starting item 2`. At 50%, 75%, and 100% do the same. No other commentary between checkpoints — keep it tight. Applies to both direct builds and Patch agent runs.
+
 ---
 
 ## Pending Updates
