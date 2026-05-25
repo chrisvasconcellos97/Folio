@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { C } from "../../lib/colors";
+import { C, glass } from "../../lib/colors";
 import { PipInsightCard } from "../../components/PipInsightCard";
 import { PipLoader } from "../../components/PipLoader";
 import { Pill } from "../../components/Pill";
@@ -318,13 +318,7 @@ export function PipelineView({ accounts, loading, revenueHistory, shopMetrics, o
           return (
             <div
               key={a.id}
-              style={{
-                background: C.bgCard,
-                border: "1px solid " + C.border,
-                borderRadius: 12,
-                padding: "12px 14px",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.28)",
-              }}
+              style={Object.assign({}, glass, { borderRadius: 12, padding: "12px 14px" })}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div style={{ flex: 1 }}>
@@ -388,13 +382,7 @@ export function PipelineView({ accounts, loading, revenueHistory, shopMetrics, o
           return (
             <div
               key={a.id}
-              style={{
-                background: C.bgCard,
-                border: "1px solid " + C.border,
-                borderRadius: 12,
-                padding: "12px 14px",
-                opacity: 0.55,
-              }}
+              style={Object.assign({}, glass, { borderRadius: 12, padding: "12px 14px", opacity: 0.55 })}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "../../lib/supabase";
-import { C } from "../../lib/colors";
+import { C, glass } from "../../lib/colors";
 import { Card } from "../../components/Card";
 import { FolioIcon } from "../../components/FolioIcon";
 import { PipMark } from "../../components/PipMark";
@@ -40,15 +40,14 @@ function AccountCard({ account, openItemCount }) {
 
   return (
     <div
-      style={{
-        background: C.bgCard,
-        border: "1px solid " + (isGoing ? C.yellow + "55" : C.border),
+      style={Object.assign({}, glass, {
+        border: "1px solid " + (isGoing ? C.yellow + "55" : "rgba(255,255,255,0.06)"),
         borderRadius: 10,
         padding: "12px 14px",
         display: "flex",
         flexDirection: "column",
         gap: 6,
-      }}
+      })}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "70%" }}>
@@ -244,10 +243,7 @@ export function DirectorView({ org, orgId, userMeta, onSignOut }) {
                 { label: "Team Size",   value: members.length },
               ].map(function (s) {
                 return (
-                  <div key={s.label} style={{
-                    background: C.bgCard, border: "1px solid " + C.border, borderRadius: 10,
-                    padding: "14px 16px",
-                  }}>
+                  <div key={s.label} style={Object.assign({}, glass, { borderRadius: 10, padding: "14px 16px" })}>
                     <div style={{ fontSize: 10, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 4 }}>
                       {s.label}
                     </div>
