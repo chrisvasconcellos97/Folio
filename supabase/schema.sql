@@ -136,24 +136,44 @@ create policy "Users manage own quick tasks"
 
 -- Gauge Projects
 create table if not exists gauge_projects (
-  id           uuid primary key default gen_random_uuid(),
-  user_id      uuid references auth.users not null,
-  account_id   uuid references folio_accounts on delete cascade,
-  meeting_id   uuid references folio_meetings on delete set null,
-  title        text not null,
-  description  text,
-  status       text default 'planned'
-               check (status in ('planned', 'in_progress', 'blocked', 'complete', 'on_hold')),
-  priority     text default 'medium'
-               check (priority in ('high', 'medium', 'low')),
-  due_date     date,
-  assignee     text,
-  stages       jsonb default '[]',
-  requested_at timestamptz default now(),
-  requested_by text,
-  created_at   timestamptz default now(),
-  updated_at   timestamptz default now()
+  id             uuid primary key default gen_random_uuid(),
+  user_id        uuid references auth.users not null,
+  account_id     uuid references folio_accounts on delete cascade,
+  account_ids    uuid[] default '{}',
+  meeting_id     uuid references folio_meetings on delete set null,
+  title          text not null,
+  description    text,
+  status         text default 'planned'
+                 check (status in ('planned', 'in_progress', 'blocked', 'complete', 'on_hold')),
+  priority       text default 'medium'
+                 check (priority in ('high', 'medium', 'low')),
+  due_date       date,
+  start_date     date,
+  assignee       text,
+  stages         jsonb default '[]',
+  scope          text default 'personal',
+  blocked_reason text,
+  requested_at   timestamptz default now(),
+  requested_by   text,
+  created_at     timestamptz default now(),
+  updated_at     timestamptz default now()
 );
+
+-- Gauge Templates
+create table if not exists gauge_templates (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid references auth.users not null,
+  org_id      uuid,
+  title       text not null,
+  description text,
+  stages      jsonb default '[]',
+  created_at  timestamptz default now()
+);
+
+alter table gauge_templates enable row level security;
+create policy "Template owner access"
+  on gauge_templates for all
+  using (auth.uid() = user_id);
 
 alter table gauge_projects enable row level security;
 -- Owner: full access to own projects

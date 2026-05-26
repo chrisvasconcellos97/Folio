@@ -6,6 +6,8 @@ import { ProjectModal } from "../../gauge/ProjectModal";
 import { pickV } from "../../../lib/metricsUtils";
 import { supabase } from "../../../lib/supabase";
 
+var MONO = "'JetBrains Mono', ui-monospace, monospace";
+
 var STATUS_COLORS = {
   planned:     "rgba(103,200,249,0.9)",
   in_progress: "rgba(74,155,130,0.9)",
@@ -34,6 +36,11 @@ var GB_BDR = "rgba(103,200,249,0.25)";
 function fmt(dateStr) {
   if (!dateStr) return null;
   return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function countExternal(stages) {
+  if (!stages || stages.length === 0) return 0;
+  return stages.filter(function (s) { return s.is_external && !s.completed_at; }).length;
 }
 
 function buildProjectsInsight(projects, accountId) {
@@ -109,7 +116,13 @@ export function ProjectsTab({ projects, accounts, accountId, userId, addProject,
   var ordered    = inProgress.concat(other);
 
   function handleSaveNew(data) {
-    return addProject(Object.assign({}, data, { account_id: accountId }));
+    // Ensure account_id is always set for ProjectsTab context
+    return addProject(Object.assign({}, data, {
+      account_id: accountId,
+      account_ids: data.account_ids && data.account_ids.length > 0
+        ? data.account_ids
+        : [accountId],
+    }));
   }
 
   function handleSaveEdit(data) {
@@ -141,7 +154,6 @@ export function ProjectsTab({ projects, accounts, accountId, userId, addProject,
             Gauge Projects
           </div>
         </div>
-
         <button
           onClick={function () { setShowAdd(true); }}
           style={{ background: GB, border: "1px solid " + GB_BDR, borderRadius: 20, padding: "5px 13px", color: "rgba(103,200,249,0.9)", fontSize: 11, fontWeight: 600, fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer" }}
@@ -158,8 +170,9 @@ export function ProjectsTab({ projects, accounts, accountId, userId, addProject,
 
       <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
         {ordered.map(function (p) {
-          var dimmed  = p.status === "complete";
-          var blocked = p.status === "blocked";
+          var dimmed   = p.status === "complete";
+          var blocked  = p.status === "blocked";
+          var extCount = countExternal(p.stages || []);
           return (
             <div
               key={p.id}
@@ -173,16 +186,36 @@ export function ProjectsTab({ projects, accounts, accountId, userId, addProject,
                 opacity: dimmed ? 0.6 : 1,
               })}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: p.description ? 5 : 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: C.text, flex: 1, lineHeight: 1.3 }}>{p.title}</div>
-                <div style={{ background: STATUS_COLORS[p.status] + "20", border: "1px solid " + STATUS_COLORS[p.status] + "40", borderRadius: 16, padding: "2px 9px", fontSize: 9, fontWeight: 600, color: STATUS_COLORS[p.status], flexShrink: 0, whiteSpace: "nowrap" }}>
-                  {STATUS_LABELS[p.status] || p.status}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: (p.description || blocked) ? 5 : 0 }}>
+                <div style={{
+                  fontSize: 13, fontWeight: 600, color: C.text, flex: 1, lineHeight: 1.3,
+                  textDecoration: dimmed ? "line-through" : "none",
+                }}>
+                  {p.title}
+                </div>
+                <div style={{ display: "flex", gap: 5, alignItems: "center", flexShrink: 0 }}>
+                  {/* Scope badge */}
+                  {p.scope === "team" && (
+                    <div style={{ background: "rgba(77,184,150,0.08)", border: "1px solid rgba(77,184,150,0.2)", borderRadius: 999, padding: "1px 7px", fontFamily: MONO, fontSize: 8, color: C.accent, letterSpacing: "0.08em" }}>
+                      TEAM
+                    </div>
+                  )}
+                  <div style={{ background: STATUS_COLORS[p.status] + "20", border: "1px solid " + STATUS_COLORS[p.status] + "40", borderRadius: 16, padding: "2px 9px", fontSize: 9, fontWeight: 600, color: STATUS_COLORS[p.status], whiteSpace: "nowrap" }}>
+                    {STATUS_LABELS[p.status] || p.status}
+                  </div>
                 </div>
               </div>
 
               {p.description && (
-                <div style={{ fontSize: 11, color: C.textSub, lineHeight: 1.5, marginBottom: 6, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical" }}>
+                <div style={{ fontSize: 11, color: C.textSoft, lineHeight: 1.5, marginBottom: 6, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical" }}>
                   {p.description}
+                </div>
+              )}
+
+              {/* Blocked reason */}
+              {blocked && p.blocked_reason && (
+                <div style={{ fontSize: 11, color: C.red, background: C.redFaint, border: "1px solid " + C.redLine, borderRadius: 6, padding: "5px 8px", marginBottom: 6, lineHeight: 1.5 }}>
+                  {p.blocked_reason}
                 </div>
               )}
 
@@ -193,11 +226,19 @@ export function ProjectsTab({ projects, accounts, accountId, userId, addProject,
                     {p.priority.charAt(0).toUpperCase() + p.priority.slice(1)}
                   </span>
                 )}
+                {p.start_date && (
+                  <span style={{ fontSize: 10, color: C.textMuted, fontFamily: MONO }}>
+                    Started {fmt(p.start_date)}
+                  </span>
+                )}
                 {p.due_date && (
                   <span style={{ fontSize: 10, color: C.textMuted }}>Due · {fmt(p.due_date)}</span>
                 )}
                 {p.assignee && (
                   <span style={{ fontSize: 10, color: C.textMuted }}>{"Owner: " + p.assignee}</span>
+                )}
+                {extCount > 0 && (
+                  <span style={{ fontSize: 10, color: C.yellow, fontFamily: MONO }}>↗ {extCount} external</span>
                 )}
               </div>
             </div>

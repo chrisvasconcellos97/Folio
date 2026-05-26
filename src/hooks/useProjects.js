@@ -6,6 +6,7 @@ export function useProjects(userId, accountId, orgId) {
   var [projects, setProjects]   = useState([]);
   var [loading, setLoading]     = useState(false);
   var [error, setError]         = useState(null);
+  var [templates, setTemplates] = useState([]);
 
   var fetch = useCallback(function () {
     if (!userId) return;
@@ -26,7 +27,23 @@ export function useProjects(userId, accountId, orgId) {
     });
   }, [userId, accountId]);
 
+  var fetchTemplates = useCallback(function () {
+    if (!userId) return Promise.resolve([]);
+    return supabase
+      .from("gauge_templates")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .then(function (result) {
+        if (!result.error) {
+          setTemplates(result.data || []);
+          return result.data || [];
+        }
+        return [];
+      });
+  }, [userId]);
+
   useEffect(function () { fetch(); }, [fetch]);
+  useEffect(function () { fetchTemplates(); }, [fetchTemplates]);
 
   function addProject(data) {
     return supabase
@@ -65,5 +82,17 @@ export function useProjects(userId, accountId, orgId) {
       });
   }
 
-  return { projects, loading, error, refetch: fetch, addProject, updateProject, deleteProject };
+  function addTemplate(data) {
+    return supabase
+      .from("gauge_templates")
+      .insert([Object.assign({}, data, { user_id: userId, org_id: orgId || null })])
+      .select()
+      .then(function (result) {
+        if (result.error) throw result.error;
+        fetchTemplates();
+        return result.data[0];
+      });
+  }
+
+  return { projects, loading, error, refetch: fetch, addProject, updateProject, deleteProject, templates, fetchTemplates, addTemplate };
 }

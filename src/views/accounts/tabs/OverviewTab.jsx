@@ -6,6 +6,7 @@ import { Card } from "../../../components/Card";
 import { FL } from "../../../components/FieldLabel";
 import { callAskPip } from "../../../lib/pip";
 import { useAccountNotes } from "../../../hooks/useAccountNotes";
+import { supabase } from "../../../lib/supabase";
 import {
   latestRecord, accountRecords,
   momPct, yoyPct, momDelta,
@@ -198,8 +199,36 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
 
   var { notes: savedNotes, saveNotes } = useAccountNotes(userId, account.id, orgId, account.objective, onUpdateAccount);
   var [notesDraft, setNotesDraft] = useState(savedNotes || account.objective || "");
+  var [externalStages, setExternalStages] = useState([]);
 
   useEffect(function () { setNotesDraft(savedNotes || account.objective || ""); }, [account.id, savedNotes]);
+
+  // Fetch external stages from gauge_projects for this account
+  useEffect(function () {
+    if (!account || !account.id) return;
+    supabase
+      .from("gauge_projects")
+      .select("id, title, stages, account_id, account_ids")
+      .or("account_id.eq." + account.id + ",account_ids.cs.{" + account.id + "}")
+      .then(function (result) {
+        if (result.error || !result.data) return;
+        var rows = [];
+        result.data.forEach(function (proj) {
+          var stages = proj.stages || [];
+          stages.forEach(function (s) {
+            if (s.is_external && !s.completed_at) {
+              rows.push({
+                stageTitle:    s.title,
+                projectTitle:  proj.title,
+                contactName:   s.external_contact_name || null,
+                projectId:     proj.id,
+              });
+            }
+          });
+        });
+        setExternalStages(rows);
+      });
+  }, [account.id]);
 
   var openCount = openItems.filter(function (i) { return !i.done; }).length;
 
@@ -605,6 +634,32 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
           Full meeting log →
         </button>
       </div>
+
+      {/* Waiting on Client — external Gauge stages */}
+      {externalStages.length > 0 && (
+        <Card>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <FL>Waiting on Client</FL>
+            <div style={{ fontSize: 10, color: C.yellow }}>{externalStages.length} pending</div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+            {externalStages.map(function (row, i) {
+              return (
+                <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                  <span style={{ fontSize: 11, color: C.yellow, flexShrink: 0, marginTop: 1 }}>↗</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 12, color: C.text, lineHeight: 1.4 }}>{row.stageTitle}</div>
+                    <div style={{ fontSize: 11, color: C.textMuted }}>
+                      {row.projectTitle}
+                      {row.contactName ? " · " + row.contactName : ""}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
 
       {/* Sub-accounts */}
       {subAccounts && subAccounts.length > 0 && (

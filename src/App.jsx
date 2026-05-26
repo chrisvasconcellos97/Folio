@@ -289,6 +289,8 @@ export default function App() {
         userId={userId}
         userEmail={session && session.user ? session.user.email : null}
         accounts={accounts}
+        members={members}
+        orgId={orgId}
       />
     );
   }
