@@ -131,39 +131,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 ## Pending Updates
 
-1. **Pipeline V2 + Revenue History + Shop Metrics:** *(no open items)*
-
-2. **Code quality:** *(no open items)*
-
-3. **Feature completeness:** *(no open items)*
-
-4. **Native feel:** *(no open items)*
-
-5. **Overview tab redesign + account intelligence:** *(no open items)*
-
-6. **Motion design / transitions:** *(no open items)*
-
-7. **Typography & visual rhythm:** *(no open items)*
-
-8. **Copy & tone:** *(no open items)*
-
-9. **Search & discoverability:** *(no open items)*
-
-10. **Onboarding & contextual help:** *(no open items)*
-
-11. **Export & sharing:** *(no open items)*
-
-12. **Personalization:** *(no open items)*
-
-13. **Data visualization:** *(no open items)*
-
-14. **Gauge + account change log:** *(no open items)*
-
-15. *(shipped — see Already shipped)*
-
-16. **Route Builder:** *(no open items)*
-
-17. *(shipped — see Already shipped)*
+1. **Account owners field** — add an `owner` field to accounts, rendered as a dropdown of team members (pulled from `folio_org_members`).
 
 **Already shipped (drop from list):**
 - ✅ Pipeline V2 + Revenue History + Shop Metrics — Log Month modal, MoM/YoY deltas, sparklines, shop metrics dots on pipeline cards
