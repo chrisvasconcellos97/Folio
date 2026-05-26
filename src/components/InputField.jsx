@@ -11,6 +11,7 @@ var baseStyle = {
   fontFamily: "'Inter', system-ui, sans-serif",
   outline: "none",
   boxSizing: "border-box",
+  colorScheme: "dark",
 };
 
 export function InputField({ id, value, onChange, placeholder, type, style, onKeyDown, autoFocus }) {
