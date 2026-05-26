@@ -107,7 +107,12 @@ export function useOrg(userId, userEmail) {
           window.fetch("/api/invite", {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
-            body: JSON.stringify({ email: email.trim().toLowerCase(), role: memberRole, orgId: org.id }),
+            body: JSON.stringify({
+              email: email.trim().toLowerCase(),
+              role: memberRole,
+              orgId: org.id,
+              appUrl: window.location.origin,
+            }),
           }).catch(function(err) { console.warn("Invite email failed:", err); });
         });
       });
