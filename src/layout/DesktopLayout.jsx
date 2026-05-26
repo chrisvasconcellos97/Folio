@@ -187,7 +187,7 @@ export function DesktopLayout({
       {accountsPane && (
         <div
           style={{
-            width: 320,
+            width: 400,
             flexShrink: 0,
             borderRight: "1px solid " + C.rule,
             overflowY: "auto",

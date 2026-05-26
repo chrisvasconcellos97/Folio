@@ -648,9 +648,6 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                       fontWeight: 400,
                       letterSpacing: "-0.005em",
                       color: isChild ? C.textSoft : C.text,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
                     }}>
                       {a.name}
                     </div>
