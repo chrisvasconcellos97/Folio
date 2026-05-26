@@ -141,7 +141,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 5. **Meeting reminders** — push/email reminder for upcoming meeting cadences (e.g. 15 min before). Respects user prefs.
 
-6. **Meeting log: single notes field + Pip parsing** — strip LogMeetingModal down to title + one large notes textarea (remove the separate observations / topics / action items / promises fields). Pressing Enter auto-prepends a bullet. On save, Pip parses the freeform notes into structured fields: summary, action items, promises/commitments, follow-up meeting time. Stored on the meeting row so existing views (MeetingsTab, Brief Me, Copy Summary) keep working.
+6. **Meeting log: single notes field + Pip parsing** — strip LogMeetingModal down to title + one large notes textarea (remove the separate observations / topics / action items / promises fields). Pressing Enter auto-prepends a bullet. On save, Pip parses the freeform notes into structured sections (summary, action items, promises/commitments, follow-up meeting time) **once**, stored on the meeting row. MeetingsTab renders the parsed sections as styled, scannable blocks with clear section headers — not raw notes. Original freeform notes preserved alongside the structured output.
 
 **Already shipped (drop from list):**
 - ✅ Pipeline V2 + Revenue History + Shop Metrics — Log Month modal, MoM/YoY deltas, sparklines, shop metrics dots on pipeline cards
