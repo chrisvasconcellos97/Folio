@@ -8,6 +8,7 @@ import { PipOrb } from "../../components/PipMark";
 import { PipLoader } from "../../components/PipLoader";
 import { QuickTaskModal } from "../quicktasks/QuickTaskModal";
 import { AmberBtn } from "../../components/Buttons";
+import { QuickActionBar } from "../../components/QuickActionBar";
 
 var MONO = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
@@ -66,7 +67,7 @@ function savePrefs(p) {
   try { localStorage.setItem(PREF_KEY, JSON.stringify(p)); } catch(e) {}
 }
 
-export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks, addTask, updateTask, deleteTask, hasMeetings, hasCadences, revenueHistory }) {
+export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks, addTask, updateTask, deleteTask, hasMeetings, hasCadences, revenueHistory, onLogMeeting }) {
   var [search, setSearch]           = useState("");
   var [searchFocused, setSearchFocused] = useState(false);
   var [filter, setFilter]           = useState(function() { return loadPrefs().filter || "All"; });
@@ -194,7 +195,17 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
         }
       `}</style>
 
-      {/* Quick Task button */}
+      {/* Quick Action Bar */}
+      <QuickActionBar
+        accounts={accounts}
+        onAddAccount={onAddAccount}
+        onLogMeeting={onLogMeeting || function() { return Promise.resolve(); }}
+        onAddTask={function(accountId, title) {
+          return addTask({ title: title, account_id: accountId || undefined });
+        }}
+      />
+
+      {/* Quick Task button (legacy - keep for direct task modal access) */}
       <button
         onClick={function () { setShowAddTask(true); }}
         style={{

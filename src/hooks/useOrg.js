@@ -100,6 +100,16 @@ export function useOrg(userId, userEmail) {
       .then(function (result) {
         if (result.error) throw result.error;
         fetch();
+        // Fire-and-forget: send invite email via admin API
+        supabase.auth.getSession().then(function(sessionResult) {
+          var token = sessionResult.data && sessionResult.data.session ? sessionResult.data.session.access_token : null;
+          if (!token) return;
+          window.fetch("/api/invite", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+            body: JSON.stringify({ email: email.trim().toLowerCase(), role: memberRole, orgId: org.id }),
+          }).catch(function(err) { console.warn("Invite email failed:", err); });
+        });
       });
   }
 

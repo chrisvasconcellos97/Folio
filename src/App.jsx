@@ -96,7 +96,7 @@ export default function App() {
     return function() { window.removeEventListener("keydown", handleKeyDown); };
   }, []);
 
-  var { meetings, loading: meetLoading } = useMeetings(userId);
+  var { meetings, loading: meetLoading, addMeeting } = useMeetings(userId);
   var { cadences, loading: cadenceLoading, addCadence } = useCadences(userId);
   useCadenceSync(userId, cadences, cadenceLoading);
   var { tasks, addTask, updateTask, deleteTask } = useQuickTasks(userId);
@@ -222,6 +222,9 @@ export default function App() {
       hasMeetings={meetings.length > 0}
       hasCadences={cadences.length > 0}
       revenueHistory={revenueHistory}
+      onLogMeeting={function(accountId, date, title) {
+        return addMeeting({ account_id: accountId, meeting_date: date, title: title });
+      }}
     />
   );
 
