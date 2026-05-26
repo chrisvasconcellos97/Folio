@@ -1,10 +1,11 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { C } from "../../lib/colors";
 import { PipMark } from "../../components/PipMark";
 import { PipInsightCard } from "../../components/PipInsightCard";
 import { PipLoader } from "../../components/PipLoader";
 import { Card } from "../../components/Card";
 import { FL } from "../../components/FieldLabel";
+import { Modal } from "../../components/Modal";
 import { pickV } from "../../lib/metricsUtils";
 
 function groupByMonth(meetings) {
@@ -77,7 +78,205 @@ function buildMeetingsInsight(meetings) {
   return parts.join(" ");
 }
 
+function formatDetailDate(dateStr) {
+  if (!dateStr) return "";
+  var d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function MeetingDetailModal({ meeting, onClose }) {
+  var [copied, setCopied] = useState(false);
+  var m = meeting;
+  var accountName = m.folio_accounts ? m.folio_accounts.name : "Account";
+  var dateLabel = formatDetailDate(m.meeting_date);
+
+  function handleCopy() {
+    var parts = [
+      accountName + " — " + (m.title || "Meeting") + " — " + dateLabel,
+    ];
+    if (m.notes) parts.push("Notes: " + m.notes);
+    if (m.action_items) parts.push("Action Items: " + m.action_items);
+    var text = parts.join("\n");
+    navigator.clipboard.writeText(text).then(function () {
+      setCopied(true);
+      setTimeout(function () { setCopied(false); }, 2000);
+    });
+  }
+
+  var mailtoBody = encodeURIComponent(m.pip_email || "");
+  var mailtoHref = "mailto:?body=" + mailtoBody;
+
+  return (
+    <Modal title="" onClose={onClose} width={560}>
+      {/* Header */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{
+          fontFamily: "'Fraunces Variable', Georgia, serif",
+          fontSize: 18,
+          fontWeight: 700,
+          color: C.text,
+          marginBottom: 4,
+        }}>
+          {accountName}
+        </div>
+        <div style={{
+          fontFamily: "'Inter Variable', system-ui, sans-serif",
+          fontSize: 14,
+          color: C.textSoft,
+          marginBottom: 6,
+        }}>
+          {m.title || "Meeting"}
+        </div>
+        <div style={{
+          fontFamily: "'JetBrains Mono Variable', monospace",
+          fontSize: 12,
+          color: C.textMuted,
+          fontVariantNumeric: "tabular-nums",
+        }}>
+          {dateLabel}
+        </div>
+      </div>
+
+      {/* Sections */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        {m.notes && (
+          <div>
+            <FL>Notes</FL>
+            <div style={{
+              fontFamily: "'Inter Variable', system-ui, sans-serif",
+              fontSize: 14,
+              color: C.text,
+              lineHeight: 1.6,
+              whiteSpace: "pre-wrap",
+            }}>
+              {m.notes}
+            </div>
+          </div>
+        )}
+
+        {m.action_items && (
+          <div>
+            <FL>Action Items</FL>
+            <div style={{
+              fontFamily: "'Inter Variable', system-ui, sans-serif",
+              fontSize: 14,
+              color: C.yellow,
+              lineHeight: 1.6,
+              whiteSpace: "pre-wrap",
+            }}>
+              {m.action_items}
+            </div>
+          </div>
+        )}
+
+        {m.attendees && m.attendees.length > 0 && (
+          <div>
+            <FL>Attendees</FL>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 4 }}>
+              {m.attendees.map(function (a, i) {
+                return (
+                  <span key={i} style={{
+                    background: C.surface2,
+                    border: "1px solid " + C.rule,
+                    borderRadius: 999,
+                    padding: "3px 10px",
+                    fontFamily: "'Inter Variable', system-ui, sans-serif",
+                    fontSize: 12,
+                    color: C.textSoft,
+                  }}>
+                    {a}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {m.pip_summary && (
+          <div>
+            <FL>
+              <span style={{ color: C.accent, marginRight: 4 }}>✦ Pip</span>
+              Pip Summary
+            </FL>
+            <div style={{
+              fontFamily: "'Inter Variable', system-ui, sans-serif",
+              fontSize: 14,
+              color: C.textSoft,
+              lineHeight: 1.6,
+              fontStyle: "italic",
+              whiteSpace: "pre-wrap",
+            }}>
+              {m.pip_summary}
+            </div>
+          </div>
+        )}
+
+        {m.pip_email && (
+          <div>
+            <FL>Draft Email</FL>
+            <div style={{
+              fontFamily: "'Inter Variable', system-ui, sans-serif",
+              fontSize: 13,
+              color: C.textSoft,
+              lineHeight: 1.6,
+              whiteSpace: "pre-wrap",
+              marginBottom: 8,
+            }}>
+              {m.pip_email}
+            </div>
+            <a
+              href={mailtoHref}
+              style={{
+                display: "inline-block",
+                fontFamily: "'Inter Variable', system-ui, sans-serif",
+                fontSize: 12,
+                color: C.accent,
+                textDecoration: "none",
+                border: "1px solid " + C.accentBorder,
+                borderRadius: 6,
+                padding: "5px 12px",
+              }}
+            >
+              Open in Mail
+            </a>
+          </div>
+        )}
+      </div>
+
+      {/* Footer actions */}
+      <div style={{
+        marginTop: 24,
+        paddingTop: 16,
+        borderTop: "1px solid " + C.rule,
+        display: "flex",
+        justifyContent: "flex-end",
+      }}>
+        <button
+          onClick={handleCopy}
+          style={{
+            background: copied ? C.accentFaint : C.surface2,
+            border: "1px solid " + (copied ? C.accentBorder : C.rule),
+            borderRadius: 8,
+            padding: "8px 16px",
+            fontFamily: "'Inter Variable', system-ui, sans-serif",
+            fontSize: 13,
+            fontWeight: 600,
+            color: copied ? C.accent : C.textSoft,
+            cursor: "pointer",
+            transition: "all 0.15s",
+          }}
+        >
+          {copied ? "✓ Copied" : "Copy Summary"}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
 export function MeetingsView({ meetings, loading }) {
+  var [selectedMeeting, setSelectedMeeting] = useState(null);
+  var [hoveredId, setHoveredId] = useState(null);
+
   var meetingsInsight = useMemo(function () { return buildMeetingsInsight(meetings); }, [meetings]);
   var today      = new Date();
   var upcoming   = meetings.filter(function (m) { return m.meeting_date && new Date(m.meeting_date) >= today; });
@@ -95,6 +294,7 @@ export function MeetingsView({ meetings, loading }) {
   return (
     <div>
       <PipInsightCard text={meetingsInsight} />
+
       {/* Upcoming */}
       {upcoming.length > 0 && (
         <div style={{ marginBottom: 24 }}>
@@ -115,12 +315,22 @@ export function MeetingsView({ meetings, loading }) {
               var daysOut = Math.round(
                 (new Date(m.meeting_date) - today) / (1000 * 60 * 60 * 24)
               );
+              var isHovered = hoveredId === m.id;
               return (
-                <Card
+                <div
                   key={m.id}
+                  onMouseEnter={function () { setHoveredId(m.id); }}
+                  onMouseLeave={function () { setHoveredId(null); }}
+                >
+                <Card
                   style={{
                     borderLeft: "3px solid " + C.accent,
+                    cursor: "pointer",
+                    position: "relative",
+                    background: isHovered ? C.accentFaint : undefined,
+                    transition: "background 0.12s",
                   }}
+                  onClick={function () { setSelectedMeeting(m); }}
                 >
                   <div
                     style={{
@@ -169,6 +379,7 @@ export function MeetingsView({ meetings, loading }) {
                     </div>
                   </div>
                 </Card>
+                </div>
               );
             })}
           </div>
@@ -193,8 +404,19 @@ export function MeetingsView({ meetings, loading }) {
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {pastGroups[month].map(function (m) {
+                var isHovered = hoveredId === m.id;
                 return (
-                  <Card key={m.id}>
+                  <Card
+                    key={m.id}
+                    style={{
+                      cursor: "pointer",
+                      background: isHovered ? C.accentFaint : undefined,
+                      transition: "background 0.12s",
+                    }}
+                    onClick={function () { setSelectedMeeting(m); }}
+                    onMouseEnter={function () { setHoveredId(m.id); }}
+                    onMouseLeave={function () { setHoveredId(null); }}
+                  >
                     <div
                       style={{
                         display: "flex",
@@ -252,6 +474,13 @@ export function MeetingsView({ meetings, loading }) {
         >
           No meetings logged yet. Head to an account to record one.
         </div>
+      )}
+
+      {selectedMeeting && (
+        <MeetingDetailModal
+          meeting={selectedMeeting}
+          onClose={function () { setSelectedMeeting(null); }}
+        />
       )}
     </div>
   );
