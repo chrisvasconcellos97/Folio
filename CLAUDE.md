@@ -135,7 +135,11 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 2. **Hide Route Builder from nav** — remove the nav entry so it stops reading as a headline feature; leave the code and route in place so it's easy to bring back later.
 
-3. **Meeting Cockpit view** — clicking a meeting cadence opens a dedicated in-meeting view for that account. One-stop screen with open items, a live notepad, and summarized meeting history. Designed for use *during* the meeting — focused workspace feel, not the standard account detail page.
+3. **Meeting Cockpit view** — clicking a meeting cadence opens a dedicated in-meeting view for that account. One-stop screen with open items, a live notepad, and summarized meeting history. Designed for use *during* the meeting — focused workspace feel, not the standard account detail page. On save, the notepad becomes a logged meeting tied to the account (closes the cadence → meeting log gap).
+
+4. **Overdue badges in cadence views** — surface overdue meeting/task cadences with a clear badge in Calendar, Week, and List views (not just a "N days ago" label).
+
+5. **Meeting reminders** — push/email reminder for upcoming meeting cadences (e.g. 15 min before). Respects user prefs.
 
 **Already shipped (drop from list):**
 - ✅ Pipeline V2 + Revenue History + Shop Metrics — Log Month modal, MoM/YoY deltas, sparklines, shop metrics dots on pipeline cards
