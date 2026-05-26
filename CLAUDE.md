@@ -133,6 +133,8 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 1. **Account owners field** — add an `owner` field to accounts, rendered as a dropdown of team members (pulled from `folio_org_members`).
 
+2. **Hide Route Builder from nav** — remove the nav entry so it stops reading as a headline feature; leave the code and route in place so it's easy to bring back later.
+
 **Already shipped (drop from list):**
 - ✅ Pipeline V2 + Revenue History + Shop Metrics — Log Month modal, MoM/YoY deltas, sparklines, shop metrics dots on pipeline cards
 - ✅ Data Visualization — 8-point sparklines + MoM trend arrows on account cards; 6-month meeting frequency bars on account detail header
