@@ -220,7 +220,7 @@ export function DirectorView({ org, orgId, userMeta, onSignOut }) {
             style={{
               background: "none", border: "1px solid " + C.border, borderRadius: 8,
               padding: "6px 14px", fontSize: 12, color: C.textSub, cursor: "pointer",
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: "'Inter', system-ui, sans-serif",
             }}
           >
             Sign out
@@ -276,7 +276,7 @@ export function DirectorView({ org, orgId, userMeta, onSignOut }) {
                             border: "1px solid " + (sortBy === s.id ? C.accentLine : C.border),
                             borderRadius: 6, padding: "4px 10px", fontSize: 11,
                             color: sortBy === s.id ? C.accent : C.textMuted,
-                            cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+                            cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif",
                           }}
                         >
                           {s.label}

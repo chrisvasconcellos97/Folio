@@ -160,7 +160,7 @@ function TeamSection({ org, role, members, pendingInvites, onInvite, onRevoke })
                   style={{
                     background: "none", border: "1px solid " + C.border, borderRadius: 6,
                     padding: "4px 10px", fontSize: 11, color: C.red, cursor: "pointer",
-                    fontFamily: "'DM Sans', sans-serif", opacity: revoking === m.id ? 0.5 : 1,
+                    fontFamily: "'Inter', system-ui, sans-serif", opacity: revoking === m.id ? 0.5 : 1,
                   }}
                 >
                   {revoking === m.id ? "…" : "Remove"}
@@ -197,7 +197,7 @@ function TeamSection({ org, role, members, pendingInvites, onInvite, onRevoke })
                       onClick={function () { handleRevoke(p.id, p.invited_email); }}
                       style={{
                         background: "none", border: "none", color: C.textMuted,
-                        fontSize: 11, cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+                        fontSize: 11, cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif",
                       }}
                     >
                       Cancel
@@ -235,7 +235,7 @@ function TeamSection({ org, role, members, pendingInvites, onInvite, onRevoke })
                 style={{
                   width: "100%", background: C.bgDropdown, border: "1px solid " + C.border,
                   borderRadius: 8, padding: "9px 12px", fontSize: 13, color: C.text,
-                  fontFamily: "'DM Sans', sans-serif", outline: "none", cursor: "pointer",
+                  fontFamily: "'Inter', system-ui, sans-serif", outline: "none", cursor: "pointer",
                 }}
               >
                 <option value="member">Member</option>

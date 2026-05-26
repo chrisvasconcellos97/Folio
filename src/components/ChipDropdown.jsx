@@ -30,7 +30,7 @@ export function ChipDropdown({ label, options, value, values, onSelect, multi, p
           padding: "8px 12px",
           fontSize: 13,
           color: (multi ? selected.length > 0 : !!selected) ? C.text : C.textMuted,
-          fontFamily: "'DM Sans', sans-serif",
+          fontFamily: "'Inter', system-ui, sans-serif",
           cursor: "pointer",
           width: "100%",
           textAlign: "left",
@@ -82,7 +82,7 @@ export function ChipDropdown({ label, options, value, values, onSelect, multi, p
                     padding: "4px 12px",
                     fontSize: 12,
                     color: sel ? C.accent : C.textSub,
-                    fontFamily: "'DM Sans', sans-serif",
+                    fontFamily: "'Inter', system-ui, sans-serif",
                     cursor: "pointer",
                     fontWeight: sel ? 600 : 400,
                   }}

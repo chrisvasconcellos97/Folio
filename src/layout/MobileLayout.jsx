@@ -2,10 +2,13 @@ import { useEffect, useRef } from "react";
 import { C } from "../lib/colors";
 import { FolioIcon } from "../components/FolioIcon";
 import { GaugeIcon } from "../components/GaugeIcon";
-import { PipMark } from "../components/PipMark";
+import { PipOrb } from "../components/PipMark";
 import { AmberBtn } from "../components/Buttons";
 import { UserMenu } from "../components/UserMenu";
 import { FirstRunTooltip } from "../components/Tooltip";
+
+var MONO = "'JetBrains Mono', ui-monospace, monospace";
+var SERIF = "'Fraunces', Georgia, serif";
 
 var TOOLTIP_TIPS = {
   cadence: "Set recurring meeting schedules so you never lose track of an account.",
@@ -41,8 +44,8 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
       {/* Mobile header */}
       <div
         style={{
-          background: C.bg,
-          borderBottom: "1px solid " + C.border,
+          background: C.surface,
+          borderBottom: "1px solid " + C.rule,
           padding: "max(14px, env(safe-area-inset-top)) 18px 12px",
           position: "sticky",
           top: 0,
@@ -57,27 +60,28 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <FolioIcon size={24} />
+            <FolioIcon size={32} />
             <div>
               <div
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 5,
-                  fontSize: 15,
-                  fontWeight: 600,
+                  fontFamily: SERIF,
+                  fontSize: 18,
+                  fontWeight: 400,
                   color: C.text,
+                  letterSpacing: "-0.01em",
+                  lineHeight: 1.1,
                 }}
               >
                 Folio
-                <PipMark size={6} color={C.accent} opacity={0.5} />
               </div>
               <div
                 style={{
+                  fontFamily: MONO,
                   fontSize: 8,
-                  color: C.textMuted,
+                  color: C.textFaint,
                   letterSpacing: "0.1em",
                   textTransform: "uppercase",
+                  marginTop: 1,
                 }}
               >
                 Account Management
@@ -114,8 +118,8 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
           bottom: 0,
           left: 0,
           right: 0,
-          background: C.bgDark,
-          borderTop: "1px solid " + C.border,
+          background: C.surface,
+          borderTop: "1px solid " + C.rule,
           padding: "8px 16px max(12px, env(safe-area-inset-bottom))",
           zIndex: 50,
         }}
@@ -131,6 +135,7 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
         >
           {NAV_ITEMS.map(function (item) {
             var active = view === item.id;
+            var isGauge = item.id === "gauge";
             var btn = (
               <button
                 key={item.id}
@@ -141,24 +146,25 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
                   borderRadius: 8,
                   cursor: "pointer",
                   userSelect: "none",
+                  fontFamily: MONO,
                   fontSize: 9,
                   fontWeight: 600,
-                  fontFamily: "'DM Sans', sans-serif",
-                  background: active ? C.bgCardAlt : "transparent",
-                  color: active ? (item.id === "gauge" ? C.blue : C.accent) : C.textMuted,
-                  border: "1px solid " + (active ? C.border : "transparent"),
+                  letterSpacing: "0.04em",
+                  background: active ? C.surface2 : "transparent",
+                  color: active ? (isGauge ? C.blue : C.accent) : C.textMuted,
+                  border: "1px solid " + (active ? C.rule : "transparent"),
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
                   gap: 3,
                 }}
               >
-                {item.icon === "gauge" ? (
+                {isGauge ? (
                   <GaugeIcon size={14} color={active ? C.blue : C.textMuted} />
                 ) : item.icon ? (
                   <span style={{ fontSize: 13 }}>{item.icon}</span>
                 ) : (
-                  <PipMark size={8} color={active ? C.accent : C.textMuted} pulse={active} />
+                  <PipOrb size="xs" />
                 )}
                 {item.label}
               </button>

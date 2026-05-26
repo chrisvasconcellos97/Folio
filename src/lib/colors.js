@@ -1,40 +1,54 @@
-// ─── Folio Theme ─────────────────────────────────────────────────────────────
-// To retheme: update the hex value AND its _rgb companion below.
-// All derived rgba tokens auto-update from the _rgb string — nothing else
-// needs touching for a full recolor.
+// ─── Folio Theme — Redesign v2 ────────────────────────────────────────────────
+// Accent RGB: 77,184,150 (#4db896)
 // ─────────────────────────────────────────────────────────────────────────────
 
-var _accent = "78,175,135";   // #4EAF87
-var _red    = "224,92,92";    // #E05C5C
-var _yellow = "232,168,56";   // #E8A838
-var _blue   = "123,108,246";  // #7B6CF6
+var _accent = "77,184,150";   // #4db896
+var _red    = "200,90,62";    // #c85a3e
+var _yellow = "212,147,42";   // #d4932a
+var _blue   = "91,143,212";   // #5b8fd4
 
 export const C = {
   // ── Backgrounds ──────────────────────────────────────────────────────────
-  bg:           "#0D1F1C",
-  bgCard:       "#142420",
-  bgCardAlt:    "#1A2E2A",
-  bgDark:       "#091712",
-  bgPill:       "#1e3530",
-  bgPillActive: "#2a4a42",
+  bg:           "#07100f",
+  surface:      "#0c1615",
+  surface2:     "#11201e",
+  surface3:     "#162927",
+  bgDropdown:   "#1a2b28",
+
+  // Legacy aliases (keep for backward compat)
+  bgCard:       "#0c1615",
+  bgCardAlt:    "#11201e",
+  bgDark:       "#07100f",
+  bgPill:       "#1a2b28",
+  bgPillActive: "oklch(0.22 0.04 178 / 0.5)",
 
   // ── Accent ───────────────────────────────────────────────────────────────
-  accent:       "#4EAF87",
-  accentDim:    "#2D7A5A",
-  accentGlow:   "rgba(" + _accent + ",0.12)",
+  accent:       "#4db896",
+  accentDeep:   "#2d8f70",
+  accentDim:    "#1a5c47",
+  accentGlow:   "rgba(" + _accent + ",0.14)",
+  accentGlow2:  "rgba(" + _accent + ",0.22)",
   accentFaint:  "rgba(" + _accent + ",0.08)",
   accentMid:    "rgba(" + _accent + ",0.15)",
   accentSubtle: "rgba(" + _accent + ",0.30)",
   accentLine:   "rgba(" + _accent + ",0.2)",
   accentRing:   "rgba(" + _accent + ",0.35)",
-  accentBorder: "rgba(" + _accent + ",0.4)",
-  accentShadow: "rgba(" + _accent + ",0.22)",
+  accentBorder: "rgba(" + _accent + ",0.42)",
+  accentShadow: "rgba(" + _accent + ",0.55)",
+
+  // ── Borders / rules ───────────────────────────────────────────────────────
+  rule:         "#1c2c2a",
+  ruleSoft:     "#15201f",
+
+  // Legacy aliases
+  border:       "#1c2c2a",
+  borderBright: "#15201f",
 
   // ── Status ───────────────────────────────────────────────────────────────
-  green:  "#4EAF87",
-  yellow: "#E8A838",
-  red:    "#E05C5C",
-  blue:   "#7B6CF6",
+  green:  "#4db896",
+  yellow: "#d4932a",
+  red:    "#c85a3e",
+  blue:   "#5b8fd4",
   purple: "#7B6CF6",
 
   // ── Status derived ───────────────────────────────────────────────────────
@@ -44,25 +58,29 @@ export const C = {
   blueFaint:   "rgba(" + _blue   + ",0.12)",
   blueLine:    "rgba(" + _blue   + ",0.2)",
 
+  // ── Gauge status pill colors ──────────────────────────────────────────────
+  statusPlanned:    { text: "#7ab0e8", bg: "rgba(40,60,110,0.5)",  border: "#4a80c8" },
+  statusInProgress: { text: "#4db896", bg: "rgba(30,70,55,0.5)",   border: "rgba(77,184,150,0.42)" },
+  statusBlocked:    { text: "#e06040", bg: "rgba(80,30,20,0.5)",   border: "#b84830" },
+  statusOnHold:     { text: "#7a8c8a", bg: "rgba(30,40,40,0.6)",   border: "#506060" },
+  statusComplete:   { text: "#5dc890", bg: "rgba(20,65,45,0.5)",   border: "#3a9060" },
+
   // ── Text ─────────────────────────────────────────────────────────────────
-  text:      "#E8F0EC",
-  textSub:   "#8BA89E",
-  textMuted: "#567A70",
+  text:      "#e7ece9",
+  textSoft:  "#aebbb6",
+  textMuted: "#6f7c79",
+  textFaint: "#475251",
 
-  // ── Borders ──────────────────────────────────────────────────────────────
-  border:       "#1e3530",
-  borderBright: "#2a4a42",
-
-  // ── Dropdown ─────────────────────────────────────────────────────────────
-  bgDropdown:   "#1a2b28",
+  // Legacy aliases
+  textSub:   "#aebbb6",
 };
 
 export var glass = {
-  background: "rgba(18,40,36,0.82)",
+  background: "rgba(12,22,21,0.85)",
   backdropFilter: "blur(12px)",
   WebkitBackdropFilter: "blur(12px)",
-  border: "1px solid rgba(255,255,255,0.06)",
-  boxShadow: "0 4px 20px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.07)",
+  border: "1px solid rgba(255,255,255,0.05)",
+  boxShadow: "0 4px 20px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)",
 };
 
 export function hexToRgb(hex) {

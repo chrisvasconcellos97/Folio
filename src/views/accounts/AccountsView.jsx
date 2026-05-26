@@ -4,10 +4,13 @@ import { latestRecord, accountRecords, momPct } from "../../lib/metricsUtils";
 import { Pill } from "../../components/Pill";
 import { InputField } from "../../components/InputField";
 import { Card } from "../../components/Card";
-import { PipMark } from "../../components/PipMark";
+import { PipOrb } from "../../components/PipMark";
 import { PipLoader } from "../../components/PipLoader";
 import { QuickTaskModal } from "../quicktasks/QuickTaskModal";
 import { AmberBtn } from "../../components/Buttons";
+
+var MONO = "'JetBrains Mono', ui-monospace, monospace";
+var SERIF = "'Fraunces', Georgia, serif";
 
 var DENSITY_KEY = "folio_density";
 
@@ -33,11 +36,11 @@ function SkeletonCard() {
   return (
     <div
       style={{
-        background: C.bgCard,
-        border: "1px solid " + C.border,
-        borderLeft: "3px solid " + C.border,
-        borderRadius: 12,
-        padding: "13px 15px",
+        background: C.surface,
+        border: "1px solid " + C.rule,
+        borderLeft: "3px solid " + C.rule,
+        borderRadius: 6,
+        padding: "11px 12px",
       }}
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
@@ -194,15 +197,15 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
         onClick={function () { setShowAddTask(true); }}
         style={{
           background: "transparent",
-          border: "1px dashed " + C.border,
-          borderRadius: 8,
+          border: "1px dashed " + C.rule,
+          borderRadius: 6,
           padding: "7px 14px",
           marginBottom: openTasks.length > 0 ? 10 : 16,
           width: "100%",
           textAlign: "left",
           fontSize: 11,
           color: C.textMuted,
-          fontFamily: "'DM Sans', sans-serif",
+          fontFamily: "'Inter', system-ui, sans-serif",
           cursor: "pointer",
           display: "flex",
           alignItems: "center",
@@ -217,16 +220,17 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
       {openTasks.length > 0 && (
         <div style={{ marginBottom: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-            <div style={{ fontSize: 10, color: C.textSub, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em" }}>
+            <div style={{ fontFamily: MONO, fontSize: 9.5, color: C.textSoft, fontWeight: 400, textTransform: "uppercase", letterSpacing: "0.08em" }}>
               Quick Tasks
             </div>
             <div style={{
-              background: C.bgPillActive,
-              border: "1px solid " + C.border,
-              borderRadius: 10,
-              padding: "1px 6px",
+              background: "oklch(0.22 0.04 178 / 0.5)",
+              border: "1px solid " + C.rule,
+              borderRadius: 999,
+              padding: "1px 7px",
+              fontFamily: MONO,
               fontSize: 9,
-              fontWeight: 700,
+              fontWeight: 400,
               color: C.accent,
             }}>
               {openTasks.length}
@@ -237,10 +241,10 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
               var isOverdue = t.reminder_at && new Date(t.reminder_at) < new Date();
               return (
                 <div key={t.id} style={{
-                  background: C.bgCard,
-                  border: "1px solid " + (isOverdue ? "rgba(248,113,113,0.25)" : C.border),
+                  background: C.surface,
+                  border: "1px solid " + (isOverdue ? C.redLine : C.rule),
                   borderLeft: "3px solid " + (isOverdue ? C.red : C.yellow),
-                  borderRadius: 10,
+                  borderRadius: 6,
                   padding: "9px 12px",
                   display: "flex",
                   alignItems: "center",
@@ -253,7 +257,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                       width: 18,
                       height: 18,
                       borderRadius: "50%",
-                      border: "1px solid " + C.border,
+                      border: "1px solid " + C.rule,
                       background: "transparent",
                       cursor: "pointer",
                       flexShrink: 0,
@@ -312,29 +316,31 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
         style={{
           display: "grid",
           gridTemplateColumns: "1fr 1fr 1fr",
-          gap: 8,
-          marginBottom: 16,
+          gap: 6,
+          marginBottom: 14,
         }}
       >
         {[
-          { l: "Accounts", v: loading ? "—" : accounts.length, c: C.text },
-          { l: "Watching", v: loading ? "—" : accounts.filter(function(a){ return a.status === "yellow"; }).length, c: C.yellow },
-          { l: "At Risk",  v: loading ? "—" : accounts.filter(function(a){ return a.status === "red"; }).length, c: C.red },
+          { l: "Accounts", v: loading ? "—" : accounts.length, c: C.text, filterId: "All" },
+          { l: "Watching", v: loading ? "—" : accounts.filter(function(a){ return a.status === "yellow"; }).length, c: C.yellow, filterId: null },
+          { l: "At Risk",  v: loading ? "—" : accounts.filter(function(a){ return a.status === "red"; }).length, c: C.red, filterId: "At Risk" },
         ].map(function (s) {
           return (
             <div
               key={s.l}
+              onClick={s.filterId ? function() { setFilter(s.filterId); } : undefined}
               style={{
-                background: C.bgCard,
-                border: "1px solid " + C.border,
-                borderRadius: 12,
-                padding: "12px 14px",
+                background: C.surface,
+                border: "1px solid " + C.rule,
+                borderRadius: 8,
+                padding: "11px 12px",
+                cursor: s.filterId ? "pointer" : "default",
               }}
             >
-              <div style={{ fontSize: 22, fontWeight: 700, color: s.c, fontVariantNumeric: "tabular-nums" }}>
+              <div style={{ fontFamily: SERIF, fontSize: 22, fontWeight: 400, color: s.c, fontFeatureSettings: '"tnum"' }}>
                 {s.v}
               </div>
-              <div style={{ fontSize: 10, color: C.textMuted, marginTop: 3, textTransform: "uppercase", letterSpacing: "0.07em" }}>
+              <div style={{ fontFamily: MONO, fontSize: 9, color: C.textMuted, marginTop: 3, textTransform: "uppercase", letterSpacing: "0.08em" }}>
                 {s.l}
               </div>
             </div>
@@ -346,8 +352,8 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
       {upcoming.length > 0 && (
         <div style={{ marginBottom: 14 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-            <PipMark size={7} color={C.accent} glow pulse />
-            <div style={{ fontSize: 10, color: C.accent, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em" }}>
+            <PipOrb size="xs" />
+            <div style={{ fontFamily: MONO, fontSize: 9.5, color: C.accent, fontWeight: 400, textTransform: "uppercase", letterSpacing: "0.08em" }}>
               Pip — This Week
             </div>
           </div>
@@ -362,10 +368,10 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                   key={a.id}
                   onClick={function () { onSelect(a); }}
                   style={{
-                    background: C.accentGlow,
+                    background: C.accentFaint,
                     border: "1px solid " + C.accentLine,
                     borderLeft: "3px solid " + C.accent,
-                    borderRadius: 10,
+                    borderRadius: 6,
                     padding: "10px 14px",
                     cursor: "pointer",
                     display: "flex",
@@ -375,13 +381,13 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                   }}
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 2 }}>{a.name}</div>
-                    <div style={{ fontSize: 10, color: C.textMuted, fontVariantNumeric: "tabular-nums" }}>
+                    <div style={{ fontFamily: SERIF, fontSize: 14, color: C.text, marginBottom: 2 }}>{a.name}</div>
+                    <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, fontFeatureSettings: '"tnum"' }}>
                       {meetDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
                     </div>
                   </div>
                   <div style={{ textAlign: "right", flexShrink: 0 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, marginBottom: 4, fontVariantNumeric: "tabular-nums" }}>{dayLabel}</div>
+                    <div style={{ fontFamily: MONO, fontSize: 10, color: C.accent, marginBottom: 4, fontFeatureSettings: '"tnum"' }}>{dayLabel}</div>
                     <Pill color={statusColor}>{STATUS_LABELS[a.status] || a.status}</Pill>
                   </div>
                 </div>
@@ -411,13 +417,13 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
             title={density === "comfortable" ? "Switch to compact view" : "Switch to comfortable view"}
             style={{
               background: "transparent",
-              border: "1px solid " + C.border,
-              borderRadius: 7,
+              border: "1px solid " + C.rule,
+              borderRadius: 6,
               padding: "5px 9px",
               cursor: "pointer",
               color: C.textMuted,
               fontSize: 14,
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: "'Inter', system-ui, sans-serif",
               lineHeight: 1,
               flexShrink: 0,
             }}
@@ -433,9 +439,10 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                   key={h}
                   onClick={function() { setSearch(h); }}
                   style={{
-                    background: C.bgPill, border: "1px solid " + C.border,
-                    borderRadius: 20, padding: "3px 10px", fontSize: 11,
-                    color: C.textSub, fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
+                    background: C.bgDropdown, border: "1px solid " + C.rule,
+                    borderRadius: 999, padding: "3px 11px",
+                    fontFamily: MONO, fontSize: 10.5,
+                    color: C.textSoft, cursor: "pointer",
                   }}
                 >
                   {h}
@@ -447,7 +454,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
       </div>
 
       {/* Filter pills — tier / status */}
-      <div style={{ display: "flex", gap: 6, marginBottom: 6, overflowX: "auto", paddingBottom: 2 }}>
+      <div style={{ display: "flex", gap: 5, marginBottom: 6, overflowX: "auto", paddingBottom: 2 }}>
         {FILTERS.map(function (f) {
           var active = filter === f;
           return (
@@ -455,14 +462,14 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
               key={f}
               onClick={function () { setFilter(f); }}
               style={{
-                background: active ? C.bgPillActive : C.bgPill,
-                color: active ? C.accent : C.textMuted,
-                border: "1px solid " + (active ? C.accentSubtle : C.border),
-                borderRadius: 20,
-                padding: "5px 12px",
-                fontSize: 11,
-                fontWeight: 600,
-                fontFamily: "'DM Sans', sans-serif",
+                background: active ? C.accent : "transparent",
+                color: active ? C.bg : C.textMuted,
+                border: "1px solid " + (active ? C.accent : C.rule),
+                borderRadius: 999,
+                padding: "4px 12px",
+                fontFamily: MONO,
+                fontSize: 10.5,
+                fontWeight: 400,
                 cursor: "pointer",
                 whiteSpace: "nowrap",
               }}
@@ -475,8 +482,8 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
 
       {/* Filter pills — supplier type tags */}
       {availableTags.length > 0 && (
-        <div style={{ display: "flex", gap: 6, marginBottom: 6, overflowX: "auto", paddingBottom: 2, alignItems: "center" }}>
-          <span style={{ fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.07em", whiteSpace: "nowrap", flexShrink: 0 }}>Type</span>
+        <div style={{ display: "flex", gap: 5, marginBottom: 6, overflowX: "auto", paddingBottom: 2, alignItems: "center" }}>
+          <span style={{ fontFamily: MONO, fontSize: 9.5, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap", flexShrink: 0 }}>Type</span>
           {availableTags.map(function (t) {
             var active = tagFilter === t;
             return (
@@ -484,14 +491,13 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                 key={t}
                 onClick={function () { setTagFilter(active ? null : t); }}
                 style={{
-                  background: active ? "rgba(123,108,246,0.15)" : C.bgPill,
+                  background: active ? "rgba(91,143,212,0.15)" : "transparent",
                   color: active ? C.blue : C.textMuted,
-                  border: "1px solid " + (active ? "rgba(123,108,246,0.35)" : C.border),
-                  borderRadius: 20,
-                  padding: "5px 12px",
-                  fontSize: 11,
-                  fontWeight: 600,
-                  fontFamily: "'DM Sans', sans-serif",
+                  border: "1px solid " + (active ? "rgba(91,143,212,0.35)" : C.rule),
+                  borderRadius: 999,
+                  padding: "4px 11px",
+                  fontFamily: MONO,
+                  fontSize: 10.5,
                   cursor: "pointer",
                   whiteSpace: "nowrap",
                 }}
@@ -505,8 +511,8 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
 
       {/* Filter pills — region */}
       {availableRegions.length > 0 && (
-        <div style={{ display: "flex", gap: 6, marginBottom: 14, overflowX: "auto", paddingBottom: 2, alignItems: "center" }}>
-          <span style={{ fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.07em", whiteSpace: "nowrap", flexShrink: 0 }}>Region</span>
+        <div style={{ display: "flex", gap: 5, marginBottom: 12, overflowX: "auto", paddingBottom: 2, alignItems: "center" }}>
+          <span style={{ fontFamily: MONO, fontSize: 9.5, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap", flexShrink: 0 }}>Region</span>
           {availableRegions.map(function (r) {
             var active = regionFilter === r;
             return (
@@ -514,14 +520,13 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                 key={r}
                 onClick={function () { setRegionFilter(active ? null : r); }}
                 style={{
-                  background: active ? C.accentMid : C.bgPill,
-                  color: active ? C.accent : C.textMuted,
-                  border: "1px solid " + (active ? C.accentSubtle : C.border),
-                  borderRadius: 20,
-                  padding: "5px 12px",
-                  fontSize: 11,
-                  fontWeight: 600,
-                  fontFamily: "'DM Sans', sans-serif",
+                  background: active ? C.accent : "transparent",
+                  color: active ? C.bg : C.textMuted,
+                  border: "1px solid " + (active ? C.accent : C.rule),
+                  borderRadius: 999,
+                  padding: "4px 11px",
+                  fontFamily: MONO,
+                  fontSize: 10.5,
                   cursor: "pointer",
                   whiteSpace: "nowrap",
                 }}
@@ -572,7 +577,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
       )}
 
       {/* Account list */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
         {loading && <PipLoader height={300} />}
 
         {!loading && accounts.length === 0 && (
@@ -625,14 +630,10 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
               onKeyDown={function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(a); } }}
               style={{
                 flex: isChild ? 1 : undefined,
-                background: "rgba(18,40,36,0.82)",
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
-                border: "1px solid rgba(255,255,255,0.06)",
-                borderLeft: "3px solid " + statusColor,
-                borderRadius: 12,
-                padding: isChild ? (isCompact ? "6px 10px" : "10px 12px") : (isCompact ? "8px 12px" : "12px 14px"),
-                boxShadow: "0 4px 20px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.07)",
+                background: C.surface,
+                border: "1px solid " + C.rule,
+                borderRadius: 6,
+                padding: isChild ? (isCompact ? "6px 10px" : "10px 12px") : (isCompact ? "8px 12px" : "11px 12px"),
                 cursor: "pointer",
                 userSelect: "none",
                 transition: "opacity 0.12s",
@@ -642,26 +643,28 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: a.revenue || a.next_meeting ? 4 : 0 }}>
                     <div style={{
-                      fontSize: isChild ? 13 : 14,
-                      fontWeight: 600,
-                      color: isChild ? C.textSub : C.text,
+                      fontFamily: SERIF,
+                      fontSize: isChild ? 13.5 : 15.5,
+                      fontWeight: 400,
+                      letterSpacing: "-0.005em",
+                      color: isChild ? C.textSoft : C.text,
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
                     }}>
                       {a.name}
                     </div>
-                    {a.tier && <Pill color={TIER_COLORS[a.tier] || C.textSub}>{a.tier}</Pill>}
+                    {a.tier && <Pill color={TIER_COLORS[a.tier] || C.textSoft}>{a.tier}</Pill>}
                   </div>
                   {(a.revenue || a.next_meeting) && !isCompact && (
                     <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                       {a.revenue && (
-                        <div style={{ fontSize: 11, color: C.textMuted, fontVariantNumeric: "tabular-nums" }}>
+                        <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, fontFeatureSettings: '"tnum"' }}>
                           {a.revenue}
                         </div>
                       )}
                       {a.next_meeting && (
-                        <div style={{ fontSize: 11, color: C.textMuted, fontVariantNumeric: "tabular-nums" }}>
+                        <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, fontFeatureSettings: '"tnum"' }}>
                           {"Next · " + new Date(a.next_meeting + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                         </div>
                       )}
@@ -669,10 +672,10 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                   )}
                 </div>
                 <div style={{
-                  fontSize: 11,
-                  fontWeight: 700,
+                  fontFamily: MONO,
+                  fontSize: 10,
                   color: daysColor,
-                  fontVariantNumeric: "tabular-nums",
+                  fontFeatureSettings: '"tnum"',
                   flexShrink: 0,
                 }}>
                   {daysLabel}
@@ -686,9 +689,9 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
               {a.account_type === 'mso' && shopCounts[a.id] > 0 && !isCompact && (
                 <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
                   <div style={{
-                    fontSize: 10, fontWeight: 700, color: C.accent,
-                    background: C.accentGlow, border: '1px solid ' + C.accentLine,
-                    borderRadius: 10, padding: '2px 8px', letterSpacing: '0.04em',
+                    fontFamily: MONO, fontSize: 9.5, color: C.accent,
+                    background: C.accentFaint, border: '1px solid ' + C.accentLine,
+                    borderRadius: 999, padding: '2px 8px', letterSpacing: '0.06em',
                   }}>
                     {shopCounts[a.id]} {shopCounts[a.id] === 1 ? 'shop' : 'shops'}
                   </div>
@@ -733,13 +736,16 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
             return (
               <div key={a.id} className="list-item" style={{ display: "flex", alignItems: "flex-start", gap: 0, marginTop: -2, animationDelay: index * 0.04 + "s" }}>
                 <div style={{
-                  width: 28,
+                  width: 24,
                   flexShrink: 0,
                   display: "flex",
                   justifyContent: "center",
                   paddingTop: 11,
+                  borderLeft: "1px dashed " + C.accentBorder,
+                  marginLeft: 10,
+                  marginRight: 4,
                 }}>
-                  <span style={{ fontSize: 13, color: C.textMuted, opacity: 0.3, lineHeight: 1 }}>↳</span>
+                  <span style={{ fontSize: 11, color: C.textFaint, lineHeight: 1 }}>↳</span>
                 </div>
                 {card}
               </div>

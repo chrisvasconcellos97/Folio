@@ -142,7 +142,7 @@ export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAd
                 </div>
                 {onGoToCadence && (
                   <button onClick={onGoToCadence}
-                    style={{ background: "none", border: "1px solid " + C.border, borderRadius: 6, padding: "4px 10px", fontSize: 11, color: C.textMuted, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", flexShrink: 0 }}>
+                    style={{ background: "none", border: "1px solid " + C.border, borderRadius: 6, padding: "4px 10px", fontSize: 11, color: C.textMuted, fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer", flexShrink: 0 }}>
                     Cadence →
                   </button>
                 )}
@@ -205,7 +205,7 @@ export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAd
               style={{
                 background: C.accentGlow, border: "1px solid " + C.accentSubtle,
                 borderRadius: 8, padding: "6px 16px", fontSize: 12, fontWeight: 600,
-                color: C.accent, fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
+                color: C.accent, fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer",
               }}
             >
               + Add Action Item

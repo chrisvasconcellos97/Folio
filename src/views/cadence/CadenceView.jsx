@@ -113,7 +113,7 @@ export function CadenceView({ cadences, accounts, onSelectAccount, addCadence, o
             style={{
               flex: 1, padding: '7px 4px', borderRadius: 8, cursor: 'pointer',
               fontSize: 12, fontWeight: active ? 600 : 400,
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: "'Inter', system-ui, sans-serif",
               background: active ? C.bgCardAlt : 'transparent',
               color: active ? C.accent : C.textMuted,
               border: '1px solid ' + (active ? C.border : 'transparent'),
@@ -136,7 +136,7 @@ export function CadenceView({ cadences, accounts, onSelectAccount, addCadence, o
             style={{
               background: C.accentGlow, border: '1px solid ' + C.accentSubtle,
               borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 600,
-              color: C.accent, fontFamily: "'DM Sans', sans-serif", cursor: 'pointer',
+              color: C.accent, fontFamily: "'Inter', system-ui, sans-serif", cursor: 'pointer',
             }}
           >
             + Set Cadence
@@ -181,7 +181,7 @@ export function CadenceView({ cadences, accounts, onSelectAccount, addCadence, o
           style={{
             background: C.accentGlow, border: '1px solid ' + C.accentSubtle,
             borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 600,
-            color: C.accent, fontFamily: "'DM Sans', sans-serif", cursor: 'pointer',
+            color: C.accent, fontFamily: "'Inter', system-ui, sans-serif", cursor: 'pointer',
           }}
         >
           + Set Cadence

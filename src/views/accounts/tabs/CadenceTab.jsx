@@ -194,7 +194,7 @@ export function CadenceTab({ account, cadences, items, meetings, contacts, onAdd
           </div>
           <button
             onClick={function () { setEditingCad(null); setPrefillValues(null); setShowModal(true); }}
-            style={{ background: 'none', border: 'none', fontSize: 11, color: C.accent, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
+            style={{ background: 'none', border: 'none', fontSize: 11, color: C.accent, cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif" }}
           >
             + Add
           </button>
@@ -223,7 +223,7 @@ export function CadenceTab({ account, cadences, items, meetings, contacts, onAdd
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
           <div style={sectionLabel}>Open Items{openItems.length > 0 ? ' (' + openItems.length + ')' : ''}</div>
-          <button onClick={onAddItem} style={{ background: 'none', border: 'none', fontSize: 11, color: C.accent, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+          <button onClick={onAddItem} style={{ background: 'none', border: 'none', fontSize: 11, color: C.accent, cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif" }}>
             + Add
           </button>
         </div>
@@ -252,7 +252,7 @@ export function CadenceTab({ account, cadences, items, meetings, contacts, onAdd
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
           <div style={sectionLabel}>Meeting History</div>
-          <button onClick={onLogMeeting} style={{ background: 'none', border: 'none', fontSize: 11, color: C.accent, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+          <button onClick={onLogMeeting} style={{ background: 'none', border: 'none', fontSize: 11, color: C.accent, cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif" }}>
             + Log
           </button>
         </div>

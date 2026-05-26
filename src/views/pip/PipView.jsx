@@ -1,8 +1,11 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { C } from "../../lib/colors";
-import { PipMark } from "../../components/PipMark";
+import { PipOrb } from "../../components/PipMark";
 import { AmberBtn } from "../../components/Buttons";
 import { InputField } from "../../components/InputField";
+
+var MONO = "'JetBrains Mono', ui-monospace, monospace";
+var SERIF = "'Fraunces', Georgia, serif";
 import { askPip } from "../../lib/pip";
 import { latestRecord, momPct, yoyPct, fmtRevenue, fmtPct } from "../../lib/metricsUtils";
 import { getNextOccurrence, getFrequencyLabel } from "../../lib/cadenceUtils";
@@ -287,44 +290,35 @@ export function PipView({ accounts, meetings, tasks, addTask, updateTask, onActi
       }}
     >
       {/* Header */}
-      <div style={{ textAlign: "center", padding: "20px 0 16px" }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            marginBottom: 12,
-          }}
-        >
-          <div
-            className="pip-sonar"
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: "50%",
-              background: C.accentGlow,
-              border: "1px solid " + C.accentRing,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "0 0 28px " + C.accentLine,
-            }}
-          >
-            <PipMark size={16} color={C.accent} glow pulse />
+      <div style={{
+        display: "flex", alignItems: "center", gap: 14,
+        padding: "16px 0 14px",
+        borderBottom: "1px solid " + C.rule,
+        marginBottom: 16,
+      }}>
+        <PipOrb size="md" sonar />
+        <div style={{ flex: 1 }}>
+          <div style={{ fontFamily: SERIF, fontSize: 28, fontWeight: 400, color: C.text, letterSpacing: "-0.02em", lineHeight: 1 }}>
+            Pip
+          </div>
+          <div style={{ fontFamily: MONO, fontSize: 9.5, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", marginTop: 3 }}>
+            Account Intelligence · {listening ? "Listening" : "Ready"}
           </div>
         </div>
-        <div style={{ fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 4 }}>
-          Pip
-        </div>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-          <div style={{ fontSize: 12, color: C.textMuted }}>Your account intelligence</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {voiceSupported && (
             <button
               onClick={function () { setAudio(function (v) { if (!v) window.speechSynthesis && window.speechSynthesis.cancel(); return !v; }); }}
               title={audioEnabled ? "Mute Pip's voice" : "Unmute Pip's voice"}
               aria-label={audioEnabled ? "Mute Pip voice" : "Unmute Pip voice"}
-              style={{ background: "none", border: "none", cursor: "pointer", padding: "2px 4px", opacity: audioEnabled ? 1 : 0.4, lineHeight: 1 }}
+              style={{
+                width: 28, height: 28, borderRadius: 6, cursor: "pointer",
+                background: "transparent", border: "1px solid " + C.rule,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                opacity: audioEnabled ? 1 : 0.4,
+              }}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.textMuted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.textMuted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 {audioEnabled
                   ? <><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></>
                   : <><path d="M11 5L6 9H2v6h4l5 4V5z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></>
@@ -332,6 +326,9 @@ export function PipView({ accounts, meetings, tasks, addTask, updateTask, onActi
               </svg>
             </button>
           )}
+          <div style={{ fontFamily: MONO, fontSize: 9.5, color: C.textFaint }}>
+            {new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+          </div>
         </div>
       </div>
 
@@ -360,28 +357,36 @@ export function PipView({ accounts, meetings, tasks, addTask, updateTask, onActi
                 gap: 6,
               }}
             >
-              <div
-                style={{
-                  maxWidth: "82%",
-                  background: isPip ? C.bgCard : C.accentGlow,
-                  border: "1px solid " + (isPip ? C.border : C.accentLine),
-                  borderRadius: isPip ? "4px 12px 12px 12px" : "12px 4px 12px 12px",
-                  padding: "10px 14px",
-                  fontSize: 13,
-                  color: isPip ? C.textSub : C.text,
-                  lineHeight: 1.65,
-                }}
-              >
-                {isPip && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 5 }}>
-                    <PipMark size={6} color={C.accent} />
-                    <span style={{ fontSize: 9, color: C.accent, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                      Pip
-                    </span>
+              {isPip ? (
+                <div style={{ display: "grid", gridTemplateColumns: "32px 1fr", gap: 10, maxWidth: "82%" }}>
+                  <PipOrb size="sm" />
+                  <div>
+                    <div style={{ fontFamily: MONO, fontSize: 9.5, color: C.accent, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>
+                      PIP · {i === 0 ? "JUST NOW" : "EARLIER"}
+                    </div>
+                    <div style={{
+                      fontFamily: SERIF, fontSize: 17, color: C.text, lineHeight: 1.5,
+                    }}>
+                      {m.text}
+                    </div>
                   </div>
-                )}
-                {m.text}
-              </div>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    maxWidth: "50ch",
+                    background: C.surface2,
+                    borderRadius: "12px 12px 4px 12px",
+                    padding: "10px 14px",
+                    fontFamily: "'Inter', system-ui, sans-serif",
+                    fontSize: 14,
+                    color: C.text,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {m.text}
+                </div>
+              )}
               {isPip && m.actionResult && (
                 <div style={{ fontSize: 10, color: C.accent, display: "flex", alignItems: "center", gap: 5, paddingLeft: 4 }}>
                   <span style={{ color: "#4ade80" }}>✓</span>
@@ -392,15 +397,15 @@ export function PipView({ accounts, meetings, tasks, addTask, updateTask, onActi
                 <button
                   onClick={function () { onAction(m.action, m.actionAccount); }}
                   style={{
-                    background: C.accentGlow,
-                    border: "1px solid " + C.accentRing,
-                    borderRadius: 20,
+                    background: C.accentDeep,
+                    border: "none",
+                    borderRadius: 6,
                     padding: "7px 14px",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: C.accent,
-                    fontFamily: "'DM Sans', sans-serif",
+                    fontFamily: MONO,
+                    fontSize: 10.5,
+                    color: C.bg,
                     cursor: "pointer",
+                    marginLeft: 42,
                   }}
                 >
                   {actionLabel(m.action, m.actionAccount)}
@@ -411,11 +416,12 @@ export function PipView({ accounts, meetings, tasks, addTask, updateTask, onActi
         })}
 
         {loading && (
-          <div style={{ display: "flex", justifyContent: "flex-start" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "32px 1fr", gap: 10, alignItems: "center" }}>
+            <PipOrb size="sm" />
             <div
               style={{
-                background: C.bgCard,
-                border: "1px solid " + C.border,
+                background: C.surface,
+                border: "1px solid " + C.rule,
                 borderRadius: "4px 12px 12px 12px",
                 padding: "10px 16px",
                 display: "flex",
@@ -428,11 +434,11 @@ export function PipView({ accounts, meetings, tasks, addTask, updateTask, onActi
                   <div
                     key={d}
                     style={{
-                      width: 6,
-                      height: 6,
+                      width: 5,
+                      height: 5,
                       borderRadius: "50%",
                       background: C.accentDim,
-                      animation: "pipPulse 1.2s ease-in-out " + d * 0.2 + "s infinite",
+                      animation: "pip-breathe 1.2s ease-in-out " + d * 0.2 + "s infinite",
                     }}
                   />
                 );
@@ -460,13 +466,13 @@ export function PipView({ accounts, meetings, tasks, addTask, updateTask, onActi
                 key={i}
                 onClick={function () { send(s); }}
                 style={{
-                  background: C.bgPill,
-                  border: "1px solid " + C.border,
-                  borderRadius: 20,
-                  padding: "5px 12px",
-                  fontSize: 11,
-                  color: C.textSub,
-                  fontFamily: "'DM Sans', sans-serif",
+                  background: "transparent",
+                  border: "1px solid " + C.rule,
+                  borderRadius: 999,
+                  padding: "5px 13px",
+                  fontFamily: MONO,
+                  fontSize: 10.5,
+                  color: C.textSoft,
                   cursor: "pointer",
                   whiteSpace: "nowrap",
                 }}
@@ -482,6 +488,7 @@ export function PipView({ accounts, meetings, tasks, addTask, updateTask, onActi
       <div
         style={{
           paddingTop: 12,
+          borderTop: "1px solid " + C.rule,
           display: "flex",
           gap: 8,
           alignItems: "center",
@@ -492,7 +499,7 @@ export function PipView({ accounts, meetings, tasks, addTask, updateTask, onActi
           onChange={function (e) { setInput(e.target.value); }}
           onKeyDown={handleKeyDown}
           placeholder={listening ? "Listening..." : "Ask Pip anything about your accounts..."}
-          style={{ flex: 1 }}
+          style={{ flex: 1, fontFamily: "'Inter', system-ui, sans-serif", fontSize: 15 }}
         />
         {voiceSupported && (
           <button
@@ -501,10 +508,10 @@ export function PipView({ accounts, meetings, tasks, addTask, updateTask, onActi
             title={listening ? "Stop listening" : "Speak to Pip"}
             aria-label={listening ? "Stop listening" : "Speak to Pip"}
             style={{
-              width: 38, height: 38, borderRadius: "50%", flexShrink: 0,
-              background: listening ? "rgba(224,92,92,0.15)" : C.accentGlow,
-              border: "1px solid " + (listening ? "rgba(224,92,92,0.4)" : C.accentLine),
-              color: listening ? C.red : C.accent,
+              width: 38, height: 38, borderRadius: 6, flexShrink: 0,
+              background: listening ? C.redFaint : "transparent",
+              border: "1px solid " + (listening ? C.redLine : C.rule),
+              color: listening ? C.red : C.textMuted,
               cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
             }}
           >
@@ -516,14 +523,22 @@ export function PipView({ accounts, meetings, tasks, addTask, updateTask, onActi
             </svg>
           </button>
         )}
-        <AmberBtn
+        <button
           onClick={function () { send(); }}
           disabled={loading || !input.trim()}
           aria-label="Send message"
-          style={{ flexShrink: 0, padding: "10px 16px" }}
+          style={{
+            flexShrink: 0, padding: "10px 18px",
+            background: C.accentDeep, color: C.bg,
+            border: "none", borderRadius: 6,
+            fontFamily: "'Inter', system-ui, sans-serif",
+            fontSize: 14, fontWeight: 600,
+            cursor: loading || !input.trim() ? "default" : "pointer",
+            opacity: loading || !input.trim() ? 0.5 : 1,
+          }}
         >
           →
-        </AmberBtn>
+        </button>
       </div>
     </div>
   );

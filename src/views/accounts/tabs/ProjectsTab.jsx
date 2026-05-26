@@ -144,7 +144,7 @@ export function ProjectsTab({ projects, accounts, accountId, userId, addProject,
 
         <button
           onClick={function () { setShowAdd(true); }}
-          style={{ background: GB, border: "1px solid " + GB_BDR, borderRadius: 20, padding: "5px 13px", color: "rgba(103,200,249,0.9)", fontSize: 11, fontWeight: 600, fontFamily: "'DM Sans', sans-serif", cursor: "pointer" }}
+          style={{ background: GB, border: "1px solid " + GB_BDR, borderRadius: 20, padding: "5px 13px", color: "rgba(103,200,249,0.9)", fontSize: 11, fontWeight: 600, fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer" }}
         >
           + New Request
         </button>

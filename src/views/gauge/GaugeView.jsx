@@ -5,12 +5,15 @@ import { useProjects } from "../../hooks/useProjects";
 import { ProjectModal } from "./ProjectModal";
 import { PipLoader } from "../../components/PipLoader";
 
+var MONO = "'JetBrains Mono', ui-monospace, monospace";
+var SERIF = "'Fraunces', Georgia, serif";
+
 var STATUS_COLORS = {
-  planned:     "rgba(103,200,249,0.7)",
-  in_progress: C.blue,
-  blocked:     C.red,
-  complete:    C.green,
-  on_hold:     C.yellow,
+  planned:     C.statusPlanned.text,
+  in_progress: C.accent,
+  blocked:     C.statusBlocked.text,
+  complete:    C.statusComplete.text,
+  on_hold:     C.statusOnHold.text,
 };
 
 var STATUS_LABELS = {
@@ -37,8 +40,8 @@ var FILTERS = [
   { id: "on_hold",     label: "On Hold"     },
 ];
 
-var GB      = "rgba(103,200,249,0.12)";
-var GB_BDR  = "rgba(103,200,249,0.2)";
+var GB      = C.blueFaint;
+var GB_BDR  = C.blueLine;
 
 function fmt(dateStr) {
   if (!dateStr) return null;
@@ -89,63 +92,53 @@ export function GaugeView({ userId, userEmail, accounts }) {
 
   return (
     <div>
-      {/* Header banner */}
+      {/* Header */}
       <div
         style={{
-          background: "linear-gradient(135deg, rgba(103,200,249,0.07) 0%, rgba(103,200,249,0.02) 100%)",
-          border: "1px solid " + GB_BDR,
-          borderRadius: 16,
-          padding: "20px 24px",
-          marginBottom: 24,
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "center",
+          alignItems: "flex-start",
+          marginBottom: 20,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <GaugeIcon size={44} glow />
-          <div>
-            <div
-              style={{
-                fontSize: 20,
-                fontWeight: 700,
-                color: C.text,
-                letterSpacing: "0.1em",
-                lineHeight: 1.1,
-              }}
-            >
-              GAUGE
-            </div>
-            <div
-              style={{
-                fontSize: 10,
-                color: "rgba(103,200,249,0.9)",
-                letterSpacing: "0.12em",
-                textTransform: "uppercase",
-                marginTop: 3,
-              }}
-            >
-              Project Management
-            </div>
+        <div>
+          <div style={{ fontFamily: SERIF, fontSize: 40, fontWeight: 400, color: C.text, letterSpacing: "-0.02em", lineHeight: 1 }}>
+            Gauge
+          </div>
+          <div style={{ fontFamily: MONO, fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", marginTop: 4 }}>
+            Project Management · {inProgressCount} Active
           </div>
         </div>
-
-        <button
-          onClick={function () { setShowAdd(true); }}
-          style={{
-            background: GB,
-            border: "1px solid " + GB_BDR,
-            borderRadius: 24,
-            padding: "8px 18px",
-            color: "rgba(103,200,249,0.9)",
-            fontSize: 12,
-            fontWeight: 600,
-            fontFamily: "'DM Sans', sans-serif",
-            cursor: "pointer",
-          }}
-        >
-          + New Project
-        </button>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button
+            onClick={function () { setFilter(filter); }}
+            style={{
+              width: 28, height: 28, borderRadius: 6, cursor: "pointer",
+              background: "transparent", border: "1px solid " + C.rule,
+              color: C.textMuted, display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/>
+            </svg>
+          </button>
+          <button
+            onClick={function () { setShowAdd(true); }}
+            style={{
+              background: C.accentDeep,
+              border: "none",
+              borderRadius: 6,
+              padding: "8px 16px",
+              color: C.bg,
+              fontFamily: "'Inter', system-ui, sans-serif",
+              fontSize: 12,
+              fontWeight: 500,
+              cursor: "pointer",
+            }}
+          >
+            + New Project
+          </button>
+        </div>
       </div>
 
       {/* Stats row */}
@@ -153,45 +146,38 @@ export function GaugeView({ userId, userEmail, accounts }) {
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(5, 1fr)",
-          gap: 10,
+          gap: 1,
           marginBottom: 20,
+          background: C.rule,
+          border: "1px solid " + C.rule,
+          borderRadius: 8,
+          overflow: "hidden",
         }}
       >
         {[
-          { label: "Total",       value: totalCount,      color: C.textSub                   },
-          { label: "In Progress", value: inProgressCount, color: "rgba(103,200,249,0.9)"      },
-          { label: "Blocked",     value: blockedCount,    color: C.red                        },
-          { label: "On Hold",     value: onHoldCount,     color: C.yellow                     },
-          { label: "Complete",    value: completedCount,  color: C.green                      },
+          { label: "Total",       value: totalCount,      color: C.textSoft,   isZero: totalCount === 0      },
+          { label: "In Progress", value: inProgressCount, color: C.accent,     isZero: inProgressCount === 0 },
+          { label: "Blocked",     value: blockedCount,    color: C.red,        isZero: blockedCount === 0    },
+          { label: "On Hold",     value: onHoldCount,     color: C.yellow,     isZero: onHoldCount === 0     },
+          { label: "Complete",    value: completedCount,  color: C.statusComplete.text, isZero: completedCount === 0 },
         ].map(function (s) {
           return (
             <div
               key={s.label}
-              style={Object.assign({}, glass, {
-                borderRadius: 10,
-                padding: "12px 14px",
+              style={{
+                background: C.surface,
+                padding: "14px 14px",
                 textAlign: "center",
-              })}
+              }}
             >
-              <div
-                style={{
-                  fontSize: 22,
-                  fontWeight: 700,
-                  color: s.color,
-                  fontVariantNumeric: "tabular-nums",
-                }}
-              >
-                {s.value}
-              </div>
-              <div
-                style={{
-                  fontSize: 9,
-                  color: C.textMuted,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.08em",
-                  marginTop: 2,
-                }}
-              >
+              {s.isZero ? (
+                <div style={{ fontFamily: MONO, fontSize: 14, color: C.textFaint, fontFeatureSettings: '"tnum"' }}>—</div>
+              ) : (
+                <div style={{ fontFamily: SERIF, fontSize: 28, color: s.color, fontFeatureSettings: '"tnum"', lineHeight: 1 }}>
+                  {s.value}
+                </div>
+              )}
+              <div style={{ fontFamily: MONO, fontSize: 9.5, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", marginTop: 4 }}>
                 {s.label}
               </div>
             </div>
@@ -199,16 +185,14 @@ export function GaugeView({ userId, userEmail, accounts }) {
         })}
       </div>
 
-      {/* Filter tabs */}
+      {/* Filter chips */}
       <div
         style={{
           display: "flex",
-          background: "rgba(0,0,0,0.25)",
-          borderRadius: 10,
-          padding: 3,
-          gap: 2,
+          gap: 5,
           marginBottom: 16,
           overflowX: "auto",
+          paddingBottom: 2,
         }}
       >
         {FILTERS.map(function (f) {
@@ -219,15 +203,14 @@ export function GaugeView({ userId, userEmail, accounts }) {
               onClick={function () { setFilter(f.id); }}
               style={{
                 flex: "0 0 auto",
-                padding: "7px 10px",
-                borderRadius: 8,
+                padding: "4px 12px",
+                borderRadius: 999,
                 cursor: "pointer",
-                fontSize: 11,
-                fontWeight: 600,
-                fontFamily: "'DM Sans', sans-serif",
-                background: active ? C.bgCardAlt : "transparent",
-                color: active ? "rgba(103,200,249,0.9)" : C.textMuted,
-                border: "1px solid " + (active ? GB_BDR : "transparent"),
+                fontFamily: MONO,
+                fontSize: 10.5,
+                background: active ? C.accent : "transparent",
+                color: active ? C.bg : C.textMuted,
+                border: "1px solid " + (active ? C.accent : C.rule),
                 whiteSpace: "nowrap",
               }}
             >
@@ -257,13 +240,16 @@ export function GaugeView({ userId, userEmail, accounts }) {
         </div>
       )}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {filtered.map(function (p) {
           var acctName    = getAccountName(p.account_id);
           var overdue     = p.status === "in_progress" && isOverdue(p.due_date);
           var dimmed      = p.status === "complete";
           var totalStages = p.stages && p.stages.length > 0 ? p.stages.length : 0;
           var doneStages  = totalStages > 0 ? p.stages.filter(function (s) { return !!s.completed_at; }).length : 0;
+          var pct         = totalStages > 0 ? Math.round((doneStages / totalStages) * 100) : 0;
+
+          var statusStyle = C["status" + p.status.split("_").map(function(w) { return w.charAt(0).toUpperCase() + w.slice(1); }).join("")] || C.statusPlanned;
 
           return (
             <div
@@ -272,155 +258,98 @@ export function GaugeView({ userId, userEmail, accounts }) {
               role="button"
               tabIndex={0}
               onKeyDown={function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setEditing(p); } }}
-              style={Object.assign({}, glass, {
-                border: "1px solid " + (p.status === "in_progress" ? GB_BDR : p.status === "blocked" ? "rgba(224,92,92,0.3)" : "rgba(255,255,255,0.06)"),
-                borderLeft: p.status === "blocked" ? "3px solid rgba(224,92,92,0.8)" : undefined,
-                borderRadius: 12,
+              style={{
+                background: C.surface,
+                border: "1px solid " + (p.status === "blocked" ? C.statusBlocked.border : C.rule),
+                borderRadius: 8,
                 padding: "14px 16px",
                 cursor: "pointer",
-                opacity: dimmed ? 0.65 : 1,
-                transition: "border-color 0.15s",
-              })}
+                opacity: dimmed ? 0.7 : 1,
+                display: "grid",
+                gridTemplateColumns: "1fr 200px",
+                gap: 16,
+                alignItems: "start",
+              }}
             >
-              {/* Top row */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                  gap: 10,
-                  marginBottom: 6,
-                }}
-              >
-                <div style={{ flex: 1 }}>
+              {/* Left: title + description + meta */}
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                  <div style={{ fontFamily: SERIF, fontSize: 17, color: C.text, lineHeight: 1.3 }}>
+                    {p.title}
+                  </div>
+                  {/* Status pill */}
+                  <div style={{
+                    background: statusStyle ? statusStyle.bg : "transparent",
+                    border: "1px solid " + (statusStyle ? statusStyle.border : C.rule),
+                    borderRadius: 999,
+                    padding: "2px 9px",
+                    fontFamily: MONO, fontSize: 9.5,
+                    color: statusStyle ? statusStyle.text : C.textMuted,
+                    flexShrink: 0, whiteSpace: "nowrap",
+                  }}>
+                    {STATUS_LABELS[p.status] || p.status}
+                  </div>
                   {acctName && (
-                    <div
-                      style={{
-                        fontSize: 10,
-                        color: C.accentDim,
-                        fontWeight: 600,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.06em",
-                        marginBottom: 3,
-                      }}
-                    >
+                    <div style={{ fontFamily: MONO, fontSize: 9.5, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                       {acctName}
                     </div>
                   )}
-                  <div style={{ fontSize: 14, fontWeight: 600, color: C.text, lineHeight: 1.3 }}>
-                    {p.title}
-                  </div>
                 </div>
 
-                <div
-                  style={{
-                    background: (STATUS_COLORS[p.status] || C.textMuted) + "20",
-                    border: "1px solid " + (STATUS_COLORS[p.status] || C.textMuted) + "40",
-                    borderRadius: 20,
-                    padding: "3px 10px",
-                    fontSize: 10,
-                    fontWeight: 600,
-                    color: STATUS_COLORS[p.status] || C.textMuted,
-                    flexShrink: 0,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {STATUS_LABELS[p.status] || p.status}
+                {p.description && (
+                  <div style={{
+                    fontFamily: SERIF, fontSize: 13.5, color: C.textSoft, lineHeight: 1.5,
+                    marginBottom: 8,
+                    overflow: "hidden", display: "-webkit-box",
+                    WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
+                  }}>
+                    {p.description}
+                  </div>
+                )}
+
+                {/* Meta row */}
+                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                  {p.priority && (
+                    <div style={{ fontFamily: MONO, fontSize: 10, color: PRIORITY_COLORS[p.priority], display: "flex", alignItems: "center", gap: 4 }}>
+                      <span style={{ width: 5, height: 5, borderRadius: "50%", background: PRIORITY_COLORS[p.priority], display: "inline-block" }} />
+                      {p.priority.charAt(0).toUpperCase() + p.priority.slice(1)}
+                    </div>
+                  )}
+                  {p.assignee && (
+                    <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted }}>
+                      {p.assignee}
+                    </div>
+                  )}
+                  {p.due_date && (
+                    <div style={{ fontFamily: MONO, fontSize: 10, color: overdue ? C.red : C.textMuted, fontFeatureSettings: '"tnum"' }}>
+                      {overdue ? "Overdue · " : "Due · "}{fmt(p.due_date)}
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Stage progress bar */}
+              {/* Right: stages + gradient progress bar */}
               {totalStages > 0 && (
-                <div style={{ marginTop: 6, marginBottom: 8 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
-                    <span style={{ fontSize: 10, color: C.textMuted }}>
-                      {doneStages}/{totalStages} stages
-                    </span>
-                    {doneStages === totalStages && (
-                      <span style={{ fontSize: 10, color: C.green, fontWeight: 600 }}>Done</span>
-                    )}
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontFamily: MONO, fontSize: 10.5, color: C.textMuted, marginBottom: 6 }}>
+                    {doneStages}/{totalStages} stages · {pct}%
                   </div>
-                  <div style={{ height: 3, background: C.bgDark, borderRadius: 2, overflow: "hidden" }}>
+                  {/* Gradient progress track */}
+                  <div style={{ position: "relative", height: 4, background: C.surface3, borderRadius: 2, overflow: "hidden" }}>
                     <div style={{
-                      height: "100%",
+                      position: "absolute", inset: 0,
+                      background: "linear-gradient(to right, oklch(0.42 0.09 232), oklch(0.55 0.12 200), oklch(0.68 0.13 178), oklch(0.80 0.13 162))",
                       borderRadius: 2,
-                      width: (totalStages > 0 ? Math.round((doneStages / totalStages) * 100) : 0) + "%",
-                      background: doneStages === totalStages ? C.green : "rgba(103,200,249,0.9)",
-                      transition: "width 0.3s ease",
+                    }} />
+                    {/* Mask covering unfilled portion */}
+                    <div style={{
+                      position: "absolute", top: 0, right: 0, bottom: 0,
+                      width: (100 - pct) + "%",
+                      background: C.surface3,
                     }} />
                   </div>
                 </div>
               )}
-
-              {/* Description */}
-              {p.description && (
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: C.textSub,
-                    lineHeight: 1.5,
-                    marginBottom: 10,
-                    overflow: "hidden",
-                    display: "-webkit-box",
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: "vertical",
-                  }}
-                >
-                  {p.description}
-                </div>
-              )}
-
-              {/* Bottom row */}
-              <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-                {p.priority && (
-                  <div
-                    style={{
-                      fontSize: 10,
-                      color: PRIORITY_COLORS[p.priority],
-                      fontWeight: 600,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 4,
-                    }}
-                  >
-                    <span
-                      style={{
-                        width: 6,
-                        height: 6,
-                        borderRadius: "50%",
-                        background: PRIORITY_COLORS[p.priority],
-                        display: "inline-block",
-                      }}
-                    />
-                    {p.priority.charAt(0).toUpperCase() + p.priority.slice(1)}
-                  </div>
-                )}
-
-                {p.due_date && (
-                  <div
-                    style={{
-                      fontSize: 10,
-                      color: overdue ? C.red : C.textMuted,
-                      fontWeight: overdue ? 600 : 400,
-                    }}
-                  >
-                    {overdue ? "Overdue · " : "Due · "}
-                    {fmt(p.due_date)}
-                  </div>
-                )}
-
-                {p.assignee && (
-                  <div style={{ fontSize: 11, color: C.textMuted }}>
-                    {"↳ " + p.assignee}
-                  </div>
-                )}
-
-                {p.requested_by && (
-                  <div style={{ fontSize: 10, color: C.textMuted }}>
-                    {"req. " + p.requested_by}
-                  </div>
-                )}
-              </div>
             </div>
           );
         })}

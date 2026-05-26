@@ -54,13 +54,13 @@ function ProfileModal({ userMeta, onClose }) {
           <button onClick={onClose} style={{
             background: "none", border: "1px solid " + C.border, borderRadius: 20,
             padding: "8px 18px", fontSize: 12, fontWeight: 600, color: C.textSub,
-            fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
+            fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer",
           }}>Cancel</button>
           <button onClick={handleSave} disabled={!name.trim() || saving} style={{
             background: !name.trim() || saving ? C.accentDim : C.accent,
             border: "none", borderRadius: 20, padding: "8px 22px",
             fontSize: 12, fontWeight: 700, color: "#fff",
-            fontFamily: "'DM Sans', sans-serif",
+            fontFamily: "'Inter', system-ui, sans-serif",
             cursor: !name.trim() || saving ? "default" : "pointer",
             opacity: saving ? 0.7 : 1,
           }}>
@@ -121,7 +121,7 @@ export function UserMenu({ userMeta, onSignOut, onTour, onSettings, dropUp }) {
             border: "1px solid " + (open ? C.accent : C.accentRing),
             color: open ? "#091712" : C.accent,
             fontSize: 11, fontWeight: 700,
-            fontFamily: "'DM Sans', sans-serif",
+            fontFamily: "'Inter', system-ui, sans-serif",
             cursor: "pointer",
             display: "flex", alignItems: "center", justifyContent: "center",
             transition: "background 0.15s, border-color 0.15s, color 0.15s",
@@ -176,7 +176,7 @@ export function UserMenu({ userMeta, onSignOut, onTour, onSettings, dropUp }) {
                       padding: "9px 14px",
                       background: "none", border: "none",
                       cursor: item.soon ? "default" : "pointer",
-                      fontFamily: "'DM Sans', sans-serif",
+                      fontFamily: "'Inter', system-ui, sans-serif",
                       fontSize: 13,
                       color: item.soon ? C.textMuted : C.textSub,
                       textAlign: "left",
@@ -209,7 +209,7 @@ export function UserMenu({ userMeta, onSignOut, onTour, onSettings, dropUp }) {
                   width: "100%", padding: "9px 14px",
                   background: "none", border: "none",
                   cursor: "pointer", textAlign: "left",
-                  fontFamily: "'DM Sans', sans-serif",
+                  fontFamily: "'Inter', system-ui, sans-serif",
                   fontSize: 13, color: C.red,
                   display: "flex", alignItems: "center", gap: 9,
                 }}

@@ -274,7 +274,7 @@ export function MeetingsTab({ meetings, accountName, userId, onLogMeeting, onDel
                         fontSize: 10,
                         fontWeight: 600,
                         color: C.blue,
-                        fontFamily: "'DM Sans', sans-serif",
+                        fontFamily: "'Inter', system-ui, sans-serif",
                         cursor: "pointer",
                       }}
                     >
@@ -309,7 +309,7 @@ export function MeetingsTab({ meetings, accountName, userId, onLogMeeting, onDel
                         fontSize: 11, padding: "4px 10px",
                         background: C.accentGlow, border: "1px solid " + C.accentSubtle,
                         borderRadius: 6, color: C.accent, textDecoration: "none",
-                        fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
+                        fontFamily: "'Inter', system-ui, sans-serif", fontWeight: 500,
                         display: "inline-flex", alignItems: "center",
                       }}
                     >
@@ -332,7 +332,7 @@ export function MeetingsTab({ meetings, accountName, userId, onLogMeeting, onDel
                 <button
                   onClick={function () { handleAskPip(m); }}
                   disabled={isLoading}
-                  style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "1px solid " + C.accentSubtle, borderRadius: 8, padding: "6px 12px", cursor: isLoading ? "not-allowed" : "pointer", opacity: isLoading ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
+                  style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "1px solid " + C.accentSubtle, borderRadius: 8, padding: "6px 12px", cursor: isLoading ? "not-allowed" : "pointer", opacity: isLoading ? 0.5 : 1, fontFamily: "'Inter', system-ui, sans-serif" }}
                 >
                   <PipMark size={6} color={C.accent} glow pulse={isLoading} />
                   <span style={{ fontSize: 11, color: C.accent, fontWeight: 600 }}>

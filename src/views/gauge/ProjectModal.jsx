@@ -244,7 +244,7 @@ export function ProjectModal({ existing, accounts, onSave, onDelete, onClose }) 
                 padding: "7px 10px",
                 fontSize: 14,
                 color: C.text,
-                fontFamily: "'DM Sans', sans-serif",
+                fontFamily: "'Inter', system-ui, sans-serif",
                 outline: "none",
               }}
             />
@@ -258,7 +258,7 @@ export function ProjectModal({ existing, accounts, onSave, onDelete, onClose }) 
                 color: C.accent,
                 fontSize: 12,
                 fontWeight: 600,
-                fontFamily: "'DM Sans', sans-serif",
+                fontFamily: "'Inter', system-ui, sans-serif",
                 cursor: "pointer",
               }}
             >
@@ -288,7 +288,7 @@ export function ProjectModal({ existing, accounts, onSave, onDelete, onClose }) 
                   style={{
                     background: C.bgCardAlt, border: "1px solid " + C.border,
                     borderRadius: 20, padding: "6px 13px", fontSize: 11,
-                    color: C.textSub, fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
+                    color: C.textSub, fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer",
                   }}
                 >
                   No
@@ -303,7 +303,7 @@ export function ProjectModal({ existing, accounts, onSave, onDelete, onClose }) 
               style={{
                 background: "none", border: "1px solid " + C.border,
                 borderRadius: 20, padding: "8px 18px", fontSize: 12,
-                fontWeight: 600, color: C.textSub, fontFamily: "'DM Sans', sans-serif",
+                fontWeight: 600, color: C.textSub, fontFamily: "'Inter', system-ui, sans-serif",
                 cursor: "pointer",
               }}
             >
@@ -317,7 +317,7 @@ export function ProjectModal({ existing, accounts, onSave, onDelete, onClose }) 
                 border: "1px solid " + GB_BORDER,
                 borderRadius: 20, padding: "8px 22px", fontSize: 12,
                 fontWeight: 600, color: !title.trim() || saving ? C.textMuted : "rgba(103,200,249,0.9)",
-                fontFamily: "'DM Sans', sans-serif", cursor: !title.trim() || saving ? "default" : "pointer",
+                fontFamily: "'Inter', system-ui, sans-serif", cursor: !title.trim() || saving ? "default" : "pointer",
               }}
             >
               {saving ? "Saving…" : existing ? "Save Changes" : "Add Project"}

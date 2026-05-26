@@ -85,7 +85,7 @@ export function Modal({ title, onClose, children, width }) {
               color: C.textMuted,
               cursor: "pointer",
               fontSize: 20,
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: "'Inter', system-ui, sans-serif",
               lineHeight: 1,
               padding: "4px 8px",
             }}

@@ -495,7 +495,7 @@ export function OnboardingTour({ onComplete }) {
                 borderRadius: 24, padding: "14px",
                 fontSize: 13, fontWeight: 700,
                 color: current.isDone ? "#091712" : C.accent,
-                fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
+                fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer",
               }}
             >
               {current.isDone ? "Let's go" : "Continue →"}

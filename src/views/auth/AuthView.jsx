@@ -152,7 +152,7 @@ export function AuthView({ onSignIn, onSignUp }) {
                     cursor: "pointer",
                     fontSize: 12,
                     fontWeight: 600,
-                    fontFamily: "'DM Sans', sans-serif",
+                    fontFamily: "'Inter', system-ui, sans-serif",
                     textTransform: "capitalize",
                     background: mode === m ? C.bgCardAlt : "transparent",
                     color: mode === m ? C.accent : C.textMuted,

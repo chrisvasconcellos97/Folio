@@ -1,9 +1,12 @@
 import { C } from "../lib/colors";
 import { FolioIcon } from "../components/FolioIcon";
 import { GaugeIcon } from "../components/GaugeIcon";
-import { PipMark } from "../components/PipMark";
+import { PipOrb } from "../components/PipMark";
 import { AmberBtn } from "../components/Buttons";
 import { UserMenu } from "../components/UserMenu";
+
+var MONO = "'JetBrains Mono', ui-monospace, monospace";
+var SERIF = "'Fraunces', Georgia, serif";
 
 var NAV_ITEMS = [
   { id: "accounts",  label: "Accounts",  icon: "▣"  },
@@ -36,42 +39,42 @@ export function DesktopLayout({
         background: C.bg,
       }}
     >
-      {/* Sidebar */}
+      {/* Rail — 232px */}
       <div
         style={{
-          width: 220,
+          width: 232,
           flexShrink: 0,
-          background: C.bgDark,
-          borderRight: "1px solid " + C.border,
+          background: C.surface,
+          borderRight: "1px solid " + C.rule,
           display: "flex",
           flexDirection: "column",
-          padding: "24px 16px",
+          padding: "20px 14px",
         }}
       >
-        {/* Logo */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 32 }}>
-          <FolioIcon size={28} />
+        {/* Brand row */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+          <FolioIcon size={40} />
           <div>
             <div
               style={{
-                fontSize: 16,
-                fontWeight: 600,
+                fontFamily: SERIF,
+                fontSize: 22,
+                fontWeight: 400,
                 color: C.text,
-                letterSpacing: "0.02em",
-                display: "flex",
-                alignItems: "center",
-                gap: 5,
+                letterSpacing: "-0.01em",
+                lineHeight: 1.1,
               }}
             >
               Folio
-              <PipMark size={6} color={C.accent} opacity={0.5} />
             </div>
             <div
               style={{
-                fontSize: 8,
-                color: C.textMuted,
+                fontFamily: MONO,
+                fontSize: 9,
+                color: C.textFaint,
                 letterSpacing: "0.1em",
                 textTransform: "uppercase",
+                marginTop: 1,
               }}
             >
               Account Mgmt
@@ -79,54 +82,104 @@ export function DesktopLayout({
           </div>
         </div>
 
+        {/* Rule */}
+        <div style={{ borderBottom: "1px solid " + C.rule, margin: "10px 0 14px" }} />
+
+        {/* Section label */}
+        <div
+          style={{
+            fontFamily: MONO,
+            fontSize: 9.5,
+            color: C.textFaint,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            marginBottom: 6,
+            paddingLeft: 4,
+          }}
+        >
+          Workspace
+        </div>
+
         {/* Nav */}
-        <nav style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1 }}>
+        <nav style={{ display: "flex", flexDirection: "column", gap: 1, flex: 1 }}>
           {NAV_ITEMS.map(function (item) {
             var active = view === item.id;
+            var isGauge = item.id === "gauge";
+            var isPip   = item.id === "pip";
             return (
               <button
                 key={item.id}
                 onClick={function () { setView(item.id); }}
                 style={{
-                  display: "flex",
+                  display: "grid",
+                  gridTemplateColumns: "16px 1fr auto",
                   alignItems: "center",
-                  gap: 10,
-                  padding: "10px 12px",
-                  borderRadius: 10,
+                  gap: 8,
+                  padding: "9px 10px",
+                  borderRadius: 6,
                   cursor: "pointer",
-                  fontFamily: "'DM Sans', sans-serif",
-                  fontWeight: active ? 600 : 400,
-                  fontSize: 13,
-                  background: active ? (item.id === "gauge" ? "rgba(123,108,246,0.08)" : C.bgPillActive) : "transparent",
-                  color: active ? (item.id === "gauge" ? C.blue : C.accent) : C.textSub,
-                  border: "1px solid " + (active ? (item.id === "gauge" ? "rgba(123,108,246,0.2)" : C.accentLine) : "transparent"),
+                  fontFamily: "'Inter', system-ui, sans-serif",
+                  fontWeight: active ? 500 : 400,
+                  fontSize: 13.5,
+                  background: active
+                    ? (isGauge ? "rgba(91,143,212,0.1)" : "oklch(0.22 0.04 178 / 0.5)")
+                    : "transparent",
+                  color: active
+                    ? (isGauge ? C.blue : C.accent)
+                    : C.textSoft,
+                  border: "1px solid " + (active
+                    ? (isGauge ? "rgba(91,143,212,0.25)" : C.accentLine)
+                    : "transparent"),
                   textAlign: "left",
                 }}
               >
-                {item.icon === "gauge" ? (
+                {/* Icon column */}
+                {isGauge ? (
                   <GaugeIcon size={14} color={active ? C.blue : C.textMuted} />
-                ) : item.icon ? (
-                  <span style={{ fontSize: 13, opacity: 0.7 }}>{item.icon}</span>
+                ) : isPip ? (
+                  <PipOrb size="xs" style={{ justifySelf: "center" }} />
                 ) : (
-                  <PipMark size={7} color={active ? C.accent : C.textMuted} pulse={active} />
+                  <span style={{ fontSize: 12, opacity: active ? 0.9 : 0.55, textAlign: "center" }}>{item.icon}</span>
                 )}
-                {item.label}
+
+                {/* Label */}
+                <span>{item.label}</span>
+
+                {/* Active dot for Pip */}
+                {isPip && active && (
+                  <span style={{
+                    width: 5, height: 5, borderRadius: "50%",
+                    background: C.accent, display: "inline-block",
+                  }} />
+                )}
               </button>
             );
           })}
         </nav>
 
-        {/* Add Account button */}
-        <AmberBtn
-          onClick={onAddAccount}
-          style={{ width: "100%", marginBottom: 12, fontSize: 12 }}
-        >
-          + Account
-        </AmberBtn>
-
-        {/* User menu */}
-        <div style={{ borderTop: "1px solid " + C.border, paddingTop: 14, marginTop: 4 }}>
-          <UserMenu userMeta={userMeta} onSignOut={onSignOut} onTour={onTour} onSettings={function () { setView("settings"); }} dropUp />
+        {/* Footer */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+          <button
+            onClick={onAddAccount}
+            style={{
+              width: "100%",
+              padding: "9px 12px",
+              borderRadius: 6,
+              cursor: "pointer",
+              fontFamily: "'Inter', system-ui, sans-serif",
+              fontSize: 12.5,
+              fontWeight: 500,
+              background: "oklch(0.32 0.05 178 / 0.35)",
+              color: C.accent,
+              border: "1px solid " + C.accentBorder,
+              textAlign: "center",
+            }}
+          >
+            + Account
+          </button>
+          <div style={{ borderTop: "1px solid " + C.rule, paddingTop: 10 }}>
+            <UserMenu userMeta={userMeta} onSignOut={onSignOut} onTour={onTour} onSettings={function () { setView("settings"); }} dropUp />
+          </div>
         </div>
       </div>
 
@@ -136,9 +189,9 @@ export function DesktopLayout({
           style={{
             width: 320,
             flexShrink: 0,
-            borderRight: "1px solid " + C.border,
+            borderRight: "1px solid " + C.rule,
             overflowY: "auto",
-            padding: "20px 16px",
+            padding: "20px 14px",
           }}
         >
           {accountsPane}

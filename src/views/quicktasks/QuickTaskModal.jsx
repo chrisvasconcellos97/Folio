@@ -142,7 +142,7 @@ export function QuickTaskModal({ existing, accounts, onSave, onDelete, onClose }
                     padding: "5px 12px",
                     fontSize: 11,
                     fontWeight: 600,
-                    fontFamily: "'DM Sans', sans-serif",
+                    fontFamily: "'Inter', system-ui, sans-serif",
                     cursor: "pointer",
                     whiteSpace: "nowrap",
                   }}

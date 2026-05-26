@@ -4,7 +4,10 @@ import { showToast } from "../../components/Toast";
 import { Pill } from "../../components/Pill";
 import { AmberBtn, SecBtn, DangerBtn } from "../../components/Buttons";
 import { Modal } from "../../components/Modal";
-import { PipMark } from "../../components/PipMark";
+import { PipOrb } from "../../components/PipMark";
+
+var MONO = "'JetBrains Mono', ui-monospace, monospace";
+var SERIF = "'Fraunces', Georgia, serif";
 import { useMeetings } from "../../hooks/useMeetings";
 import { useItems } from "../../hooks/useItems";
 import { useContacts } from "../../hooks/useContacts";
@@ -98,8 +101,10 @@ export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit
             border: "none",
             color: C.textMuted,
             cursor: "pointer",
-            fontSize: 12,
-            fontFamily: "'DM Sans', sans-serif",
+            fontFamily: MONO,
+            fontSize: 10,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
             padding: 0,
             marginBottom: 14,
             display: "flex",
@@ -107,7 +112,7 @@ export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit
             gap: 4,
           }}
         >
-          ← Back
+          ← Accounts › {account.name}
         </button>
 
         <div
@@ -121,31 +126,45 @@ export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit
           <div style={{ flex: 1 }}>
             <div
               style={{
-                fontSize: 22,
-                fontWeight: 700,
+                fontFamily: SERIF,
+                fontSize: 36,
+                fontWeight: 400,
+                letterSpacing: "-0.022em",
+                lineHeight: 1,
                 color: C.text,
-                marginBottom: 8,
-                lineHeight: 1.2,
+                marginBottom: 10,
               }}
             >
-              {account.name}
+              {(function() {
+                var words = account.name.split(" ");
+                if (words.length > 1) {
+                  return (
+                    <>
+                      {words.slice(0, -1).join(" ") + " "}
+                      <em>{words[words.length - 1]}</em>
+                    </>
+                  );
+                }
+                return account.name;
+              })()}
             </div>
             {account.account_number && (
-              <div style={{ fontSize: 11, color: C.textMuted, fontVariantNumeric: "tabular-nums", marginBottom: 6 }}>
+              <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, fontFeatureSettings: '"tnum"', marginBottom: 8 }}>
                 #{account.account_number}
               </div>
             )}
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
               {account.tier && (
-                <Pill color={TIER_COLORS[account.tier] || C.textSub}>
+                <Pill color={TIER_COLORS[account.tier] || C.textSoft}>
                   {account.tier}
                 </Pill>
               )}
               <Pill color={statusColor}>
+                <span style={{ display: "inline-block", width: 5, height: 5, borderRadius: "50%", background: statusColor, marginRight: 4, verticalAlign: "middle" }} />
                 {STATUS_LABELS[account.status] || account.status}
               </Pill>
               {openCount > 0 && (
-                <Pill color={C.yellow} style={{ fontVariantNumeric: "tabular-nums" }}>
+                <Pill color={C.yellow} style={{ fontFeatureSettings: '"tnum"' }}>
                   {openCount + " open"}
                 </Pill>
               )}
@@ -157,8 +176,9 @@ export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit
                   onClick={function () { onSelectAccount && onSelectAccount(parentAccount); }}
                   style={{
                     background: C.accentFaint, border: '1px solid ' + C.accentLine,
-                    borderRadius: 20, padding: '3px 10px', fontSize: 11, fontWeight: 600,
-                    color: C.accent, fontFamily: "'DM Sans', sans-serif", cursor: 'pointer',
+                    borderRadius: 999, padding: '3px 10px',
+                    fontFamily: MONO, fontSize: 10,
+                    color: C.accent, cursor: 'pointer',
                   }}
                 >
                   ↑ {parentAccount.name}
@@ -166,16 +186,21 @@ export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit
               )}
             </div>
             {account.tags && account.tags.length > 0 && (
-              <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 6 }}>
+              <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 8 }}>
                 {account.tags.map(function (t) {
                   return (
-                    <Pill key={t} color={C.blue}>{t}</Pill>
+                    <span key={t} style={{
+                      fontFamily: MONO, fontSize: 9.5, letterSpacing: "0.08em",
+                      textTransform: "uppercase", color: C.textSoft,
+                      background: C.surface2, borderRadius: 4,
+                      padding: "2px 7px",
+                    }}>{t}</span>
                   );
                 })}
               </div>
             )}
             {account.address && (
-              <div style={{ fontSize: 12, color: C.textMuted, marginTop: 6 }}>
+              <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, marginTop: 6 }}>
                 {account.address}
               </div>
             )}
@@ -208,10 +233,13 @@ export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit
                 });
               }}
               style={{
-                background: C.accentGlow, border: "1px solid " + C.accentLine,
-                borderRadius: 8, padding: "5px 12px", fontSize: 11, fontWeight: 600,
-                color: C.accent, fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
-                marginTop: 10, display: "flex", alignItems: "center", gap: 5,
+                background: "oklch(0.32 0.05 178 / 0.5)",
+                border: "1px solid " + C.accentBorder,
+                borderRadius: 6, padding: "6px 14px",
+                fontFamily: "'Inter', system-ui, sans-serif",
+                fontSize: 12, fontWeight: 500,
+                color: C.accent, cursor: "pointer",
+                marginTop: 12, display: "flex", alignItems: "center", gap: 5,
               }}
             >
               <span style={{ fontSize: 13 }}>✦</span> Brief Me
@@ -221,20 +249,22 @@ export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit
           <div style={{ textAlign: "right", flexShrink: 0 }}>
             <div
               style={{
-                fontSize: 24,
-                fontWeight: 700,
+                fontFamily: SERIF,
+                fontSize: 28,
+                fontWeight: 400,
                 color: C.accent,
-                fontVariantNumeric: "tabular-nums",
+                fontFeatureSettings: '"tnum"',
               }}
             >
               {account.revenue || "—"}
             </div>
             <div
               style={{
-                fontSize: 10,
+                fontFamily: MONO,
+                fontSize: 9.5,
                 color: C.textMuted,
                 textTransform: "uppercase",
-                letterSpacing: "0.07em",
+                letterSpacing: "0.08em",
                 marginTop: 2,
               }}
             >
@@ -258,7 +288,7 @@ export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit
               if (maxCount === 0) return null;
               return (
                 <div style={{ marginTop: 10, marginBottom: 4 }}>
-                  <div style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 4 }}>Meeting Cadence</div>
+                  <div style={{ fontFamily: MONO, fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Meeting Cadence</div>
                   <div style={{ display: "flex", gap: 2, alignItems: "flex-end", height: 20, justifyContent: "flex-end" }}>
                     {bars.map(function(b, i) {
                       var h = b.count === 0 ? 2 : Math.max(3, Math.round((b.count / maxCount) * 20));
@@ -318,11 +348,10 @@ export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit
       <div
         style={{
           display: "flex",
-          background: "rgba(0,0,0,0.25)",
-          borderRadius: 10,
-          padding: 3,
-          gap: 2,
+          gap: 0,
           marginBottom: 16,
+          borderBottom: "1px solid " + C.rule,
+          paddingBottom: 0,
         }}
       >
         {TABS.map(function (t) {
@@ -339,33 +368,35 @@ export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit
                 setDefaultTab(account.id, t);
               }}
               style={{
-                flex: 1,
-                padding: "7px 4px",
-                borderRadius: 8,
+                padding: "8px 0",
+                marginRight: 26,
                 cursor: "pointer",
-                fontSize: 11,
-                fontWeight: 600,
-                fontFamily: "'DM Sans', sans-serif",
-                textTransform: "capitalize",
-                background: active ? C.bgCardAlt : "transparent",
+                fontFamily: MONO,
+                fontSize: 10.5,
+                fontWeight: 400,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                background: "transparent",
                 color: active ? (isGauge ? C.blue : C.accent) : C.textMuted,
-                border: "1px solid " + (active ? (isGauge ? "rgba(123,108,246,0.2)" : C.border) : "transparent"),
+                border: "none",
+                borderBottom: active ? "1.5px solid " + (isGauge ? C.blue : C.accent) : "1.5px solid transparent",
+                marginBottom: -1,
               }}
             >
-              {isGauge ? "gauge" : t === "shops" ? (
+              {isGauge ? "Gauge" : t === "shops" ? (
                 <span>
-                  shops
+                  Shops
                   {subAccounts.length > 0 && (
                     <span style={{
-                      marginLeft: 4, fontSize: 9, fontWeight: 700,
-                      background: C.accentMid, color: C.accent,
-                      borderRadius: 8, padding: "1px 5px",
+                      marginLeft: 5,
+                      fontFamily: MONO, fontSize: 9.5,
+                      color: active ? C.accent : C.textMuted,
                     }}>
-                      {subAccounts.length}
+                      ({subAccounts.length})
                     </span>
                   )}
                 </span>
-              ) : t}
+              ) : t.charAt(0).toUpperCase() + t.slice(1)}
             </button>
           );
         })}

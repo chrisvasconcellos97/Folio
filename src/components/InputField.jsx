@@ -8,7 +8,7 @@ var baseStyle = {
   padding: "10px 14px",
   color: C.text,
   fontSize: 16,
-  fontFamily: "'DM Sans', sans-serif",
+  fontFamily: "'Inter', system-ui, sans-serif",
   outline: "none",
   boxSizing: "border-box",
 };

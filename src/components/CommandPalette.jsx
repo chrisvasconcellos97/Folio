@@ -63,7 +63,7 @@ export function CommandPalette({ accounts, onSelectAccount, onNavigate, onClose 
             placeholder="Jump to account or view…"
             style={{
               width: "100%", background: "transparent", border: "none", outline: "none",
-              fontSize: 16, color: C.text, fontFamily: "'DM Sans', sans-serif",
+              fontSize: 16, color: C.text, fontFamily: "'Inter', system-ui, sans-serif",
             }}
           />
         </div>

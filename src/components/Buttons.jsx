@@ -2,7 +2,7 @@ import { C } from "../lib/colors";
 
 var btnBase = {
   cursor: "pointer",
-  fontFamily: "'DM Sans', sans-serif",
+  fontFamily: "'Inter', system-ui, sans-serif",
   fontWeight: 600,
   fontSize: 12,
   borderRadius: 24,

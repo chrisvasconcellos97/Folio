@@ -345,7 +345,7 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
                   padding: "4px 10px",
                   fontSize: 10,
                   fontWeight: 600,
-                  fontFamily: "'DM Sans', sans-serif",
+                  fontFamily: "'Inter', system-ui, sans-serif",
                   cursor: "pointer",
                 }}
               >
@@ -399,7 +399,7 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
           placeholder="Quick thoughts, reminders, anything that doesn't belong to a specific meeting…"
           style={{
             width: "100%", background: "transparent", border: "none", resize: "none",
-            color: C.text, fontSize: 14, fontFamily: "'DM Sans', sans-serif",
+            color: C.text, fontSize: 14, fontFamily: "'Inter', system-ui, sans-serif",
             lineHeight: 1.6, outline: "none", minHeight: 72, padding: 0,
           }}
         />
@@ -597,7 +597,7 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
             border: "none",
             color: C.textMuted,
             fontSize: 11,
-            fontFamily: "'DM Sans', sans-serif",
+            fontFamily: "'Inter', system-ui, sans-serif",
             cursor: "pointer",
             padding: "4px 8px",
           }}

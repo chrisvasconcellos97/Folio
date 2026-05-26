@@ -250,7 +250,7 @@ export function ContactsTab({ contacts, accountId, accountName, onAdd, onDelete,
               href={"mailto:" + Object.values(selected).join(",")}
               style={{
                 background: C.accent, color: "#fff", borderRadius: 7, padding: "5px 14px",
-                fontSize: 12, fontWeight: 600, textDecoration: "none", fontFamily: "'DM Sans', sans-serif",
+                fontSize: 12, fontWeight: 600, textDecoration: "none", fontFamily: "'Inter', system-ui, sans-serif",
               }}
             >
               Email Selected
@@ -259,7 +259,7 @@ export function ContactsTab({ contacts, accountId, accountName, onAdd, onDelete,
               onClick={function () { setSelected({}); }}
               style={{
                 background: "transparent", border: "1px solid " + C.border, borderRadius: 7,
-                padding: "5px 10px", fontSize: 12, color: C.textMuted, fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
+                padding: "5px 10px", fontSize: 12, color: C.textMuted, fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer",
               }}
             >
               Clear

@@ -1,24 +1,20 @@
-import { C } from "../lib/colors";
+// Folio folder mark — three-quarter folder with orb on front cover.
+// size controls width; height is always size * 0.818 (88:72 aspect ratio)
 
-export function FolioIcon({ size = 28, color }) {
-  var s = size;
-  var c = color || C.accent;
+export function FolioIcon({ size = 40 }) {
+  var h = Math.round(size * 0.818);
   return (
-    <svg width={s} height={s * 0.87} viewBox="0 0 60 52" fill="none">
-      <rect
-        x="2" y="10" width="56" height="38" rx="4"
-        fill={c} fillOpacity="0.12"
-        stroke={c} strokeWidth="1.5" strokeOpacity="0.7"
-      />
-      <path d="M2 18 L58 18" stroke={c} strokeWidth="1" strokeOpacity="0.4" />
-      <rect
-        x="2" y="10" width="20" height="8" rx="2"
-        fill={c} fillOpacity="0.25"
-        stroke={c} strokeWidth="1" strokeOpacity="0.5"
-      />
-      <circle cx="30" cy="33" r="8" fill={c} fillOpacity="0.1" stroke={c} strokeWidth="1" strokeOpacity="0.4" />
-      <circle cx="30" cy="30" r="3.5" fill={c} fillOpacity="0.85" />
-      <circle cx="30" cy="37" r="2" fill={c} fillOpacity="0.4" />
-    </svg>
+    <div className="folio-mark">
+      <svg width={size} height={h} viewBox="0 0 88 72" aria-hidden="true">
+        <rect className="fm-folder-back"  x="2"  y="12" width="84" height="56" rx="3"/>
+        <path className="fm-folder-tab"   d="M 4 14 Q 4 8 10 8 L 30 8 Q 34 8 36 12 L 40 14 Z"/>
+        <rect className="fm-folder-front" x="4"  y="22" width="80" height="44" rx="3"/>
+        <line className="fm-folder-edge"  x1="6" y1="22" x2="82" y2="22"/>
+        <circle className="fm-orb-glow"   cx="44" cy="44" r="11"/>
+        <circle className="fm-orb-ring"   cx="44" cy="44" r="11"/>
+        <circle className="fm-orb-head"   cx="44" cy="40" r="4"/>
+        <circle className="fm-orb-tail"   cx="44" cy="48.5" r="2.8"/>
+      </svg>
+    </div>
   );
 }

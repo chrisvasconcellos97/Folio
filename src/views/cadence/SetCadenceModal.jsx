@@ -112,10 +112,10 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues, acco
   };
 
   function pillStyle(active) {
-    return Object.assign({ flex: 1, padding: '8px 0', borderRadius: 8, fontSize: 12, fontFamily: "'DM Sans', sans-serif", cursor: 'pointer' }, active ? pill.active : pill.inactive);
+    return Object.assign({ flex: 1, padding: '8px 0', borderRadius: 8, fontSize: 12, fontFamily: "'Inter', system-ui, sans-serif", cursor: 'pointer' }, active ? pill.active : pill.inactive);
   }
   function dayStyle(active) {
-    return Object.assign({ flex: 1, padding: '7px 0', borderRadius: 7, fontSize: 11, fontFamily: "'DM Sans', sans-serif", cursor: 'pointer' }, active ? pill.active : pill.inactive);
+    return Object.assign({ flex: 1, padding: '7px 0', borderRadius: 7, fontSize: 11, fontFamily: "'Inter', system-ui, sans-serif", cursor: 'pointer' }, active ? pill.active : pill.inactive);
   }
 
   return (
@@ -175,7 +175,7 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues, acco
               <FL style={{ marginBottom: 0 }}>Accounts</FL>
               {selectedAccountIds.length > 0 && (
                 <button type="button" onClick={function () { setSelectedAccountIds([]); }}
-                  style={{ background: 'none', border: 'none', fontSize: 11, color: C.textMuted, cursor: 'pointer', padding: 0, fontFamily: "'DM Sans', sans-serif" }}>
+                  style={{ background: 'none', border: 'none', fontSize: 11, color: C.textMuted, cursor: 'pointer', padding: 0, fontFamily: "'Inter', system-ui, sans-serif" }}>
                   Clear all
                 </button>
               )}
@@ -242,7 +242,7 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues, acco
             <input
               type="date" value={anchorDate}
               onChange={function (e) { setAnchorDate(e.target.value); }}
-              style={{ width: '100%', padding: '9px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid ' + C.border, borderRadius: 8, color: C.text, fontSize: 16, fontFamily: "'DM Sans', sans-serif" }}
+              style={{ width: '100%', padding: '9px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid ' + C.border, borderRadius: 8, color: C.text, fontSize: 16, fontFamily: "'Inter', system-ui, sans-serif" }}
             />
           </div>
         )}
@@ -270,7 +270,7 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues, acco
                   <input
                     type="number" min="1" max="31" value={dayOfMonth}
                     onChange={function (e) { var v = parseInt(e.target.value); if (v >= 1 && v <= 31) setDayOfMonth(v); }}
-                    style={{ width: 72, padding: '9px 12px', textAlign: 'center', background: 'rgba(255,255,255,0.04)', border: '1px solid ' + C.border, borderRadius: 8, color: C.text, fontSize: 16, fontFamily: "'DM Sans', sans-serif" }}
+                    style={{ width: 72, padding: '9px 12px', textAlign: 'center', background: 'rgba(255,255,255,0.04)', border: '1px solid ' + C.border, borderRadius: 8, color: C.text, fontSize: 16, fontFamily: "'Inter', system-ui, sans-serif" }}
                   />
                   <span style={{ fontSize: 12, color: C.textMuted }}>of each month</span>
                 </div>
@@ -357,7 +357,7 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues, acco
                 var active = defaultAttendees.includes(c.name);
                 return (
                   <button key={c.id} type="button" onClick={function () { toggleDefaultAttendee(c.name); }}
-                    style={{ background: active ? C.accentMid : 'rgba(255,255,255,0.04)', border: '1px solid ' + (active ? C.accentBorder : C.border), borderRadius: 20, padding: '5px 12px', fontSize: 12, fontWeight: active ? 600 : 400, color: active ? C.accent : C.textMuted, fontFamily: "'DM Sans', sans-serif", cursor: 'pointer' }}>
+                    style={{ background: active ? C.accentMid : 'rgba(255,255,255,0.04)', border: '1px solid ' + (active ? C.accentBorder : C.border), borderRadius: 20, padding: '5px 12px', fontSize: 12, fontWeight: active ? 600 : 400, color: active ? C.accent : C.textMuted, fontFamily: "'Inter', system-ui, sans-serif", cursor: 'pointer' }}>
                     {active ? '✓ ' : ''}{c.name}{c.title ? ' · ' + c.title : ''}
                   </button>
                 );
@@ -374,7 +374,7 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues, acco
             onChange={function (e) { setNotes(e.target.value); }}
             placeholder={type === 'task' ? 'Any extra context...' : 'Recurring topics, prep reminders...'}
             rows={2}
-            style={{ width: '100%', padding: '9px 12px', resize: 'vertical', background: 'rgba(255,255,255,0.04)', border: '1px solid ' + C.border, borderRadius: 8, color: C.text, fontSize: 13, fontFamily: "'DM Sans', sans-serif" }}
+            style={{ width: '100%', padding: '9px 12px', resize: 'vertical', background: 'rgba(255,255,255,0.04)', border: '1px solid ' + C.border, borderRadius: 8, color: C.text, fontSize: 13, fontFamily: "'Inter', system-ui, sans-serif" }}
           />
         </div>
 

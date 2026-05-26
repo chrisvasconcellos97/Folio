@@ -22,7 +22,7 @@ export var navBtnStyle = {
   lineHeight: 1,
   cursor: 'pointer',
   padding: '3px 10px',
-  fontFamily: "'DM Sans', sans-serif",
+  fontFamily: "'Inter', system-ui, sans-serif",
 };
 
 export function CadenceEventCard({ event, onSelectAccount, onCreateItem, showDate }) {
@@ -66,7 +66,7 @@ export function CadenceEventCard({ event, onSelectAccount, onCreateItem, showDat
             style={{
               background: C.accentFaint, border: '1px solid ' + C.accentLine,
               borderRadius: 6, padding: '3px 10px', fontSize: 11, fontWeight: 600,
-              color: C.accent, fontFamily: "'DM Sans', sans-serif", cursor: 'pointer',
+              color: C.accent, fontFamily: "'Inter', system-ui, sans-serif", cursor: 'pointer',
               marginTop: 6, display: 'block',
             }}
           >
@@ -84,7 +84,7 @@ export function CadenceEventCard({ event, onSelectAccount, onCreateItem, showDat
             padding: '5px 11px',
             fontSize: 11,
             color: col,
-            fontFamily: "'DM Sans', sans-serif",
+            fontFamily: "'Inter', system-ui, sans-serif",
             cursor: 'pointer',
             whiteSpace: 'nowrap',
           }}

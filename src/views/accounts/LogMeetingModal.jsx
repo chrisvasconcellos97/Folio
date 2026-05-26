@@ -96,7 +96,7 @@ export function LogMeetingModal({ accountId, userId, contacts, onSave, onClose }
                       fontSize: 12,
                       fontWeight: active ? 600 : 400,
                       color: active ? C.accent : C.textMuted,
-                      fontFamily: "'DM Sans', sans-serif",
+                      fontFamily: "'Inter', system-ui, sans-serif",
                       cursor: "pointer",
                     }}
                   >

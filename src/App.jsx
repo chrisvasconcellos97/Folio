@@ -25,7 +25,7 @@ import { OnboardingTour } from "./views/welcome/OnboardingTour";
 import { ReturningWelcome } from "./views/welcome/ReturningWelcome";
 import { DesktopLayout } from "./layout/DesktopLayout";
 import { MobileLayout } from "./layout/MobileLayout";
-import { PipMark } from "./components/PipMark";
+import { PipOrb, PipMark } from "./components/PipMark";
 import { CommandPalette } from "./components/CommandPalette";
 import { Toast, showToast } from "./components/Toast";
 import { C } from "./lib/colors";
@@ -177,15 +177,7 @@ export default function App() {
   if (authLoading) {
     return (
       <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div className="pip-sonar" style={{
-          width: 52, height: 52, borderRadius: "50%",
-          background: C.accentGlow,
-          border: "1px solid " + C.accentBorder,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          boxShadow: "0 0 20px " + C.accentShadow,
-        }}>
-          <PipMark size={14} color={C.accent} glow pulse />
-        </div>
+        <PipOrb size="lg" sonar />
       </div>
     );
   }
@@ -382,7 +374,7 @@ export default function App() {
           style={{
             background: C.accent, border: "none", borderRadius: 8, padding: "6px 16px",
             fontSize: 12, fontWeight: 700, color: "#fff", cursor: "pointer",
-            fontFamily: "'DM Sans', sans-serif",
+            fontFamily: "'Inter', system-ui, sans-serif",
           }}
         >
           Accept
@@ -392,7 +384,7 @@ export default function App() {
           style={{
             background: "none", border: "1px solid " + C.border, borderRadius: 8,
             padding: "6px 12px", fontSize: 12, color: C.textSub, cursor: "pointer",
-            fontFamily: "'DM Sans', sans-serif",
+            fontFamily: "'Inter', system-ui, sans-serif",
           }}
         >
           Dismiss
@@ -427,24 +419,13 @@ export default function App() {
               zIndex: 90,
             }}
           >
-            <div
-              className={"pip-sonar" + (pipTransition === "out" ? " pip-out" : pipTransition === "in" ? " pip-in" : "")}
+            <PipOrb
+              size="lg"
+              sonar
+              className={pipTransition === "out" ? "pip-out" : pipTransition === "in" ? "pip-in" : ""}
               onClick={function () { handleSetView("pip"); }}
-              style={{
-                width: 52,
-                height: 52,
-                borderRadius: "50%",
-                background: C.accentGlow,
-                border: "1px solid " + C.accentBorder,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                boxShadow: "0 0 20px " + C.accentShadow,
-              }}
-            >
-              <PipMark size={14} color={C.accent} glow pulse />
-            </div>
+              style={{ cursor: "pointer" }}
+            />
           </div>
         )}
         {showOnboarding && (
@@ -499,24 +480,13 @@ export default function App() {
             zIndex: 90,
           }}
         >
-          <div
-            className={"pip-sonar" + (pipTransition === "out" ? " pip-out" : pipTransition === "in" ? " pip-in" : "")}
+          <PipOrb
+            size="lg"
+            sonar
+            className={pipTransition === "out" ? "pip-out" : pipTransition === "in" ? "pip-in" : ""}
             onClick={function () { handleSetView("pip"); }}
-            style={{
-              width: 52,
-              height: 52,
-              borderRadius: "50%",
-              background: C.accentGlow,
-              border: "1px solid " + C.accentBorder,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              boxShadow: "0 0 20px " + C.accentShadow,
-            }}
-          >
-            <PipMark size={14} color={C.accent} glow pulse />
-          </div>
+            style={{ cursor: "pointer" }}
+          />
         </div>
       )}
       {showOnboarding && (

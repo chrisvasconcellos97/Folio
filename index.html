@@ -3,51 +3,115 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0D1F1C" />
+    <meta name="theme-color" content="#07100f" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Folio" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
-    <link
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <title>Folio — Account Management</title>
     <style>
       * { box-sizing: border-box; margin: 0; padding: 0; }
-      body { font-family: 'DM Sans', sans-serif; background: #0D1F1C; color: #E8F0EC; }
-
-      /* Pip animations */
-      .pip-pulse { animation: pipPulse 2s ease-in-out infinite; }
-      @keyframes pipPulse {
-        0%, 100% { opacity: 1; transform: scale(1); }
-        50%       { opacity: 0.7; transform: scale(0.92); }
+      body {
+        font-family: 'Inter', system-ui, sans-serif;
+        background: #07100f;
+        color: #e7ece9;
+        -webkit-font-smoothing: antialiased;
+        font-size: 14px;
+        line-height: 1.5;
       }
 
-      .pip-sonar { position: relative; }
-      .pip-sonar::before,
-      .pip-sonar::after {
-        content: '';
-        position: absolute;
-        top: 50%; left: 50%;
-        width: 52px; height: 52px;
+      /* CSS custom properties for oklch accent */
+      :root {
+        --accent:        oklch(0.72 0.12 178);
+        --accent-deep:   oklch(0.62 0.13 178);
+        --accent-dim:    oklch(0.45 0.10 178);
+        --accent-glow:   oklch(0.72 0.12 178 / 0.14);
+        --accent-glow-2: oklch(0.72 0.12 178 / 0.22);
+        --accent-border: oklch(0.72 0.12 178 / 0.42);
+        --accent-shadow: oklch(0.72 0.16 178 / 0.55);
+        --warn:  oklch(0.74 0.13 44);
+        --alert: oklch(0.68 0.16 28);
+        --gauge: oklch(0.72 0.12 232);
+        --bg:        #07100f;
+        --surface:   #0c1615;
+        --surface-2: #11201e;
+        --surface-3: #162927;
+        --rule:      #1c2c2a;
+        --text:      #e7ece9;
+        --text-soft: #aebbb6;
+        --text-mute: #6f7c79;
+        --text-faint:#475251;
+        --serif: 'Fraunces', Georgia, serif;
+        --sans:  'Inter', system-ui, sans-serif;
+        --mono:  'JetBrains Mono', ui-monospace, monospace;
+      }
+
+      /* Canonical Pip orb */
+      .pip {
+        position: relative;
+        display: inline-grid;
+        place-items: center;
         border-radius: 50%;
-        border: 1px solid rgba(74,155,130,0.35);
-        transform: translate(-50%, -50%) scale(1);
-        animation: sonarRing 3s ease-out infinite;
+        background: var(--accent-glow);
+        border: 1px solid var(--accent-border);
+        box-shadow: 0 0 24px var(--accent-shadow);
+        flex-shrink: 0;
+      }
+      .pip > svg {
+        width: 38%; height: 38%;
+        overflow: visible;
+        transform-origin: 50% 50%;
+        animation: pip-breathe 2.4s ease-in-out infinite;
+      }
+      .pip .head { fill: var(--accent); }
+      .pip .tail { fill: var(--accent); opacity: 0.42; }
+      @keyframes pip-breathe {
+        0%,100% { transform: scale(1);    opacity: 1; }
+        50%     { transform: scale(1.08); opacity: 0.88; }
+      }
+      .pip.sonar::before, .pip.sonar::after {
+        content: ""; position: absolute; inset: -1px; border-radius: 50%;
+        border: 1px solid var(--accent-border);
+        animation: pip-sonar 3.2s cubic-bezier(.2,.6,.3,1) infinite;
         pointer-events: none;
-        z-index: -1;
       }
-      .pip-sonar::after { animation-delay: 1.5s; }
-      @keyframes sonarRing {
-        0%   { transform: translate(-50%, -50%) scale(1);   opacity: 0.6; }
-        100% { transform: translate(-50%, -50%) scale(2.2); opacity: 0; }
+      .pip.sonar::after { animation-delay: 1.6s; }
+      @keyframes pip-sonar {
+        0%   { transform: scale(1);   opacity: 0.55; }
+        70%  { opacity: 0; }
+        100% { transform: scale(2.4); opacity: 0; }
       }
+      .pip.xs  { width: 12px;  height: 12px;  box-shadow: 0 0 6px var(--accent-shadow); }
+      .pip.sm  { width: 22px;  height: 22px;  box-shadow: 0 0 10px var(--accent-shadow); }
+      .pip.md  { width: 32px;  height: 32px;  box-shadow: 0 0 14px var(--accent-shadow); }
+      .pip.lg  { width: 52px;  height: 52px; }
+      .pip.xl  { width: 84px;  height: 84px;  box-shadow: 0 0 34px var(--accent-shadow); }
+      .pip.xxl { width: 132px; height: 132px; box-shadow: 0 0 48px var(--accent-shadow); }
+      .pip.static > svg { animation: none; }
+
+      /* Folio folder mark */
+      .folio-mark { display: inline-block; position: relative; line-height: 0; }
+      .folio-mark svg { display: block; }
+      .folio-mark .fm-folder-back  { fill: oklch(0.16 0.02 178); stroke: oklch(0.30 0.03 178); stroke-width: 1; }
+      .folio-mark .fm-folder-tab   { fill: oklch(0.20 0.025 178); stroke: oklch(0.30 0.03 178); stroke-width: 1; }
+      .folio-mark .fm-folder-front { fill: oklch(0.22 0.03 178); stroke: oklch(0.36 0.04 178); stroke-width: 1; }
+      .folio-mark .fm-folder-edge  { stroke: var(--accent-border); stroke-width: 0.8; fill: none; opacity: 0.55; }
+      .folio-mark .fm-orb-glow,
+      .folio-mark .fm-orb-ring,
+      .folio-mark .fm-orb-head,
+      .folio-mark .fm-orb-tail { transform-origin: 44px 44px; animation: pip-breathe 2.4s ease-in-out infinite; }
+      .folio-mark .fm-orb-glow { fill: var(--accent-glow-2); }
+      .folio-mark .fm-orb-ring { fill: none; stroke: var(--accent-border); stroke-width: 0.9; }
+      .folio-mark .fm-orb-head { fill: var(--accent); }
+      .folio-mark .fm-orb-tail { fill: var(--accent); opacity: 0.42; }
 
       /* Scrollbar */
       ::-webkit-scrollbar { width: 4px; }
       ::-webkit-scrollbar-track { background: transparent; }
-      ::-webkit-scrollbar-thumb { background: rgba(74,155,130,0.2); border-radius: 2px; }
+      ::-webkit-scrollbar-thumb { background: var(--accent-glow); border-radius: 2px; }
 
       /* Input resets */
       input, textarea { -webkit-appearance: none; }
@@ -56,8 +120,6 @@
       /* Native feel */
       * { -webkit-tap-highlight-color: transparent; }
       html, body { overscroll-behavior: none; }
-
-      /* No text selection on UI chrome — applied per-component for content areas */
       .no-select { user-select: none; -webkit-user-select: none; }
 
       /* Staggered list entrance */
@@ -73,15 +135,10 @@
       /* Mobile sheet modal */
       @media (max-width: 640px) {
         .modal-sheet {
-          position: fixed !important;
-          bottom: 0 !important;
-          left: 0 !important;
-          right: 0 !important;
-          top: auto !important;
-          transform: none !important;
+          position: fixed !important; bottom: 0 !important; left: 0 !important; right: 0 !important;
+          top: auto !important; transform: none !important;
           border-radius: 20px 20px 0 0 !important;
-          max-height: 92vh;
-          overflow-y: auto;
+          max-height: 92vh; overflow-y: auto;
           animation: sheetUp 0.28s cubic-bezier(0.32, 0.72, 0, 1) !important;
         }
         @keyframes sheetUp {
@@ -90,39 +147,26 @@
         }
       }
 
-      /* Overlay / modal transition */
+      /* Transitions */
       .fade-in { animation: fadeIn 0.15s ease-out; }
       @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-
-      /* View content transition — clean crossfade, cards handle motion via list-item stagger */
       .view-fade-in { animation: viewFadeIn 0.18s ease-out; }
       @keyframes viewFadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-      /* Tab content transition */
       .tab-slide-right { animation: slideInRight 0.22s ease-out; }
       .tab-slide-left  { animation: slideInLeft  0.22s ease-out; }
 
-      /* Pip view-transition collapse / emerge */
+      /* Pip corner button transitions */
       .pip-out { animation: pipCollapse 0.18s ease-in forwards; }
       .pip-in  { animation: pipEmerge  0.32s cubic-bezier(0.34,1.56,0.64,1) forwards; }
-      @keyframes pipCollapse {
-        from { opacity: 1; transform: scale(1); }
-        to   { opacity: 0; transform: scale(0.15); }
-      }
-      @keyframes pipEmerge {
-        from { opacity: 0; transform: scale(0.15); }
-        to   { opacity: 1; transform: scale(1); }
-      }
+      @keyframes pipCollapse { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.15); } }
+      @keyframes pipEmerge   { from { opacity: 0; transform: scale(0.15); } to { opacity: 1; transform: scale(1); } }
 
-      /* Welcome / Pip tour animations */
-      @keyframes pipFloat {
-        0%, 100% { transform: translateY(0px) scale(1); }
-        50%       { transform: translateY(-14px) scale(1.02); }
-      }
-      @keyframes pipRise {
-        0%   { opacity: 0; transform: translateY(50px) scale(0.3); }
-        100% { opacity: 1; transform: translateY(0px)  scale(1);   }
-      }
+      /* Welcome animations */
+      @keyframes pipFloat { 0%,100% { transform: translateY(0px) scale(1); } 50% { transform: translateY(-14px) scale(1.02); } }
+      @keyframes pipRise  { 0% { opacity: 0; transform: translateY(50px) scale(0.3); } 100% { opacity: 1; transform: translateY(0px) scale(1); } }
+      @keyframes tapGlow  { 0%,100% { box-shadow: 0 0 0 0 transparent; } 50% { box-shadow: 0 0 16px var(--accent-shadow); border-color: var(--accent-border); } }
+
+      /* Legacy compat animations */
       @keyframes folioAppear {
         0%   { opacity: 0; transform: translate(-50%,-50%) scale(0.7); }
         100% { opacity: 1; transform: translate(-50%,-50%) scale(1);   }
@@ -135,6 +179,9 @@
         0%, 100% { opacity: 0.4; }
         50%       { opacity: 1;   }
       }
+
+      /* Skeleton pulse */
+      @keyframes skeleton-pulse { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
     </style>
   </head>
   <body>

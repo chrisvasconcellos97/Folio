@@ -208,7 +208,7 @@ export function RouteBuilder({ accounts, userId }) {
                 type="time"
                 value={startTime}
                 onChange={function(e) { setStartTime(e.target.value); setOptimized(null); }}
-                style={{ width: "100%", background: C.bgDropdown, border: "1px solid " + C.border, borderRadius: 8, padding: "9px 12px", fontSize: 13, color: C.text, fontFamily: "'DM Sans', sans-serif", outline: "none", boxSizing: "border-box" }}
+                style={{ width: "100%", background: C.bgDropdown, border: "1px solid " + C.border, borderRadius: 8, padding: "9px 12px", fontSize: 13, color: C.text, fontFamily: "'Inter', system-ui, sans-serif", outline: "none", boxSizing: "border-box" }}
               />
             </div>
             <div style={{ flex: 1, minWidth: 140 }}>
@@ -216,7 +216,7 @@ export function RouteBuilder({ accounts, userId }) {
               <select
                 value={visitDuration}
                 onChange={function(e) { setVisitDuration(parseInt(e.target.value)); setOptimized(null); }}
-                style={{ width: "100%", background: C.bgDropdown, border: "1px solid " + C.border, borderRadius: 8, padding: "9px 12px", fontSize: 13, color: C.text, fontFamily: "'DM Sans', sans-serif", outline: "none" }}
+                style={{ width: "100%", background: C.bgDropdown, border: "1px solid " + C.border, borderRadius: 8, padding: "9px 12px", fontSize: 13, color: C.text, fontFamily: "'Inter', system-ui, sans-serif", outline: "none" }}
               >
                 {[15, 30, 45, 60, 90, 120].map(function(m) { return <option key={m} value={m}>{m} min</option>; })}
               </select>
@@ -300,7 +300,7 @@ export function RouteBuilder({ accounts, userId }) {
                 </a>
                 <button
                   onClick={function() { setShowSave(true); }}
-                  style={{ background: "none", border: "1px solid " + C.border, borderRadius: 8, padding: "5px 12px", fontSize: 11, color: C.textMuted, fontFamily: "'DM Sans', sans-serif", cursor: "pointer" }}
+                  style={{ background: "none", border: "1px solid " + C.border, borderRadius: 8, padding: "5px 12px", fontSize: 11, color: C.textMuted, fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer" }}
                 >
                   Save Route
                 </button>

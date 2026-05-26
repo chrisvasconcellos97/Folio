@@ -40,7 +40,7 @@ function TagChip({ label, active, onClick, onRemove, color }) {
         padding: "5px 10px",
         fontSize: 11,
         fontWeight: 600,
-        fontFamily: "'DM Sans', sans-serif",
+        fontFamily: "'Inter', system-ui, sans-serif",
         cursor: "pointer",
         display: "flex",
         alignItems: "center",
@@ -204,7 +204,7 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
                       border: "1px solid " + (on ? C.accentRing : C.border),
                       borderRadius: 8, padding: "9px 6px", fontSize: 12,
                       fontWeight: on ? 700 : 400,
-                      fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
+                      fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer",
                     }}>
                     {t}
                   </button>
@@ -228,7 +228,7 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
                       border: "1px solid " + (on ? "rgba(" + bgRgb + ",0.4)" : C.border),
                       borderRadius: 8, padding: "9px 4px", fontSize: 11,
                       fontWeight: on ? 700 : 400,
-                      fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
+                      fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer",
                     }}>
                     {s.label}
                   </button>
@@ -334,7 +334,7 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
               alignItems: "center",
               justifyContent: "space-between",
               cursor: "pointer",
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: "'Inter', system-ui, sans-serif",
               fontSize: 13,
               color: states.length > 0 ? C.text : C.textMuted,
             }}
@@ -381,7 +381,7 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
                       padding: "5px 12px",
                       fontSize: 11,
                       fontWeight: 700,
-                      fontFamily: "'DM Sans', sans-serif",
+                      fontFamily: "'Inter', system-ui, sans-serif",
                       cursor: "pointer",
                     }}
                   >
@@ -418,7 +418,7 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
                             color: allSelected ? C.accent : C.textMuted,
                             cursor: "pointer",
                             padding: 0,
-                            fontFamily: "'DM Sans', sans-serif",
+                            fontFamily: "'Inter', system-ui, sans-serif",
                           }}
                         >
                           {allSelected ? "deselect" : "select all"}
@@ -440,7 +440,7 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
                                 padding: "4px 8px",
                                 fontSize: 11,
                                 fontWeight: on ? 700 : 400,
-                                fontFamily: "'DM Sans', sans-serif",
+                                fontFamily: "'Inter', system-ui, sans-serif",
                                 cursor: "pointer",
                                 minWidth: 34,
                                 textAlign: "center",

@@ -182,7 +182,7 @@ function LogMonthModal({ accounts, onUpsertRevenue, onUpsertShopMetrics, onClose
             <select
               value={month}
               onChange={function (e) { setMonth(parseInt(e.target.value)); }}
-              style={{ width: "100%", background: C.bgDropdown, border: "1px solid " + C.border, borderRadius: 8, padding: "9px 12px", fontSize: 13, color: C.text, fontFamily: "'DM Sans', sans-serif", outline: "none" }}
+              style={{ width: "100%", background: C.bgDropdown, border: "1px solid " + C.border, borderRadius: 8, padding: "9px 12px", fontSize: 13, color: C.text, fontFamily: "'Inter', system-ui, sans-serif", outline: "none" }}
             >
               {allMonths.map(function (m) { return <option key={m.value} value={m.value}>{m.label}</option>; })}
             </select>
@@ -192,7 +192,7 @@ function LogMonthModal({ accounts, onUpsertRevenue, onUpsertShopMetrics, onClose
             <select
               value={year}
               onChange={function (e) { setYear(parseInt(e.target.value)); }}
-              style={{ width: "100%", background: C.bgDropdown, border: "1px solid " + C.border, borderRadius: 8, padding: "9px 12px", fontSize: 13, color: C.text, fontFamily: "'DM Sans', sans-serif", outline: "none" }}
+              style={{ width: "100%", background: C.bgDropdown, border: "1px solid " + C.border, borderRadius: 8, padding: "9px 12px", fontSize: 13, color: C.text, fontFamily: "'Inter', system-ui, sans-serif", outline: "none" }}
             >
               {years.map(function (y) { return <option key={y} value={y}>{y}</option>; })}
             </select>
@@ -222,7 +222,7 @@ function LogMonthModal({ accounts, onUpsertRevenue, onUpsertShopMetrics, onClose
                   value={v.revenue || ""}
                   onChange={function (e) { setVal(a.id, "revenue", e.target.value); }}
                   placeholder="$0"
-                  style={{ background: C.bgDropdown, border: "1px solid " + C.border, borderRadius: 6, padding: "6px 8px", fontSize: 12, color: C.text, fontFamily: "'DM Sans', sans-serif", width: "100%", boxSizing: "border-box", textAlign: "right", outline: "none" }}
+                  style={{ background: C.bgDropdown, border: "1px solid " + C.border, borderRadius: 6, padding: "6px 8px", fontSize: 12, color: C.text, fontFamily: "'Inter', system-ui, sans-serif", width: "100%", boxSizing: "border-box", textAlign: "right", outline: "none" }}
                 />
                 {isMso && <>
                   <input
@@ -230,21 +230,21 @@ function LogMonthModal({ accounts, onUpsertRevenue, onUpsertShopMetrics, onClose
                     onChange={function (e) { setVal(a.id, "connected", e.target.value); }}
                     placeholder="—"
                     disabled={!hasMsoFields}
-                    style={{ background: hasMsoFields ? C.bgDropdown : "transparent", border: "1px solid " + (hasMsoFields ? C.border : "transparent"), borderRadius: 6, padding: "6px 8px", fontSize: 12, color: C.text, fontFamily: "'DM Sans', sans-serif", width: "100%", boxSizing: "border-box", textAlign: "center", outline: "none" }}
+                    style={{ background: hasMsoFields ? C.bgDropdown : "transparent", border: "1px solid " + (hasMsoFields ? C.border : "transparent"), borderRadius: 6, padding: "6px 8px", fontSize: 12, color: C.text, fontFamily: "'Inter', system-ui, sans-serif", width: "100%", boxSizing: "border-box", textAlign: "center", outline: "none" }}
                   />
                   <input
                     value={v.integrated || ""}
                     onChange={function (e) { setVal(a.id, "integrated", e.target.value); }}
                     placeholder="—"
                     disabled={!hasMsoFields}
-                    style={{ background: hasMsoFields ? C.bgDropdown : "transparent", border: "1px solid " + (hasMsoFields ? C.border : "transparent"), borderRadius: 6, padding: "6px 8px", fontSize: 12, color: C.text, fontFamily: "'DM Sans', sans-serif", width: "100%", boxSizing: "border-box", textAlign: "center", outline: "none" }}
+                    style={{ background: hasMsoFields ? C.bgDropdown : "transparent", border: "1px solid " + (hasMsoFields ? C.border : "transparent"), borderRadius: 6, padding: "6px 8px", fontSize: 12, color: C.text, fontFamily: "'Inter', system-ui, sans-serif", width: "100%", boxSizing: "border-box", textAlign: "center", outline: "none" }}
                   />
                   <input
                     value={v.no_connection || ""}
                     onChange={function (e) { setVal(a.id, "no_connection", e.target.value); }}
                     placeholder="—"
                     disabled={!hasMsoFields}
-                    style={{ background: hasMsoFields ? C.bgDropdown : "transparent", border: "1px solid " + (hasMsoFields ? C.border : "transparent"), borderRadius: 6, padding: "6px 8px", fontSize: 12, color: C.text, fontFamily: "'DM Sans', sans-serif", width: "100%", boxSizing: "border-box", textAlign: "center", outline: "none" }}
+                    style={{ background: hasMsoFields ? C.bgDropdown : "transparent", border: "1px solid " + (hasMsoFields ? C.border : "transparent"), borderRadius: 6, padding: "6px 8px", fontSize: 12, color: C.text, fontFamily: "'Inter', system-ui, sans-serif", width: "100%", boxSizing: "border-box", textAlign: "center", outline: "none" }}
                   />
                 </>}
               </div>
@@ -296,7 +296,7 @@ export function PipelineView({ accounts, loading, revenueHistory, shopMetrics, o
             style={{
               background: C.bgCard, border: "1px solid " + C.border, borderRadius: 8,
               padding: "7px 14px", fontSize: 12, fontWeight: 600, color: C.textSub,
-              fontFamily: "'DM Sans', sans-serif", cursor: "pointer", flexShrink: 0,
+              fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer", flexShrink: 0,
               marginLeft: 12, marginTop: 0, whiteSpace: "nowrap",
             }}
           >

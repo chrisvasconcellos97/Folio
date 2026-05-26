@@ -1,23 +1,24 @@
-import { C } from "../lib/colors";
+// Canonical Pip orb — uses CSS classes from index.html for sizing and sonar.
+// size: "xs"|"sm"|"md"|"lg"|"xl"|"xxl" (default "lg")
+// sonar: bool — adds expanding rings
+// isStatic: bool — disables animation
+// extra className and style props passed through
 
-export function PipMark({ size = 12, color, pulse = false, glow = false, opacity = 1 }) {
-  var c = color || C.accent;
+export function PipOrb({ size = "lg", sonar = false, isStatic = false, className = "", style, onClick }) {
+  var cls = ["pip", size, sonar ? "sonar" : "", isStatic ? "static" : "", className].filter(Boolean).join(" ");
   return (
-    <svg
-      width={size}
-      height={size * 2}
-      viewBox="0 0 10 20"
-      fill="none"
-      className={pulse ? "pip-pulse" : ""}
-    >
-      {glow && (
-        <circle cx="5" cy="5" r="7" fill={c} fillOpacity="0.1" />
-      )}
-      <circle cx="5" cy="5" r="4" fill={c} fillOpacity={opacity} />
-      {glow && (
-        <circle cx="5" cy="15" r="5" fill={c} fillOpacity="0.07" />
-      )}
-      <circle cx="5" cy="15" r="2.8" fill={c} fillOpacity={opacity * 0.42} />
-    </svg>
+    <div className={cls} style={style} onClick={onClick} role={onClick ? "button" : undefined}>
+      <svg viewBox="-10 -10 20 20" aria-hidden="true">
+        <circle className="head" cx="0" cy="-4" r="4" />
+        <circle className="tail" cx="0" cy="4.5" r="2.8" />
+      </svg>
+    </div>
   );
+}
+
+// PipMark kept as backward-compat alias so existing imports don't break
+export function PipMark({ size = 12, color, pulse = false, glow = false, opacity = 1 }) {
+  // Map old numeric size to new CSS size classes
+  var sizeClass = size <= 8 ? "xs" : size <= 16 ? "sm" : size <= 24 ? "md" : "lg";
+  return <PipOrb size={sizeClass} sonar={false} />;
 }
