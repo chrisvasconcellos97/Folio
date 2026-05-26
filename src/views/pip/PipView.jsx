@@ -44,7 +44,7 @@ export function PipView({ accounts, meetings, tasks, addTask, updateTask, onActi
   var [input, setInput]           = useState("");
   var [loading, setLoading]       = useState(false);
   var [listening, setListening]   = useState(false);
-  var [audioEnabled, setAudio]    = useState(true);
+  var [audioEnabled, setAudio]    = useState(false);
   var bottomRef                   = useRef(null);
   var taskMsgSet                  = useRef(false);
   var recognitionRef              = useRef(null);

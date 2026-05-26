@@ -203,8 +203,25 @@ export function MeetingsTab({ meetings, accountName, userId, onLogMeeting, onDel
           <Card key={m.id} className="list-item" style={{ animationDelay: index * 0.04 + "s" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10, gap: 12 }}>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 3 }}>
-                  {m.title || "Meeting"}
+                <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 3 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>
+                    {m.title || "Meeting"}
+                  </div>
+                  {m.pip_summary && (
+                    <span style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 9,
+                      fontWeight: 500,
+                      color: C.accent,
+                      background: C.accentFaint,
+                      border: "1px solid " + C.accentLine,
+                      borderRadius: 4,
+                      padding: "1px 5px",
+                      letterSpacing: "0.06em",
+                      textTransform: "uppercase",
+                      flexShrink: 0,
+                    }}>✦ Summarized</span>
+                  )}
                 </div>
                 <div style={{ fontSize: 11, color: C.textMuted, fontVariantNumeric: "tabular-nums" }}>
                   {m.meeting_date

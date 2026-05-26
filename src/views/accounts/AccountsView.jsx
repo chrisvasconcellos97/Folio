@@ -30,7 +30,7 @@ var STATUS_LABELS = { green: "Healthy", yellow: "Watch",  red: "At Risk" };
 var TIER_COLORS   = { Major: C.blue,   Mid: C.purple,    Growth: C.green };
 var TIER_ORDER    = { Major: 1, Mid: 2, Growth: 3 };
 
-var FILTERS = ["All", "Major", "Mid", "Growth", "At Risk"];
+var FILTERS = ["All", "Major", "Mid", "Growth", "Watching", "At Risk"];
 
 function SkeletonCard() {
   return (
@@ -138,7 +138,9 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
           || (a.objective && a.objective.toLowerCase().includes(q));
         var matchFilter =
           filter === "All" ||
-          (filter === "At Risk" ? a.status === "red" : a.tier === filter);
+          (filter === "At Risk" ? a.status === "red" :
+           filter === "Watching" ? a.status === "yellow" :
+           a.tier === filter);
         var matchTag    = !tagFilter    || (a.tags && a.tags.includes(tagFilter));
         var matchRegion = !regionFilter || a.region === regionFilter;
         return matchSearch && matchFilter && matchTag && matchRegion;
@@ -322,19 +324,20 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
       >
         {[
           { l: "Accounts", v: loading ? "—" : accounts.length, c: C.text, filterId: "All" },
-          { l: "Watching", v: loading ? "—" : accounts.filter(function(a){ return a.status === "yellow"; }).length, c: C.yellow, filterId: null },
+          { l: "Watching", v: loading ? "—" : accounts.filter(function(a){ return a.status === "yellow"; }).length, c: C.yellow, filterId: "Watching" },
           { l: "At Risk",  v: loading ? "—" : accounts.filter(function(a){ return a.status === "red"; }).length, c: C.red, filterId: "At Risk" },
         ].map(function (s) {
           return (
             <div
               key={s.l}
-              onClick={s.filterId ? function() { setFilter(s.filterId); } : undefined}
+              onClick={function() { setFilter(s.filterId); }}
               style={{
-                background: C.surface,
-                border: "1px solid " + C.rule,
+                background: filter === s.filterId ? C.accentFaint : C.surface,
+                border: "1px solid " + (filter === s.filterId ? C.accentBorder : C.rule),
                 borderRadius: 8,
                 padding: "11px 12px",
-                cursor: s.filterId ? "pointer" : "default",
+                cursor: "pointer",
+                transition: "border-color 0.12s, background 0.12s",
               }}
             >
               <div style={{ fontFamily: SERIF, fontSize: 22, fontWeight: 400, color: s.c, fontFeatureSettings: '"tnum"' }}>

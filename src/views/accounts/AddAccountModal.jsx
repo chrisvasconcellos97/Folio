@@ -24,7 +24,7 @@ var STATUSES = [
   { value: "yellow", label: "Watch"   },
   { value: "red",    label: "At Risk" },
 ];
-var PRESET_TAGS = ["Aftermarket", "Salvage", "OE", "Reman"];
+var PRESET_TAGS = [];
 
 function TagChip({ label, active, onClick, onRemove, color }) {
   var col = color || C.blue;
@@ -265,7 +265,7 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
 
         {/* Supplier types */}
         <div>
-          <FL>Supplier Type</FL>
+          <FL>Account Type</FL>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
             {PRESET_TAGS.map(function (t) {
               return (
@@ -284,7 +284,7 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
               value={customTag}
               onChange={function (e) { setCustomTag(e.target.value); }}
               onKeyDown={handleCustomTagKey}
-              placeholder="Custom type, Enter to add"
+              placeholder="Add a type, press Enter"
               style={{ flex: 1 }}
             />
           </div>
