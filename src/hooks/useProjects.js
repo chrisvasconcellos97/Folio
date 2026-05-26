@@ -94,5 +94,27 @@ export function useProjects(userId, accountId, orgId) {
       });
   }
 
-  return { projects, loading, error, refetch: fetch, addProject, updateProject, deleteProject, templates, fetchTemplates, addTemplate };
+  function updateTemplate(id, data) {
+    return supabase
+      .from("gauge_templates")
+      .update(data)
+      .eq("id", id)
+      .then(function (result) {
+        if (result.error) throw result.error;
+        fetchTemplates();
+      });
+  }
+
+  function deleteTemplate(id) {
+    return supabase
+      .from("gauge_templates")
+      .delete()
+      .eq("id", id)
+      .then(function (result) {
+        if (result.error) throw result.error;
+        fetchTemplates();
+      });
+  }
+
+  return { projects, loading, error, refetch: fetch, addProject, updateProject, deleteProject, templates, fetchTemplates, addTemplate, updateTemplate, deleteTemplate };
 }

@@ -78,7 +78,7 @@ function countExternal(stages) {
 }
 
 export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
-  var { projects, loading, addProject, updateProject, deleteProject, templates, addTemplate } = useProjects(userId, null, orgId);
+  var { projects, loading, addProject, updateProject, deleteProject, templates, addTemplate, updateTemplate, deleteTemplate } = useProjects(userId, null, orgId);
   var [filter, setFilter]           = useState("all");
   var [showAdd, setShowAdd]         = useState(false);
   var [showPicker, setShowPicker]   = useState(false);
@@ -473,6 +473,8 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
         <TemplatePickerModal
           templates={templates}
           onUse={handleUseTemplate}
+          onUpdate={updateTemplate}
+          onDelete={deleteTemplate}
           onClose={function () { setShowPicker(false); }}
         />
       )}
