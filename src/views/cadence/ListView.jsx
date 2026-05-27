@@ -2,6 +2,8 @@ import { C } from "../../lib/colors";
 import { getNextOccurrence, isSameDay } from "../../lib/cadenceUtils";
 import { CadenceEventCard } from "./cadenceShared";
 
+var MONO = "'JetBrains Mono', ui-monospace, monospace";
+
 export function ListView({ cadences, onSelectAccount, onCreateItem, onOpenHub }) {
   var today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -40,7 +42,7 @@ export function ListView({ cadences, onSelectAccount, onCreateItem, onOpenHub })
       {filled.map(function (group) {
         return (
           <div key={group.key}>
-            <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 700, letterSpacing: '0.07em', marginBottom: 8 }}>
+            <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
               {group.label}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

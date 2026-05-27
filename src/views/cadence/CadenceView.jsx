@@ -13,6 +13,10 @@ import { CalendarView } from "./CalendarView";
 import { WeekView } from "./WeekView";
 import { ListView } from "./ListView";
 
+var MONO  = "'JetBrains Mono', ui-monospace, monospace";
+var SERIF = "'Fraunces', Georgia, serif";
+var INTER = "'Inter', system-ui, sans-serif";
+
 function buildGlobalCadenceInsight(cadences) {
   var seed  = "global" + new Date().getDate().toString();
   var today = new Date(); today.setHours(0, 0, 0, 0);
@@ -111,9 +115,12 @@ export function CadenceView({ cadences, accounts, onSelectAccount, addCadence, o
         return (
           <button key={pair[0]} onClick={function () { setViewMode(pair[0]); }}
             style={{
-              flex: 1, padding: '7px 4px', borderRadius: 8, cursor: 'pointer',
-              fontSize: 12, fontWeight: active ? 600 : 400,
-              fontFamily: "'Inter', system-ui, sans-serif",
+              flex: 1, padding: '8px 4px', borderRadius: 8, cursor: 'pointer',
+              fontFamily: MONO,
+              fontSize: 10.5,
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+              fontWeight: active ? 700 : 500,
               background: active ? C.bgCardAlt : 'transparent',
               color: active ? C.accent : C.textMuted,
               border: '1px solid ' + (active ? C.border : 'transparent'),
@@ -129,14 +136,26 @@ export function CadenceView({ cadences, accounts, onSelectAccount, addCadence, o
   if (!cadences || cadences.length === 0) {
     return (
       <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div style={{ fontSize: 20, fontWeight: 700, color: C.text }}>Cadence</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+          <div>
+            <div style={{ fontFamily: SERIF, fontSize: 40, fontWeight: 400, color: C.text, letterSpacing: '-0.02em', lineHeight: 1 }}>
+              Cadence
+            </div>
+            <div style={{ fontFamily: MONO, fontSize: 11, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 4 }}>
+              Recurring Schedules · {(cadences || []).length} Active
+            </div>
+          </div>
           <button
             onClick={function () { setShowAddModal(true); }}
             style={{
-              background: C.accentGlow, border: '1px solid ' + C.accentSubtle,
-              borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 600,
-              color: C.accent, fontFamily: "'Inter', system-ui, sans-serif", cursor: 'pointer',
+              background: C.accentDeep || C.accent,
+              border: 'none',
+              borderRadius: 6,
+              padding: '8px 14px',
+              color: C.bg,
+              fontFamily: INTER,
+              fontSize: 12, fontWeight: 600,
+              cursor: 'pointer',
             }}
           >
             + Set Cadence

@@ -1,6 +1,9 @@
 import { C, glass } from "../../lib/colors";
 import { getFrequencyLabel, formatTime, daysUntil, formatDateFull } from "../../lib/cadenceUtils";
 
+var SERIF = "'Fraunces', Georgia, serif";
+var MONO  = "'JetBrains Mono', ui-monospace, monospace";
+
 export var ACCOUNT_COLORS = [C.accent, C.green, C.blue, C.purple];
 
 export function accountColor(id) {
@@ -58,17 +61,17 @@ export function CadenceEventCard({ event, onSelectAccount, onCreateItem, onOpenH
       }}
     >
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{name}</div>
+        <div style={{ fontFamily: SERIF, fontSize: 15.5, fontWeight: 400, color: C.text, letterSpacing: '-0.005em', lineHeight: 1.2 }}>{name}</div>
         {cadence.type === 'task' && (
-          <div style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>
+          <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, marginTop: 3, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
             {isGlobal ? 'All Accounts' : (account && account.name ? account.name : '')}
           </div>
         )}
-        <div style={{ fontSize: 11, color: C.textMuted, marginTop: 3 }}>
+        <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, marginTop: 4, letterSpacing: '0.04em' }}>
           {getFrequencyLabel(cadence)}
         </div>
         {showDate && event.date && (
-          <div style={{ fontSize: 11, color: col, marginTop: 3 }}>
+          <div style={{ fontFamily: MONO, fontSize: 10, color: col, marginTop: 4, letterSpacing: '0.04em', fontFeatureSettings: '"tnum"' }}>
             {daysUntil(event.date)} · {formatDateFull(event.date)}
             {cadence.meeting_time ? ' · ' + formatTime(cadence.meeting_time) : ''}
           </div>
