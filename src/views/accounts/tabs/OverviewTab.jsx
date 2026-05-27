@@ -20,7 +20,117 @@ var RANGES = [
   { label: "All Time", days: null },
 ];
 
+function buildInternalTeamInsight(account, openItems, projects) {
+  var openCount    = (openItems || []).filter(function (i) { return !i.done; }).length;
+  var today        = new Date().toISOString().split("T")[0];
+  var overdueCount = (openItems || []).filter(function (i) { return !i.done && i.due_date && i.due_date < today; }).length;
+  var daysSince    = account.last_interaction_at
+    ? Math.floor((Date.now() - new Date(account.last_interaction_at).getTime()) / 86400000)
+    : null;
+  var seed = (account.id || account.name) + new Date().getDate().toString();
+  var parts = [];
+
+  if (overdueCount > 0) {
+    parts.push(pickV(seed + "a", [
+      account.name + " has " + overdueCount + " overdue deliverable" + (overdueCount !== 1 ? "s" : "") + ". Loop back with the team.",
+      overdueCount + " thing" + (overdueCount !== 1 ? "s" : "") + " past due on " + account.name + ". Worth nudging.",
+      account.name + " is sitting on " + overdueCount + " overdue commitment" + (overdueCount !== 1 ? "s" : "") + ". Get those clear.",
+    ]));
+  } else if (daysSince !== null && daysSince >= 21) {
+    parts.push(pickV(seed + "a", [
+      "It's been " + daysSince + " days since you synced with " + account.name + ". Quick check-in?",
+      account.name + " has gone quiet — " + daysSince + " days since last touch. Worth a sync.",
+      "Haven't connected with " + account.name + " in " + daysSince + " days. Keep the cross-team rhythm.",
+    ]));
+  } else if (openCount > 0) {
+    parts.push(pickV(seed + "a", [
+      openCount + " open task" + (openCount !== 1 ? "s" : "") + " with " + account.name + " — track to close.",
+      account.name + " has " + openCount + " open thread" + (openCount !== 1 ? "s" : "") + " on your side. Keep moving them.",
+      "Active work with " + account.name + ": " + openCount + " thing" + (openCount !== 1 ? "s" : "") + " in flight.",
+    ]));
+  } else {
+    parts.push(pickV(seed + "a", [
+      "Things are quiet with " + account.name + ". Clean state.",
+      account.name + " has no open items right now — good cadence.",
+      "No outstanding work with " + account.name + ". You're square.",
+    ]));
+  }
+
+  var prjs    = projects || [];
+  var blocked = prjs.filter(function (p) { return p.status === "blocked"; });
+  var active  = prjs.filter(function (p) { return p.status === "in_progress"; });
+  if (blocked.length > 0) {
+    parts.push(pickV(seed + "b", [
+      blocked.length + " project" + (blocked.length !== 1 ? "s" : "") + " blocked in Gauge — they're stuck on the team.",
+      "Gauge shows " + blocked.length + " block" + (blocked.length !== 1 ? "s" : "") + " on this team. Time to unstick.",
+    ]));
+  } else if (active.length > 0) {
+    parts.push(pickV(seed + "b", [
+      active.length + " project" + (active.length !== 1 ? "s" : "") + " in flight with this team.",
+      "Active work in Gauge: " + active.length + " on the go.",
+    ]));
+  }
+
+  return parts.join(" ");
+}
+
+function buildPartnerInsight(account, openItems, projects) {
+  var openCount = (openItems || []).filter(function (i) { return !i.done; }).length;
+  var daysSince = account.last_interaction_at
+    ? Math.floor((Date.now() - new Date(account.last_interaction_at).getTime()) / 86400000)
+    : null;
+  var seed  = (account.id || account.name) + new Date().getDate().toString();
+  var parts = [];
+
+  // Renewal check
+  if (account.agreement_end_date) {
+    var daysToRenew = Math.floor((new Date(account.agreement_end_date + "T00:00:00").getTime() - Date.now()) / 86400000);
+    if (daysToRenew < 0) {
+      parts.push(pickV(seed + "r", [
+        "Agreement with " + account.name + " expired " + Math.abs(daysToRenew) + " day" + (Math.abs(daysToRenew) !== 1 ? "s" : "") + " ago. Renew or close out.",
+        account.name + "'s agreement is past expiry. Address it.",
+      ]));
+    } else if (daysToRenew <= 30) {
+      parts.push(pickV(seed + "r", [
+        "Renewal with " + account.name + " in " + daysToRenew + " day" + (daysToRenew !== 1 ? "s" : "") + " — start the conversation.",
+        account.name + "'s agreement ends in " + daysToRenew + " day" + (daysToRenew !== 1 ? "s" : "") + ". Time to revisit scope.",
+      ]));
+    } else if (daysToRenew <= 90) {
+      parts.push(pickV(seed + "r", [
+        "Renewal with " + account.name + " in ~" + Math.round(daysToRenew / 7) + " weeks. Worth a check-in.",
+      ]));
+    }
+  }
+
+  if (parts.length === 0 && daysSince !== null && daysSince >= 60) {
+    parts.push(pickV(seed + "a", [
+      "Haven't touched base with " + account.name + " in " + daysSince + " days. Worth a quick check.",
+      account.name + " has gone quiet — " + daysSince + " days. Stay close to the relationship.",
+    ]));
+  } else if (parts.length === 0 && openCount > 0) {
+    parts.push(pickV(seed + "a", [
+      openCount + " open item" + (openCount !== 1 ? "s" : "") + " with " + account.name + ".",
+    ]));
+  } else if (parts.length === 0) {
+    parts.push(pickV(seed + "a", [
+      "Things are steady with " + account.name + ". No action needed right now.",
+      account.name + " is in good standing.",
+    ]));
+  }
+
+  if (account.scope_summary) {
+    parts.push(pickV(seed + "s", [
+      "Scope: " + account.scope_summary.split(/[.!?]/)[0] + ".",
+    ]));
+  }
+
+  return parts.join(" ");
+}
+
 function buildPipInsight(account, openItems, revenueHistory, shopMetrics, projects) {
+  if (account.account_type === "internal_team") return buildInternalTeamInsight(account, openItems, projects);
+  if (account.account_type === "partner")       return buildPartnerInsight(account, openItems, projects);
+
   var rh = revenueHistory || [];
   var sm = shopMetrics    || [];
 

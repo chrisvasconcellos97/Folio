@@ -207,7 +207,7 @@ export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit
                 return account.name;
               })()}
             </div>
-            {account.account_number && (
+            {account.account_number && isCustomerType && (
               <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, fontFeatureSettings: '"tnum"', marginBottom: 8 }}>
                 #{account.account_number}
               </div>
@@ -218,10 +218,12 @@ export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit
                   {account.tier}
                 </Pill>
               )}
-              <Pill color={statusColor}>
-                <span style={{ display: "inline-block", width: 5, height: 5, borderRadius: "50%", background: statusColor, marginRight: 4, verticalAlign: "middle" }} />
-                {STATUS_LABELS[account.status] || account.status}
-              </Pill>
+              {isCustomerType && (
+                <Pill color={statusColor}>
+                  <span style={{ display: "inline-block", width: 5, height: 5, borderRadius: "50%", background: statusColor, marginRight: 4, verticalAlign: "middle" }} />
+                  {STATUS_LABELS[account.status] || account.status}
+                </Pill>
+              )}
               {openCount > 0 && (
                 <Pill
                   color={C.yellow}
@@ -231,10 +233,10 @@ export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit
                   {openCount + " open"}
                 </Pill>
               )}
-              {account.region && (
+              {account.region && isCustomerType && (
                 <Pill color={C.accent}>{account.region}</Pill>
               )}
-              {parentAccount && (
+              {parentAccount && isCustomerType && (
                 <button
                   onClick={function () { onSelectAccount && onSelectAccount(parentAccount); }}
                   style={{
@@ -248,7 +250,7 @@ export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit
                 </button>
               )}
             </div>
-            {account.tags && account.tags.length > 0 && (
+            {account.tags && account.tags.length > 0 && isCustomerType && (
               <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 8 }}>
                 {account.tags.map(function (t) {
                   return (
@@ -262,7 +264,7 @@ export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit
                 })}
               </div>
             )}
-            {account.address && (
+            {account.address && isCustomerType && (
               <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, marginTop: 6 }}>
                 {account.address}
               </div>

@@ -116,7 +116,19 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
   }, [allDone]);
   var showChecklist = !checklistDone && !allDone;
 
-  var openTasks = (tasks || []).filter(function (t) { return !t.done; });
+  // Scope quick tasks to the current workspace. Unassigned tasks (no account_id)
+  // live on /accounts only — they were created from the customer-facing tray.
+  var accountTypeById = {};
+  (accounts || []).forEach(function (a) { accountTypeById[a.id] = a.account_type || 'standard'; });
+  function taskMatchesWorkspace(t) {
+    var type = t.account_id ? accountTypeById[t.account_id] : null;
+    if (typeFilter === 'internal_team') return type === 'internal_team';
+    if (typeFilter === 'partner')       return type === 'partner';
+    // customer view: customer types (standard/mso/shop/null) and unassigned
+    if (!type) return true;
+    return type !== 'internal_team' && type !== 'partner';
+  }
+  var openTasks = (tasks || []).filter(function (t) { return !t.done && taskMatchesWorkspace(t); });
 
   var todayStr   = new Date().toISOString().split("T")[0];
   var in7DaysStr = (function () {
