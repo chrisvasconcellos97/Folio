@@ -1,9 +1,16 @@
 import { useState, useEffect } from "react";
 import { C } from "../lib/colors";
 
-export function showToast(msg, type, onUndo) {
+export function showToast(msg, type, onUndoOrOpts) {
+  var opts = onUndoOrOpts && typeof onUndoOrOpts === "object" ? onUndoOrOpts : { onUndo: onUndoOrOpts };
   document.dispatchEvent(new CustomEvent("folio-toast", {
-    detail: { msg: msg, type: type || "success", onUndo: onUndo || null }
+    detail: {
+      msg:     msg,
+      type:    type || "success",
+      onUndo:  opts.onUndo || null,
+      action:  opts.action || null,
+      sticky:  !!opts.sticky,
+    }
   }));
 }
 
@@ -13,14 +20,14 @@ export function Toast() {
   useEffect(function() {
     function handler(e) {
       var id     = Date.now() + Math.random();
-      var msg    = e.detail.msg;
-      var type   = e.detail.type;
-      var onUndo = e.detail.onUndo;
-      setToasts(function(prev) { return prev.concat({ id: id, msg: msg, type: type, onUndo: onUndo }); });
-      var duration = onUndo ? 4500 : 2500;
-      setTimeout(function() {
-        setToasts(function(prev) { return prev.filter(function(t) { return t.id !== id; }); });
-      }, duration);
+      var t      = e.detail;
+      setToasts(function(prev) { return prev.concat({ id: id, msg: t.msg, type: t.type, onUndo: t.onUndo, action: t.action, sticky: t.sticky }); });
+      if (!t.sticky) {
+        var duration = t.onUndo || t.action ? 4500 : 2500;
+        setTimeout(function() {
+          setToasts(function(prev) { return prev.filter(function(x) { return x.id !== id; }); });
+        }, duration);
+      }
     }
     document.addEventListener("folio-toast", handler);
     return function() { document.removeEventListener("folio-toast", handler); };
@@ -57,7 +64,7 @@ export function Toast() {
             fontFamily: "'Inter', system-ui, sans-serif",
             whiteSpace: "nowrap",
             boxShadow: "0 4px 24px rgba(0,0,0,0.5)",
-            pointerEvents: t.onUndo ? "auto" : "none",
+            pointerEvents: t.onUndo || t.action ? "auto" : "none",
             display: "flex",
             alignItems: "center",
             gap: 12,
@@ -83,6 +90,28 @@ export function Toast() {
                 }}
               >
                 Undo
+              </button>
+            )}
+            {t.action && (
+              <button
+                onClick={function() {
+                  t.action.run();
+                  setToasts(function(prev) { return prev.filter(function(x) { return x.id !== t.id; }); });
+                }}
+                style={{
+                  background: "rgba(255,255,255,0.12)",
+                  border: "1px solid rgba(255,255,255,0.22)",
+                  color: "#fff",
+                  borderRadius: 6,
+                  padding: "3px 10px",
+                  fontSize: 12,
+                  fontFamily: "'Inter', system-ui, sans-serif",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  lineHeight: "1.5",
+                }}
+              >
+                {t.action.label}
               </button>
             )}
           </div>
