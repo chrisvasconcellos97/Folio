@@ -33,13 +33,6 @@ var STATUS_LABELS = { green: "Healthy", yellow: "Watch",  red: "At Risk" };
 var TIER_COLORS   = { Major: C.blue, Mid: C.yellow, Growth: C.purple };
 var TIER_ORDER    = { Major: 1, Mid: 2, Growth: 3 };
 
-// Left-edge fade tints per tier (alpha tuned to match the Gauge style)
-var TIER_FADE = {
-  Major:  "rgba(103, 200, 249, 0.28)",
-  Mid:    "rgba(232, 200, 56, 0.28)",
-  Growth: "rgba(180, 140, 232, 0.28)",
-};
-
 var FILTERS = ["All", "Major", "Mid", "Growth", "Watching", "At Risk"];
 
 function SkeletonCard() {
@@ -793,10 +786,9 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
               onKeyDown={function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(a); } }}
               style={{
                 flex: isChild ? 1 : undefined,
-                background: TIER_FADE[a.tier]
-                  ? "linear-gradient(to right, " + TIER_FADE[a.tier] + " 0%, " + C.surface + " 55%)"
-                  : C.surface,
+                background: C.surface,
                 border: "1px solid " + C.rule,
+                borderLeft: TIER_COLORS[a.tier] ? "3px solid " + TIER_COLORS[a.tier] : "1px solid " + C.rule,
                 borderRadius: 6,
                 padding: isChild ? (isCompact ? "6px 10px" : "10px 12px") : (isCompact ? "8px 12px" : "11px 12px"),
                 cursor: "pointer",
