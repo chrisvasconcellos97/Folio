@@ -193,14 +193,26 @@ export function CadenceView({ cadences, accounts, onSelectAccount, addCadence, o
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <div style={{ fontSize: 20, fontWeight: 700, color: C.text }}>Cadence</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+        <div>
+          <div style={{ fontFamily: SERIF, fontSize: 40, fontWeight: 400, color: C.text, letterSpacing: '-0.02em', lineHeight: 1 }}>
+            Cadence
+          </div>
+          <div style={{ fontFamily: MONO, fontSize: 11, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 4 }}>
+            Recurring Schedules · {(cadences || []).length} Active
+          </div>
+        </div>
         <button
           onClick={function () { setShowAddModal(true); }}
           style={{
-            background: C.accentGlow, border: '1px solid ' + C.accentSubtle,
-            borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 600,
-            color: C.accent, fontFamily: "'Inter', system-ui, sans-serif", cursor: 'pointer',
+            background: C.accentDeep || C.accent,
+            border: 'none',
+            borderRadius: 6,
+            padding: '8px 14px',
+            color: C.bg,
+            fontFamily: INTER,
+            fontSize: 12, fontWeight: 600,
+            cursor: 'pointer',
           }}
         >
           + Set Cadence

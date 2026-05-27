@@ -399,10 +399,20 @@ function PipPrefsSection({ userId }) {
   );
 }
 
+var SETTINGS_MONO  = "'JetBrains Mono', ui-monospace, monospace";
+var SETTINGS_SERIF = "'Fraunces', Georgia, serif";
+
 export function SettingsView({ userId, userMeta, org, role, members, pendingInvites, onCreateOrg, onInvite, onRevoke }) {
   return (
     <div style={{ maxWidth: 600, margin: "0 auto", padding: "8px 0 40px" }}>
-      <div style={{ fontSize: 20, fontWeight: 700, color: C.text, marginBottom: 20 }}>Settings</div>
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ fontFamily: SETTINGS_SERIF, fontSize: 40, fontWeight: 400, color: C.text, letterSpacing: "-0.02em", lineHeight: 1 }}>
+          Settings
+        </div>
+        <div style={{ fontFamily: SETTINGS_MONO, fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", marginTop: 4 }}>
+          Profile · Team · Org
+        </div>
+      </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <ProfileSection userMeta={userMeta} />

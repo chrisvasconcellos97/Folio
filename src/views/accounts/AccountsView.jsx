@@ -261,6 +261,13 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
     return counts;
   }, [accounts]);
 
+  var workspaceTitle = typeFilter === "internal_team" ? "Departments"
+                     : typeFilter === "partner"       ? "Partners"
+                     : "Accounts";
+  var workspaceSubtitle = typeFilter === "internal_team" ? "Internal Teams · " + (accounts.length) + " Total"
+                        : typeFilter === "partner"       ? "Partners · " + (accounts.length) + " Total"
+                        : "Customer Portfolio · " + (accounts.length) + " Total";
+
   return (
     <div>
       <style>{`
@@ -269,6 +276,15 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
           50% { opacity: 0.4; }
         }
       `}</style>
+
+      <div style={{ marginBottom: 18 }}>
+        <div style={{ fontFamily: SERIF, fontSize: 40, fontWeight: 400, color: C.text, letterSpacing: "-0.02em", lineHeight: 1 }}>
+          {workspaceTitle}
+        </div>
+        <div style={{ fontFamily: MONO, fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", marginTop: 4 }}>
+          {workspaceSubtitle}
+        </div>
+      </div>
 
       {/* Status banner */}
       <StatusBanner

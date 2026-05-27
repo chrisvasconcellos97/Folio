@@ -9,6 +9,9 @@ import { Modal } from "../../components/Modal";
 import { AddToTasksButton } from "../../components/AddToTasksButton";
 import { pickV } from "../../lib/metricsUtils";
 
+var MV_MONO  = "'JetBrains Mono', ui-monospace, monospace";
+var MV_SERIF = "'Fraunces', Georgia, serif";
+
 function groupByMonth(meetings) {
   var groups = {};
   meetings.forEach(function (m) {
@@ -304,6 +307,15 @@ export function MeetingsView({ meetings, loading, allItems, addItem }) {
 
   return (
     <div>
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontFamily: MV_SERIF, fontSize: 40, fontWeight: 400, color: C.text, letterSpacing: "-0.02em", lineHeight: 1 }}>
+          Meetings
+        </div>
+        <div style={{ fontFamily: MV_MONO, fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", marginTop: 4 }}>
+          Conversation History · {meetings.length} Total
+        </div>
+      </div>
+
       <PipInsightCard text={meetingsInsight} />
 
       {/* Upcoming */}

@@ -1,5 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
 import { C, glass } from "../../lib/colors";
+
+var PV_MONO  = "'JetBrains Mono', ui-monospace, monospace";
+var PV_SERIF = "'Fraunces', Georgia, serif";
 import { PipInsightCard } from "../../components/PipInsightCard";
 import { PipLoader } from "../../components/PipLoader";
 import { Pill } from "../../components/Pill";
@@ -326,24 +329,31 @@ export function PipelineView({ accounts, loading, revenueHistory, shopMetrics, o
 
   return (
     <div>
-      {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-        <div style={{ flex: 1 }}>
-          <PipInsightCard text={pipelineInsight} />
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+        <div>
+          <div style={{ fontFamily: PV_SERIF, fontSize: 40, fontWeight: 400, color: C.text, letterSpacing: "-0.02em", lineHeight: 1 }}>
+            Pipeline
+          </div>
+          <div style={{ fontFamily: PV_MONO, fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", marginTop: 4 }}>
+            Revenue · Trends · Shop Metrics
+          </div>
         </div>
         {onUpsertRevenue && (
           <button
             onClick={function () { setShowLogMonth(true); }}
             style={{
-              background: C.bgCard, border: "1px solid " + C.border, borderRadius: 8,
-              padding: "7px 14px", fontSize: 12, fontWeight: 600, color: C.textSub,
-              fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer", flexShrink: 0,
-              marginLeft: 12, marginTop: 0, whiteSpace: "nowrap",
+              background: C.accentDeep || C.accent, border: "none", borderRadius: 6,
+              padding: "8px 14px", fontSize: 12, fontWeight: 600, color: C.bg,
+              fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer",
             }}
           >
             + Log Month
           </button>
         )}
+      </div>
+
+      <div style={{ marginBottom: 12 }}>
+        <PipInsightCard text={pipelineInsight} />
       </div>
 
       {/* Filter chips */}
