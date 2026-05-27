@@ -56,6 +56,25 @@ export function fmtRevenue(n) {
   return "$" + Math.round(n).toLocaleString();
 }
 
+export function parseRevenueText(s) {
+  if (s === null || s === undefined) return null;
+  var str = String(s).trim();
+  if (!str) return null;
+  var num = parseFloat(str.replace(/[^0-9.]/g, ""));
+  if (isNaN(num)) return null;
+  if (/m/i.test(str)) return num * 1000000;
+  if (/k/i.test(str)) return num * 1000;
+  return num;
+}
+
+export function displayRevenue(account) {
+  if (account && account.revenue_amount !== null && account.revenue_amount !== undefined) {
+    return fmtRevenue(Number(account.revenue_amount));
+  }
+  if (account && account.revenue) return account.revenue;
+  return "—";
+}
+
 export function fmtPct(pct) {
   if (pct === null || pct === undefined) return null;
   return (pct >= 0 ? "↑" : "↓") + Math.abs(pct) + "%";

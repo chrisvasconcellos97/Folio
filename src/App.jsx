@@ -97,6 +97,17 @@ export default function App() {
   }, []);
 
   var { meetings, loading: meetLoading, addMeeting } = useMeetings(userId);
+  var [allItems, setAllItems]       = useState([]);
+  var [allContacts, setAllContacts] = useState([]);
+  useEffect(function () {
+    if (!userId) return;
+    supabase.from("folio_items").select("*").eq("user_id", userId).then(function (r) {
+      if (!r.error) setAllItems(r.data || []);
+    });
+    supabase.from("folio_contacts").select("*").eq("user_id", userId).then(function (r) {
+      if (!r.error) setAllContacts(r.data || []);
+    });
+  }, [userId, accounts.length, meetings.length]);
   var { cadences, loading: cadenceLoading, addCadence } = useCadences(userId);
   useCadenceSync(userId, cadences, cadenceLoading);
   var { tasks, addTask, updateTask, deleteTask } = useQuickTasks(userId);
@@ -221,6 +232,12 @@ export default function App() {
       hasMeetings={meetings.length > 0}
       hasCadences={cadences.length > 0}
       revenueHistory={revenueHistory}
+      items={allItems}
+      meetings={meetings}
+      contacts={allContacts}
+      onColdClick={function() { handleSetView("accounts"); }}
+      onOverdueClick={function() { handleSetView("cadence"); }}
+      onFollowUpClick={function() { handleSetView("meetings"); }}
       onLogMeeting={function(accountId, date, title) {
         return addMeeting({ account_id: accountId, meeting_date: date, title: title });
       }}
@@ -282,7 +299,7 @@ export default function App() {
   }
 
   if (view === "pip") {
-    mainContent = <PipView accounts={accounts} meetings={meetings} tasks={tasks} addTask={addTask} updateTask={updateTask} onAction={handlePipAction} revenueHistory={revenueHistory} shopMetrics={shopMetrics} cadences={cadences} projects={allProjects} />;
+    mainContent = <PipView accounts={accounts} meetings={meetings} items={allItems} contacts={allContacts} tasks={tasks} addTask={addTask} updateTask={updateTask} onAction={handlePipAction} revenueHistory={revenueHistory} shopMetrics={shopMetrics} cadences={cadences} projects={allProjects} />;
   }
 
   if (view === "gauge") {
@@ -449,7 +466,13 @@ export default function App() {
         {isDesktop && showPalette && (
           <CommandPalette
             accounts={accounts}
+            contacts={allContacts}
             onSelectAccount={function(a) { setSelected(a); setView("accounts"); setShowPalette(false); }}
+            onSelectContact={function(c) {
+              var acct = accounts.find(function(a) { return a.id === c.account_id; });
+              if (acct) { setSelected(acct); setView("accounts"); setPipPrefill({ tab: "contacts" }); }
+              setShowPalette(false);
+            }}
             onNavigate={function(v) { handleSetView(v); setShowPalette(false); }}
             onClose={function() { setShowPalette(false); }}
           />

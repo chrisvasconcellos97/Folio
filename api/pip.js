@@ -133,7 +133,10 @@ export default async function handler(req, res) {
 
   var systemWithContext = PIP_SYSTEM;
   if (context && (context.accounts || context.recentMeetings)) {
-    systemWithContext += "\n\nCurrent account context:\n" + JSON.stringify(context, null, 2);
+    systemWithContext +=
+      "\n\nThe accounts array below includes nested meetings (last 8), openItems, contacts, and activeProjects for each account. " +
+      "Use that data when the user asks about a specific account — pull facts directly from there before asking the user.\n\n" +
+      "Current account context:\n" + JSON.stringify(context, null, 2);
   }
 
   try {

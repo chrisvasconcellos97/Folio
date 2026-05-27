@@ -30,7 +30,7 @@ function buildTasksGreeting(openTasks, accounts) {
   return "Hey — " + n + " quick tasks open:\n" + list + "\n\nWant to run through them or focus on something else?";
 }
 
-export function PipView({ accounts, meetings, tasks, addTask, updateTask, onAction, revenueHistory, shopMetrics, cadences, projects }) {
+export function PipView({ accounts, meetings, items, contacts, tasks, addTask, updateTask, onAction, revenueHistory, shopMetrics, cadences, projects }) {
   var openTasks = useMemo(function () {
     return (tasks || []).filter(function (t) { return !t.done; });
   }, [tasks]);
@@ -97,18 +97,49 @@ export function PipView({ accounts, meetings, tasks, addTask, updateTask, onActi
   function buildContext() {
     var rh = revenueHistory || [];
     var sm = shopMetrics    || [];
+    var allItems    = items    || [];
+    var allContacts = contacts || [];
+    var allMeetings = meetings || [];
     return {
       accounts: accounts.map(function (a) {
         var latest   = latestRecord(rh, a.id);
         var shopLatest = latestRecord(sm, a.id);
+        var acctMeetings = allMeetings.filter(function (m) { return m.account_id === a.id; })
+          .slice(0, 8)
+          .map(function (m) {
+            return {
+              date:         m.meeting_date,
+              title:        m.title,
+              notes:        m.notes,
+              action_items: m.action_items,
+              commitments:  m.commitments,
+              follow_up:    m.follow_up_date,
+              summary:      m.pip_summary,
+              attendees:    m.attendees,
+            };
+          });
+        var openItems = allItems.filter(function (i) { return i.account_id === a.id && !i.done; })
+          .map(function (i) { return { text: i.text, due: i.due_date, owner: i.owner }; });
+        var acctContacts = allContacts.filter(function (c) { return c.account_id === a.id; })
+          .map(function (c) { return { name: c.name, title: c.title, email: c.email, phone: c.phone, is_poc: c.is_poc }; });
+        var acctProjects = (projects || [])
+          .filter(function (p) { return p.account_id === a.id && p.status !== "complete" && p.status !== "on_hold"; })
+          .map(function (p) { return { title: p.title, status: p.status, due_date: p.due_date }; });
         return {
           id:      a.id,
           name:    a.name,
           tier:    a.tier,
           status:  a.status,
           revenue: a.revenue,
+          revenue_amount: a.revenue_amount,
+          notes:   a.objective,
+          last_interaction_at: a.last_interaction_at,
           region:  a.region,
           tags:    a.tags,
+          meetings:       acctMeetings,
+          openItems:      openItems,
+          contacts:       acctContacts,
+          activeProjects: acctProjects,
           revenueTrend: latest ? {
             amount:    fmtRevenue(latest.revenue),
             month:     latest.month,

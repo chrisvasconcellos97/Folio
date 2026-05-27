@@ -7,6 +7,7 @@ create table if not exists folio_accounts (
   user_id                 uuid references auth.users not null,
   name                    text not null,
   revenue                 text,
+  revenue_amount          numeric,
   tier                    text check (tier in ('Major', 'Mid', 'Growth')),
   status                  text default 'green' check (status in ('green', 'yellow', 'red')),
   objective               text,

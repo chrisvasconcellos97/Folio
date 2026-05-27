@@ -14,6 +14,7 @@ import { useContacts } from "../../hooks/useContacts";
 import { useCadences } from "../../hooks/useCadences";
 import { useProjects } from "../../hooks/useProjects";
 import { callBriefMePip } from "../../lib/pip";
+import { displayRevenue } from "../../lib/metricsUtils";
 import { OverviewTab } from "./tabs/OverviewTab";
 import { MeetingsTab } from "./tabs/MeetingsTab";
 import { ItemsTab } from "./tabs/ItemsTab";
@@ -256,7 +257,7 @@ export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit
                 fontFeatureSettings: '"tnum"',
               }}
             >
-              {account.revenue || "—"}
+              {displayRevenue(account)}
             </div>
             <div
               style={{
@@ -529,6 +530,9 @@ export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit
           contacts={contacts}
           onSave={function (data) {
             return addMeeting(data).then(function (m) { showToast("Meeting logged"); return m; });
+          }}
+          onCreateItem={function (data) {
+            return addItem(Object.assign({ account_id: account.id }, data));
           }}
           onClose={function () { setMeetingModal(false); }}
         />

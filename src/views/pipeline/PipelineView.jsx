@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { C, glass } from "../../lib/colors";
 import { PipInsightCard } from "../../components/PipInsightCard";
 import { PipLoader } from "../../components/PipLoader";
@@ -16,6 +16,32 @@ import {
 } from "../../lib/metricsUtils";
 
 var TIER_COLORS = { Major: C.blue, Mid: C.purple, Growth: C.green };
+var MONO = "'JetBrains Mono', ui-monospace, monospace";
+
+var PIPELINE_PREF_KEY = "folio_pipeline_prefs";
+function loadPipelinePrefs() {
+  try { return JSON.parse(localStorage.getItem(PIPELINE_PREF_KEY) || "{}"); } catch(e) { return {}; }
+}
+function savePipelinePrefs(p) {
+  try { localStorage.setItem(PIPELINE_PREF_KEY, JSON.stringify(p)); } catch(e) {}
+}
+
+var REVENUE_RANGES = [
+  { id: "any",    label: "Any" },
+  { id: "lt500k", label: "<$500K" },
+  { id: "mid",    label: "$500K-$2M" },
+  { id: "gt2m",   label: ">$2M" },
+];
+
+function matchRevenue(amount, range) {
+  if (range === "any") return true;
+  if (amount == null) return false;
+  var n = Number(amount);
+  if (range === "lt500k") return n < 500000;
+  if (range === "mid")    return n >= 500000 && n <= 2000000;
+  if (range === "gt2m")   return n > 2000000;
+  return true;
+}
 
 function pctColor(pct) {
   if (pct === null || pct === undefined) return C.textMuted;
@@ -265,8 +291,23 @@ function LogMonthModal({ accounts, onUpsertRevenue, onUpsertShopMetrics, onClose
 
 export function PipelineView({ accounts, loading, revenueHistory, shopMetrics, onUpsertRevenue, onUpsertShopMetrics }) {
   var [showLogMonth, setShowLogMonth] = useState(false);
+  var [tierFilter, setTierFilter]     = useState(function() { return loadPipelinePrefs().tier || "All"; });
+  var [statusFilter, setStatusFilter] = useState(function() { return loadPipelinePrefs().status || "All"; });
+  var [revFilter, setRevFilter]       = useState(function() { return loadPipelinePrefs().revenue || "any"; });
+
+  useEffect(function() { savePipelinePrefs(Object.assign(loadPipelinePrefs(), { tier: tierFilter, status: statusFilter, revenue: revFilter })); }, [tierFilter, statusFilter, revFilter]);
+
   var rev = revenueHistory || [];
   var sm  = shopMetrics    || [];
+
+  var filteredAccounts = useMemo(function() {
+    return accounts.filter(function(a) {
+      if (tierFilter !== "All" && a.tier !== tierFilter) return false;
+      if (statusFilter !== "All" && a.status !== statusFilter) return false;
+      if (!matchRevenue(a.revenue_amount, revFilter)) return false;
+      return true;
+    });
+  }, [accounts, tierFilter, statusFilter, revFilter]);
 
   var pipelineInsight = useMemo(function () {
     return buildPipelineInsight(accounts, rev);
@@ -276,8 +317,8 @@ export function PipelineView({ accounts, loading, revenueHistory, shopMetrics, o
     return <PipLoader />;
   }
 
-  var withData    = accounts.filter(function (a) { return latestRecord(rev, a.id) !== null; });
-  var withoutData = accounts.filter(function (a) { return latestRecord(rev, a.id) === null; });
+  var withData    = filteredAccounts.filter(function (a) { return latestRecord(rev, a.id) !== null; });
+  var withoutData = filteredAccounts.filter(function (a) { return latestRecord(rev, a.id) === null; });
 
   withData.sort(function (a, b) {
     return latestRecord(rev, b.id).revenue - latestRecord(rev, a.id).revenue;
@@ -303,6 +344,56 @@ export function PipelineView({ accounts, loading, revenueHistory, shopMetrics, o
             + Log Month
           </button>
         )}
+      </div>
+
+      {/* Filter chips */}
+      <div style={{ display: "flex", gap: 5, marginBottom: 6, overflowX: "auto", paddingBottom: 2, alignItems: "center" }}>
+        <span style={{ fontFamily: MONO, fontSize: 9.5, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", flexShrink: 0 }}>Tier</span>
+        {["All", "Major", "Mid", "Growth"].map(function(t) {
+          var active = tierFilter === t;
+          return (
+            <button key={t} onClick={function() { setTierFilter(t); }}
+              style={{
+                background: active ? C.accent : "transparent", color: active ? C.bg : C.textMuted,
+                border: "1px solid " + (active ? C.accent : C.rule), borderRadius: 999,
+                padding: "4px 11px", fontFamily: MONO, fontSize: 10.5, cursor: "pointer", whiteSpace: "nowrap",
+              }}>
+              {t}
+            </button>
+          );
+        })}
+      </div>
+      <div style={{ display: "flex", gap: 5, marginBottom: 6, overflowX: "auto", paddingBottom: 2, alignItems: "center" }}>
+        <span style={{ fontFamily: MONO, fontSize: 9.5, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", flexShrink: 0 }}>Status</span>
+        {[{ id: "All", label: "All" }, { id: "green", label: "Healthy" }, { id: "yellow", label: "Watch" }, { id: "red", label: "At Risk" }].map(function(s) {
+          var active = statusFilter === s.id;
+          return (
+            <button key={s.id} onClick={function() { setStatusFilter(s.id); }}
+              style={{
+                background: active ? C.accent : "transparent", color: active ? C.bg : C.textMuted,
+                border: "1px solid " + (active ? C.accent : C.rule), borderRadius: 999,
+                padding: "4px 11px", fontFamily: MONO, fontSize: 10.5, cursor: "pointer", whiteSpace: "nowrap",
+              }}>
+              {s.label}
+            </button>
+          );
+        })}
+      </div>
+      <div style={{ display: "flex", gap: 5, marginBottom: 12, overflowX: "auto", paddingBottom: 2, alignItems: "center" }}>
+        <span style={{ fontFamily: MONO, fontSize: 9.5, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", flexShrink: 0 }}>Revenue</span>
+        {REVENUE_RANGES.map(function(r) {
+          var active = revFilter === r.id;
+          return (
+            <button key={r.id} onClick={function() { setRevFilter(r.id); }}
+              style={{
+                background: active ? C.accent : "transparent", color: active ? C.bg : C.textMuted,
+                border: "1px solid " + (active ? C.accent : C.rule), borderRadius: 999,
+                padding: "4px 11px", fontFamily: MONO, fontSize: 10.5, cursor: "pointer", whiteSpace: "nowrap",
+              }}>
+              {r.label}
+            </button>
+          );
+        })}
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -400,6 +491,11 @@ export function PipelineView({ accounts, loading, revenueHistory, shopMetrics, o
         {accounts.length === 0 && (
           <div style={{ textAlign: "center", padding: "40px 20px", color: C.textMuted, fontSize: 13 }}>
             No accounts in the pipeline yet.
+          </div>
+        )}
+        {accounts.length > 0 && filteredAccounts.length === 0 && (
+          <div style={{ textAlign: "center", padding: "40px 20px", color: C.textMuted, fontSize: 13 }}>
+            No accounts match the active filters.
           </div>
         )}
       </div>

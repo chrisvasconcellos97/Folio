@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { C } from "../../lib/colors";
-import { latestRecord, accountRecords, momPct } from "../../lib/metricsUtils";
+import { latestRecord, accountRecords, momPct, displayRevenue } from "../../lib/metricsUtils";
 import { Pill } from "../../components/Pill";
 import { InputField } from "../../components/InputField";
 import { Card } from "../../components/Card";
@@ -9,6 +9,7 @@ import { PipLoader } from "../../components/PipLoader";
 import { QuickTaskModal } from "../quicktasks/QuickTaskModal";
 import { AmberBtn } from "../../components/Buttons";
 import { QuickActionBar } from "../../components/QuickActionBar";
+import { StatusBanner } from "../../components/StatusBanner";
 
 var MONO = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
@@ -67,10 +68,11 @@ function savePrefs(p) {
   try { localStorage.setItem(PREF_KEY, JSON.stringify(p)); } catch(e) {}
 }
 
-export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks, addTask, updateTask, deleteTask, hasMeetings, hasCadences, revenueHistory, onLogMeeting }) {
+export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks, addTask, updateTask, deleteTask, hasMeetings, hasCadences, revenueHistory, items, meetings, contacts, onColdClick, onOverdueClick, onFollowUpClick, onLogMeeting }) {
   var [search, setSearch]           = useState("");
   var [searchFocused, setSearchFocused] = useState(false);
   var [filter, setFilter]           = useState(function() { return loadPrefs().filter || "All"; });
+  var [sortMode, setSortMode]       = useState(function() { return loadPrefs().sort || "tier"; });
   var [tagFilter, setTagFilter]     = useState(null);
   var [regionFilter, setRegionFilter] = useState(null);
   var [showAddTask, setShowAddTask] = useState(false);
@@ -79,6 +81,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
   });
 
   useEffect(function() { savePrefs(Object.assign(loadPrefs(), { filter: filter })); }, [filter]);
+  useEffect(function() { savePrefs(Object.assign(loadPrefs(), { sort: sortMode })); }, [sortMode]);
   useEffect(function() {
     try { localStorage.setItem(DENSITY_KEY, density); } catch(e) {}
   }, [density]);
@@ -127,6 +130,19 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
       .sort(function (a, b) { return a.next_meeting.localeCompare(b.next_meeting); });
   }, [loading, accounts, todayStr, in7DaysStr]);
 
+  var accountIdsWithContactMatch = useMemo(function () {
+    var set = {};
+    var q = search.trim().toLowerCase();
+    if (!q || !contacts) return set;
+    contacts.forEach(function (c) {
+      var match = (c.name && c.name.toLowerCase().includes(q))
+        || (c.email && c.email.toLowerCase().includes(q))
+        || (c.title && c.title.toLowerCase().includes(q));
+      if (match) set[c.account_id] = true;
+    });
+    return set;
+  }, [search, contacts]);
+
   var filtered = useMemo(function () {
     return accounts
       .filter(function (a) {
@@ -136,7 +152,8 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
           || (a.tags && a.tags.some(function(t) { return t.toLowerCase().includes(q); }))
           || (a.region && a.region.toLowerCase().includes(q))
           || (a.account_number && a.account_number.toLowerCase().includes(q))
-          || (a.objective && a.objective.toLowerCase().includes(q));
+          || (a.objective && a.objective.toLowerCase().includes(q))
+          || accountIdsWithContactMatch[a.id];
         var matchFilter =
           filter === "All" ||
           (filter === "At Risk" ? a.status === "red" :
@@ -147,11 +164,26 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
         return matchSearch && matchFilter && matchTag && matchRegion;
       })
       .sort(function (a, b) {
+        if (sortMode === "revenue") {
+          var ra = a.revenue_amount != null ? Number(a.revenue_amount) : -1;
+          var rb = b.revenue_amount != null ? Number(b.revenue_amount) : -1;
+          if (ra !== rb) return rb - ra;
+          return a.name.localeCompare(b.name);
+        }
+        if (sortMode === "name") {
+          return a.name.localeCompare(b.name);
+        }
+        if (sortMode === "recent") {
+          var la = a.last_interaction_at || a.last_meeting || "";
+          var lb = b.last_interaction_at || b.last_meeting || "";
+          if (la !== lb) return lb.localeCompare(la);
+          return a.name.localeCompare(b.name);
+        }
         var tierDiff = (TIER_ORDER[a.tier] || 9) - (TIER_ORDER[b.tier] || 9);
         if (tierDiff !== 0) return tierDiff;
         return a.name.localeCompare(b.name);
       });
-  }, [accounts, search, filter, tagFilter, regionFilter]);
+  }, [accounts, search, filter, tagFilter, regionFilter, sortMode, accountIdsWithContactMatch]);
 
   // Build display list: parents in sort order, children nested immediately below
   var displayList = useMemo(function () {
@@ -194,6 +226,16 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
           50% { opacity: 0.4; }
         }
       `}</style>
+
+      {/* Status banner */}
+      <StatusBanner
+        accounts={accounts}
+        items={items}
+        meetings={meetings}
+        onColdClick={onColdClick}
+        onOverdueClick={onOverdueClick}
+        onFollowUpClick={onFollowUpClick}
+      />
 
       {/* Quick Action Bar */}
       <QuickActionBar
@@ -426,6 +468,21 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
               }}
             />
           </div>
+          <select
+            value={sortMode}
+            onChange={function(e) { setSortMode(e.target.value); }}
+            title="Sort by"
+            style={{
+              background: "transparent", border: "1px solid " + C.rule, borderRadius: 6,
+              padding: "5px 8px", color: C.textMuted, fontSize: 11,
+              fontFamily: MONO, cursor: "pointer", flexShrink: 0,
+            }}
+          >
+            <option value="tier">Tier</option>
+            <option value="name">Name</option>
+            <option value="revenue">Revenue</option>
+            <option value="recent">Recent</option>
+          </select>
           <button
             onClick={function() { setDensity(function(d) { return d === "comfortable" ? "compact" : "comfortable"; }); }}
             title={density === "comfortable" ? "Switch to compact view" : "Switch to comfortable view"}
@@ -655,7 +712,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: a.revenue || a.next_meeting ? 4 : 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: (a.revenue_amount != null || a.revenue) || a.next_meeting ? 4 : 0 }}>
                     <div style={{
                       fontFamily: SERIF,
                       fontSize: isChild ? 13.5 : 15.5,
@@ -667,11 +724,11 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                     </div>
                     {a.tier && <Pill color={TIER_COLORS[a.tier] || C.textSoft}>{a.tier}</Pill>}
                   </div>
-                  {(a.revenue || a.next_meeting) && !isCompact && (
+                  {((a.revenue_amount != null || a.revenue) || a.next_meeting) && !isCompact && (
                     <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                      {a.revenue && (
+                      {(a.revenue_amount != null || a.revenue) && (
                         <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, fontFeatureSettings: '"tnum"' }}>
-                          {a.revenue}
+                          {displayRevenue(a)}
                         </div>
                       )}
                       {a.next_meeting && (

@@ -7,7 +7,7 @@ import { FL } from "../../components/FieldLabel";
 
 var STARS = [1, 2, 3, 4, 5];
 
-export function LogMeetingModal({ accountId, userId, contacts, onSave, onClose }) {
+export function LogMeetingModal({ accountId, userId, contacts, onSave, onClose, onCreateItem }) {
   var today = new Date().toISOString().split("T")[0];
   var [title, setTitle]            = useState("");
   var [date, setDate]              = useState(today);
@@ -18,6 +18,7 @@ export function LogMeetingModal({ accountId, userId, contacts, onSave, onClose }
   var [followUp, setFollowUp]      = useState("");
   var [rating, setRating]          = useState(0);
   var [attendees, setAttendees]    = useState([]);
+  var [createItems, setCreateItems] = useState(true);
   var [loading, setLoading]        = useState(false);
   var [error, setError]            = useState(null);
 
@@ -31,6 +32,7 @@ export function LogMeetingModal({ accountId, userId, contacts, onSave, onClose }
     if (!title.trim()) { setError("Meeting title is required."); return; }
     setLoading(true);
     setError(null);
+    var actionText = actionItems.trim();
     onSave({
       account_id:     accountId,
       user_id:        userId,
@@ -38,7 +40,7 @@ export function LogMeetingModal({ accountId, userId, contacts, onSave, onClose }
       meeting_date:   date,
       notes:          notes.trim() || null,
       talking_points: talkingPoints.trim() || null,
-      action_items:   actionItems.trim() || null,
+      action_items:   actionText || null,
       commitments:    commitments.trim() || null,
       follow_up_date: followUp || null,
       rating:         rating || null,
@@ -46,6 +48,12 @@ export function LogMeetingModal({ accountId, userId, contacts, onSave, onClose }
     })
       .then(function () {
         setLoading(false);
+        if (createItems && actionText && onCreateItem) {
+          var lines = actionText.split(/\n+/).map(function (l) { return l.replace(/^[-•*\s]+/, "").trim(); }).filter(function (l) { return l.length > 0; });
+          lines.forEach(function (line) {
+            onCreateItem({ text: line }).catch(function (err) { console.error("Auto-create item failed:", err); });
+          });
+        }
         onClose();
       })
       .catch(function (err) {
@@ -137,9 +145,20 @@ export function LogMeetingModal({ accountId, userId, contacts, onSave, onClose }
             id="log-action-items"
             value={actionItems}
             onChange={function (e) { setActions(e.target.value); }}
-            placeholder="Who does what by when..."
+            placeholder="Who does what by when (one per line)..."
             rows={3}
           />
+          {onCreateItem && actionItems.trim() && (
+            <label style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 6, cursor: "pointer", userSelect: "none" }}>
+              <input
+                type="checkbox"
+                checked={createItems}
+                onChange={function (e) { setCreateItems(e.target.checked); }}
+                style={{ width: 14, height: 14, cursor: "pointer" }}
+              />
+              <span style={{ fontSize: 12, color: C.textSub }}>Create open items from these</span>
+            </label>
+          )}
         </div>
 
         <div>

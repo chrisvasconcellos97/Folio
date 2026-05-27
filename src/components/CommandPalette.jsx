@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { C } from "../lib/colors";
 
-export function CommandPalette({ accounts, onSelectAccount, onNavigate, onClose }) {
+export function CommandPalette({ accounts, contacts, onSelectAccount, onSelectContact, onNavigate, onClose }) {
   var [query, setQuery] = useState("");
   var [idx, setIdx] = useState(0);
   var inputRef = useRef(null);
@@ -24,11 +24,27 @@ export function CommandPalette({ accounts, onSelectAccount, onNavigate, onClose 
           || (a.tags && a.tags.some(function(t) { return t.toLowerCase().includes(q); }))
           || (a.region && a.region.toLowerCase().includes(q));
       }).slice(0, 6).map(function(a) {
-        return { label: a.name, sub: a.tier || a.region || "", action: function() { onSelectAccount(a); } };
+        return { label: a.name, sub: a.tier || a.region || "", group: "Accounts", action: function() { onSelectAccount(a); } };
       })
     : [];
-  var navResults = NAV_ITEMS.filter(function(n) { return !q || n.label.toLowerCase().includes(q); });
-  var results = accountResults.concat(navResults);
+  var contactResults = q && contacts && onSelectContact
+    ? contacts.filter(function(c) {
+        return (c.name && c.name.toLowerCase().includes(q))
+          || (c.email && c.email.toLowerCase().includes(q))
+          || (c.title && c.title.toLowerCase().includes(q));
+      }).slice(0, 6).map(function(c) {
+        var acct = (accounts || []).find(function(a) { return a.id === c.account_id; });
+        return {
+          label: c.name,
+          sub: (c.title ? c.title : "") + (acct ? (c.title ? " · " : "") + acct.name : ""),
+          group: "Contacts",
+          action: function() { onSelectContact(c); },
+        };
+      })
+    : [];
+  var navResults = NAV_ITEMS.filter(function(n) { return !q || n.label.toLowerCase().includes(q); })
+    .map(function(n) { return Object.assign({}, n, { group: "Navigate" }); });
+  var results = accountResults.concat(contactResults).concat(navResults);
 
   useEffect(function() { setIdx(0); }, [query]);
 
@@ -73,19 +89,31 @@ export function CommandPalette({ accounts, onSelectAccount, onNavigate, onClose 
           )}
           {results.map(function(r, i) {
             var active = i === idx;
+            var prevGroup = i > 0 ? results[i - 1].group : null;
+            var showHeader = r.group && r.group !== prevGroup;
             return (
-              <div
-                key={i}
-                onClick={function() { r.action(); onClose(); }}
-                style={{
-                  padding: "10px 16px", cursor: "pointer", display: "flex", alignItems: "center",
-                  gap: 10, background: active ? C.accentFaint : "transparent",
-                  borderLeft: "2px solid " + (active ? C.accent : "transparent"),
-                }}
-              >
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, color: C.text, fontWeight: active ? 500 : 400 }}>{r.label}</div>
-                  {r.sub && <div style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>{r.sub}</div>}
+              <div key={i}>
+                {showHeader && (
+                  <div style={{
+                    padding: "8px 16px 2px", fontSize: 9.5, fontWeight: 700,
+                    color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em",
+                    fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+                  }}>
+                    {r.group}
+                  </div>
+                )}
+                <div
+                  onClick={function() { r.action(); onClose(); }}
+                  style={{
+                    padding: "10px 16px", cursor: "pointer", display: "flex", alignItems: "center",
+                    gap: 10, background: active ? C.accentFaint : "transparent",
+                    borderLeft: "2px solid " + (active ? C.accent : "transparent"),
+                  }}
+                >
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 14, color: C.text, fontWeight: active ? 500 : 400 }}>{r.label}</div>
+                    {r.sub && <div style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>{r.sub}</div>}
+                  </div>
                 </div>
               </div>
             );

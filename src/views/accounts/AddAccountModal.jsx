@@ -63,7 +63,8 @@ function TagChip({ label, active, onClick, onRemove, color }) {
 
 export function AddAccountModal({ userId, onSave, onClose, existing, accounts, defaultType, defaultParentId }) {
   var [name, setName]       = useState(existing ? existing.name : "");
-  var [revenue, setRevenue] = useState(existing ? (existing.revenue || "") : "");
+  var [revenueAmount, setRevenueAmount] = useState(existing && existing.revenue_amount != null ? String(existing.revenue_amount) : "");
+  var [revenueNote, setRevenueNote] = useState(existing && existing.revenue && existing.revenue_amount == null ? existing.revenue : "");
   var [tier, setTier]       = useState(existing ? (existing.tier || "Mid") : "Mid");
   var [status, setStatus]   = useState(existing ? (existing.status || "green") : "green");
   var [notes, setNotes]     = useState(existing ? (existing.objective || "") : "");
@@ -125,9 +126,12 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
     setLoading(true);
     setError(null);
 
+    var parsedRev = revenueAmount.trim() === "" ? null : parseFloat(revenueAmount.replace(/[^0-9.]/g, ""));
+    if (parsedRev !== null && isNaN(parsedRev)) parsedRev = null;
     var data = {
       name:              name.trim(),
-      revenue:           revenue.trim() || null,
+      revenue_amount:    parsedRev,
+      revenue:           revenueNote.trim() || (parsedRev !== null ? null : null),
       tier:              tier,
       status:            status,
       objective:         notes.trim() || null,
@@ -174,7 +178,29 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
         {/* Revenue */}
         <div>
           <FL htmlFor="account-revenue">Revenue (YTD)</FL>
-          <InputField id="account-revenue" value={revenue} onChange={function (e) { setRevenue(e.target.value); }} placeholder="e.g. $4.9M" />
+          <div style={{ position: "relative" }}>
+            <span style={{
+              position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)",
+              color: C.textMuted, fontSize: 14, pointerEvents: "none",
+              fontFamily: "'Inter', system-ui, sans-serif",
+            }}>$</span>
+            <InputField
+              id="account-revenue"
+              type="number"
+              inputMode="decimal"
+              value={revenueAmount}
+              onChange={function (e) { setRevenueAmount(e.target.value); }}
+              placeholder="4900000"
+              style={{ paddingLeft: 24 }}
+            />
+          </div>
+          <InputField
+            id="account-revenue-note"
+            value={revenueNote}
+            onChange={function (e) { setRevenueNote(e.target.value); }}
+            placeholder="Note (optional, e.g. ARR, estimated)"
+            style={{ marginTop: 6, fontSize: 12 }}
+          />
         </div>
 
         {/* Address */}
