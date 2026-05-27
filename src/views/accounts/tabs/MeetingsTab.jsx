@@ -159,8 +159,15 @@ export function MeetingsTab({ meetings, accountName, accountId, userId, openItem
     }).then(function (data) {
       setLoadingPip(function (prev) { return Object.assign({}, prev, { [m.id]: false }); });
       if (data.summary && onUpdateMeeting) {
-        onUpdateMeeting(m.id, { pip_summary: data.summary, pip_email: data.email || null })
-          .then(function () { showToast("Pip summary saved"); })
+        var patch = { pip_summary: data.summary, pip_email: data.email || null };
+        if (data.action_items && data.action_items.trim()) {
+          patch.action_items = data.action_items;
+        }
+        onUpdateMeeting(m.id, patch)
+          .then(function () {
+            var n = data.action_items ? data.action_items.split(/\r?\n/).filter(function (l) { return l.trim(); }).length : 0;
+            showToast(n > 0 ? "Pip summary saved · " + n + " action item" + (n !== 1 ? "s" : "") : "Pip summary saved");
+          })
           .catch(function (err) { console.error("Pip save failed:", err); });
       }
     }).catch(function () {

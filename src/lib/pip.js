@@ -197,14 +197,18 @@ export function callAskPip(payload) {
 
   var m = payload.meeting || {};
   var prompt =
-    "Summarize this meeting AND draft a follow-up email. Return ONLY valid JSON: {\"summary\":\"...\",\"email\":\"...\"}.\n\n" +
+    "Summarize this meeting, extract action items, and draft a follow-up email. " +
+    "Return ONLY valid JSON: {\"summary\":\"...\",\"action_items\":[\"...\"],\"email\":\"...\"}.\n\n" +
     "Account: " + (payload.accountName || "—") + "\n" +
     "Meeting: " + (m.title || "Untitled") + " (" + (m.meeting_date || "") + ")\n" +
     (m.notes          ? "Notes: " + m.notes + "\n" : "") +
     (m.talking_points ? "Talking points: " + m.talking_points + "\n" : "") +
-    (m.action_items   ? "Action items: " + m.action_items + "\n" : "") +
+    (m.action_items   ? "Existing action items: " + m.action_items + "\n" : "") +
     (m.commitments    ? "Commitments: " + m.commitments + "\n" : "") +
-    "\nSummary: 2-3 sentences. Email body only (no subject, plain prose).";
+    "\nSummary: 2-3 sentences. " +
+    "action_items: array of concrete next steps as plain strings (one item per string, no numbering, no bullets). " +
+    "If existing action items are listed, merge with anything new from the notes — don't lose them. " +
+    "Email body only (no subject, plain prose).";
 
   return callPipApi(
     [{ role: "user", content: prompt }],
@@ -213,12 +217,19 @@ export function callAskPip(payload) {
   ).then(function (resp) {
     var text = resp.content || "";
     var match = text.match(/\{[\s\S]*\}/);
-    if (!match) return { summary: text, email: "" };
+    if (!match) return { summary: text, email: "", action_items: "" };
     try {
       var parsed = JSON.parse(match[0]);
-      return { summary: parsed.summary || "", email: parsed.email || "" };
+      var items  = Array.isArray(parsed.action_items)
+        ? parsed.action_items.filter(function (x) { return typeof x === "string" && x.trim(); }).join("\n")
+        : (typeof parsed.action_items === "string" ? parsed.action_items : "");
+      return {
+        summary:      parsed.summary || "",
+        email:        parsed.email || "",
+        action_items: items,
+      };
     } catch (e) {
-      return { summary: text, email: "" };
+      return { summary: text, email: "", action_items: "" };
     }
   });
 }
