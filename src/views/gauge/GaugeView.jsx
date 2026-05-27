@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { C } from "../../lib/colors";
 import { GaugeIcon } from "../../components/GaugeIcon";
 import { useProjects } from "../../hooks/useProjects";
@@ -6,6 +6,8 @@ import { ProjectModal } from "./ProjectModal";
 import { ProjectStageEditor } from "./ProjectStageEditor";
 import { TemplatePickerModal } from "./TemplatePickerModal";
 import { PipLoader } from "../../components/PipLoader";
+import { PipInsightCard } from "../../components/PipInsightCard";
+import { pickV } from "../../lib/metricsUtils";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
@@ -31,6 +33,20 @@ var PRIORITY_COLORS = {
   medium: C.yellow,
   low:    C.green,
 };
+
+// Gradient stop colors per priority/state — left edge fades into the row's
+// normal dark green surface. Complete uses a light-green gradient to flag
+// finished work without making it shout.
+var FADE_START = {
+  high:    "rgba(232, 88, 88, 0.32)",
+  medium:  "rgba(232, 152, 48, 0.30)",
+  low:     "rgba(232, 200, 56, 0.28)",
+  complete:"rgba(120, 200, 140, 0.28)",
+};
+function fadeForProject(p) {
+  if (p.status === "complete") return FADE_START.complete;
+  return FADE_START[p.priority] || null;
+}
 
 var FILTERS = [
   { id: "all",         label: "All"         },
@@ -78,6 +94,57 @@ function countExternal(stages) {
   return stages.filter(function (s) { return s.is_external && !s.completed_at; }).length;
 }
 
+function buildGaugeInsight(projects, accountsById) {
+  var prjs = projects || [];
+  var active   = prjs.filter(function (p) { return p.status === "in_progress"; });
+  var blocked  = prjs.filter(function (p) { return p.status === "blocked"; });
+  var onHold   = prjs.filter(function (p) { return p.status === "on_hold"; });
+  var overdue  = active.filter(function (p) { return isOverdue(p.due_date); });
+  var highPri  = active.filter(function (p) { return p.priority === "high"; });
+
+  var seed  = String(new Date().getDate()) + ":" + prjs.length;
+  var parts = [];
+
+  if (overdue.length > 0) {
+    var first = overdue[0];
+    var acct  = first.account_id ? accountsById[first.account_id] : null;
+    parts.push(pickV(seed + "a", [
+      overdue.length + " project" + (overdue.length !== 1 ? "s are" : " is") + " past due. " + first.title + (acct ? " (" + acct.name + ")" : "") + " needs eyes first.",
+      "Past due: " + overdue.length + ". Top of the pile is " + first.title + (acct ? " for " + acct.name : "") + ".",
+    ]));
+  } else if (blocked.length > 0) {
+    var bf = blocked[0];
+    var ba = bf.account_id ? accountsById[bf.account_id] : null;
+    parts.push(pickV(seed + "a", [
+      blocked.length + " project" + (blocked.length !== 1 ? "s" : "") + " blocked. " + bf.title + (ba ? " (" + ba.name + ")" : "") + " is waiting on something — unstick it.",
+      "Blocked work: " + blocked.length + ". Start with " + bf.title + ".",
+    ]));
+  } else if (highPri.length > 0) {
+    parts.push(pickV(seed + "a", [
+      highPri.length + " high-priority project" + (highPri.length !== 1 ? "s" : "") + " in flight. Keep momentum.",
+      "Top of mind: " + highPri.length + " high-priority. Stay on " + highPri[0].title + ".",
+    ]));
+  } else if (active.length > 0) {
+    parts.push(pickV(seed + "a", [
+      active.length + " project" + (active.length !== 1 ? "s" : "") + " in flight. No blockers, no overdues — clean board.",
+      active.length + " active project" + (active.length !== 1 ? "s" : "") + ". Things are moving.",
+    ]));
+  } else {
+    parts.push(pickV(seed + "a", [
+      "No active projects right now. Nothing on fire.",
+      "Gauge is quiet. Take a breath.",
+    ]));
+  }
+
+  if (onHold.length > 0 && parts.length < 2) {
+    parts.push(pickV(seed + "b", [
+      onHold.length + " on hold — worth revisiting if context has changed.",
+    ]));
+  }
+
+  return parts.join(" ");
+}
+
 export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
   var { projects, loading, addProject, updateProject, deleteProject, templates, addTemplate, updateTemplate, deleteTemplate } = useProjects(userId, null, orgId);
   var [filter, setFilter]           = useState("all");
@@ -117,6 +184,15 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
   var completedCount  = projects.filter(function (p) { return p.status === "complete"; }).length;
   var blockedCount    = projects.filter(function (p) { return p.status === "blocked"; }).length;
   var onHoldCount     = projects.filter(function (p) { return p.status === "on_hold"; }).length;
+
+  var accountsById = useMemo(function () {
+    var map = {};
+    (accounts || []).forEach(function (a) { map[a.id] = a; });
+    return map;
+  }, [accounts]);
+  var gaugeInsight = useMemo(function () {
+    return buildGaugeInsight(projects, accountsById);
+  }, [projects, accountsById]);
 
   function getAccountName(id) {
     if (!id) return null;
@@ -304,6 +380,12 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
         </div>
       )}
 
+      {projects && projects.length > 0 && (
+        <div style={{ marginBottom: 10 }}>
+          <PipInsightCard text={gaugeInsight} />
+        </div>
+      )}
+
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {sortedFiltered.map(function (p) {
           var isComplete  = p.status === "complete";
@@ -321,11 +403,16 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
           var isOpen = !!expandedRows[p.id];
           function toggleRow() { setExpandedRows(function (prev) { return Object.assign({}, prev, { [p.id]: !prev[p.id] }); }); }
 
+          var fadeStart = fadeForProject(p);
+          var rowBg = fadeStart
+            ? "linear-gradient(to right, " + fadeStart + " 0%, " + C.surface + " 55%)"
+            : C.surface;
+
           return (
             <div
               key={p.id}
               style={{
-                background: C.surface,
+                background: rowBg,
                 border: "1px solid " + (p.status === "blocked" ? C.statusBlocked.border : C.rule),
                 borderRadius: 8,
                 opacity: isComplete ? 0.45 : 1,
@@ -352,8 +439,23 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
               {/* Left: title + description + meta */}
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+                  {overdue && (
+                    <span
+                      title="Past due"
+                      style={{
+                        display: "inline-flex", alignItems: "center", justifyContent: "center",
+                        width: 18, height: 18, borderRadius: "50%",
+                        background: "rgba(232,88,88,0.18)", border: "1px solid " + C.red,
+                        color: C.red, fontFamily: MONO, fontWeight: 700, fontSize: 11,
+                        flexShrink: 0,
+                      }}
+                    >
+                      !
+                    </span>
+                  )}
                   <div style={{
-                    fontFamily: SERIF, fontSize: 17, color: C.text, lineHeight: 1.3,
+                    fontFamily: SERIF, fontSize: 17, lineHeight: 1.3,
+                    color: overdue ? C.red : C.text,
                     textDecoration: isComplete ? "line-through" : "none",
                   }}>
                     {p.title}
