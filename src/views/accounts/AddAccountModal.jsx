@@ -6,6 +6,7 @@ import { InputField, TextArea } from "../../components/InputField";
 import { FL } from "../../components/FieldLabel";
 import { detectRegion, detectMarketScope, STATE_NAMES } from "../../lib/regions";
 import { ChipDropdown } from "../../components/ChipDropdown";
+import { ownerLabel } from "../../lib/ownerLabel";
 
 var REGION_GROUPS = [
   { label: "Northeast",     states: ["ME","NH","VT","MA","RI","CT","NY","NJ","PA"] },
@@ -61,7 +62,7 @@ function TagChip({ label, active, onClick, onRemove, color }) {
   );
 }
 
-export function AddAccountModal({ userId, onSave, onClose, existing, accounts, defaultType, defaultParentId }) {
+export function AddAccountModal({ userId, onSave, onClose, existing, accounts, defaultType, defaultParentId, members }) {
   var [name, setName]       = useState(existing ? existing.name : "");
   var [revenueAmount, setRevenueAmount] = useState(existing && existing.revenue_amount != null ? String(existing.revenue_amount) : "");
   var [revenueNote, setRevenueNote] = useState(existing && existing.revenue && existing.revenue_amount == null ? existing.revenue : "");
@@ -82,6 +83,7 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
   var [scopeSummary, setScopeSummary]         = useState(existing ? (existing.scope_summary || '') : '');
   var [billingTerms, setBillingTerms]         = useState(existing ? (existing.billing_terms || '') : '');
   var [spendYtd, setSpendYtd]                 = useState(existing && existing.spend_ytd != null ? String(existing.spend_ytd) : '');
+  var [ownerUserId, setOwnerUserId]           = useState(existing ? (existing.owner_user_id || userId) : userId);
   var [loading, setLoading] = useState(false);
   var [error, setError]     = useState(null);
 
@@ -163,6 +165,7 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
       scope_summary:      isPartner ? (scopeSummary.trim() || null) : null,
       billing_terms:      isPartner ? (billingTerms.trim() || null) : null,
       spend_ytd:          isPartner ? parsedSpend : null,
+      owner_user_id:      ownerUserId || userId,
     };
 
     var needsGeocode = address.trim() && (!existing || existing.address !== address.trim()) && !(existing && existing.lat);
@@ -654,6 +657,23 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
             rows={2}
           />
         </div>
+
+        {members && members.length > 1 && (
+          <div>
+            <FL>Owner</FL>
+            <ChipDropdown
+              options={members.map(function (m) { return ownerLabel(m); })}
+              value={(function () {
+                var m = members.find(function (x) { return x.user_id === ownerUserId; });
+                return m ? ownerLabel(m) : ownerLabel(members[0]);
+              })()}
+              onChange={function (label) {
+                var m = members.find(function (x) { return ownerLabel(x) === label; });
+                if (m) setOwnerUserId(m.user_id);
+              }}
+            />
+          </div>
+        )}
 
         {error && (
           <div

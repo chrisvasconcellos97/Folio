@@ -30,6 +30,7 @@ create table if not exists folio_accounts (
   scope_summary           text,
   billing_terms           text,
   spend_ytd               numeric,
+  owner_user_id           uuid references auth.users(id),
   created_at              timestamptz default now(),
   updated_at              timestamptz default now()
 );

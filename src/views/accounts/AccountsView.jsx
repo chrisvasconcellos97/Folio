@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { C } from "../../lib/colors";
+import { ownerInitials, findOwner } from "../../lib/ownerLabel";
 import { latestRecord, accountRecords, momPct, displayRevenue } from "../../lib/metricsUtils";
 import { Pill } from "../../components/Pill";
 import { InputField } from "../../components/InputField";
@@ -82,7 +83,7 @@ function matchesTypeFilter(account, typeFilter) {
   return !t || t === "standard" || t === "mso" || t === "shop";
 }
 
-export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks, addTask, updateTask, deleteTask, hasMeetings, hasCadences, revenueHistory, items, meetings, contacts, onColdClick, onOverdueClick, onFollowUpClick, onLogMeeting, typeFilter }) {
+export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks, addTask, updateTask, deleteTask, hasMeetings, hasCadences, revenueHistory, items, meetings, contacts, onColdClick, onOverdueClick, onFollowUpClick, onLogMeeting, typeFilter, userId, members }) {
   var activeType = typeFilter || "customer";
   var copy = WORKSPACE_COPY[activeType] || WORKSPACE_COPY.customer;
   accounts = (accounts || []).filter(function (a) { return matchesTypeFilter(a, activeType); });
@@ -90,6 +91,9 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
   var [searchFocused, setSearchFocused] = useState(false);
   var [filter, setFilter]           = useState(function() { return loadPrefs().filter || "All"; });
   var [sortMode, setSortMode]       = useState(function() { return loadPrefs().sort || "tier"; });
+  var mineKey = "folio_mine_only_" + (typeFilter || "customer");
+  var [mineOnly, setMineOnly]       = useState(function () { try { return localStorage.getItem(mineKey) === "1"; } catch (e) { return false; } });
+  useEffect(function () { try { localStorage.setItem(mineKey, mineOnly ? "1" : "0"); } catch (e) {} }, [mineOnly, mineKey]);
   var [tagFilter, setTagFilter]     = useState(null);
   var [regionFilter, setRegionFilter] = useState(null);
   var [showAddTask, setShowAddTask] = useState(false);
@@ -190,7 +194,10 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
            a.tier === filter);
         var matchTag    = !tagFilter    || (a.tags && a.tags.includes(tagFilter));
         var matchRegion = !regionFilter || a.region === regionFilter;
-        return matchSearch && matchFilter && matchTag && matchRegion;
+        var matchMine   = !mineOnly
+          || a.owner_user_id === userId
+          || (!a.owner_user_id && a.user_id === userId);
+        return matchSearch && matchFilter && matchTag && matchRegion && matchMine;
       })
       .sort(function (a, b) {
         if (sortMode === "revenue") {
@@ -212,7 +219,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
         if (tierDiff !== 0) return tierDiff;
         return a.name.localeCompare(b.name);
       });
-  }, [accounts, search, filter, tagFilter, regionFilter, sortMode, accountIdsWithContactMatch]);
+  }, [accounts, search, filter, tagFilter, regionFilter, sortMode, accountIdsWithContactMatch, mineOnly, userId]);
 
   // Build display list: parents in sort order, children nested immediately below
   var displayList = useMemo(function () {
@@ -497,6 +504,22 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
               }}
             />
           </div>
+          {members && members.length > 1 && (
+            <button
+              onClick={function () { setMineOnly(function (v) { return !v; }); }}
+              title="Show only accounts you own"
+              style={{
+                background: mineOnly ? C.accentFaint : "transparent",
+                border: "1px solid " + (mineOnly ? C.accentBorder : C.rule),
+                borderRadius: 6,
+                padding: "5px 10px", color: mineOnly ? C.accent : C.textMuted, fontSize: 11,
+                fontFamily: MONO, cursor: "pointer", flexShrink: 0,
+                letterSpacing: "0.05em",
+              }}
+            >
+              {mineOnly ? "Mine ✓" : "Mine"}
+            </button>
+          )}
           <select
             value={sortMode}
             onChange={function(e) { setSortMode(e.target.value); }}
@@ -777,6 +800,26 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                 }}>
                   {daysLabel}
                 </div>
+                {members && members.length > 1 && (function () {
+                  var owner = findOwner(members, a.owner_user_id) || findOwner(members, a.user_id);
+                  if (!owner) return null;
+                  var isMine = (a.owner_user_id || a.user_id) === userId;
+                  return (
+                    <div
+                      title={"Owner: " + (owner.invited_email || "Team member")}
+                      style={{
+                        fontFamily: MONO, fontSize: 9.5, fontWeight: 600,
+                        color: isMine ? C.accent : C.textMuted,
+                        background: isMine ? C.accentFaint : C.surface2,
+                        border: "1px solid " + (isMine ? C.accentLine : C.rule),
+                        borderRadius: 999, padding: "2px 7px",
+                        letterSpacing: "0.04em", flexShrink: 0,
+                      }}
+                    >
+                      {ownerInitials(owner)}
+                    </div>
+                  );
+                })()}
               </div>
               {a.next_meeting && a.next_meeting < todayStr && (
                 <div style={{ marginTop: 4 }}>

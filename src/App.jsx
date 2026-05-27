@@ -276,6 +276,8 @@ export default function App() {
         accounts={accounts}
         loading={acctLoading}
         typeFilter={typeFilter}
+        userId={userId}
+        members={members}
         onSelect={handleSelectAccount}
         onAddAccount={function () {
           var t = typeFilter === "internal_team" ? "internal_team"
@@ -320,6 +322,7 @@ export default function App() {
             userId={userId}
             orgId={orgId}
             accounts={accounts}
+            members={members}
             onBack={handleBack}
             onEdit={function () { setEditingAccount(selectedAccount); }}
             onDelete={handleDeleteAccount}
@@ -467,6 +470,7 @@ export default function App() {
       userId={userId}
       existing={editingAccount || null}
       accounts={accounts}
+      members={members}
       defaultType={editingAccount ? null : addAccountDefaultType}
       onSave={editingAccount ? handleEditAccount : handleAddAccount}
       onClose={function () { setShowAddAccount(false); setEditingAccount(null); setAddAccountDefaultType(null); }}

@@ -16,6 +16,7 @@ import { useCadences } from "../../hooks/useCadences";
 import { useProjects } from "../../hooks/useProjects";
 import { callBriefMePip } from "../../lib/pip";
 import { usePipAccountState } from "../../hooks/usePipAccountState";
+import { ownerLabel, ownerInitials, findOwner } from "../../lib/ownerLabel";
 import { displayRevenue } from "../../lib/metricsUtils";
 import { OverviewTab } from "./tabs/OverviewTab";
 import { MeetingsTab } from "./tabs/MeetingsTab";
@@ -44,7 +45,7 @@ function setDefaultTab(accountId, tab) {
   try { localStorage.setItem("folio_default_tab_" + accountId, tab); } catch(e) {}
 }
 
-export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit, onDelete, onUpdate, onSelectAccount, pipPrefill, onPipPrefillHandled, initialHubCadenceId, onHubConsumed, revenueHistory, shopMetrics, onAddAccount }) {
+export function AccountDetail({ account, userId, orgId, accounts, members, onBack, onEdit, onDelete, onUpdate, onSelectAccount, pipPrefill, onPipPrefillHandled, initialHubCadenceId, onHubConsumed, revenueHistory, shopMetrics, onAddAccount }) {
   var isInternalTeam = account.account_type === 'internal_team';
   var isPartner      = account.account_type === 'partner';
   var isCustomerType = !isInternalTeam && !isPartner;
@@ -249,6 +250,26 @@ export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit
                   ↑ {parentAccount.name}
                 </button>
               )}
+              {members && members.length > 1 && (function () {
+                var owner = findOwner(members, account.owner_user_id) || findOwner(members, userId);
+                return (
+                  <select
+                    value={account.owner_user_id || userId}
+                    onChange={function (e) { onUpdate && onUpdate({ owner_user_id: e.target.value }); }}
+                    title="Account owner"
+                    style={{
+                      background: C.surface, border: "1px solid " + C.rule,
+                      borderRadius: 999, padding: "3px 10px",
+                      fontFamily: MONO, fontSize: 10, color: C.textSoft,
+                      cursor: "pointer", appearance: "none",
+                    }}
+                  >
+                    {members.map(function (m) {
+                      return <option key={m.user_id || m.id} value={m.user_id || ""}>Owner: {ownerInitials(m)}</option>;
+                    })}
+                  </select>
+                );
+              })()}
             </div>
             {account.tags && account.tags.length > 0 && isCustomerType && (
               <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 8 }}>
