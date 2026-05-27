@@ -8,9 +8,9 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       manifest: {
-        name: "Folio",
-        short_name: "Folio",
-        description: "Account Management by Briefcase",
+        name: "Folios",
+        short_name: "Folios",
+        description: "Account Management",
         theme_color: "#0D1F1C",
         background_color: "#0D1F1C",
         display: "standalone",

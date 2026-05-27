@@ -33,20 +33,20 @@ export default async function handler(req, res) {
     var signupUrl = (appUrl || "https://folioshq.com").replace(/\/$/, "") + "/";
     var roleLabel = role === "director" ? "Director" : "Member";
 
-    var subject = "You've been invited to " + orgName + " on Folio";
+    var subject = "You've been invited to " + orgName + " on Folios";
     var html = [
       '<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;color:#1a1a1a;">',
       '<h1 style="font-size:22px;margin:0 0 16px;font-weight:600;">You\'re invited to ' + escapeHtml(orgName) + '</h1>',
       '<p style="font-size:15px;line-height:1.6;margin:0 0 16px;">',
-      escapeHtml(inviterEmail) + ' added you to <strong>' + escapeHtml(orgName) + '</strong> on Folio as a <strong>' + roleLabel + '</strong>.',
+      escapeHtml(inviterEmail) + ' added you to <strong>' + escapeHtml(orgName) + '</strong> on Folios as a <strong>' + roleLabel + '</strong>.',
       '</p>',
       '<p style="font-size:15px;line-height:1.6;margin:0 0 24px;">',
       'Sign up with this email address (<strong>' + escapeHtml(email) + '</strong>) and your invite will be waiting for you to accept.',
       '</p>',
       '<p style="margin:0 0 24px;">',
-      '<a href="' + signupUrl + '" style="display:inline-block;background:#4A9B82;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:600;font-size:15px;">Open Folio</a>',
+      '<a href="' + signupUrl + '" style="display:inline-block;background:#4A9B82;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:600;font-size:15px;">Open Folios</a>',
       '</p>',
-      '<p style="font-size:13px;line-height:1.6;color:#666;margin:0;">Folio — year-round account management.</p>',
+      '<p style="font-size:13px;line-height:1.6;color:#666;margin:0;">Folios — year-round account management.</p>',
       '</div>',
     ].join("");
 
@@ -57,7 +57,7 @@ export default async function handler(req, res) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Folio <onboarding@resend.dev>",
+        from: "Folios <onboarding@resend.dev>",
         to: [email],
         subject: subject,
         html: html,

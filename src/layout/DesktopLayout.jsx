@@ -65,7 +65,7 @@ export function DesktopLayout({
                 lineHeight: 1.1,
               }}
             >
-              Folio
+              Folios
             </div>
             <div
               style={{

@@ -8,7 +8,7 @@ var AGA = "rgba(103,200,249,0.10)";
 var AGB = "rgba(103,200,249,0.38)";
 var AGS = "rgba(103,200,249,0.26)";
 
-/* ── Preview components (generic data) ─────────────────────────── */
+/* ── Preview components (generic data) ─────────────── */
 
 function Shell({ children }) {
   return (
@@ -134,13 +134,13 @@ function StatusPreview() {
   );
 }
 
-/* ── Screen definitions ─────────────────────────────────────────── */
+/* ── Screen definitions ────────────────────────────── */
 
 var SCREENS = [
   { isIntro: true },
   {
     headline: "Oh. You actually opened Gauge.",
-    body: "I'm Pip — your AI field analyst. I live in Folio too. I get around.",
+    body: "I'm Pip — your AI field analyst. I live in Folios too. I get around.",
     sub: "Gauge is where commitments become things that actually get tracked.",
     pipTop: "18%", pipLeft: "50%",
   },
@@ -152,7 +152,7 @@ var SCREENS = [
   },
   {
     headline: "Link it to your accounts.",
-    body: "Connect each project to the Folio account it came from. So you never forget who you made the promise to.",
+    body: "Connect each project to the Folios account it came from. So you never forget who you made the promise to.",
     pipTop: "10%", pipLeft: "82%",
     visual: AccountLinkPreview,
   },
@@ -170,7 +170,7 @@ var SCREENS = [
   },
 ];
 
-/* ── Component ──────────────────────────────────────────────────── */
+/* ── Component ───────────────────────────────────── */
 
 export function OnboardingTour({ onComplete }) {
   var [screen, setScreen]         = useState(0);
