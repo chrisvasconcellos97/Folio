@@ -141,7 +141,17 @@ This app is currently single-user but should be built with multi-tenancy in mind
    - Pip context improvement — pass full account history (all meetings, open items, contacts) into Pip system prompt
    - Auto-create open items from meeting action items — checkbox in Add Meeting modal to promote each action item to an open item
    - In-app notification banner — shows on login: accounts gone cold, items overdue, follow-ups due this week
-   - **Cadence Hub** — clicking a cadence row in CadenceView opens a dedicated all-access screen for that specific recurring meeting. Pip brief at top (what this cadence is, last touchpoint, next due). One freeform notes pane that Pip cleans into summary / action items / promised deliveries / follow-up dates on demand. Past meetings log showing every prior instance with their Pip outputs. Open + closed tasks tied to this cadence (filtered from `folio_items`). Scheduled follow-ups surfaced as a timeline. One note in, structured output out, full history in one place.
+   - **Cadence Hub** — per-cadence all-access workspace. Locked spec:
+     - **Schema:** add `cadence_id` (nullable uuid → `folio_cadences`), `method` ('phone'|'email'|'video'|'in_person'), `status` ('draft'|'summarized') to `folio_meetings`.
+     - **Rename:** "Log Meeting" → "Log Conversation" everywhere (account detail button, quick actions banner `+ Meeting` → `+ Conversation`). DB stays `folio_meetings`.
+     - **Log Conversation modal:** method dropdown + cadence dropdown. If account has cadences → cadence required (all conversations filter into the hub). If account has no cadences → conversation logs without a cadence and lives in the account's Meetings tab.
+     - **Hub layout (desktop):** opens from CadenceView (calendar/week/list) and account detail page. Sections top-to-bottom — Pip brief (cached + manual refresh) → Active drafts → "+ New conversation" → Meeting history (this cadence) → All open items on account → Scheduled follow-ups.
+     - **Hub layout (mobile):** compact header (cadence name, last/next, Pip brief collapsed one-liner that taps to expand). 4-tab segmented control below: **Notes** (default — active drafts + new conversation) / **History** / **Tasks** / **Follow-ups**.
+     - **Drafts:** running scratchpad per meeting, private to author. Multiple drafts can coexist. Stale flag for drafts >7 days unsummarized. Summarize → Pip generates summary + action items (with optional promised dates) + follow-up dates → status flips to 'summarized', moves into history. Summarized meetings stay editable.
+     - **Cadence next-due:** auto-advances when a conversation is logged tied to it.
+     - **Account Meetings tab:** stays as all-cadence rollup view (and home for cadence-less conversations on accounts without cadences set up).
+     - **Backfill:** one-time per-account prompt to assign cadences to existing meetings.
+     - **Open discussion (not in v1):** how action items / promised deliveries feed into Gauge.
 
 4. **Native feel:** *(no open items)*
 
