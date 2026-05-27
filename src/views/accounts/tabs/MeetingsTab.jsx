@@ -6,6 +6,7 @@ import { FL } from "../../../components/FieldLabel";
 import { MarkdownText } from "../../../components/MarkdownText";
 import { PipMark } from "../../../components/PipMark";
 import { PipInsightCard } from "../../../components/PipInsightCard";
+import { AddToTasksButton } from "../../../components/AddToTasksButton";
 import { callAskPip } from "../../../lib/pip";
 import { pickV } from "../../../lib/metricsUtils";
 import { showToast } from "../../../components/Toast";
@@ -141,7 +142,7 @@ function copySummary(meeting, accountName) {
   });
 }
 
-export function MeetingsTab({ meetings, accountName, userId, onLogMeeting, onDelete, onAddMeeting, onUpdateMeeting }) {
+export function MeetingsTab({ meetings, accountName, accountId, userId, openItems, addItem, onLogMeeting, onDelete, onAddMeeting, onUpdateMeeting }) {
   var [loadingPip, setLoadingPip] = useState({});
   var [pipErrors, setPipErrors]   = useState({});
   var [confirmDeleteId, setConfirmDeleteId] = useState(null);
@@ -272,7 +273,17 @@ export function MeetingsTab({ meetings, accountName, userId, onLogMeeting, onDel
 
             {m.action_items && (
               <div style={{ marginBottom: 10 }}>
-                <FL>Action Items</FL>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
+                  <FL style={{ marginBottom: 0 }}>Action Items</FL>
+                  {addItem && (
+                    <AddToTasksButton
+                      actionItemsText={m.action_items}
+                      accountId={accountId}
+                      openItems={openItems}
+                      addItem={addItem}
+                    />
+                  )}
+                </div>
                 <div style={{ fontSize: 14, color: C.yellow, lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{m.action_items}</div>
               </div>
             )}

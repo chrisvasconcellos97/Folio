@@ -9,6 +9,7 @@ import { getFrequencyLabel, getNextOccurrence, daysUntil, formatDateFull, format
 import { summarizeDraftPip, callCadenceBriefPip } from "../../lib/pip";
 import { supabase } from "../../lib/supabase";
 import { CadenceBackfillBanner } from "./CadenceBackfillBanner";
+import { AddToTasksButton } from "../../components/AddToTasksButton";
 
 var INTER = "'Inter', system-ui, sans-serif";
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
@@ -376,7 +377,7 @@ function PipBriefPanel({ brief, briefAt, loading, error, onRefresh, mobileCollap
 }
 
 /* ---- Meeting history row ---- */
-function HistoryRow({ meeting, onEdit, onDelete }) {
+function HistoryRow({ meeting, onEdit, onDelete, accountId, openItems, addItem }) {
   var [confirm, setConfirm] = useState(false);
   return (
     <div style={Object.assign({}, glass, { borderRadius: 10, padding: "11px 13px" })}>
@@ -406,6 +407,16 @@ function HistoryRow({ meeting, onEdit, onDelete }) {
           {meeting.follow_up_date && (
             <div style={{ fontSize: 11, color: C.accent, marginTop: 6, fontVariantNumeric: "tabular-nums" }}>
               Follow-up: {new Date(meeting.follow_up_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+            </div>
+          )}
+          {meeting.action_items && addItem && accountId && (
+            <div style={{ marginTop: 8 }}>
+              <AddToTasksButton
+                actionItemsText={meeting.action_items}
+                accountId={accountId}
+                openItems={openItems}
+                addItem={addItem}
+              />
             </div>
           )}
         </div>
@@ -630,6 +641,9 @@ export function CadenceHub({
                 meeting={m}
                 onEdit={onEditMeeting}
                 onDelete={deleteMeeting}
+                accountId={account.id}
+                openItems={openItems}
+                addItem={addItem}
               />
             );
           })}

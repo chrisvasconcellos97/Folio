@@ -6,6 +6,7 @@ import { PipLoader } from "../../components/PipLoader";
 import { Card } from "../../components/Card";
 import { FL } from "../../components/FieldLabel";
 import { Modal } from "../../components/Modal";
+import { AddToTasksButton } from "../../components/AddToTasksButton";
 import { pickV } from "../../lib/metricsUtils";
 
 function groupByMonth(meetings) {
@@ -84,7 +85,7 @@ function formatDetailDate(dateStr) {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-function MeetingDetailModal({ meeting, onClose }) {
+function MeetingDetailModal({ meeting, onClose, allItems, addItem }) {
   var [copied, setCopied] = useState(false);
   var m = meeting;
   var accountName = m.folio_accounts ? m.folio_accounts.name : "Account";
@@ -156,7 +157,17 @@ function MeetingDetailModal({ meeting, onClose }) {
 
         {m.action_items && (
           <div>
-            <FL>Action Items</FL>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
+              <FL style={{ marginBottom: 0 }}>Action Items</FL>
+              {addItem && m.account_id && (
+                <AddToTasksButton
+                  actionItemsText={m.action_items}
+                  accountId={m.account_id}
+                  openItems={(allItems || []).filter(function (i) { return i.account_id === m.account_id && !i.done; })}
+                  addItem={addItem}
+                />
+              )}
+            </div>
             <div style={{
               fontFamily: "'Inter Variable', system-ui, sans-serif",
               fontSize: 14,
@@ -273,7 +284,7 @@ function MeetingDetailModal({ meeting, onClose }) {
   );
 }
 
-export function MeetingsView({ meetings, loading }) {
+export function MeetingsView({ meetings, loading, allItems, addItem }) {
   var [selectedMeeting, setSelectedMeeting] = useState(null);
   var [hoveredId, setHoveredId] = useState(null);
 
@@ -480,6 +491,8 @@ export function MeetingsView({ meetings, loading }) {
         <MeetingDetailModal
           meeting={selectedMeeting}
           onClose={function () { setSelectedMeeting(null); }}
+          allItems={allItems}
+          addItem={addItem}
         />
       )}
     </div>

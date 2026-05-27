@@ -337,7 +337,7 @@ export default function App() {
   }
 
   if (view === "meetings") {
-    mainContent = <MeetingsView meetings={meetings} loading={meetLoading} />;
+    mainContent = <MeetingsView meetings={meetings} loading={meetLoading} allItems={allItems} addItem={pipAddItem} />;
   }
 
   if (view === "pipeline") {

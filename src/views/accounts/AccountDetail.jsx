@@ -524,7 +524,10 @@ export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit
         <MeetingsTab
           meetings={meetings}
           accountName={account.name}
+          accountId={account.id}
           userId={userId}
+          openItems={items}
+          addItem={function (data) { return addItem(Object.assign({ account_id: account.id }, data)); }}
           onLogMeeting={function () { setMeetingModal(true); }}
           onDelete={deleteMeeting}
           onAddMeeting={addMeeting}
