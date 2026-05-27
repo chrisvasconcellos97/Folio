@@ -188,6 +188,17 @@ This app is currently single-user but should be built with multi-tenancy in mind
      - **Backfill:** one-time per-account prompt to assign cadences to existing meetings.
      - **Open discussion (not in v1):** how action items / promised deliveries feed into Gauge.
    - **Departments tab** — internal-teams workspace (marketing, sales, product, ops, etc). Click a department → full hub for working notes, tasks, conversations with team leads, optional cadences. Two modeling options to decide before build: (a) separate top-level concept with new `folio_departments` table, distinct nav, no revenue/shop fields — clean separation; (b) reuse `folio_accounts` with `account_type = 'internal_team'` alongside `mso`/`shop` — free reuse of Cadence Hub, conversations, contacts, Pip stack. Lean toward (b) so internal teams inherit the same workflow muscle, with conditional UI hiding revenue/shop sections for `internal_team` type. Decide whether to fold into Cadence Hub build or ship after.
+   - **Workspaces — Departments + Partners (locked spec):**
+     - **Model:** reuse `folio_accounts` with `account_type` extended to `'internal_team'` (Departments) and `'partner'` (Partners) alongside existing `standard`/`mso`/`shop`. Single table, conditional UI per type. Cadence Hub already works against the table → free for new types.
+     - **Schema:** `agreement_end_date date`, `scope_summary text`, `billing_terms text`, `spend_ytd numeric` on `folio_accounts` (all nullable). `is_leader boolean default false`, `is_primary boolean default false` on `folio_contacts`.
+     - **Nav:** Desktop → 3 flat top-level items (Accounts / Departments / Partners) with a divider between Accounts and Departments. Mobile → collapsible "Workspaces" group containing the three.
+     - **Conditional UI:** Customer types show revenue/pipeline/tier/shop. Department/Partner hide all of those. Partner shows agreement-end / scope-summary / billing-terms / spend-YTD. All three show contacts, cadences, Cadence Hub, open items, notes scratchpad, Pip.
+     - **Contacts:** New `Leader` (☆) and `Primary` (📌) toggles per contact. Leaders sort to top with marker. Primary gets a pin badge. Same contact can be both. Especially useful on Departments — surfaces team leads and day-to-day contact.
+     - **List views:** Reuse `AccountsView` with a `typeFilter` prop instead of three separate files. `/departments` and `/partners` routes filter that view.
+     - **Pip context branching:** customer → revenue/pipeline/days-since-contact; department → cross-team deliverables and overdue commitments; partner → renewal/scope/spend.
+     - **Permissions:** Same org RLS as accounts (everyone in org sees all). Scoped visibility (HR-only sees HR) deferred.
+     - **Add modal:** AddAccountModal type dropdown includes `internal_team` and `partner` with friendly labels. The Add CTA copy adapts to context (`+ Department` on /departments, `+ Partner` on /partners, `+ Account` on /accounts).
+     - **Org chart view for contacts:** queued as follow-up (not v1).
 
 4. **Native feel:** *(no open items)*
 
