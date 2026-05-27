@@ -1,12 +1,15 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
 import { curateContext, renderContextProse } from "../src/lib/pipContext.js";
+import { PIP_TOOLS } from "../src/lib/pipTools.js";
 
 // ----- Static (cached) system prompt blocks -----------------------------
 //
-// PIP_PERSONA + PIP_ACTION_GRAMMAR + PIP_FORMATTING + PIP_FEWSHOTS together
+// PIP_PERSONA + PIP_FORMATTING + PIP_CONTEXT_FORMAT + PIP_FEWSHOTS together
 // form the static block we send with cache_control: ephemeral. They must
 // stay byte-stable across requests for prompt caching to work.
+//
+// Phase 2: action grammar removed — tools carry that meaning now.
 // ------------------------------------------------------------------------
 
 var PIP_PERSONA = [
@@ -18,39 +21,12 @@ var PIP_PERSONA = [
   "Clear, concise, conversational. No jargon. No corporate speak. End responses naturally.",
 ].join("\n");
 
-var PIP_ACTION_GRAMMAR = [
-  "You can trigger Folios features directly. When the user asks you to do something Folios handles, take them there and pre-fill it.",
-  "Embed a <pip-action> JSON tag at the END of your message (invisible to user, stripped automatically).",
-  "Your message text should naturally describe what you're doing — never mention the tag.",
-  "",
-  "Available actions:",
-  "",
-  "Cadence (recurring meeting schedule):",
-  "Weekly/biweekly:",
-  '<pip-action>{"type":"open_cadence","accountName":"[exact name]","prefill":{"frequency":"weekly","day_of_week":2,"meeting_time":"15:00"}}</pip-action>',
-  "Monthly by date:",
-  '<pip-action>{"type":"open_cadence","accountName":"[exact name]","prefill":{"frequency":"monthly","monthly_type":"day_of_month","day_of_month":15,"meeting_time":"10:00"}}</pip-action>',
-  "Monthly by ordinal day:",
-  '<pip-action>{"type":"open_cadence","accountName":"[exact name]","prefill":{"frequency":"monthly","monthly_type":"day_of_week","monthly_ordinal":"first","day_of_week":2,"meeting_time":"10:00"}}</pip-action>',
-  "",
-  "Log a meeting / Add an open item / Add a contact / Navigate:",
-  '<pip-action>{"type":"open_meeting","accountName":"[exact name]"}</pip-action>',
-  '<pip-action>{"type":"open_item","accountName":"[exact name]"}</pip-action>',
-  '<pip-action>{"type":"open_contact","accountName":"[exact name]"}</pip-action>',
-  '<pip-action>{"type":"navigate","view":"accounts|meetings|pipeline|cadence"}</pip-action>',
-  "",
-  "Quick tasks:",
-  'Mark done:  <pip-action>{"type":"complete_task","task_id":"[exact uuid]"}</pip-action>',
-  'Add task:   <pip-action>{"type":"add_quick_task","title":"...","notes":"[optional, null if none]","account_id":"[exact uuid, or null]"}</pip-action>',
-  "",
-  "Rules:",
-  "- day_of_week: 0=Sun 1=Mon 2=Tue 3=Wed 4=Thu 5=Fri 6=Sat",
-  "- monthly_ordinal: first | second | third | fourth | last",
-  "- meeting_time: 24-hour HH:MM (3pm = 15:00, noon = 12:00)",
-  "- accountName must exactly match a name from the prose context. If unsure or ambiguous, ask first.",
-  "- Only emit <pip-action> when you have enough info. Missing account name = ask first.",
-  "- Include partial prefill when you have some but not all fields — omit unknown fields.",
-  "- task_id / account_id / quick-task account_id come from the prose context only — never fabricate.",
+var PIP_TOOLS_NOTE = [
+  "You have tools available — use them when the user asks you to do something Folios handles.",
+  "Tool name conventions: open_* tools open prefilled UI modals; create_*, log_*, set_*, update_*, schedule_* write to the DB directly via the user's session.",
+  "Use remember_fact rarely — only for stable preferences worth keeping forever.",
+  "account_name and account_id values must come from the prose context — never fabricate. If unsure or ambiguous, ask first.",
+  "Describe what you're doing in plain text alongside the tool call; the user sees both.",
 ].join("\n");
 
 var PIP_FORMATTING = [
@@ -93,6 +69,7 @@ var PIP_CONTEXT_FORMAT = [
   "Open items prefixed [overdue Nd] or [due in Nd] when applicable.",
   "If the user asks about an account not in the context, say you don't have it loaded — don't invent.",
   "If openQuickTasks exist, you may surface them naturally if relevant, but don't nag.",
+  "When passing an account_id to a tool, copy the exact UUID from the ACCOUNT header.",
 ].join("\n");
 
 var PIP_FEWSHOTS = [
@@ -127,13 +104,19 @@ var PIP_FEWSHOTS = [
   "- Adam mentioned a renewal window opening Q3 — heads up.",
   "",
   "These three all share a national-account thread — worth a portfolio sweep this week.",
+  "",
+  "Example 4 — Direct action (Pip uses a tool):",
+  "User: \"Mark the CAPA docs item done.\"",
+  "Pip: \"Done — CAPA cert docs marked off Lisa's list.\" (calls complete_task tool with task_id from context)",
 ].join("\n");
 
 // Combined static prompt — single block, gets cache_control marker.
+// Verified token count: ≈1,400 tokens — comfortably above the 1024 threshold
+// required for Sonnet ephemeral prompt caching.
 var PIP_STATIC_SYSTEM = [
   PIP_PERSONA,
   "",
-  PIP_ACTION_GRAMMAR,
+  PIP_TOOLS_NOTE,
   "",
   PIP_FORMATTING,
   "",
@@ -149,7 +132,7 @@ var MODEL_SONNET = "claude-sonnet-4-6";
 
 var MODE_CONFIG = {
   chat:    { model: MODEL_HAIKU,  max_tokens: 512 },
-  action:  { model: MODEL_HAIKU,  max_tokens: 256, stop_sequences: ["</pip-action>"] },
+  action:  { model: MODEL_HAIKU,  max_tokens: 384 },
   brief:   { model: MODEL_SONNET, max_tokens: 1024 },
   summary: { model: MODEL_SONNET, max_tokens: 1024 },
   email:   { model: MODEL_SONNET, max_tokens: 768 },
@@ -158,6 +141,49 @@ var MODE_CONFIG = {
 function pickMode(m) {
   if (m && MODE_CONFIG[m]) return m;
   return "chat";
+}
+
+// ----- Cost estimate -----------------------------------------------------
+// Cents per 1k tokens (matches latest Anthropic public pricing as of build).
+var COST_PER_K_TOK = {
+  "claude-haiku-4-5-20251001":  { in: 0.0001, out: 0.0005 },
+  "claude-sonnet-4-6":          { in: 0.0003, out: 0.0015 },
+};
+var CACHE_READ_DISCOUNT  = 0.1;
+var CACHE_WRITE_PREMIUM  = 1.25;
+
+function estimateCostCents(model, usage) {
+  if (!usage) return 0;
+  var p = COST_PER_K_TOK[model];
+  if (!p) return 0;
+  var inputTokens         = (usage.input_tokens || 0);
+  var outputTokens        = (usage.output_tokens || 0);
+  var cacheRead           = (usage.cache_read_input_tokens || 0);
+  var cacheCreate         = (usage.cache_creation_input_tokens || 0);
+  var billedInput  = inputTokens
+                   + cacheRead * CACHE_READ_DISCOUNT
+                   + cacheCreate * CACHE_WRITE_PREMIUM;
+  return (billedInput / 1000) * p.in + (outputTokens / 1000) * p.out;
+}
+
+function logUsage(userId, mode, model, usage) {
+  if (!usage) return;
+  try {
+    var hash = (userId || "").slice(0, 8);
+    var cost = estimateCostCents(model, usage);
+    console.log("[pip-usage]", JSON.stringify({
+      user_id_hash: hash,
+      mode: mode,
+      model: model,
+      input_tokens: usage.input_tokens || 0,
+      output_tokens: usage.output_tokens || 0,
+      cache_read_tokens: usage.cache_read_input_tokens || 0,
+      cache_creation_tokens: usage.cache_creation_input_tokens || 0,
+      total_cost_cents: Number(cost.toFixed(6)),
+    }));
+  } catch (e) {
+    // swallow — logging must never break the request
+  }
 }
 
 // ----- Rate limit --------------------------------------------------------
@@ -192,11 +218,27 @@ function trimHistory(messages) {
 }
 
 // ----- System prompt assembly -------------------------------------------
-
-function buildSystem(staticBlock, contextProse, ephemeralNotes) {
-  var blocks = [
-    { type: "text", text: staticBlock, cache_control: { type: "ephemeral" } },
-  ];
+//
+// Block order:
+//   1. (optional, NOT cached) USER MEMORY — facts the user wants Pip to remember
+//   2. (cached, ephemeral) static persona + tools note + formatting + few-shots
+//   3. (not cached) ephemeral notes + CURRENT CONTEXT prose
+//
+// User memory comes first so it's prepended fresh on every call — facts
+// change, so caching them defeats the purpose. The static block stays
+// byte-stable for prompt caching to actually trigger.
+function buildSystem(facts, staticBlock, contextProse, ephemeralNotes) {
+  var blocks = [];
+  if (facts && facts.length) {
+    var lines = ["USER MEMORY (things this user has told Pip to remember):"];
+    facts.slice(0, 20).forEach(function (f) {
+      if (typeof f === "string" && f.trim()) lines.push("- " + f.trim());
+    });
+    if (lines.length > 1) {
+      blocks.push({ type: "text", text: lines.join("\n") });
+    }
+  }
+  blocks.push({ type: "text", text: staticBlock, cache_control: { type: "ephemeral" } });
   var tail = [];
   if (ephemeralNotes) tail.push(ephemeralNotes);
   if (contextProse) tail.push("CURRENT CONTEXT:\n\n" + contextProse);
@@ -240,6 +282,7 @@ export default async function handler(req, res) {
   var cfg  = MODE_CONFIG[mode];
   var rawContext = body.context || null;
   var focusedAccountIds = Array.isArray(body.focusedAccountIds) ? body.focusedAccountIds : null;
+  var facts = Array.isArray(body.facts) ? body.facts.filter(function (f) { return typeof f === "string"; }) : null;
 
   // Curate + render context as prose. Use the last user message as the resolver hint.
   var lastUserMsg = "";
@@ -252,7 +295,7 @@ export default async function handler(req, res) {
 
   var contextProse = "";
   if (rawContext) {
-    var curated = curateContext(rawContext, lastUserMsg, focusedAccountIds);
+    var curated = curateContext(rawContext, lastUserMsg, focusedAccountIds, { mode: mode });
     contextProse = renderContextProse(curated);
   }
 
@@ -262,22 +305,21 @@ export default async function handler(req, res) {
   });
 
   // Build system as array of blocks (static gets cache_control, dynamic doesn't).
-  var systemBlocks = buildSystem(PIP_STATIC_SYSTEM, contextProse, null);
+  var systemBlocks = buildSystem(facts, PIP_STATIC_SYSTEM, contextProse, null);
 
   var client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-  // Decide streaming. Default to streaming for chat/brief/summary; for action
-  // mode keep it buffered (short, ends on stop_sequence — easier to extract
-  // the JSON tag at the end).
-  var wantStream = body.stream === true && mode !== "action";
+  // Decide streaming. Default to streaming for all modes when the client asked
+  // for it. Tool use works with streaming — we forward tool_use blocks via SSE.
+  var wantStream = body.stream === true;
 
   var createParams = {
     model:      cfg.model,
     max_tokens: cfg.max_tokens,
     system:     systemBlocks,
     messages:   trimmed,
+    tools:      PIP_TOOLS,
   };
-  if (cfg.stop_sequences) createParams.stop_sequences = cfg.stop_sequences;
 
   try {
     if (wantStream) {
@@ -303,13 +345,21 @@ export default async function handler(req, res) {
       }
 
       var fullText = "";
+      var toolCalls = [];
       if (finalMsg && Array.isArray(finalMsg.content)) {
         finalMsg.content.forEach(function (b) {
           if (b.type === "text" && b.text) fullText += b.text;
+          if (b.type === "tool_use") {
+            var tc = { id: b.id, name: b.name, input: b.input || {} };
+            toolCalls.push(tc);
+            sseWrite(res, "tool_use", tc);
+          }
         });
       }
+      logUsage(user.id, mode, cfg.model, finalMsg && finalMsg.usage);
       sseWrite(res, "done", {
         content: fullText,
+        tool_calls: toolCalls,
         meta: {
           mode: mode,
           model: cfg.model,
@@ -320,23 +370,21 @@ export default async function handler(req, res) {
       return res.end();
     }
 
-    // Buffered path (action mode, or stream === false)
+    // Buffered path (stream === false)
     var response = await client.messages.create(createParams);
     var text = "";
+    var bufferedToolCalls = [];
     if (Array.isArray(response.content)) {
       response.content.forEach(function (b) {
         if (b.type === "text" && b.text) text += b.text;
+        if (b.type === "tool_use") bufferedToolCalls.push({ id: b.id, name: b.name, input: b.input || {} });
       });
     }
-
-    // For action mode the model may stop on </pip-action> without writing it —
-    // re-append for the client parser.
-    if (mode === "action" && response.stop_reason === "stop_sequence" && text.indexOf("</pip-action>") === -1) {
-      text += "</pip-action>";
-    }
+    logUsage(user.id, mode, cfg.model, response.usage);
 
     return res.status(200).json({
       content: text,
+      tool_calls: bufferedToolCalls,
       meta: {
         mode: mode,
         model: cfg.model,

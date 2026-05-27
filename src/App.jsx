@@ -114,6 +114,49 @@ export default function App() {
   var { projects: allProjects } = useProjects(userId);
   var { revenueHistory, shopMetrics, upsertRevenue, upsertShopMetrics } = useAccountMetrics(userId);
 
+  // Top-level write helpers used by Pip's native tool calls.
+  // These mirror the hook-level addItem/setFollowUp paths so RLS still applies
+  // through the user's Supabase session.
+  function pipAddItem(data) {
+    return supabase
+      .from("folio_items")
+      .insert([Object.assign({}, data, { user_id: userId })])
+      .select()
+      .then(function (r) {
+        if (r.error) throw r.error;
+        if (data.account_id) {
+          supabase.from("folio_accounts")
+            .update({ last_interaction_at: new Date().toISOString() })
+            .eq("id", data.account_id)
+            .then(function () {});
+        }
+        setAllItems(function (prev) { return prev.concat(r.data || []); });
+        return r.data && r.data[0];
+      });
+  }
+
+  function pipSetFollowUp(accountId, followUpDate) {
+    // Find the most-recent meeting on this account, then update its
+    // follow_up_date column.
+    return supabase
+      .from("folio_meetings")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("account_id", accountId)
+      .order("meeting_date", { ascending: false })
+      .limit(1)
+      .then(function (r) {
+        if (r.error) throw r.error;
+        if (!r.data || !r.data.length) throw new Error("no meeting to attach follow-up to");
+        return supabase.from("folio_meetings")
+          .update({ follow_up_date: followUpDate })
+          .eq("id", r.data[0].id);
+      })
+      .then(function (r) {
+        if (r && r.error) throw r.error;
+      });
+  }
+
   function handleSelectAccount(a) {
     setSelected(a);
   }
@@ -299,7 +342,27 @@ export default function App() {
   }
 
   if (view === "pip") {
-    mainContent = <PipView accounts={accounts} meetings={meetings} items={allItems} contacts={allContacts} tasks={tasks} addTask={addTask} updateTask={updateTask} onAction={handlePipAction} revenueHistory={revenueHistory} shopMetrics={shopMetrics} cadences={cadences} projects={allProjects} />;
+    mainContent = <PipView
+      accounts={accounts}
+      meetings={meetings}
+      items={allItems}
+      contacts={allContacts}
+      tasks={tasks}
+      addTask={addTask}
+      updateTask={updateTask}
+      onAction={handlePipAction}
+      revenueHistory={revenueHistory}
+      shopMetrics={shopMetrics}
+      cadences={cadences}
+      projects={allProjects}
+      userId={userId}
+      addItem={pipAddItem}
+      addMeeting={addMeeting}
+      addCadence={addCadence}
+      updateAccount={updateAccount}
+      setFollowUp={pipSetFollowUp}
+      onNavigate={handleSetView}
+    />;
   }
 
   if (view === "gauge") {

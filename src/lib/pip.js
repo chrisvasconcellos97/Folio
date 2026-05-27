@@ -45,8 +45,8 @@ export { classifyIntent };
  *
  * @param {Array} messages - conversation history ({role, content})
  * @param {Object} context - raw context object (accounts/items/etc)
- * @param {Object} [opts] - { mode?, focusedAccountIds?, onDelta?, stream? }
- * @returns Promise<{ content, meta, deterministic? }>
+ * @param {Object} [opts]  - { mode?, focusedAccountIds?, onDelta?, onToolUse?, stream?, facts? }
+ * @returns Promise<{ content, toolCalls, meta, deterministic? }>
  */
 export function askPip(messages, context, opts) {
   opts = opts || {};
@@ -58,7 +58,12 @@ export function askPip(messages, context, opts) {
   if (!opts.mode) {
     var intent = classifyIntent(lastUser, context);
     if (intent.deterministicAnswer) {
-      return Promise.resolve({ content: intent.deterministicAnswer, deterministic: true, meta: { mode: "deterministic" } });
+      return Promise.resolve({
+        content: intent.deterministicAnswer,
+        toolCalls: [],
+        deterministic: true,
+        meta: { mode: "deterministic" },
+      });
     }
     opts.mode = intent.mode;
   }
@@ -76,19 +81,27 @@ export function callPipApi(messages, context, opts) {
     messages: messages,
     context:  context || {},
     mode:     opts.mode || "chat",
-    stream:   opts.stream !== false && typeof opts.onDelta === "function",
+    stream:   opts.stream !== false && (typeof opts.onDelta === "function" || typeof opts.onToolUse === "function"),
   };
   if (opts.focusedAccountIds && opts.focusedAccountIds.length) {
     body.focusedAccountIds = opts.focusedAccountIds;
   }
+  if (opts.facts && opts.facts.length) {
+    body.facts = opts.facts;
+  }
   return authHeaders().then(function (headers) {
     if (body.stream) {
-      return streamPip(PROXY_URL, body, headers, opts.onDelta);
+      return streamPip(PROXY_URL, body, headers, opts.onDelta, opts.onToolUse).then(function (r) {
+        // Normalize shape — always expose toolCalls (default []).
+        return { content: r.content || "", toolCalls: r.toolCalls || [], meta: r.meta || null };
+      });
     }
     return pipFetch(PROXY_URL, {
       method: "POST",
       headers: headers,
       body:    JSON.stringify(body),
+    }).then(function (j) {
+      return { content: j.content || "", toolCalls: j.tool_calls || [], meta: j.meta || null };
     });
   });
 }

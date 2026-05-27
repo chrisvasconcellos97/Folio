@@ -45,8 +45,15 @@ function take(arr, n) {
 // optional focusedAccountIds. If focused accounts are given, those win.
 // Otherwise resolve via substring match. If nothing matches, return a
 // list-only view of all accounts (no nested meetings/items/contacts).
-export function curateContext(raw, message, focusedAccountIds) {
-  if (!raw || typeof raw !== "object") return { mode: "empty", accounts: [] };
+//
+// `mode` (optional) — when "brief", we always render full detailed context
+// for the focused account (no shortcut via cached state). For other modes the
+// caller can attach a `cachedState` map (accountId → prose) on each account
+// to opt into the cheaper rolling-state path.
+export function curateContext(raw, message, focusedAccountIds, opts) {
+  opts = opts || {};
+  var briefMode = opts.mode === "brief";
+  if (!raw || typeof raw !== "object") return { mode: "empty", accounts: [], briefMode: briefMode };
   var accounts = Array.isArray(raw.accounts) ? raw.accounts : [];
 
   var focused = [];
@@ -63,6 +70,7 @@ export function curateContext(raw, message, focusedAccountIds) {
     // Full nested context for matched accounts only.
     return {
       mode: "focused",
+      briefMode: briefMode,
       accounts: focused,
       openQuickTasks: raw.openQuickTasks || [],
       upcomingTaskCadences: raw.upcomingTaskCadences || [],
@@ -85,6 +93,7 @@ export function curateContext(raw, message, focusedAccountIds) {
   });
   return {
     mode: "list",
+    briefMode: briefMode,
     accounts: listOnly,
     openQuickTasks: raw.openQuickTasks || [],
     upcomingTaskCadences: raw.upcomingTaskCadences || [],
@@ -110,6 +119,24 @@ function trunc(s, n) {
   s = String(s).replace(/\s+/g, " ").trim();
   if (s.length <= n) return s;
   return s.slice(0, n - 1) + "…";
+}
+
+// Compact "cached state" rendering — used when a fresh state_prose blob is
+// available and the caller is OK with the lighter view (chat mode mostly).
+// The cached prose is treated as the body; we still emit the ACCOUNT header
+// and a minimal status line so the model can find the id.
+function renderAccountCached(a) {
+  var lines = [];
+  lines.push("ACCOUNT: " + a.name + (a.id ? " (id: " + a.id + ")" : ""));
+  var status = a.status || "—";
+  var health = a.health || "—";
+  var last   = a.last_interaction_at ? fmtDate(a.last_interaction_at) : "never";
+  var ds     = daysSince(a.last_interaction_at);
+  var dsStr  = ds == null ? "" : " (" + ds + "d ago)";
+  lines.push("Status: " + status + " · Health: " + health + " · Last contact: " + last + dsStr);
+  lines.push("");
+  lines.push("Pip's cached read: " + a.cachedState);
+  return lines.join("\n");
 }
 
 function renderAccountFull(a) {
@@ -216,7 +243,14 @@ export function renderContextProse(curated) {
     sections.push(curated.accounts.map(renderAccountListItem).join("\n"));
   } else if (curated.mode === "focused" && curated.accounts.length > 0) {
     curated.accounts.forEach(function (a) {
-      sections.push(renderAccountFull(a));
+      // Phase 2: prefer the rolling cached state when it's fresh and the
+      // caller did NOT mark this as a brief-mode request. Brief mode wants
+      // the full raw data because that's the moment to spend tokens.
+      if (a.cachedState && !curated.briefMode) {
+        sections.push(renderAccountCached(a));
+      } else {
+        sections.push(renderAccountFull(a));
+      }
     });
   }
 

@@ -15,6 +15,7 @@ import { useContacts } from "../../hooks/useContacts";
 import { useCadences } from "../../hooks/useCadences";
 import { useProjects } from "../../hooks/useProjects";
 import { callBriefMePip } from "../../lib/pip";
+import { usePipAccountState } from "../../hooks/usePipAccountState";
 import { displayRevenue } from "../../lib/metricsUtils";
 import { OverviewTab } from "./tabs/OverviewTab";
 import { MeetingsTab } from "./tabs/MeetingsTab";
@@ -63,6 +64,18 @@ export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit
   var [briefText, setBriefText]         = useState(null);
   var [briefLoading, setBriefLoading]   = useState(false);
   var [briefError, setBriefError]       = useState(null);
+
+  var pipAcctState = usePipAccountState(userId);
+  var [refreshingState, setRefreshingState] = useState(false);
+
+  function handleRefreshPipMemory() {
+    if (!account || !account.id || refreshingState) return;
+    setRefreshingState(true);
+    Promise.resolve(pipAcctState.refreshState(account.id)).finally(function () {
+      setRefreshingState(false);
+      showToast("Pip's memory refreshed");
+    });
+  }
 
   useEffect(function () {
     if (!pipPrefill) return;
@@ -245,6 +258,23 @@ export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit
               }}
             >
               <span style={{ fontSize: 13 }}>✦</span> Brief Me
+            </button>
+            <button
+              onClick={handleRefreshPipMemory}
+              disabled={refreshingState}
+              title="Have Pip re-read this account and refresh its cached memory."
+              style={{
+                background: "transparent",
+                border: "1px solid " + C.border,
+                borderRadius: 6, padding: "6px 12px",
+                fontFamily: "'Inter', system-ui, sans-serif",
+                fontSize: 11, fontWeight: 500,
+                color: C.textMuted, cursor: refreshingState ? "default" : "pointer",
+                marginTop: 8, marginLeft: 6, display: "inline-flex", alignItems: "center", gap: 5,
+                opacity: refreshingState ? 0.5 : 1,
+              }}
+            >
+              {refreshingState ? "Refreshing…" : "Refresh Pip's memory"}
             </button>
           </div>
 

@@ -1,15 +1,19 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { C } from "../../lib/colors";
 import { PipOrb } from "../../components/PipMark";
-import { AmberBtn } from "../../components/Buttons";
 import { InputField } from "../../components/InputField";
 import { MarkdownText } from "../../components/MarkdownText";
+import { PipActionBatch } from "../../components/PipActionBatch";
+import { showToast } from "../../components/Toast";
 
 var MONO = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
 import { askPip, classifyIntent } from "../../lib/pip";
-import { latestRecord, momPct, yoyPct, fmtRevenue, fmtPct } from "../../lib/metricsUtils";
+import { latestRecord, momPct, yoyPct, fmtRevenue } from "../../lib/metricsUtils";
 import { getNextOccurrence, getFrequencyLabel } from "../../lib/cadenceUtils";
+import { routeToolCall, planToolCalls, describeToolCall, classifyTool, CONFIRM_THRESHOLD } from "../../lib/pipTools";
+import { usePipFacts } from "../../hooks/usePipFacts";
+import { usePipAccountState, findStaleAccountIds } from "../../hooks/usePipAccountState";
 
 var STARTERS = [
   "Which accounts need my attention this week?",
@@ -31,7 +35,32 @@ function buildTasksGreeting(openTasks, accounts) {
   return "Hey — " + n + " quick tasks open:\n" + list + "\n\nWant to run through them or focus on something else?";
 }
 
-export function PipView({ accounts, meetings, items, contacts, tasks, addTask, updateTask, onAction, revenueHistory, shopMetrics, cadences, projects }) {
+export function PipView(props) {
+  var accounts        = props.accounts;
+  var meetings        = props.meetings;
+  var items           = props.items;
+  var contacts        = props.contacts;
+  var tasks           = props.tasks;
+  var addTask         = props.addTask;
+  var updateTask      = props.updateTask;
+  var onAction        = props.onAction;
+  var revenueHistory  = props.revenueHistory;
+  var shopMetrics     = props.shopMetrics;
+  var cadences        = props.cadences;
+  var projects        = props.projects;
+  // Optional Phase 2 wiring — caller may pass these from App.jsx. If absent
+  // the corresponding tools simply turn into no-ops.
+  var userId          = props.userId;
+  var addItem         = props.addItem;
+  var addMeeting      = props.addMeeting;
+  var addCadence      = props.addCadence;
+  var updateAccount   = props.updateAccount;
+  var setFollowUp     = props.setFollowUp;
+  var onNavigate      = props.onNavigate;
+
+  var pipFacts        = usePipFacts(userId);
+  var pipAcctState    = usePipAccountState(userId);
+
   var openTasks = useMemo(function () {
     return (tasks || []).filter(function (t) { return !t.done; });
   }, [tasks]);
@@ -49,6 +78,7 @@ export function PipView({ accounts, meetings, items, contacts, tasks, addTask, u
   var bottomRef                   = useRef(null);
   var taskMsgSet                  = useRef(false);
   var recognitionRef              = useRef(null);
+  var stateRefreshFired           = useRef(false);
   var voiceSupported = typeof window !== "undefined" && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 
   function startListening() {
@@ -95,12 +125,30 @@ export function PipView({ accounts, meetings, items, contacts, tasks, addTask, u
     }
   }, [messages]);
 
+  // Fire-and-forget rolling-state refresh on mount when stale rows exist.
+  useEffect(function () {
+    if (!userId || stateRefreshFired.current) return;
+    if (!accounts || !accounts.length) return;
+    if (pipAcctState.loading) return;
+    stateRefreshFired.current = true;
+    var stale = findStaleAccountIds(accounts, pipAcctState.states, 20);
+    if (stale.length) {
+      pipAcctState.refreshState(stale);
+    }
+  }, [userId, accounts, pipAcctState.loading, pipAcctState.states]);
+
   function buildContext() {
     var rh = revenueHistory || [];
     var sm = shopMetrics    || [];
     var allItems    = items    || [];
     var allContacts = contacts || [];
     var allMeetings = meetings || [];
+    var cachedStateMap = {};
+    (pipAcctState.states || []).forEach(function (s) {
+      if (s.stale_at && new Date(s.stale_at).getTime() > Date.now()) {
+        cachedStateMap[s.account_id] = s.state_prose;
+      }
+    });
     return {
       accounts: accounts.map(function (a) {
         var latest   = latestRecord(rh, a.id);
@@ -141,6 +189,7 @@ export function PipView({ accounts, meetings, items, contacts, tasks, addTask, u
           openItems:      openItems,
           contacts:       acctContacts,
           activeProjects: acctProjects,
+          cachedState:    cachedStateMap[a.id] || null,
           revenueTrend: latest ? {
             amount:    fmtRevenue(latest.revenue),
             month:     latest.month,
@@ -212,53 +261,76 @@ export function PipView({ accounts, meetings, items, contacts, tasks, addTask, u
     };
   }
 
-  function parseAction(text) {
-    try {
-      var match = text.match(/<pip-action>([\s\S]*?)<\/pip-action>/);
-      if (!match) return null;
-      return JSON.parse(match[1].trim());
-    } catch (e) {
-      return null;
-    }
+  // Build the tool-routing context once per send. Wraps callbacks + accounts
+  // so each routeToolCall() can fire writes via the user's session.
+  function buildToolCtx() {
+    return {
+      accounts:      accounts,
+      addTask:       addTask,
+      updateTask:    updateTask,
+      addItem:       addItem,
+      addMeeting:    addMeeting,
+      addCadence:    addCadence,
+      updateAccount: updateAccount,
+      setFollowUp:   setFollowUp,
+      addFact:       pipFacts.addFact,
+      onOpenAction:  onAction,
+      onNavigate:    onNavigate,
+    };
   }
 
-  function stripAction(text) {
-    return text.replace(/<pip-action>[\s\S]*?<\/pip-action>/g, "").trim();
+  function executeTools(toolCalls, replaceMsgIdx) {
+    if (!toolCalls || !toolCalls.length) return Promise.resolve([]);
+    var ctx = buildToolCtx();
+    return toolCalls.reduce(function (chain, tc) {
+      return chain.then(function (results) {
+        return routeToolCall(tc, ctx).then(function (r) {
+          results.push(r);
+          return results;
+        });
+      });
+    }, Promise.resolve([])).then(function (results) {
+      // Toast a summary if anything actually executed.
+      var executed = results.filter(function (r) { return r && r.kind === "executed"; }).length;
+      var errored  = results.filter(function (r) { return r && r.kind === "error"; }).length;
+      if (executed > 0) {
+        showToast(executed + " action" + (executed === 1 ? "" : "s") + " done");
+      }
+      if (errored > 0) {
+        showToast(errored + " action" + (errored === 1 ? "" : "s") + " failed", "warning");
+      }
+      if (replaceMsgIdx != null) {
+        setMessages(function (prev) {
+          var next = prev.slice();
+          if (next[replaceMsgIdx]) {
+            next[replaceMsgIdx] = Object.assign({}, next[replaceMsgIdx], {
+              pendingTools: null,
+              executedSummary: { executed: executed, errored: errored, results: results },
+            });
+          }
+          return next;
+        });
+      }
+      return results;
+    });
   }
 
-  function actionLabel(action, account) {
-    var name = account ? account.name : null;
-    if (action.type === 'open_cadence')  return 'Set Cadence' + (name ? ' for ' + name : '') + ' →';
-    if (action.type === 'open_meeting')  return 'Log Meeting' + (name ? ' for ' + name : '') + ' →';
-    if (action.type === 'open_item')     return 'Add Open Item' + (name ? ' for ' + name : '') + ' →';
-    if (action.type === 'open_contact')  return 'Add Contact' + (name ? ' for ' + name : '') + ' →';
-    if (action.type === 'navigate')      return 'Go to ' + (action.view || 'View') + ' →';
-    return 'Open →';
+  function handleConfirmAll(msgIdx, tools) {
+    return executeTools(tools, msgIdx);
   }
 
-  function executeQuickTaskAction(action) {
-    if (!action) return Promise.resolve(null);
-    if (action.type === "complete_task" && action.task_id && updateTask) {
-      return updateTask(action.task_id, { done: true }).then(function () { return "completed"; });
-    }
-    if (action.type === "add_quick_task" && action.title && addTask) {
-      return addTask({
-        title:      action.title,
-        notes:      action.notes || null,
-        account_id: action.account_id || null,
-      }).then(function () { return "added"; });
-    }
-    return Promise.resolve(null);
+  function handleReviewSelected(msgIdx, tools) {
+    return executeTools(tools, msgIdx);
   }
 
-  function findAccount(name) {
-    if (!name) return null;
-    var lower = name.toLowerCase();
-    return accounts.find(function (a) {
-      return a.name.toLowerCase() === lower ||
-             a.name.toLowerCase().includes(lower) ||
-             lower.includes(a.name.toLowerCase());
-    }) || null;
+  function handleDiscard(msgIdx) {
+    setMessages(function (prev) {
+      var next = prev.slice();
+      if (next[msgIdx]) {
+        next[msgIdx] = Object.assign({}, next[msgIdx], { pendingTools: null, discarded: true });
+      }
+      return next;
+    });
   }
 
   function send(text) {
@@ -298,33 +370,43 @@ export function PipView({ accounts, meetings, items, contacts, tasks, addTask, u
       setMessages(function (prev) {
         var next = prev.slice();
         if (next[streamIdx]) {
-          next[streamIdx] = Object.assign({}, next[streamIdx], { text: stripAction(streamingText), streaming: true });
+          next[streamIdx] = Object.assign({}, next[streamIdx], { text: streamingText, streaming: true });
         }
         return next;
       });
     }
 
-    askPip(apiMessages, ctxForIntent, { onDelta: onDelta, mode: intent.mode })
+    var opts = {
+      onDelta: onDelta,
+      mode: intent.mode,
+      facts: pipFacts.activeFactStrings,
+    };
+
+    askPip(apiMessages, ctxForIntent, opts)
       .then(function (data) {
         var rawText   = data.content || streamingText || "...";
-        var action    = parseAction(rawText);
-        var cleanText = stripAction(rawText);
-        var account   = action && action.accountName ? findAccount(action.accountName) : null;
-        return executeQuickTaskAction(action).then(function (result) {
-          setLoading(false);
-          setMessages(function (prev) {
-            var next = prev.slice();
-            next[streamIdx] = {
-              role:          "assistant",
-              text:          cleanText,
-              action:        action || null,
-              actionAccount: account || null,
-              actionResult:  result,
-            };
-            return next;
-          });
-          speak(cleanText);
+        var toolCalls = data.toolCalls || [];
+
+        // Decide bulk vs. immediate.
+        var plan = planToolCalls(toolCalls);
+
+        setLoading(false);
+        setMessages(function (prev) {
+          var next = prev.slice();
+          next[streamIdx] = {
+            role:         "assistant",
+            text:         rawText,
+            toolCalls:    toolCalls,
+            pendingTools: plan.needsConfirmation ? plan.confirm : null,
+          };
+          return next;
         });
+        speak(rawText);
+
+        if (!plan.needsConfirmation && plan.immediate.length) {
+          // Execute single/small batches inline.
+          executeTools(plan.immediate, streamIdx);
+        }
       })
       .catch(function (err) {
         setLoading(false);
@@ -344,6 +426,29 @@ export function PipView({ accounts, meetings, items, contacts, tasks, addTask, u
       e.preventDefault();
       send();
     }
+  }
+
+  function renderToolReceipts(m, idx) {
+    if (!m.toolCalls || !m.toolCalls.length) return null;
+    if (m.pendingTools && m.pendingTools.length) return null; // shown in the batch card below
+    if (m.discarded) return null;
+    var single = m.toolCalls.filter(function (t) { return classifyTool(t.name) !== "navigate"; });
+    if (!single.length) return null;
+    return (
+      <div style={{ marginLeft: 42, marginTop: 4, display: "flex", flexDirection: "column", gap: 3 }}>
+        {single.map(function (t, i) {
+          return (
+            <div
+              key={i}
+              style={{ fontFamily: MONO, fontSize: 10, color: C.accent, display: "flex", gap: 6, alignItems: "center" }}
+            >
+              <span style={{ color: "#4ade80" }}>✓</span>
+              <span>{describeToolCall(t, accounts)}</span>
+            </div>
+          );
+        })}
+      </div>
+    );
   }
 
   return (
@@ -452,29 +557,20 @@ export function PipView({ accounts, meetings, items, contacts, tasks, addTask, u
                   {m.text}
                 </div>
               )}
-              {isPip && m.actionResult && (
-                <div style={{ fontSize: 10, color: C.accent, display: "flex", alignItems: "center", gap: 5, paddingLeft: 4 }}>
-                  <span style={{ color: "#4ade80" }}>✓</span>
-                  {m.actionResult === "completed" ? "Task marked done" : "Task added"}
-                </div>
+              {isPip && renderToolReceipts(m, i)}
+              {isPip && m.pendingTools && m.pendingTools.length > 0 && (
+                <PipActionBatch
+                  tools={m.pendingTools}
+                  accounts={accounts}
+                  onConfirmAll={function (tools) { return handleConfirmAll(i, tools); }}
+                  onReviewSelected={function (tools) { return handleReviewSelected(i, tools); }}
+                  onDiscard={function () { handleDiscard(i); }}
+                />
               )}
-              {isPip && m.action && onAction && (
-                <button
-                  onClick={function () { onAction(m.action, m.actionAccount); }}
-                  style={{
-                    background: C.accentDeep,
-                    border: "none",
-                    borderRadius: 6,
-                    padding: "7px 14px",
-                    fontFamily: MONO,
-                    fontSize: 10.5,
-                    color: C.bg,
-                    cursor: "pointer",
-                    marginLeft: 42,
-                  }}
-                >
-                  {actionLabel(m.action, m.actionAccount)}
-                </button>
+              {isPip && m.discarded && (
+                <div style={{ marginLeft: 42, fontFamily: MONO, fontSize: 10, color: C.textMuted }}>
+                  Discarded.
+                </div>
               )}
             </div>
           );
@@ -608,3 +704,6 @@ export function PipView({ accounts, meetings, items, contacts, tasks, addTask, u
     </div>
   );
 }
+
+// Re-export for convenience.
+export { CONFIRM_THRESHOLD };

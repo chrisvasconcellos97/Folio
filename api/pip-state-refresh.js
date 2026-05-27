@@ -1,0 +1,228 @@
+// Pip rolling-state regeneration endpoint.
+//
+// POST { accountIds: string[] } (cap 50)
+// → For each account, loads raw data (meetings, items, contacts, projects),
+//   issues a Haiku 4.5 call asking for a tight 2-3 sentence state blob,
+//   stores result in folio_pip_account_state with stale_at = now() + 24h.
+//
+// Uses Promise.all for parallel issuance. (Migrating to Anthropic Message
+// Batches API is a TODO — 50% discount, and the user isn't waiting on this
+// anyway since it's fire-and-forget from the client.)
+
+import Anthropic from "@anthropic-ai/sdk";
+import { createClient } from "@supabase/supabase-js";
+
+var MODEL_HAIKU = "claude-haiku-4-5-20251001";
+var MAX_TOKENS  = 300;
+var MAX_BATCH   = 50;
+
+function trunc(s, n) {
+  if (!s) return "";
+  s = String(s).replace(/\s+/g, " ").trim();
+  if (s.length <= n) return s;
+  return s.slice(0, n - 1) + "…";
+}
+
+function daysSince(iso) {
+  if (!iso) return null;
+  var t = new Date(iso).getTime();
+  if (isNaN(t)) return null;
+  return Math.floor((Date.now() - t) / 86400000);
+}
+
+function buildPrompt(account, meetings, items, contacts, projects) {
+  var lines = [];
+  lines.push("ACCOUNT: " + (account.name || "Untitled"));
+  var hd = "Status: " + (account.status || "—") + " · Health: " + (account.health || "—");
+  if (account.last_interaction_at) {
+    var ds = daysSince(account.last_interaction_at);
+    hd += " · Last contact: " + account.last_interaction_at + (ds != null ? " (" + ds + "d ago)" : "");
+  }
+  lines.push(hd);
+
+  if (meetings && meetings.length) {
+    lines.push("");
+    lines.push("Recent meetings (" + meetings.length + "):");
+    meetings.slice(0, 5).forEach(function (m) {
+      var head = "- " + (m.meeting_date || "?") + " — " + (m.title || "Meeting");
+      lines.push(head);
+      var body = m.pip_summary || m.notes;
+      if (body) lines.push("  " + trunc(body, 240));
+    });
+  }
+
+  if (items && items.length) {
+    lines.push("");
+    lines.push("Open items (" + items.length + "):");
+    var today = new Date(); today.setHours(0, 0, 0, 0);
+    items.slice(0, 8).forEach(function (i) {
+      var line = "- " + (i.text || "—");
+      if (i.due_date) {
+        var due = new Date(i.due_date);
+        var diff = Math.round((due - today) / 86400000);
+        if (diff < 0) line += " [overdue " + Math.abs(diff) + "d]";
+        else if (diff <= 7) line += " [due in " + diff + "d]";
+        else line += " (due " + i.due_date + ")";
+      }
+      lines.push(line);
+    });
+  }
+
+  if (contacts && contacts.length) {
+    lines.push("");
+    lines.push("Contacts (" + contacts.length + "): " + contacts.slice(0, 4).map(function (c) {
+      return c.name + (c.is_poc ? " [POC]" : "");
+    }).join(", "));
+  }
+
+  if (projects && projects.length) {
+    lines.push("");
+    lines.push("Active projects: " + projects.slice(0, 4).map(function (p) {
+      return p.title + " (" + (p.status || "—") + ")";
+    }).join(", "));
+  }
+
+  return [
+    "You are Pip, generating a compact rolling state cache for an account.",
+    "Write 2-3 sentences in this exact format:",
+    "[Account name] — [state: last contact, momentum, key signals, open risks].",
+    "Be specific. No padding. No headers. No bullets. End with a period.",
+    "Then on a SECOND line output a JSON sidecar with health_signal/momentum/risk_flags:",
+    "{\"health_signal\":\"green|yellow|red\",\"momentum\":\"up|flat|down\",\"risk_flags\":[\"...\"]}",
+    "If you cannot determine a field, use null.",
+    "",
+    "Source data:",
+    lines.join("\n"),
+  ].join("\n");
+}
+
+function parseModelOutput(text) {
+  if (!text) return { prose: "", sidecar: null };
+  var trimmed = text.trim();
+  // Split off the last JSON-looking line.
+  var match = trimmed.match(/(\{[\s\S]*\})\s*$/);
+  if (!match) return { prose: trimmed, sidecar: null };
+  var prose = trimmed.slice(0, match.index).trim();
+  var sidecar = null;
+  try { sidecar = JSON.parse(match[1]); } catch (e) { sidecar = null; }
+  return { prose: prose || trimmed, sidecar: sidecar };
+}
+
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  var authHeader = req.headers.authorization || "";
+  var token      = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+  var supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
+  var { data: { user }, error: authError } = await supabase.auth.getUser(token);
+  if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
+
+  // User-scoped client for the rest of the work — RLS takes care of access.
+  var userClient = createClient(
+    process.env.VITE_SUPABASE_URL,
+    process.env.VITE_SUPABASE_ANON_KEY,
+    { global: { headers: { Authorization: "Bearer " + token } } }
+  );
+
+  var body = req.body || {};
+  var accountIds = Array.isArray(body.accountIds)
+    ? body.accountIds.filter(function (x) { return typeof x === "string" && x.length > 0; })
+    : [];
+  if (!accountIds.length) return res.status(400).json({ error: "accountIds required" });
+  accountIds = accountIds.slice(0, MAX_BATCH);
+
+  try {
+    // Pull everything we need in 4 parallel queries, scoped via .in()
+    var pAccts  = userClient.from("folio_accounts")
+      .select("id, name, status, health, last_interaction_at, tier, region")
+      .in("id", accountIds);
+    var pMtgs   = userClient.from("folio_meetings")
+      .select("account_id, meeting_date, title, notes, pip_summary, action_items, follow_up_date")
+      .in("account_id", accountIds)
+      .order("meeting_date", { ascending: false })
+      .limit(200);
+    var pItems  = userClient.from("folio_items")
+      .select("account_id, text, due_date, done, owner")
+      .in("account_id", accountIds)
+      .eq("done", false);
+    var pConts  = userClient.from("folio_contacts")
+      .select("account_id, name, title, is_poc")
+      .in("account_id", accountIds);
+
+    var results = await Promise.all([pAccts, pMtgs, pItems, pConts]);
+    if (results[0].error) throw results[0].error;
+    var accts    = results[0].data || [];
+    var meetings = results[1].data || [];
+    var items    = results[2].data || [];
+    var contacts = results[3].data || [];
+
+    // Pull active projects for these accounts. The projects table is optional —
+    // be tolerant of error.
+    var projects = [];
+    try {
+      var pj = await userClient.from("folio_projects")
+        .select("account_id, title, status, due_date")
+        .in("account_id", accountIds)
+        .neq("status", "complete")
+        .neq("status", "on_hold");
+      if (!pj.error) projects = pj.data || [];
+    } catch (e) { /* ignore */ }
+
+    function byAcct(arr) {
+      var out = {};
+      arr.forEach(function (r) {
+        if (!out[r.account_id]) out[r.account_id] = [];
+        out[r.account_id].push(r);
+      });
+      return out;
+    }
+    var mByAcct = byAcct(meetings);
+    var iByAcct = byAcct(items);
+    var cByAcct = byAcct(contacts);
+    var pByAcct = byAcct(projects);
+
+    var client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+    var calls = accts.map(function (a) {
+      var prompt = buildPrompt(a, mByAcct[a.id], iByAcct[a.id], cByAcct[a.id], pByAcct[a.id]);
+      return client.messages.create({
+        model: MODEL_HAIKU,
+        max_tokens: MAX_TOKENS,
+        temperature: 0.3,
+        messages: [{ role: "user", content: prompt }],
+      }).then(function (resp) {
+        var text = "";
+        if (Array.isArray(resp.content)) {
+          resp.content.forEach(function (b) { if (b.type === "text" && b.text) text += b.text; });
+        }
+        var parsed = parseModelOutput(text);
+        var staleAt = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
+        var row = {
+          account_id:    a.id,
+          user_id:       user.id,
+          state_prose:   parsed.prose,
+          health_signal: parsed.sidecar && parsed.sidecar.health_signal || null,
+          momentum:      parsed.sidecar && parsed.sidecar.momentum || null,
+          risk_flags:    parsed.sidecar && Array.isArray(parsed.sidecar.risk_flags) ? parsed.sidecar.risk_flags : null,
+          generated_at:  new Date().toISOString(),
+          stale_at:      staleAt,
+        };
+        return userClient.from("folio_pip_account_state").upsert([row], { onConflict: "account_id" });
+      }).catch(function (err) {
+        console.error("pip-state-refresh per-account failed", a.id, err && err.message);
+        return null;
+      });
+    });
+
+    await Promise.all(calls);
+
+    return res.status(200).json({ ok: true, refreshed: accts.length });
+  } catch (err) {
+    console.error("pip-state-refresh error:", err);
+    return res.status(500).json({ error: "refresh failed" });
+  }
+}

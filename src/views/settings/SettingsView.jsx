@@ -6,6 +6,13 @@ import { InputField } from "../../components/InputField";
 import { AmberBtn } from "../../components/Buttons";
 import { showToast } from "../../components/Toast";
 import { supabase } from "../../lib/supabase";
+import { usePipFacts } from "../../hooks/usePipFacts";
+
+var PIP_FACT_PLACEHOLDERS = [
+  "Prefer concise replies",
+  "I cover the West region",
+  "Call Dan 'Dan-O'",
+];
 
 var ROLE_LABELS = { owner: "Owner", member: "Member", leadership: "Leadership (read-only)" };
 var ROLE_COLORS = { owner: C.accent, member: C.blue, leadership: C.textSub };
@@ -286,13 +293,121 @@ function TeamSection({ org, role, members, pendingInvites, onInvite, onRevoke })
   );
 }
 
-export function SettingsView({ userMeta, org, role, members, pendingInvites, onCreateOrg, onInvite, onRevoke }) {
+function PipPrefsSection({ userId }) {
+  var pipFacts = usePipFacts(userId);
+  var [draft, setDraft] = useState("");
+  var [saving, setSaving] = useState(false);
+
+  function add() {
+    if (!draft.trim() || saving) return;
+    setSaving(true);
+    pipFacts.addFact(draft.trim())
+      .then(function () { setDraft(""); setSaving(false); showToast("Pip will remember that"); })
+      .catch(function (err) { setSaving(false); showToast(err.message || "Couldn't save", "error"); });
+  }
+
+  function remove(id) {
+    pipFacts.removeFact(id).then(function () { showToast("Fact removed"); });
+  }
+
+  function toggle(row) {
+    pipFacts.toggleFactActive(row.id, !row.active);
+  }
+
+  var placeholder = PIP_FACT_PLACEHOLDERS[Math.floor(Math.random() * PIP_FACT_PLACEHOLDERS.length)];
+
+  return (
+    <Card>
+      <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 6 }}>Pip preferences</div>
+      <div style={{ fontSize: 13, color: C.textSub, lineHeight: 1.6, marginBottom: 14 }}>
+        Things Pip should remember about you. These are injected into every Pip prompt — keep them short and durable.
+      </div>
+
+      <div style={{ display: "flex", gap: 8, alignItems: "flex-end", marginBottom: 14 }}>
+        <div style={{ flex: 1 }}>
+          <FL>New preference</FL>
+          <InputField
+            value={draft}
+            onChange={function (e) { setDraft(e.target.value); }}
+            placeholder={placeholder}
+            onKeyDown={function (e) { if (e.key === "Enter") add(); }}
+          />
+        </div>
+        <AmberBtn onClick={add} disabled={!draft.trim() || saving} style={{ fontSize: 12, flexShrink: 0 }}>
+          {saving ? "Saving…" : "Add"}
+        </AmberBtn>
+      </div>
+
+      {pipFacts.facts.length === 0 ? (
+        <div style={{ fontSize: 12, color: C.textMuted, fontStyle: "italic", padding: "8px 0" }}>
+          Nothing yet — try a preference above.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {pipFacts.facts.map(function (f) {
+            return (
+              <div
+                key={f.id}
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  padding: "8px 12px",
+                  background: f.active ? C.bgCardAlt : "transparent",
+                  borderRadius: 8,
+                  border: "1px solid " + C.border,
+                  opacity: f.active ? 1 : 0.55,
+                }}
+              >
+                <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, color: C.text, lineHeight: 1.4, textDecoration: f.active ? "none" : "line-through" }}>
+                    {f.fact}
+                  </div>
+                  <div style={{ fontSize: 10, color: C.textMuted, fontFamily: "'JetBrains Mono', ui-monospace, monospace", textTransform: "uppercase", letterSpacing: "0.07em" }}>
+                    {f.source === "pip_inferred" ? "Pip noted this" : "You told Pip"}
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                  <button
+                    onClick={function () { toggle(f); }}
+                    title={f.active ? "Pause this fact" : "Reactivate"}
+                    aria-label={f.active ? "Pause this fact" : "Reactivate this fact"}
+                    style={{
+                      background: "none", border: "1px solid " + C.border, borderRadius: 6,
+                      padding: "4px 10px", fontSize: 11, color: C.textSub, cursor: "pointer",
+                      fontFamily: "'Inter', system-ui, sans-serif",
+                    }}
+                  >
+                    {f.active ? "✓" : "✗"}
+                  </button>
+                  <button
+                    onClick={function () { remove(f.id); }}
+                    aria-label="Delete this fact"
+                    style={{
+                      background: "none", border: "1px solid " + C.border, borderRadius: 6,
+                      padding: "4px 10px", fontSize: 11, color: C.red, cursor: "pointer",
+                      fontFamily: "'Inter', system-ui, sans-serif",
+                    }}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+export function SettingsView({ userId, userMeta, org, role, members, pendingInvites, onCreateOrg, onInvite, onRevoke }) {
   return (
     <div style={{ maxWidth: 600, margin: "0 auto", padding: "8px 0 40px" }}>
       <div style={{ fontSize: 20, fontWeight: 700, color: C.text, marginBottom: 20 }}>Settings</div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <ProfileSection userMeta={userMeta} />
+
+        {userId && <PipPrefsSection userId={userId} />}
 
         {org ? (
           <TeamSection
