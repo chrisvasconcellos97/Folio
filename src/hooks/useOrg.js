@@ -94,26 +94,33 @@ export function useOrg(userId, userEmail) {
 
   function inviteMember(email, memberRole) {
     if (!org) return Promise.reject(new Error("No org"));
+    var trimmedEmail = email.trim().toLowerCase();
     return supabase
       .from("folio_org_members")
-      .insert([{ org_id: org.id, user_id: null, role: memberRole, invited_email: email.trim().toLowerCase(), accepted: false }])
+      .insert([{ org_id: org.id, user_id: null, role: memberRole, invited_email: trimmedEmail, accepted: false }])
       .then(function (result) {
         if (result.error) throw result.error;
         fetch();
-        // Fire-and-forget: send invite email via admin API
-        supabase.auth.getSession().then(function(sessionResult) {
+        // Try to send invite email; surface result so UI can fall back to copy-link
+        return supabase.auth.getSession().then(function(sessionResult) {
           var token = sessionResult.data && sessionResult.data.session ? sessionResult.data.session.access_token : null;
-          if (!token) return;
-          window.fetch("/api/invite", {
+          if (!token) return { emailSent: false, reason: "no_session" };
+          return window.fetch("/api/invite", {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
             body: JSON.stringify({
-              email: email.trim().toLowerCase(),
+              email: trimmedEmail,
               role: memberRole,
               orgId: org.id,
               appUrl: window.location.origin,
             }),
-          }).catch(function(err) { console.warn("Invite email failed:", err); });
+          }).then(function(r) {
+            if (r.ok) return { emailSent: true };
+            return r.json().then(
+              function(j) { return { emailSent: false, reason: j.error || "send_failed" }; },
+              function()  { return { emailSent: false, reason: "send_failed" }; }
+            );
+          }).catch(function() { return { emailSent: false, reason: "network" }; });
         });
       });
   }

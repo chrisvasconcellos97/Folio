@@ -98,17 +98,36 @@ function TeamSection({ org, role, members, pendingInvites, onInvite, onRevoke })
 
   function handleInvite() {
     if (!email.trim() || inviting) return;
+    var sentTo = email.trim();
     setInviting(true);
     onInvite(email, inviteRole)
-      .then(function () {
+      .then(function (result) {
         setInviting(false);
         setEmail("");
-        showToast("Invite sent to " + email.trim());
+        if (result && result.emailSent) {
+          showToast("Invite sent to " + sentTo);
+        } else {
+          showToast("Invite saved — email didn't send, share the link manually", "warning");
+        }
       })
       .catch(function (err) {
         setInviting(false);
         showToast(err.message || "Couldn't send invite", "error");
       });
+  }
+
+  function handleCopyLink(p) {
+    var msg = "You've been invited to " + org.name + " on Folios. " +
+      "Sign up at " + window.location.origin + " using " + p.invited_email +
+      " and your invite will be waiting.";
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(msg).then(
+        function () { showToast("Invite link copied"); },
+        function () { showToast("Couldn't copy — check permissions", "error"); }
+      );
+    } else {
+      showToast("Clipboard not available", "error");
+    }
   }
 
   function handleRevoke(memberId, memberEmail) {
@@ -192,17 +211,29 @@ function TeamSection({ org, role, members, pendingInvites, onInvite, onRevoke })
                     <div style={{ fontSize: 12, color: C.textSub }}>{p.invited_email}</div>
                     <div style={{ fontSize: 10, color: C.textMuted }}>Awaiting acceptance · {ROLE_LABELS[p.role]}</div>
                   </div>
-                  {canManage && (
+                  <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
                     <button
-                      onClick={function () { handleRevoke(p.id, p.invited_email); }}
+                      onClick={function () { handleCopyLink(p); }}
                       style={{
-                        background: "none", border: "none", color: C.textMuted,
-                        fontSize: 11, cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif",
+                        background: "none", border: "1px solid " + C.border, borderRadius: 6,
+                        padding: "4px 10px", fontSize: 11, color: C.accent, cursor: "pointer",
+                        fontFamily: "'Inter', system-ui, sans-serif", fontWeight: 600,
                       }}
                     >
-                      Cancel
+                      Copy Link
                     </button>
-                  )}
+                    {canManage && (
+                      <button
+                        onClick={function () { handleRevoke(p.id, p.invited_email); }}
+                        style={{
+                          background: "none", border: "none", color: C.textMuted,
+                          fontSize: 11, cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif",
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             })}
