@@ -68,12 +68,25 @@ export function PipView(props) {
     return (tasks || []).filter(function (t) { return !t.done; });
   }, [tasks]);
 
-  var [messages, setMessages] = useState([
-    {
-      role: "assistant",
-      text: "Hey. Ready when you are. What's going on with your accounts?",
-    },
-  ]);
+  var PIP_HISTORY_KEY = "folio_pip_messages_" + (userId || "anon");
+  var PIP_HISTORY_LIMIT = 200;
+  var [messages, setMessages] = useState(function () {
+    try {
+      var raw = localStorage.getItem(PIP_HISTORY_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return [{ role: "assistant", text: "Hey. Ready when you are. What's going on with your accounts?" }];
+  });
+
+  useEffect(function () {
+    try {
+      var trimmed = messages.length > PIP_HISTORY_LIMIT ? messages.slice(-PIP_HISTORY_LIMIT) : messages;
+      localStorage.setItem(PIP_HISTORY_KEY, JSON.stringify(trimmed));
+    } catch (e) {}
+  }, [messages, PIP_HISTORY_KEY]);
   var [input, setInput]           = useState("");
   var [loading, setLoading]       = useState(false);
   var [listening, setListening]   = useState(false);
@@ -118,9 +131,10 @@ export function PipView(props) {
 
   useEffect(function () {
     if (taskMsgSet.current || openTasks.length === 0) return;
+    if (messages.length > 1) { taskMsgSet.current = true; return; }
     taskMsgSet.current = true;
     setMessages([{ role: "assistant", text: buildTasksGreeting(openTasks, accounts) }]);
-  }, [openTasks, accounts]);
+  }, [openTasks, accounts, messages.length]);
 
   useEffect(function () {
     if (bottomRef.current) {
