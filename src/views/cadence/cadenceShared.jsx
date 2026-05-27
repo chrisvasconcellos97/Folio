@@ -25,25 +25,38 @@ export var navBtnStyle = {
   fontFamily: "'Inter', system-ui, sans-serif",
 };
 
-export function CadenceEventCard({ event, onSelectAccount, onCreateItem, showDate }) {
+export function CadenceEventCard({ event, onSelectAccount, onCreateItem, onOpenHub, showDate }) {
   var cadence = event.cadence;
   var account = event.account;
   var col     = eventColor(event);
   var isGlobal = cadence.is_global;
-  var name = cadence.type === 'task'
+  var isTask   = cadence.type === 'task';
+  var name = isTask
     ? '✓ ' + (cadence.task_title || '?')
     : (account && account.name ? account.name : 'Unknown');
 
   return (
-    <div style={Object.assign({}, glass, {
-      borderLeft: '3px solid ' + col,
-      borderRadius: 8,
-      padding: '11px 14px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: 12,
-    })}>
+    <div
+      style={Object.assign({}, glass, {
+        borderLeft: '3px solid ' + col,
+        borderRadius: 8,
+        padding: '11px 14px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
+        cursor: !isTask && !isGlobal && onOpenHub ? 'pointer' : 'default',
+      })}
+      role={!isTask && !isGlobal && onOpenHub ? 'button' : undefined}
+      tabIndex={!isTask && !isGlobal && onOpenHub ? 0 : undefined}
+      onClick={function () { if (!isTask && !isGlobal && onOpenHub) onOpenHub(cadence); }}
+      onKeyDown={function (e) {
+        if (!isTask && !isGlobal && onOpenHub && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          onOpenHub(cadence);
+        }
+      }}
+    >
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{name}</div>
         {cadence.type === 'task' && (
@@ -74,23 +87,45 @@ export function CadenceEventCard({ event, onSelectAccount, onCreateItem, showDat
           </button>
         )}
       </div>
-      {onSelectAccount && !isGlobal && (
-        <button
-          onClick={function () { onSelectAccount(cadence.account_id); }}
-          style={{
-            background: col + '18',
-            border: '1px solid ' + col + '44',
-            borderRadius: 7,
-            padding: '5px 11px',
-            fontSize: 11,
-            color: col,
-            fontFamily: "'Inter', system-ui, sans-serif",
-            cursor: 'pointer',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          View →
-        </button>
+      {!isGlobal && (
+        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+          {!isTask && onOpenHub && (
+            <button
+              onClick={function (e) { e.stopPropagation(); onOpenHub(cadence); }}
+              style={{
+                background: col + '18',
+                border: '1px solid ' + col + '44',
+                borderRadius: 7,
+                padding: '5px 11px',
+                fontSize: 11, fontWeight: 600,
+                color: col,
+                fontFamily: "'Inter', system-ui, sans-serif",
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Open Hub →
+            </button>
+          )}
+          {onSelectAccount && (
+            <button
+              onClick={function (e) { e.stopPropagation(); onSelectAccount(cadence.account_id); }}
+              style={{
+                background: 'transparent',
+                border: '1px solid ' + col + '44',
+                borderRadius: 7,
+                padding: '5px 11px',
+                fontSize: 11,
+                color: col,
+                fontFamily: "'Inter', system-ui, sans-serif",
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Account
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

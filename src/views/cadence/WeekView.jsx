@@ -2,7 +2,7 @@ import { C } from "../../lib/colors";
 import { isSameDay, formatTime, DAYS_SHORT, MONTHS } from "../../lib/cadenceUtils";
 import { eventColor, navBtnStyle } from "./cadenceShared";
 
-export function WeekView({ weekStart, weekEnd, events, onPrev, onNext, onSelectAccount }) {
+export function WeekView({ weekStart, weekEnd, events, onPrev, onNext, onSelectAccount, onOpenHub }) {
   var today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -63,10 +63,18 @@ export function WeekView({ weekStart, weekEnd, events, onPrev, onNext, onSelectA
                   var time = ev.cadence.meeting_time ? formatTime(ev.cadence.meeting_time) : '';
                   return (
                     <div key={ev.cadence.id + "-" + j}
-                      onClick={function () { onSelectAccount && onSelectAccount(ev.cadence.account_id); }}
+                      onClick={function () {
+                        if (ev.cadence.type !== 'task' && onOpenHub) onOpenHub(ev.cadence);
+                        else if (onSelectAccount) onSelectAccount(ev.cadence.account_id);
+                      }}
                       role="button"
                       tabIndex={0}
-                      onKeyDown={function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectAccount && onSelectAccount(ev.cadence.account_id); } }}
+                      onKeyDown={function (e) {
+                        if (e.key !== 'Enter' && e.key !== ' ') return;
+                        e.preventDefault();
+                        if (ev.cadence.type !== 'task' && onOpenHub) onOpenHub(ev.cadence);
+                        else if (onSelectAccount) onSelectAccount(ev.cadence.account_id);
+                      }}
                       style={{
                         background: col + '18', border: '1px solid ' + col + '44',
                         borderRadius: 5, padding: '4px 5px', cursor: 'pointer',

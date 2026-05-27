@@ -192,7 +192,7 @@ export function MeetingsTab({ meetings, accountName, userId, onLogMeeting, onDel
       {meetings.length === 0 && (
         <div style={{ textAlign: "center", padding: "40px 20px", color: C.textMuted, fontSize: 13 }}>
           <div style={{ marginBottom: 12 }}>No meetings on record. Log one after your next call.</div>
-          <AmberBtn onClick={onLogMeeting} style={{ fontSize: 12 }}>+ Log a Meeting</AmberBtn>
+          <AmberBtn onClick={onLogMeeting} style={{ fontSize: 12 }}>+ Log a Conversation</AmberBtn>
         </div>
       )}
 
@@ -408,7 +408,7 @@ export function MeetingsTab({ meetings, accountName, userId, onLogMeeting, onDel
       })}
 
       <AmberBtn style={{ width: "100%", fontSize: 13 }} onClick={onLogMeeting}>
-        + Log New Meeting
+        + Log New Conversation
       </AmberBtn>
 
       {editingMeeting && (

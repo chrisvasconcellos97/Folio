@@ -53,6 +53,7 @@ export default function App() {
 
   var [view, setView]                   = useState("accounts");
   var [selectedAccount, setSelected]    = useState(null);
+  var [pendingHubCadenceId, setPendingHubCadenceId] = useState(null);
   var [showAddAccount, setShowAddAccount] = useState(false);
   var [editingAccount, setEditingAccount] = useState(null);
   var [pipPrefill, setPipPrefill]       = useState(null);
@@ -305,6 +306,8 @@ export default function App() {
             onSelectAccount={function (acct) { setSelected(acct); }}
             pipPrefill={pipPrefill}
             onPipPrefillHandled={function () { setPipPrefill(null); }}
+            initialHubCadenceId={pendingHubCadenceId}
+            onHubConsumed={function () { setPendingHubCadenceId(null); }}
             revenueHistory={revenueHistory}
             shopMetrics={shopMetrics}
             onAddAccount={addAccount}
@@ -383,6 +386,14 @@ export default function App() {
         cadences={cadences}
         accounts={accounts}
         addCadence={addCadence}
+        onOpenHub={function (cadence) {
+          var acct = accounts.find(function (a) { return a.id === cadence.account_id; });
+          if (acct) {
+            setSelected(acct);
+            setPendingHubCadenceId(cadence.id);
+            setView("accounts");
+          }
+        }}
         onSelectAccount={function (accountId) {
           var acct = accounts.find(function (a) { return a.id === accountId; });
           if (acct) {

@@ -3,7 +3,7 @@ import { C } from "../../lib/colors";
 import { isSameDay, formatDateFull, getCalendarGrid, DAYS_SHORT, MONTHS } from "../../lib/cadenceUtils";
 import { CadenceEventCard, eventColor, navBtnStyle } from "./cadenceShared";
 
-export function CalendarView({ year, month, events, onPrev, onNext, onSelectAccount, onCreateItem }) {
+export function CalendarView({ year, month, events, onPrev, onNext, onSelectAccount, onCreateItem, onOpenHub }) {
   var today = new Date();
   var grid  = getCalendarGrid(year, month);
   var [selectedDay, setSelectedDay] = useState(null);
@@ -106,7 +106,7 @@ export function CalendarView({ year, month, events, onPrev, onNext, onSelectAcco
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {dayEvents(selectedDay).map(function (ev, i) {
-              return <CadenceEventCard key={ev.cadence.id + "-sel-" + i} event={ev} onSelectAccount={onSelectAccount} onCreateItem={onCreateItem} />;
+              return <CadenceEventCard key={ev.cadence.id + "-sel-" + i} event={ev} onSelectAccount={onSelectAccount} onCreateItem={onCreateItem} onOpenHub={onOpenHub} />;
             })}
           </div>
         </div>

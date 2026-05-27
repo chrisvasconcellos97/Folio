@@ -5,7 +5,7 @@ import { Pill } from "../../components/Pill";
 import { AmberBtn, SecBtn, DangerBtn } from "../../components/Buttons";
 import { MarkdownText } from "../../components/MarkdownText";
 import { Modal } from "../../components/Modal";
-import { PipOrb } from "../../components/PipMark";
+import { PipOrb, PipMark } from "../../components/PipMark";
 
 var MONO = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
@@ -25,11 +25,13 @@ import { CadenceTab } from "./tabs/CadenceTab";
 import { ProjectsTab } from "./tabs/ProjectsTab";
 import { ShopsTab } from "./tabs/ShopsTab";
 import { AddAccountModal } from "./AddAccountModal";
-import { LogMeetingModal } from "./LogMeetingModal";
+import { LogConversationModal } from "./LogConversationModal";
 import { QuickMeetingModal } from "./QuickMeetingModal";
 import { AddItemModal } from "./AddItemModal";
 import { AddContactModal } from "./AddContactModal";
 import { PrintAccountSheet } from "../../components/PrintAccountSheet";
+import { CadenceHub } from "../cadence/CadenceHub";
+import { CadenceBackfillBanner } from "../cadence/CadenceBackfillBanner";
 
 var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red };
 var STATUS_LABELS = { green: "Healthy", yellow: "Watch", red: "At Risk" };
@@ -42,7 +44,7 @@ function setDefaultTab(accountId, tab) {
   try { localStorage.setItem("folio_default_tab_" + accountId, tab); } catch(e) {}
 }
 
-export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit, onDelete, onUpdate, onSelectAccount, pipPrefill, onPipPrefillHandled, revenueHistory, shopMetrics, onAddAccount }) {
+export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit, onDelete, onUpdate, onSelectAccount, pipPrefill, onPipPrefillHandled, initialHubCadenceId, onHubConsumed, revenueHistory, shopMetrics, onAddAccount }) {
   var TABS = account.account_type === 'mso'
     ? ["overview", "shops", "meetings", "tasks", "contacts", "cadence", "projects"]
     : ["overview", "meetings", "tasks", "contacts", "cadence", "projects"];
@@ -59,6 +61,8 @@ export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit
   var [confirmDelete, setConfirmDelete]   = useState(false);
 
   var [cadencePrefill, setCadencePrefill] = useState(null);
+  var [hubCadence, setHubCadence]         = useState(null);
+  var [logConvDefaultCadenceId, setLogConvDefaultCadenceId] = useState(null);
 
   var [showBriefModal, setBriefModal]   = useState(false);
   var [briefText, setBriefText]         = useState(null);
@@ -98,12 +102,45 @@ export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit
   var { cadences, addCadence, updateCadence, deleteCadence } = useCadences(userId, account.id);
   var { projects, addProject, updateProject, deleteProject } = useProjects(userId, account.id, orgId);
 
+  useEffect(function () {
+    if (!initialHubCadenceId || !cadences || cadences.length === 0) return;
+    var match = cadences.find(function (c) { return c.id === initialHubCadenceId; });
+    if (match) {
+      setHubCadence(match);
+      if (onHubConsumed) onHubConsumed();
+    }
+  }, [initialHubCadenceId, cadences]);
+
   var allAccounts   = accounts || [];
   var subAccounts   = allAccounts.filter(function (a) { return a.parent_account_id === account.id; });
   var parentAccount = account.parent_account_id ? allAccounts.find(function (a) { return a.id === account.parent_account_id; }) : null;
 
   var statusColor = STATUS_COLORS[account.status] || C.textSub;
   var openCount   = items.filter(function (i) { return !i.done; }).length;
+
+  if (hubCadence) {
+    return (
+      <CadenceHub
+        cadence={hubCadence}
+        account={account}
+        userId={userId}
+        meetings={meetings}
+        items={items}
+        addMeeting={addMeeting}
+        updateMeeting={updateMeeting}
+        deleteMeeting={deleteMeeting}
+        addItem={function (data) { return addItem(Object.assign({ account_id: account.id }, data)); }}
+        closeItem={closeItem}
+        onUpdateCadence={function (id, data) {
+          return updateCadence(id, data).then(function () {
+            setHubCadence(function (prev) { return prev && prev.id === id ? Object.assign({}, prev, data) : prev; });
+          });
+        }}
+        onBack={function () { setHubCadence(null); }}
+        onOpenAccount={function () { setHubCadence(null); setTab("overview"); }}
+      />
+    );
+  }
 
   return (
     <div>
@@ -376,6 +413,14 @@ export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit
         </div>
       </div>
 
+      {/* Backfill prompt — surfaces once per account when cadences exist with un-tagged meetings */}
+      <CadenceBackfillBanner
+        account={account}
+        cadences={cadences}
+        meetings={meetings}
+        onUpdateMeeting={updateMeeting}
+      />
+
       {/* Tabs */}
       <div
         style={{
@@ -524,6 +569,7 @@ export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit
           onDeleteMeeting={deleteMeeting}
           prefill={cadencePrefill}
           onPrefillHandled={function () { setCadencePrefill(null); }}
+          onOpenHub={function (cad) { setHubCadence(cad); }}
         />
       )}
 
@@ -555,17 +601,23 @@ export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit
       )}
 
       {showMeetingModal && (
-        <LogMeetingModal
+        <LogConversationModal
           accountId={account.id}
           userId={userId}
           contacts={contacts}
+          cadences={cadences}
+          defaultCadenceId={logConvDefaultCadenceId}
           onSave={function (data) {
-            return addMeeting(data).then(function (m) { showToast("Meeting logged"); return m; });
+            return addMeeting(data).then(function (m) {
+              showToast(data.status === "draft" ? "Draft started" : "Conversation logged");
+              if (data.cadence_id && data.status === "draft") {
+                var c = cadences.find(function (cc) { return cc.id === data.cadence_id; });
+                if (c) setHubCadence(c);
+              }
+              return m;
+            });
           }}
-          onCreateItem={function (data) {
-            return addItem(Object.assign({ account_id: account.id }, data));
-          }}
-          onClose={function () { setMeetingModal(false); }}
+          onClose={function () { setMeetingModal(false); setLogConvDefaultCadenceId(null); }}
         />
       )}
 

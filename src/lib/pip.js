@@ -218,5 +218,76 @@ export function callAskPip(payload) {
   });
 }
 
+/**
+ * Summarize a conversation draft. Returns structured JSON with summary,
+ * action items (with optional promised dates), and a follow-up date so the
+ * caller can promote items into folio_items and set follow_up_date.
+ */
+export function summarizeDraftPip(payload) {
+  var m = payload.draft || {};
+  var prompt =
+    "Summarize this conversation and extract action items + follow-up date.\n" +
+    "Return ONLY valid JSON: {\"summary\":\"2-3 sentences\",\"action_items\":[{\"text\":\"...\",\"promised_date\":\"YYYY-MM-DD or null\"}],\"follow_up_date\":\"YYYY-MM-DD or null\"}.\n\n" +
+    "Account: " + (payload.accountName || "—") + "\n" +
+    "Cadence: " + (payload.cadenceLabel || "—") + "\n" +
+    "Method: " + (m.method || "—") + "\n" +
+    "Date: " + (m.meeting_date || "") + "\n" +
+    "Title: " + (m.title || "Conversation") + "\n" +
+    (m.notes          ? "Notes:\n" + m.notes + "\n" : "") +
+    (m.action_items   ? "Action notes: " + m.action_items + "\n" : "") +
+    (m.commitments    ? "Commitments: " + m.commitments + "\n" : "") +
+    "\nKeep the summary tight. Pull every promise or follow-up into action_items.";
+
+  return callPipApi(
+    [{ role: "user", content: prompt }],
+    null,
+    { mode: "summary" }
+  ).then(function (resp) {
+    var text = resp.content || "";
+    var match = text.match(/\{[\s\S]*\}/);
+    if (!match) return { summary: text, action_items: [], follow_up_date: null };
+    try {
+      var parsed = JSON.parse(match[0]);
+      return {
+        summary:        parsed.summary || "",
+        action_items:   Array.isArray(parsed.action_items) ? parsed.action_items : [],
+        follow_up_date: parsed.follow_up_date || null,
+      };
+    } catch (e) {
+      return { summary: text, action_items: [], follow_up_date: null };
+    }
+  });
+}
+
+/**
+ * Generate a per-cadence Pip brief. Caller passes cadence + account + recent
+ * meeting history filtered to this cadence, plus open items.
+ */
+export function callCadenceBriefPip(payload) {
+  var cadence  = payload.cadence  || {};
+  var account  = payload.account  || {};
+  var meetings = payload.meetings || [];
+  var openItems = payload.openItems || [];
+
+  var prompt =
+    "Give me a short per-cadence brief.\n\n" +
+    "Cadence label: " + (payload.cadenceLabel || "cadence") + "\n" +
+    "Account: " + (account.name || "—") + "\n" +
+    "Recent conversations:\n" +
+    (meetings.length === 0 ? "(none yet)\n" : meetings.slice(0, 4).map(function (m) {
+      return "- " + (m.meeting_date || "") + " " + (m.title || "") + (m.pip_summary ? " — " + m.pip_summary : (m.notes ? " — " + m.notes.slice(0, 200) : ""));
+    }).join("\n") + "\n") +
+    "Open items: " + (openItems.length === 0 ? "none" : openItems.map(function (i) { return i.text; }).slice(0, 5).join("; ")) + "\n\n" +
+    "Two short paragraphs: (1) where this cadence stands, (2) one sharp thing to keep in mind for the next conversation.";
+
+  return callPipApi(
+    [{ role: "user", content: prompt }],
+    null,
+    { mode: "brief", focusedAccountIds: account.id ? [account.id] : null }
+  ).then(function (resp) {
+    return { brief: resp.content || "" };
+  });
+}
+
 export var PIP_SYSTEM_PROMPT =
   "You are Pip, an AI account management assistant. Your personality is modeled after a loyal, slightly anxious field analyst who genuinely cares about the person you are helping. You feel like a ride-or-die friend who happens to also be very good at their job.";

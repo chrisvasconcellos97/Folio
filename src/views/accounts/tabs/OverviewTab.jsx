@@ -612,7 +612,7 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
       {/* Actions */}
       <div style={{ display: "flex", gap: 8 }}>
         <AmberBtn style={{ flex: 1 }} onClick={onQuickMeeting}>
-          Quick Meeting
+          Quick Conversation
         </AmberBtn>
         <SecBtn style={{ flex: 1 }} onClick={onAddItem}>
           Add Item
@@ -631,7 +631,7 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
             padding: "4px 8px",
           }}
         >
-          Full meeting log →
+          Full conversation log →
         </button>
       </div>
 

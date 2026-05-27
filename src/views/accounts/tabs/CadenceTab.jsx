@@ -77,7 +77,7 @@ function buildCadenceInsight(cadences, account) {
   return parts.join(" ");
 }
 
-function CadenceCard({ cad, today, confirmDeleteId, setConfirmDeleteId, onDeleteCadence, onAddCadence, setEditingCad, setShowModal }) {
+function CadenceCard({ cad, today, confirmDeleteId, setConfirmDeleteId, onDeleteCadence, onAddCadence, setEditingCad, setShowModal, onOpenHub }) {
   var isTask  = cad.type === 'task';
   var next    = getNextOccurrence(cad, today);
   var confirm = confirmDeleteId === cad.id;
@@ -122,6 +122,18 @@ function CadenceCard({ cad, today, confirmDeleteId, setConfirmDeleteId, onDelete
             </span>
           ) : (
             <>
+              {!isTask && onOpenHub && (
+                <button
+                  onClick={function () { onOpenHub(cad); }}
+                  style={{
+                    background: C.accentGlow, border: '1px solid ' + C.accentSubtle,
+                    borderRadius: 6, padding: '5px 10px', fontSize: 11, fontWeight: 600,
+                    color: C.accent, fontFamily: "'Inter', system-ui, sans-serif", cursor: 'pointer',
+                  }}
+                >
+                  Open Hub →
+                </button>
+              )}
               <SecBtn onClick={function () { setEditingCad(cad); setShowModal(true); }} style={{ fontSize: 11, padding: '5px 10px' }}>
                 Edit
               </SecBtn>
@@ -151,7 +163,7 @@ function CadenceCard({ cad, today, confirmDeleteId, setConfirmDeleteId, onDelete
   );
 }
 
-export function CadenceTab({ account, cadences, items, meetings, contacts, onAddCadence, onUpdateCadence, onDeleteCadence, onAddItem, onCloseItem, onLogMeeting, onDeleteMeeting, prefill, onPrefillHandled }) {
+export function CadenceTab({ account, cadences, items, meetings, contacts, onAddCadence, onUpdateCadence, onDeleteCadence, onAddItem, onCloseItem, onLogMeeting, onDeleteMeeting, prefill, onPrefillHandled, onOpenHub }) {
   var [showModal,       setShowModal]       = useState(false);
   var [editingCad,      setEditingCad]      = useState(null);
   var [prefillValues,   setPrefillValues]   = useState(null);
@@ -179,7 +191,7 @@ export function CadenceTab({ account, cadences, items, meetings, contacts, onAdd
     letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8,
   };
 
-  var cardProps = { today, confirmDeleteId, setConfirmDeleteId, onDeleteCadence, onAddCadence, setEditingCad, setShowModal };
+  var cardProps = { today, confirmDeleteId, setConfirmDeleteId, onDeleteCadence, onAddCadence, setEditingCad, setShowModal, onOpenHub };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

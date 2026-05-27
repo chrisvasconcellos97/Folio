@@ -112,7 +112,7 @@ export function QuickMeetingModal({ accountId, userId, accountName, contacts, on
 
         <div style={{ display: "flex", gap: 8 }}>
           <AmberBtn style={{ flex: 1 }} onClick={handleSave} disabled={loading}>
-            {loading ? "Saving..." : "Log Meeting"}
+            {loading ? "Saving..." : "Log Conversation"}
           </AmberBtn>
           <SecBtn style={{ flex: 1 }} onClick={onClose}>
             Cancel

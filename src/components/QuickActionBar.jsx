@@ -74,11 +74,11 @@ export function QuickActionBar({ accounts, onAddAccount, onLogMeeting, onAddTask
     setMeetSaving(true);
     try {
       await onLogMeeting(meetAcctId, meetDate, meetTitle.trim());
-      showToast("Meeting logged");
+      showToast("Conversation logged");
       setOpenPanel(null);
     } catch (err) {
       console.error(err);
-      showToast("Couldn't log meeting — check your connection", "error");
+      showToast("Couldn't log conversation — check your connection", "error");
     } finally {
       setMeetSaving(false);
     }
@@ -156,7 +156,7 @@ export function QuickActionBar({ accounts, onAddAccount, onLogMeeting, onAddTask
           onMouseLeave={function() { setHovered(null); }}
           style={pillBtn(openPanel === "meeting" || hovered === "meet")}
         >
-          + Meeting
+          + Conversation
         </button>
         <button
           onClick={openTask}
@@ -180,7 +180,7 @@ export function QuickActionBar({ accounts, onAddAccount, onLogMeeting, onAddTask
         }}>
           <form onSubmit={handleLogMeeting} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.07em", fontFamily: MONO, marginBottom: 2 }}>
-              Log Meeting
+              Log Conversation
             </div>
             <select
               value={meetAcctId}

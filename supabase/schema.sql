@@ -60,8 +60,11 @@ create table if not exists folio_meetings (
   id             uuid primary key default gen_random_uuid(),
   account_id     uuid references folio_accounts on delete cascade not null,
   user_id        uuid references auth.users not null,
+  cadence_id     uuid references folio_cadences(id) on delete set null,
   title          text,
   meeting_date   date,
+  method         text check (method is null or method in ('phone', 'email', 'video', 'in_person')),
+  status         text default 'summarized' check (status in ('draft', 'summarized')),
   notes          text,
   talking_points text,
   action_items   text,
@@ -71,8 +74,12 @@ create table if not exists folio_meetings (
   attendees      text[],
   pip_summary    text,
   pip_email      text,
-  created_at     timestamptz default now()
+  created_at     timestamptz default now(),
+  updated_at     timestamptz default now()
 );
+
+create index if not exists folio_meetings_cadence_id_idx on folio_meetings(cadence_id);
+create index if not exists folio_meetings_status_idx     on folio_meetings(status);
 
 alter table folio_meetings enable row level security;
 create policy "Users manage own meetings"
@@ -109,6 +116,8 @@ create table if not exists folio_cadences (
   meeting_time  text,
   task_title    text,
   notes         text,
+  pip_brief     text,
+  pip_brief_at  timestamptz,
   created_at    timestamptz default now(),
   updated_at    timestamptz default now()
 );
@@ -205,6 +214,10 @@ create trigger folio_accounts_updated_at
 
 create trigger folio_cadences_updated_at
   before update on folio_cadences
+  for each row execute function update_updated_at();
+
+create trigger folio_meetings_updated_at
+  before update on folio_meetings
   for each row execute function update_updated_at();
 
 create trigger gauge_projects_updated_at

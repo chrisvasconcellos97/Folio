@@ -2,7 +2,7 @@ import { C } from "../../lib/colors";
 import { getNextOccurrence, isSameDay } from "../../lib/cadenceUtils";
 import { CadenceEventCard } from "./cadenceShared";
 
-export function ListView({ cadences, onSelectAccount, onCreateItem }) {
+export function ListView({ cadences, onSelectAccount, onCreateItem, onOpenHub }) {
   var today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -51,6 +51,7 @@ export function ListView({ cadences, onSelectAccount, onCreateItem }) {
                     event={{ cadence: item.cadence, date: item.next, account: item.account }}
                     onSelectAccount={onSelectAccount}
                     onCreateItem={onCreateItem}
+                    onOpenHub={onOpenHub}
                     showDate
                   />
                 );

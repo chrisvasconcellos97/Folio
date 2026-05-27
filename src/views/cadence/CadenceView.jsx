@@ -76,7 +76,7 @@ function buildGlobalCadenceInsight(cadences) {
 }
 
 /* ---- Main CadenceView ---- */
-export function CadenceView({ cadences, accounts, onSelectAccount, addCadence, onCreateItem }) {
+export function CadenceView({ cadences, accounts, onSelectAccount, addCadence, onCreateItem, onOpenHub }) {
   var cadenceInsight = useMemo(function () { return buildGlobalCadenceInsight(cadences); }, [cadences]);
   var [viewMode, setViewMode] = useState('list');
   var [showAddModal, setShowAddModal] = useState(false);
@@ -197,6 +197,7 @@ export function CadenceView({ cadences, accounts, onSelectAccount, addCadence, o
           onNext={function () { setCalDate(new Date(calYear, calMonth + 1, 1)); }}
           onSelectAccount={onSelectAccount}
           onCreateItem={onCreateItem}
+          onOpenHub={onOpenHub}
         />
       )}
 
@@ -206,11 +207,12 @@ export function CadenceView({ cadences, accounts, onSelectAccount, addCadence, o
           onPrev={function () { var d = new Date(weekDate); d.setDate(d.getDate() - 7); setWeekDate(d); }}
           onNext={function () { var d = new Date(weekDate); d.setDate(d.getDate() + 7); setWeekDate(d); }}
           onSelectAccount={onSelectAccount}
+          onOpenHub={onOpenHub}
         />
       )}
 
       {viewMode === 'list' && (
-        <ListView cadences={cadences} onSelectAccount={onSelectAccount} onCreateItem={onCreateItem} />
+        <ListView cadences={cadences} onSelectAccount={onSelectAccount} onCreateItem={onCreateItem} onOpenHub={onOpenHub} />
       )}
 
       {showAddModal && (
