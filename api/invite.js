@@ -57,11 +57,10 @@ export default async function handler(req, res) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Folios <onboarding@resend.dev>",
+        from: "Folios <invites@folioshq.com>",
         to: [email],
         subject: subject,
         html: html,
-        reply_to: user.email || undefined,
       }),
     });
 
