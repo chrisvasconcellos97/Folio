@@ -364,10 +364,10 @@ export function MeetingsView({ meetings, loading, allItems, addItem }) {
                     }}
                   >
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 3 }}>
+                      <div style={{ fontFamily: MV_SERIF, fontSize: 15.5, fontWeight: 400, color: C.text, marginBottom: 3, letterSpacing: "-0.005em", lineHeight: 1.2 }}>
                         {m.folio_accounts ? m.folio_accounts.name : "Account"}
                       </div>
-                      <div style={{ fontSize: 14, color: C.textSub, marginBottom: 6 }}>
+                      <div style={{ fontFamily: MV_MONO, fontSize: 10, color: C.textSub, marginBottom: 6, letterSpacing: "0.04em", textTransform: "uppercase" }}>
                         {m.title || "Meeting"}
                       </div>
                       {daysOut <= 1 && (
@@ -449,14 +449,14 @@ export function MeetingsView({ meetings, loading, allItems, addItem }) {
                       }}
                     >
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 2 }}>
+                        <div style={{ fontFamily: MV_SERIF, fontSize: 15.5, fontWeight: 400, color: C.text, marginBottom: 3, letterSpacing: "-0.005em", lineHeight: 1.2 }}>
                           {m.folio_accounts ? m.folio_accounts.name : "Account"}
                         </div>
-                        <div style={{ fontSize: 12, color: C.textSub }}>
+                        <div style={{ fontFamily: MV_MONO, fontSize: 10, color: C.textSub, letterSpacing: "0.04em", textTransform: "uppercase" }}>
                           {m.title || "Meeting"}
                         </div>
                       </div>
-                      <div style={{ fontSize: 11, color: C.textMuted, flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>
+                      <div style={{ fontFamily: MV_MONO, fontSize: 10, color: C.textMuted, flexShrink: 0, letterSpacing: "0.04em", fontFeatureSettings: '"tnum"' }}>
                         {new Date(m.meeting_date).toLocaleDateString("en-US", {
                           month: "short",
                           day: "numeric",

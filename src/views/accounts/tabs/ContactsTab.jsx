@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
 import { C } from "../../../lib/colors";
+
+var CT_SERIF = "'Fraunces', Georgia, serif";
+var CT_MONO  = "'JetBrains Mono', ui-monospace, monospace";
 import { AmberBtn, DangerBtn, SecBtn } from "../../../components/Buttons";
 import { Card } from "../../../components/Card";
 import { PipInsightCard } from "../../../components/PipInsightCard";
@@ -176,7 +179,7 @@ export function ContactsTab({ contacts, accountId, accountName, onAdd, onDelete,
               </div>
 
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 500, color: C.text, marginBottom: 2, display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+                <div style={{ fontFamily: CT_SERIF, fontSize: 15.5, fontWeight: 400, color: C.text, marginBottom: 3, display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", letterSpacing: "-0.005em", lineHeight: 1.2 }}>
                   {c.is_leader && (
                     <span title="Leader" aria-label="Leader" style={{ fontSize: 13, color: C.yellow, lineHeight: 1 }}>☆</span>
                   )}
@@ -185,14 +188,14 @@ export function ContactsTab({ contacts, accountId, accountName, onAdd, onDelete,
                     <span title="Primary contact" aria-label="Primary contact" style={{ fontSize: 12, lineHeight: 1 }}>📌</span>
                   )}
                   {c.is_poc && (
-                    <span style={{ fontSize: 10, color: C.yellow, fontWeight: 600, letterSpacing: "0.06em", background: "rgba(251,191,36,0.12)", padding: "2px 6px", borderRadius: 10 }}>
+                    <span style={{ fontFamily: CT_MONO, fontSize: 9, color: C.yellow, fontWeight: 600, letterSpacing: "0.06em", background: "rgba(251,191,36,0.12)", padding: "2px 6px", borderRadius: 10, textTransform: "uppercase" }}>
                       POC
                     </span>
                   )}
                 </div>
 
                 {c.title && (
-                  <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 6 }}>{c.title}</div>
+                  <div style={{ fontFamily: CT_MONO, fontSize: 10, color: C.textMuted, marginBottom: 6, letterSpacing: "0.04em", textTransform: "uppercase" }}>{c.title}</div>
                 )}
 
                 {(c.phone || c.email || c.linkedin) && (

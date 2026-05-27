@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { C, glass } from "../../../lib/colors";
+
+var IT_SERIF = "'Fraunces', Georgia, serif";
+var IT_MONO  = "'JetBrains Mono', ui-monospace, monospace";
 import { AmberBtn, SecBtn } from "../../../components/Buttons";
 import { PipInsightCard } from "../../../components/PipInsightCard";
 import { pickV } from "../../../lib/metricsUtils";
@@ -122,11 +125,11 @@ export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAd
               }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
-                    <div style={{ fontSize: 12, color: C.text, fontWeight: 600, lineHeight: 1.4 }}>
+                    <div style={{ fontFamily: IT_SERIF, fontSize: 15.5, color: C.text, fontWeight: 400, lineHeight: 1.2, letterSpacing: "-0.005em" }}>
                       {t.cadence.task_title}
                     </div>
                     {t.cadence.is_global && (
-                      <span style={{ fontSize: 9, color: C.accent, background: C.accentGlow, border: '1px solid ' + C.accentLine, borderRadius: 10, padding: '2px 7px', fontWeight: 600, letterSpacing: '0.04em' }}>
+                      <span style={{ fontFamily: IT_MONO, fontSize: 9, color: C.accent, background: C.accentGlow, border: '1px solid ' + C.accentLine, borderRadius: 10, padding: '2px 7px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
                         All Accounts
                       </span>
                     )}
@@ -170,15 +173,15 @@ export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAd
                   </button>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, color: C.text, lineHeight: 1.4 }}>{item.text}</div>
+                  <div style={{ fontFamily: IT_SERIF, fontSize: 15.5, fontWeight: 400, color: C.text, lineHeight: 1.2, letterSpacing: "-0.005em" }}>{item.text}</div>
                   <div style={{ display: "flex", gap: 12, marginTop: 4, flexWrap: "wrap" }}>
                     {item.due_date && (
-                      <div style={{ fontSize: 10, color: C.yellow }}>
+                      <div style={{ fontFamily: IT_MONO, fontSize: 10, color: C.yellow, letterSpacing: "0.04em", fontFeatureSettings: '"tnum"' }}>
                         {"Due: " + new Date(item.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                       </div>
                     )}
                     {item.owner && (
-                      <div style={{ fontSize: 10, color: C.textMuted }}>{"Owner: " + item.owner}</div>
+                      <div style={{ fontFamily: IT_MONO, fontSize: 10, color: C.textMuted, letterSpacing: "0.04em" }}>{"Owner: " + item.owner}</div>
                     )}
                   </div>
                 </div>

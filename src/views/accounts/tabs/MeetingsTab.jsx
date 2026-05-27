@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { C } from "../../../lib/colors";
+
+var MT_SERIF = "'Fraunces', Georgia, serif";
+var MT_MONO  = "'JetBrains Mono', ui-monospace, monospace";
 import { AmberBtn, DangerBtn, SecBtn } from "../../../components/Buttons";
 import { Card } from "../../../components/Card";
 import { FL } from "../../../components/FieldLabel";
@@ -213,12 +216,12 @@ export function MeetingsTab({ meetings, accountName, accountId, userId, openItem
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10, gap: 12 }}>
               <div style={{ flex: 1 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 3 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>
+                  <div style={{ fontFamily: MT_SERIF, fontSize: 15.5, fontWeight: 400, color: C.text, letterSpacing: "-0.005em", lineHeight: 1.2 }}>
                     {m.title || "Meeting"}
                   </div>
                   {m.pip_summary && (
                     <span style={{
-                      fontFamily: "'JetBrains Mono', monospace",
+                      fontFamily: MT_MONO,
                       fontSize: 9,
                       fontWeight: 500,
                       color: C.accent,
@@ -232,13 +235,13 @@ export function MeetingsTab({ meetings, accountName, accountId, userId, openItem
                     }}>✦ Summarized</span>
                   )}
                 </div>
-                <div style={{ fontSize: 11, color: C.textMuted, fontVariantNumeric: "tabular-nums" }}>
+                <div style={{ fontFamily: MT_MONO, fontSize: 10, color: C.textMuted, marginTop: 4, letterSpacing: "0.04em", fontFeatureSettings: '"tnum"' }}>
                   {m.meeting_date
                     ? new Date(m.meeting_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
                     : ""}
                 </div>
                 {m.attendees && m.attendees.length > 0 && (
-                  <div style={{ fontSize: 11, color: C.accent, marginTop: 3 }}>
+                  <div style={{ fontFamily: MT_MONO, fontSize: 10, color: C.accent, marginTop: 3, letterSpacing: "0.04em" }}>
                     {m.attendees.join(', ')}
                   </div>
                 )}

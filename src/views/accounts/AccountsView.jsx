@@ -383,8 +383,11 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                     style={{ flex: 1, cursor: "pointer", minWidth: 0 }}
                   >
                     <div style={{
-                      fontSize: 14,
-                      fontWeight: 500,
+                      fontFamily: SERIF,
+                      fontSize: 15.5,
+                      fontWeight: 400,
+                      letterSpacing: "-0.005em",
+                      lineHeight: 1.2,
                       color: C.text,
                       overflow: "hidden",
                       textOverflow: "ellipsis",
@@ -395,13 +398,13 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                     {(function () {
                       var acct = t.account_id ? (accounts || []).find(function (a) { return a.id === t.account_id; }) : null;
                       return acct ? (
-                        <div style={{ fontSize: 10, color: C.accentDim, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 2 }}>
+                        <div style={{ fontFamily: MONO, fontSize: 10, color: C.accentDim, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 3 }}>
                           {acct.name}
                         </div>
                       ) : null;
                     })()}
                     {t.reminder_at && (
-                      <div style={{ fontSize: 10, color: isOverdue ? C.red : C.textMuted, marginTop: 2, fontVariantNumeric: "tabular-nums" }}>
+                      <div style={{ fontFamily: MONO, fontSize: 10, color: isOverdue ? C.red : C.textMuted, marginTop: 3, letterSpacing: "0.04em", fontFeatureSettings: '"tnum"' }}>
                         {"Reminder · " + new Date(t.reminder_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
                       </div>
                     )}
