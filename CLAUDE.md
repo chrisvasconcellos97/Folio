@@ -131,11 +131,16 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 ## Pending Updates
 
-1. **Pipeline V2 + Revenue History + Shop Metrics:** *(no open items)*
+1. **Pipeline V2 + Revenue History + Shop Metrics:**
+   - Revenue field formatting — convert free-text revenue to a number type with currency display + proper sorting
 
 2. **Code quality:** *(no open items)*
 
-3. **Feature completeness:** *(no open items)*
+3. **Feature completeness:**
+   - "Ask Pip" button on meetings — generates summary, cleaned notes, draft email on demand; caches to `pip_summary` / `pip_email` so it's never regenerated
+   - Pip context improvement — pass full account history (all meetings, open items, contacts) into Pip system prompt
+   - Auto-create open items from meeting action items — checkbox in Add Meeting modal to promote each action item to an open item
+   - In-app notification banner — shows on login: accounts gone cold, items overdue, follow-ups due this week
 
 4. **Native feel:** *(no open items)*
 
@@ -147,7 +152,9 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 8. **Copy & tone:** *(no open items)*
 
-9. **Search & discoverability:** *(no open items)*
+9. **Search & discoverability:**
+   - Extend global search to contacts (names, emails, titles) — currently covers accounts only
+   - Pipeline filters — tier, status, revenue range chips on PipelineView
 
 10. **Onboarding & contextual help:** *(no open items)*
 
@@ -253,19 +260,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 ## Feature Wishlist / Roadmap
 
-### High priority
-- [ ] **"Ask Pip" button on meetings** — generates summary, cleaned notes, draft email on demand; saves result to `pip_summary` / `pip_email` so it's never regenerated
-- [ ] **Pip context improvement** — pass full account history (all meetings, open items, contacts) into Pip system prompt for richer responses
-- [ ] **Revenue field formatting** — currently free text, should be a number field with proper formatting and sorting
-- [ ] **Last meeting auto-update** — when a meeting is logged, auto-set `last_meeting` on the account
-
-### Medium priority
-- [ ] **Business card scanner** — "Scan Card" button in Add Contact opens camera, sends image to Claude vision via new `api/scan-card.js`, auto-fills name/title/phone/email/linkedin. Smart account matching: fuzzy-match extracted company name against existing `folio_accounts` — if match found, show "Looks like [Account Name] — add to this account?" with one-tap confirm; if no match, prompt to create a new account. Ideal for post-conference intake.
-- [ ] **Email integration** — one-tap to open draft follow-up email in mail client (`mailto:` link pre-populated)
-- [ ] **Open items on meetings** — when logging a meeting, action items should optionally auto-create open items
-- [ ] **Account search improvement** — search across contacts and notes, not just account name
-- [ ] **Pipeline filters** — filter by tier, status, revenue range
-- [ ] **Notifications / reminders** — flag accounts with no contact in X days, overdue items
+High and medium priority items are now in the **Pending Updates** queue above.
 
 ### Cadence (once built)
 - [ ] **Cadence analytics** — meeting frequency per account, open item age, account health trends over time, Pip flags accounts untouched in 30+ days. Hold until enough data exists to make it meaningful.
