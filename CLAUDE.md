@@ -13,7 +13,7 @@ git push origin HEAD:claude/build-folio-desktop-app-XzvZ5
 The PWA service worker has bitten Chris twice — every deploy must update cleanly without requiring manual cache clears. Permanent guarantees in the codebase:
 
 1. **SW config in `vite.config.js`** — `skipWaiting: true`, `clientsClaim: true`, `cleanupOutdatedCaches: true`. Never remove these.
-2. **Explicit registration in `src/main.jsx`** — uses `virtual:pwa-register` with `immediate: true`, hourly `registration.update()`, and an `onNeedRefresh` toast showing a **"Refresh"** button via the Toast component's `action` prop. Never remove this registration.
+2. **Explicit registration in `src/main.jsx`** — uses `virtual:pwa-register` with `immediate: true`. On `onNeedRefresh`, **auto-reloads silently** after a 600ms delay with a brief "Updating Folios…" toast — no manual button. Folios autosaves notes / drafts / items, so silent reload is safe. Also checks for updates every 10 min and on every tab visibility change. Never remove this registration; never re-add a manual refresh button without explicit reason.
 3. **Vercel headers in `vercel.json`** — `/`, `/index.html`, `/sw.js`, `/manifest.webmanifest` all served with `Cache-Control: public, max-age=0, must-revalidate`. Hashed assets stay long-cached.
 4. **Never gate critical features on cache state.** If the new build needs a fresh shell, the user gets the toast prompt — they never get a broken-looking app.
 5. **Before any deploy that changes the SW or the shell — verify `vite.config.js` workbox block + main.jsx `registerSW` block are intact.** If a Patch build touches these files, double-check before merging.
