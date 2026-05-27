@@ -106,8 +106,8 @@ export function ReturningWelcome({ userId, userName, accountCount, onDismiss }) 
           maxWidth: 640, width: "100%",
         }}
       >
-        {/* Pip orb — xxl with sonar */}
-        <PipOrb size="xxl" sonar />
+        {/* Pip orb — xxl, sonar, drifting + pulsing on away screen */}
+        <PipOrb size="xxl" sonar className="drift" />
 
         {/* Away meta line */}
         <div style={{
