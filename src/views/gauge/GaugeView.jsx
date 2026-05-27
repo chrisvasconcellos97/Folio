@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { C } from "../../lib/colors";
 import { GaugeIcon } from "../../components/GaugeIcon";
 import { useProjects } from "../../hooks/useProjects";
@@ -147,6 +147,13 @@ function buildGaugeInsight(projects, accountsById) {
 
 export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
   var { projects, loading, addProject, updateProject, deleteProject, templates, addTemplate, updateTemplate, deleteTemplate } = useProjects(userId, null, orgId);
+  var [isMobile, setIsMobile] = useState(typeof window !== "undefined" ? window.innerWidth < 640 : false);
+  useEffect(function () {
+    function onResize() { setIsMobile(window.innerWidth < 640); }
+    window.addEventListener("resize", onResize);
+    return function () { window.removeEventListener("resize", onResize); };
+  }, []);
+
   var [filter, setFilter]           = useState("all");
   var [showAdd, setShowAdd]         = useState(false);
   var [showPicker, setShowPicker]   = useState(false);
@@ -424,11 +431,11 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
               tabIndex={0}
               onKeyDown={function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleRow(); } }}
               style={{
-                padding: "14px 16px",
+                padding: isMobile ? "12px 14px" : "14px 16px",
                 cursor: "pointer",
                 display: "grid",
-                gridTemplateColumns: "auto 1fr 200px auto",
-                gap: 12,
+                gridTemplateColumns: isMobile ? "auto 1fr auto" : "auto 1fr 200px auto",
+                gap: isMobile ? 10 : 12,
                 alignItems: "start",
               }}
             >
@@ -556,42 +563,73 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
                 </div>
               </div>
 
-              {/* Right: stages + gradient progress bar */}
-              <div style={{ textAlign: "right" }}>
-                {steps.total > 0 && (
-                  <>
-                    <div style={{ fontFamily: MONO, fontSize: 10.5, color: C.textMuted, marginBottom: 6 }}>
-                      {steps.done}/{steps.total} steps · {pct}%
-                    </div>
-                    <div style={{ position: "relative", height: 4, background: C.surface3, borderRadius: 2, overflow: "hidden" }}>
-                      <div style={{
-                        position: "absolute", inset: 0,
-                        background: "linear-gradient(to right, oklch(0.42 0.09 232), oklch(0.55 0.12 200), oklch(0.68 0.13 178), oklch(0.80 0.13 162))",
-                        borderRadius: 2,
-                      }} />
-                      <div style={{
-                        position: "absolute", top: 0, right: 0, bottom: 0,
-                        width: (100 - pct) + "%",
-                        background: C.surface3,
-                      }} />
-                    </div>
-                  </>
-                )}
-              </div>
-              {/* Edit button (stops propagation so row doesn't toggle) */}
+              {/* Right: stages + gradient progress bar (desktop only) */}
+              {!isMobile && (
+                <div style={{ textAlign: "right" }}>
+                  {steps.total > 0 && (
+                    <>
+                      <div style={{ fontFamily: MONO, fontSize: 10.5, color: C.textMuted, marginBottom: 6 }}>
+                        {steps.done}/{steps.total} steps · {pct}%
+                      </div>
+                      <div style={{ position: "relative", height: 4, background: C.surface3, borderRadius: 2, overflow: "hidden" }}>
+                        <div style={{
+                          position: "absolute", inset: 0,
+                          background: "linear-gradient(to right, oklch(0.42 0.09 232), oklch(0.55 0.12 200), oklch(0.68 0.13 178), oklch(0.80 0.13 162))",
+                          borderRadius: 2,
+                        }} />
+                        <div style={{
+                          position: "absolute", top: 0, right: 0, bottom: 0,
+                          width: (100 - pct) + "%",
+                          background: C.surface3,
+                        }} />
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+              {/* Edit affordance — pencil on mobile, button on desktop */}
               <button
                 onClick={function (e) { e.stopPropagation(); setEditing(p); }}
+                title="Edit project"
+                aria-label="Edit project"
                 style={{
                   background: "transparent", border: "1px solid " + C.rule,
                   borderRadius: 6, color: C.textMuted,
-                  fontFamily: MONO, fontSize: 10, letterSpacing: "0.05em",
-                  padding: "6px 10px", cursor: "pointer",
+                  fontFamily: MONO,
+                  fontSize: isMobile ? 13 : 10,
+                  letterSpacing: "0.05em",
+                  padding: isMobile ? "4px 8px" : "6px 10px",
+                  cursor: "pointer",
                   whiteSpace: "nowrap", alignSelf: "start",
+                  lineHeight: 1,
                 }}
               >
-                Edit →
+                {isMobile ? "✎" : "Edit →"}
               </button>
             </div>
+
+            {/* Mobile-only full-width progress strip below the row */}
+            {isMobile && steps.total > 0 && (
+              <div style={{ padding: "0 14px 12px 14px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                  <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted }}>
+                    {steps.done}/{steps.total} steps · {pct}%
+                  </div>
+                </div>
+                <div style={{ position: "relative", height: 4, background: C.surface3, borderRadius: 2, overflow: "hidden" }}>
+                  <div style={{
+                    position: "absolute", inset: 0,
+                    background: "linear-gradient(to right, oklch(0.42 0.09 232), oklch(0.55 0.12 200), oklch(0.68 0.13 178), oklch(0.80 0.13 162))",
+                    borderRadius: 2,
+                  }} />
+                  <div style={{
+                    position: "absolute", top: 0, right: 0, bottom: 0,
+                    width: (100 - pct) + "%",
+                    background: C.surface3,
+                  }} />
+                </div>
+              </div>
+            )}
 
             {/* Expanded body */}
             {isOpen && (
