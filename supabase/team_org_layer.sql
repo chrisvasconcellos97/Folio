@@ -14,13 +14,36 @@ alter table folio_orgs enable row level security;
 create policy "orgs_owner_all" on folio_orgs
   for all using (auth.uid() = owner_id);
 
+-- ─── Security-definer helpers ──────────────────────────────────────────────
+-- These break RLS recursion: a policy on folio_org_members can't safely
+-- subquery folio_org_members (it re-triggers itself). The functions run with
+-- the owner's privileges, bypassing RLS for the membership lookup only.
+create or replace function folio_user_org_ids()
+returns setof uuid
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select org_id from folio_org_members
+  where user_id = auth.uid() and accepted = true
+$$;
+grant execute on function folio_user_org_ids() to authenticated;
+
+create or replace function folio_user_writable_org_ids()
+returns setof uuid
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select org_id from folio_org_members
+  where user_id = auth.uid() and accepted = true and role in ('owner','member')
+$$;
+grant execute on function folio_user_writable_org_ids() to authenticated;
+
 create policy "orgs_member_read" on folio_orgs
-  for select using (
-    id in (
-      select org_id from folio_org_members
-      where user_id = auth.uid() and accepted = true
-    )
-  );
+  for select using (id in (select folio_user_org_ids()));
 
 -- ─── folio_org_members ─────────────────────────────────────────────────────
 create table if not exists folio_org_members (
@@ -51,12 +74,7 @@ create policy "members_self_accept" on folio_org_members
 
 -- Members can see all members in orgs they belong to
 create policy "members_org_read" on folio_org_members
-  for select using (
-    org_id in (
-      select org_id from folio_org_members m2
-      where m2.user_id = auth.uid() and m2.accepted = true
-    )
-  );
+  for select using (org_id in (select folio_user_org_ids()));
 
 -- ─── folio_account_notes ───────────────────────────────────────────────────
 create table if not exists folio_account_notes (
@@ -88,21 +106,12 @@ alter table folio_activity enable row level security;
 
 -- All org members can read the activity feed
 create policy "activity_org_read" on folio_activity
-  for select using (
-    org_id in (
-      select org_id from folio_org_members
-      where user_id = auth.uid() and accepted = true
-    )
-  );
+  for select using (org_id in (select folio_user_org_ids()));
 
 -- Members can insert activity for their own org
 create policy "activity_insert" on folio_activity
   for insert with check (
-    auth.uid() = user_id and
-    org_id in (
-      select org_id from folio_org_members
-      where user_id = auth.uid() and accepted = true
-    )
+    auth.uid() = user_id and org_id in (select folio_user_org_ids())
   );
 
 -- ─── org_id on folio_accounts ──────────────────────────────────────────────
@@ -111,21 +120,13 @@ alter table folio_accounts add column if not exists org_id uuid references folio
 -- Org members can read all accounts in their org (directors included)
 create policy "accounts_org_read" on folio_accounts
   for select using (
-    org_id is not null and
-    org_id in (
-      select org_id from folio_org_members
-      where user_id = auth.uid() and accepted = true
-    )
+    org_id is not null and org_id in (select folio_user_org_ids())
   );
 
 -- Non-director org members can write org accounts
 create policy "accounts_org_write" on folio_accounts
   for all using (
-    org_id is not null and
-    org_id in (
-      select org_id from folio_org_members
-      where user_id = auth.uid() and accepted = true and role in ('owner','member')
-    )
+    org_id is not null and org_id in (select folio_user_writable_org_ids())
   );
 
 -- ─── Indexes ───────────────────────────────────────────────────────────────
