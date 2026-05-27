@@ -108,7 +108,7 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
   function geocodeAddress(addr) {
     return fetch(
       "https://nominatim.openstreetmap.org/search?format=json&limit=1&q=" + encodeURIComponent(addr),
-      { headers: { "Accept-Language": "en", "User-Agent": "Folio/1.0" } }
+      { headers: { "Accept-Language": "en", "User-Agent": "Folios/1.0" } }
     )
       .then(function(r) { return r.json(); })
       .then(function(results) {
