@@ -115,6 +115,14 @@ export function ContactsTab({ contacts, accountId, accountName, onAdd, onDelete,
 
   useEffect(function () { setSelected({}); }, [contacts.length]);
 
+  // Leaders sort first, then by name. Sort is stable across renders.
+  contacts = (contacts || []).slice().sort(function (a, b) {
+    var la = a.is_leader ? 0 : 1;
+    var lb = b.is_leader ? 0 : 1;
+    if (la !== lb) return la - lb;
+    return (a.name || "").localeCompare(b.name || "");
+  });
+
   function handleDelete(id) {
     var contact = contacts.find(function (c) { return c.id === id; });
     onDelete(id)
@@ -169,7 +177,13 @@ export function ContactsTab({ contacts, accountId, accountName, onAdd, onDelete,
 
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 500, color: C.text, marginBottom: 2, display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+                  {c.is_leader && (
+                    <span title="Leader" aria-label="Leader" style={{ fontSize: 13, color: C.yellow, lineHeight: 1 }}>☆</span>
+                  )}
                   {c.name}
+                  {c.is_primary && (
+                    <span title="Primary contact" aria-label="Primary contact" style={{ fontSize: 12, lineHeight: 1 }}>📌</span>
+                  )}
                   {c.is_poc && (
                     <span style={{ fontSize: 10, color: C.yellow, fontWeight: 600, letterSpacing: "0.06em", background: "rgba(251,191,36,0.12)", padding: "2px 6px", borderRadius: 10 }}>
                       POC

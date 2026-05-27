@@ -12,6 +12,8 @@ export function EditContactModal({ contact, onSave, onClose }) {
   var [email, setEmail]       = useState(contact.email || "");
   var [linkedin, setLinkedin] = useState(contact.linkedin || "");
   var [poc, setPoc]           = useState(!!contact.is_poc);
+  var [leader, setLeader]     = useState(!!contact.is_leader);
+  var [primary, setPrimary]   = useState(!!contact.is_primary);
   var [notes, setNotes]       = useState(contact.notes || "");
   var [loading, setLoading]   = useState(false);
   var [error, setError]       = useState(null);
@@ -21,13 +23,15 @@ export function EditContactModal({ contact, onSave, onClose }) {
     setLoading(true);
     setError(null);
     onSave(contact.id, {
-      name:     name.trim(),
-      title:    title.trim()    || null,
-      phone:    phone.trim()    || null,
-      email:    email.trim()    || null,
-      linkedin: linkedin.trim() || null,
-      is_poc:   poc,
-      notes:    notes.trim()    || null,
+      name:       name.trim(),
+      title:      title.trim()    || null,
+      phone:      phone.trim()    || null,
+      email:      email.trim()    || null,
+      linkedin:   linkedin.trim() || null,
+      is_poc:     poc,
+      is_leader:  leader,
+      is_primary: primary,
+      notes:      notes.trim()    || null,
     }).catch(function (err) {
       setLoading(false);
       setError(err ? (err.message || "Something went wrong.") : "Something went wrong.");
@@ -100,44 +104,54 @@ export function EditContactModal({ contact, onSave, onClose }) {
           />
         </div>
 
-        <div
-          onClick={function () { setPoc(!poc); }}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            cursor: "pointer",
-            padding: "10px 14px",
-            background: poc ? C.accentFaint : C.bgDark,
-            border: "1px solid " + (poc ? C.accentSubtle : C.border),
-            borderRadius: 10,
-            userSelect: "none",
-          }}
-        >
-          <div
-            style={{
-              width: 18,
-              height: 18,
-              borderRadius: 4,
-              border: "1.5px solid " + (poc ? C.accent : C.accentDim),
-              background: poc ? C.accent : "transparent",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-            }}
-          >
-            {poc && <span style={{ fontSize: 11, color: "#fff" }}>✓</span>}
-          </div>
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: poc ? C.accent : C.text }}>
-              Primary Point of Contact
+        {[
+          { state: poc,     setter: setPoc,     title: "Primary Point of Contact", body: "Main person at this account" },
+          { state: leader,  setter: setLeader,  title: "Leader (☆)",                body: "Team lead or decision maker — sorts to top" },
+          { state: primary, setter: setPrimary, title: "Primary (📌)",              body: "Day-to-day go-to contact" },
+        ].map(function (row) {
+          var on = row.state;
+          return (
+            <div
+              key={row.title}
+              onClick={function () { row.setter(!on); }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                cursor: "pointer",
+                padding: "10px 14px",
+                background: on ? C.accentFaint : C.bgDark,
+                border: "1px solid " + (on ? C.accentSubtle : C.border),
+                borderRadius: 10,
+                userSelect: "none",
+              }}
+            >
+              <div
+                style={{
+                  width: 18,
+                  height: 18,
+                  borderRadius: 4,
+                  border: "1.5px solid " + (on ? C.accent : C.accentDim),
+                  background: on ? C.accent : "transparent",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                {on && <span style={{ fontSize: 11, color: "#fff" }}>✓</span>}
+              </div>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: on ? C.accent : C.text }}>
+                  {row.title}
+                </div>
+                <div style={{ fontSize: 10, color: C.textMuted, marginTop: 1 }}>
+                  {row.body}
+                </div>
+              </div>
             </div>
-            <div style={{ fontSize: 10, color: C.textMuted, marginTop: 1 }}>
-              Main person at this account
-            </div>
-          </div>
-        </div>
+          );
+        })}
 
         {error && (
           <div

@@ -63,7 +63,9 @@ var PIP_FORMATTING = [
 var PIP_CONTEXT_FORMAT = [
   "Context format:",
   "When a request includes context, it is rendered as compact prose under a 'CURRENT CONTEXT' header.",
-  "Each account block starts with 'ACCOUNT: <name> (id: <uuid>)' followed by status / health / last contact / revenue line.",
+  "Each account block starts with 'ACCOUNT: <name> [optional type tag] (id: <uuid>)' followed by status / health / last contact / revenue line.",
+  "Workspace types: most accounts are customers. Some entries are tagged [Department (internal team)] — for those, focus on cross-team deliverables and overdue commitments; revenue/tier/pipeline do not apply. Others are tagged [Partner (3rd-party vendor)] — for those, focus on agreement status, renewal date, scope drift, and spend trends; revenue/tier/pipeline do not apply. Customers keep the existing revenue/tier/pipeline lens.",
+  "Partner account blocks also include an 'Agreement ends / Billing / Spend YTD' line and 'Scope: ...' when known.",
   "Nested blocks: 'Recent meetings:', 'Open items:', 'Contacts:', 'Active projects:'.",
   "Top-level blocks may include 'OPEN QUICK TASKS', 'UPCOMING TASK CADENCES', 'ACTIVE GAUGE PROJECTS'.",
   "Open items prefixed [overdue Nd] or [due in Nd] when applicable.",

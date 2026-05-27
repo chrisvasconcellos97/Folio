@@ -68,7 +68,24 @@ function savePrefs(p) {
   try { localStorage.setItem(PREF_KEY, JSON.stringify(p)); } catch(e) {}
 }
 
-export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks, addTask, updateTask, deleteTask, hasMeetings, hasCadences, revenueHistory, items, meetings, contacts, onColdClick, onOverdueClick, onFollowUpClick, onLogMeeting }) {
+var WORKSPACE_COPY = {
+  customer:      { addLabel: "+ Account",    emptyTitle: "Nothing in the field yet.",       emptyBody: "Add your first account and Pip will get to work. Start with your most important relationship.", emptyCTA: "+ Add Your First Account", noMatch: "No accounts match — try a different search or filter.", searchPlaceholder: "Search accounts, tags, regions...", noun: "account" },
+  internal_team: { addLabel: "+ Department", emptyTitle: "No departments yet.",             emptyBody: "Departments are internal teams — marketing, sales, product, ops. Add one to start tracking cross-team work.", emptyCTA: "+ Add Your First Department", noMatch: "No departments match — try a different search or filter.", searchPlaceholder: "Search departments...", noun: "department" },
+  partner:       { addLabel: "+ Partner",    emptyTitle: "No partners yet.",                emptyBody: "Partners are 3rd-party vendors, agencies, integrators. Add one to track agreements, scope, and spend.",                emptyCTA: "+ Add Your First Partner",    noMatch: "No partners match — try a different search or filter.",    searchPlaceholder: "Search partners...",    noun: "partner" },
+};
+
+function matchesTypeFilter(account, typeFilter) {
+  var t = account.account_type;
+  if (typeFilter === "internal_team") return t === "internal_team";
+  if (typeFilter === "partner")       return t === "partner";
+  // customer: legacy nulls + standard/mso/shop
+  return !t || t === "standard" || t === "mso" || t === "shop";
+}
+
+export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks, addTask, updateTask, deleteTask, hasMeetings, hasCadences, revenueHistory, items, meetings, contacts, onColdClick, onOverdueClick, onFollowUpClick, onLogMeeting, typeFilter }) {
+  var activeType = typeFilter || "customer";
+  var copy = WORKSPACE_COPY[activeType] || WORKSPACE_COPY.customer;
+  accounts = (accounts || []).filter(function (a) { return matchesTypeFilter(a, activeType); });
   var [search, setSearch]           = useState("");
   var [searchFocused, setSearchFocused] = useState(false);
   var [filter, setFilter]           = useState(function() { return loadPrefs().filter || "All"; });
@@ -460,7 +477,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
             <InputField
               value={search}
               onChange={function (e) { setSearch(e.target.value); }}
-              placeholder="Search accounts, tags, regions..."
+              placeholder={copy.searchPlaceholder}
               onFocus={function() { setSearchFocused(true); }}
               onBlur={function() {
                 setTimeout(function() { setSearchFocused(false); }, 150);
@@ -655,14 +672,14 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
           <div style={{ textAlign: "center", padding: "60px 20px" }}>
             <div style={{ fontSize: 32, marginBottom: 16 }}>📋</div>
             <div style={{ fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 8 }}>
-              Nothing in the field yet.
+              {copy.emptyTitle}
             </div>
             <div style={{ fontSize: 14, color: C.textMuted, lineHeight: 1.6, marginBottom: 24, maxWidth: 280, margin: "0 auto 24px" }}>
-              Add your first account and Pip will get to work. Start with your most important relationship.
+              {copy.emptyBody}
             </div>
             {onAddAccount && (
               <AmberBtn onClick={onAddAccount} style={{ fontSize: 14, padding: "10px 24px" }}>
-                + Add Your First Account
+                {copy.emptyCTA}
               </AmberBtn>
             )}
           </div>
@@ -670,7 +687,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
 
         {!loading && accounts.length > 0 && displayList.length === 0 && (
           <div style={{ textAlign: "center", padding: "40px 20px", color: C.textMuted, fontSize: 13 }}>
-            No accounts match — try a different search or filter.
+            {copy.noMatch}
           </div>
         )}
 

@@ -78,8 +78,22 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
   var [accountType, setAccountType]     = useState(existing ? (existing.account_type || 'standard') : (defaultType || 'standard'));
   var [address, setAddress]             = useState(existing ? (existing.address || '') : '');
   var [accountNumber, setAccountNumber] = useState(existing ? (existing.account_number || '') : '');
+  var [agreementEndDate, setAgreementEndDate] = useState(existing ? (existing.agreement_end_date || '') : '');
+  var [scopeSummary, setScopeSummary]         = useState(existing ? (existing.scope_summary || '') : '');
+  var [billingTerms, setBillingTerms]         = useState(existing ? (existing.billing_terms || '') : '');
+  var [spendYtd, setSpendYtd]                 = useState(existing && existing.spend_ytd != null ? String(existing.spend_ytd) : '');
   var [loading, setLoading] = useState(false);
   var [error, setError]     = useState(null);
+
+  var isInternal = accountType === 'internal_team';
+  var isPartner  = accountType === 'partner';
+  var isCustomer = !isInternal && !isPartner;
+  var modalTitle = existing
+    ? (isInternal ? "Edit Department" : isPartner ? "Edit Partner" : "Edit Account")
+    : (isInternal ? "Add Department" : isPartner ? "Add Partner" : "Add Account");
+  var saveLabel = existing
+    ? "Save Changes"
+    : (isInternal ? "Add Department" : isPartner ? "Add Partner" : "Add Account");
 
   var region      = detectRegion(states);
   var marketScope = detectMarketScope(states);
@@ -128,11 +142,13 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
 
     var parsedRev = revenueAmount.trim() === "" ? null : parseFloat(revenueAmount.replace(/[^0-9.]/g, ""));
     if (parsedRev !== null && isNaN(parsedRev)) parsedRev = null;
+    var parsedSpend = spendYtd.trim() === "" ? null : parseFloat(spendYtd.replace(/[^0-9.]/g, ""));
+    if (parsedSpend !== null && isNaN(parsedSpend)) parsedSpend = null;
     var data = {
       name:              name.trim(),
-      revenue_amount:    parsedRev,
-      revenue:           revenueNote.trim() || (parsedRev !== null ? null : null),
-      tier:              tier,
+      revenue_amount:    isCustomer ? parsedRev : null,
+      revenue:           isCustomer ? (revenueNote.trim() || (parsedRev !== null ? null : null)) : null,
+      tier:              isCustomer ? tier : null,
       status:            status,
       objective:         notes.trim() || null,
       tags:              tags.length > 0 ? tags : null,
@@ -143,6 +159,10 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
       account_type:      accountType || 'standard',
       address:           address.trim() || null,
       account_number:    accountNumber.trim() || null,
+      agreement_end_date: isPartner ? (agreementEndDate || null) : null,
+      scope_summary:      isPartner ? (scopeSummary.trim() || null) : null,
+      billing_terms:      isPartner ? (billingTerms.trim() || null) : null,
+      spend_ytd:          isPartner ? parsedSpend : null,
     };
 
     var needsGeocode = address.trim() && (!existing || existing.address !== address.trim()) && !(existing && existing.lat);
@@ -159,14 +179,54 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
       .catch(function(err) { setLoading(false); setError(err.message); });
   }
 
+  var typeOptions = [
+    { value: "standard",      label: "Customer" },
+    { value: "internal_team", label: "Department" },
+    { value: "partner",       label: "Partner" },
+  ];
+  // Hide the type chooser when adding a shop sub-account or editing one.
+  var showTypeChooser = !existing && defaultType !== 'shop';
+
   return (
-    <Modal title={existing ? "Edit Account" : "Add Account"} onClose={onClose} width={480}>
+    <Modal title={modalTitle} onClose={onClose} width={480}>
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+
+        {/* Workspace type — only when creating a new top-level record */}
+        {showTypeChooser && (
+          <div>
+            <FL>Workspace Type</FL>
+            <div style={{ display: "flex", gap: 5 }}>
+              {typeOptions.map(function (opt) {
+                var on = (opt.value === "standard")
+                  ? (accountType === "standard" || accountType === "mso" || accountType === "shop")
+                  : accountType === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={function () { setAccountType(opt.value); }}
+                    style={{
+                      flex: 1,
+                      background: on ? C.accentMid : "rgba(255,255,255,0.04)",
+                      color: on ? C.accent : C.textMuted,
+                      border: "1px solid " + (on ? C.accentRing : C.border),
+                      borderRadius: 8, padding: "9px 6px", fontSize: 12,
+                      fontWeight: on ? 700 : 400,
+                      fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer",
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Name */}
         <div>
-          <FL htmlFor="account-name">Account Name</FL>
-          <InputField id="account-name" value={name} onChange={function (e) { setName(e.target.value); }} placeholder="Company name" />
+          <FL htmlFor="account-name">{isInternal ? "Department Name" : isPartner ? "Partner Name" : "Account Name"}</FL>
+          <InputField id="account-name" value={name} onChange={function (e) { setName(e.target.value); }} placeholder={isInternal ? "e.g. Marketing" : isPartner ? "e.g. Acme Agency" : "Company name"} />
         </div>
 
         {/* Account Number */}
@@ -175,7 +235,8 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
           <InputField id="account-number" value={accountNumber} onChange={function (e) { setAccountNumber(e.target.value); }} placeholder="e.g. 10042" />
         </div>
 
-        {/* Revenue */}
+        {/* Revenue — customer only */}
+        {isCustomer && (
         <div>
           <FL htmlFor="account-revenue">Revenue (YTD)</FL>
           <div style={{ position: "relative" }}>
@@ -202,6 +263,62 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
             style={{ marginTop: 6, fontSize: 12 }}
           />
         </div>
+        )}
+
+        {/* Partner fields */}
+        {isPartner && (
+          <>
+            <div>
+              <FL htmlFor="partner-scope">Scope Summary</FL>
+              <TextArea
+                id="partner-scope"
+                value={scopeSummary}
+                onChange={function (e) { setScopeSummary(e.target.value); }}
+                placeholder="What this partner does for us"
+                rows={2}
+              />
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div>
+                <FL htmlFor="partner-end">Agreement End Date</FL>
+                <InputField
+                  id="partner-end"
+                  type="date"
+                  value={agreementEndDate}
+                  onChange={function (e) { setAgreementEndDate(e.target.value); }}
+                />
+              </div>
+              <div>
+                <FL htmlFor="partner-spend">Spend YTD</FL>
+                <div style={{ position: "relative" }}>
+                  <span style={{
+                    position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)",
+                    color: C.textMuted, fontSize: 14, pointerEvents: "none",
+                    fontFamily: "'Inter', system-ui, sans-serif",
+                  }}>$</span>
+                  <InputField
+                    id="partner-spend"
+                    type="number"
+                    inputMode="decimal"
+                    value={spendYtd}
+                    onChange={function (e) { setSpendYtd(e.target.value); }}
+                    placeholder="120000"
+                    style={{ paddingLeft: 24 }}
+                  />
+                </div>
+              </div>
+            </div>
+            <div>
+              <FL htmlFor="partner-billing">Billing Terms</FL>
+              <InputField
+                id="partner-billing"
+                value={billingTerms}
+                onChange={function (e) { setBillingTerms(e.target.value); }}
+                placeholder="e.g. Net 30, monthly retainer"
+              />
+            </div>
+          </>
+        )}
 
         {/* Address */}
         <div>
@@ -215,7 +332,8 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
         </div>
 
         {/* Tier + Status */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isCustomer ? "1fr 1fr" : "1fr", gap: 10 }}>
+          {isCustomer && (
           <div>
             <FL>Tier</FL>
             <div style={{ display: "flex", gap: 5 }}>
@@ -238,6 +356,7 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
               })}
             </div>
           </div>
+          )}
           <div>
             <FL>Status</FL>
             <div style={{ display: "flex", gap: 5 }}>
@@ -264,8 +383,8 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
           </div>
         </div>
 
-        {/* MSO toggle */}
-        {defaultType !== 'shop' && (
+        {/* MSO toggle — customer-type only */}
+        {defaultType !== 'shop' && isCustomer && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <button
               type="button"
@@ -289,9 +408,9 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
           </div>
         )}
 
-        {/* Supplier types */}
+        {/* Tags (free-form labels) */}
         <div>
-          <FL>Account Type</FL>
+          <FL>Tags <span style={{ fontWeight: 400, color: C.textMuted }}>(optional)</span></FL>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
             {PRESET_TAGS.map(function (t) {
               return (
@@ -331,7 +450,8 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
           )}
         </div>
 
-        {/* Serviced states */}
+        {/* Serviced states — customer only */}
+        {isCustomer && (
         <div style={{ position: "relative" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
             <FL style={{ marginBottom: 0 }}>Serviced States</FL>
@@ -497,6 +617,7 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
             </div>
           )}
         </div>
+        )}
 
         {/* Parent account */}
         {!defaultParentId && accounts && accounts.length > 0 && (
@@ -553,7 +674,7 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
 
         <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
           <AmberBtn style={{ flex: 1 }} onClick={handleSave} disabled={loading}>
-            {loading ? "Saving..." : (existing ? "Save Changes" : "Add Account")}
+            {loading ? "Saving..." : saveLabel}
           </AmberBtn>
           <SecBtn style={{ flex: 1 }} onClick={onClose}>Cancel</SecBtn>
         </div>

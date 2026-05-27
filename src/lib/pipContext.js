@@ -89,6 +89,7 @@ export function curateContext(raw, message, focusedAccountIds, opts) {
       health: a.health,
       last_interaction_at: a.last_interaction_at,
       revenue_amount: a.revenue_amount,
+      account_type: a.account_type,
     };
   });
   return {
@@ -139,23 +140,54 @@ function renderAccountCached(a) {
   return lines.join("\n");
 }
 
+function typeLabel(t) {
+  if (t === "internal_team") return "Department (internal team)";
+  if (t === "partner")       return "Partner (3rd-party vendor)";
+  if (t === "mso")           return "Customer (MSO)";
+  if (t === "shop")          return "Customer (shop)";
+  return "Customer";
+}
+
+function typeFocusHint(t) {
+  if (t === "internal_team") return "Focus: cross-team deliverables, overdue commitments, and internal follow-ups. Revenue/tier/pipeline don't apply.";
+  if (t === "partner")       return "Focus: agreement status, renewal date, scope drift, spend trends. Revenue/tier/pipeline don't apply.";
+  return null;
+}
+
 function renderAccountFull(a) {
   var lines = [];
-  lines.push("ACCOUNT: " + a.name + (a.id ? " (id: " + a.id + ")" : ""));
+  var headerSuffix = "";
+  if (a.account_type && a.account_type !== "standard" && a.account_type !== "mso" && a.account_type !== "shop") {
+    headerSuffix = " [" + typeLabel(a.account_type) + "]";
+  } else if (a.account_type === "mso") {
+    headerSuffix = " [MSO]";
+  }
+  lines.push("ACCOUNT: " + a.name + headerSuffix + (a.id ? " (id: " + a.id + ")" : ""));
   var status = a.status || "—";
   var health = a.health || "—";
   var last   = a.last_interaction_at ? fmtDate(a.last_interaction_at) : "never";
   var ds     = daysSince(a.last_interaction_at);
   var dsStr  = ds == null ? "" : " (" + ds + "d ago)";
   var statusLine = "Status: " + status + " · Health: " + health + " · Last contact: " + last + dsStr;
-  if (a.tier) statusLine += " · Tier: " + a.tier;
-  if (a.revenueTrend && a.revenueTrend.amount) {
+  var isCustomerType = a.account_type !== "internal_team" && a.account_type !== "partner";
+  if (a.tier && isCustomerType) statusLine += " · Tier: " + a.tier;
+  if (isCustomerType && a.revenueTrend && a.revenueTrend.amount) {
     statusLine += " · Revenue: " + a.revenueTrend.amount;
     if (a.revenueTrend.momPct != null) statusLine += " (MoM " + (a.revenueTrend.momPct > 0 ? "+" : "") + a.revenueTrend.momPct + "%";
     if (a.revenueTrend.yoyPct != null) statusLine += ", YoY " + (a.revenueTrend.yoyPct > 0 ? "+" : "") + a.revenueTrend.yoyPct + "%";
     if (a.revenueTrend.momPct != null || a.revenueTrend.yoyPct != null) statusLine += ")";
   }
   lines.push(statusLine);
+  var focusHint = typeFocusHint(a.account_type);
+  if (focusHint) lines.push(focusHint);
+  if (a.account_type === "partner") {
+    var partnerBits = [];
+    if (a.agreement_end_date) partnerBits.push("Agreement ends: " + a.agreement_end_date);
+    if (a.billing_terms)      partnerBits.push("Billing: " + a.billing_terms);
+    if (a.spend_ytd != null)  partnerBits.push("Spend YTD: $" + a.spend_ytd);
+    if (partnerBits.length) lines.push(partnerBits.join(" · "));
+    if (a.scope_summary)      lines.push("Scope: " + trunc(a.scope_summary, 240));
+  }
   if (a.tags && a.tags.length) lines.push("Tags: " + a.tags.join(", "));
   if (a.region) lines.push("Region: " + a.region);
   if (a.notes) lines.push("Notes: " + trunc(a.notes, 280));
@@ -224,6 +256,8 @@ function renderAccountFull(a) {
 
 function renderAccountListItem(a) {
   var bits = [a.name];
+  if (a.account_type === "internal_team") bits.push("department");
+  else if (a.account_type === "partner")  bits.push("partner");
   if (a.status) bits.push(a.status);
   if (a.health) bits.push("health=" + a.health);
   var ds = daysSince(a.last_interaction_at);

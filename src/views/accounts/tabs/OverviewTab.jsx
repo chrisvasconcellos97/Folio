@@ -190,6 +190,9 @@ function MiniSparkline({ records }) {
 }
 
 export function OverviewTab({ account, userId, orgId, openItems, meetings, onQuickMeeting, onLogMeeting, onAddItem, onSaveSummary, subAccounts, onSelectAccount, revenueHistory, shopMetrics, onUpdateAccount, projects, onSwitchTab }) {
+  var isInternalTeam = account.account_type === "internal_team";
+  var isPartner      = account.account_type === "partner";
+  var isCustomerType = !isInternalTeam && !isPartner;
   var pipInsight = useMemo(function () {
     return buildPipInsight(account, openItems, revenueHistory, shopMetrics, projects);
   }, [account, openItems, revenueHistory, shopMetrics, projects]);
@@ -483,16 +486,59 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
             </span>
           </div>
         </Card>
-        <Card>
-          <FL>Revenue YTD</FL>
-          <div style={{ fontSize: 18, fontWeight: 700, color: C.accent, fontVariantNumeric: "tabular-nums" }}>
-            {account.revenue || "—"}
-          </div>
-        </Card>
+        {isCustomerType && (
+          <Card>
+            <FL>Revenue YTD</FL>
+            <div style={{ fontSize: 18, fontWeight: 700, color: C.accent, fontVariantNumeric: "tabular-nums" }}>
+              {account.revenue || "—"}
+            </div>
+          </Card>
+        )}
+        {isPartner && (
+          <Card>
+            <FL>Spend YTD</FL>
+            <div style={{ fontSize: 18, fontWeight: 700, color: C.accent, fontVariantNumeric: "tabular-nums" }}>
+              {account.spend_ytd != null ? "$" + Number(account.spend_ytd).toLocaleString() : "—"}
+            </div>
+          </Card>
+        )}
       </div>
 
-      {/* Revenue trend */}
-      {(function () {
+      {/* Partner Agreement card */}
+      {isPartner && (account.agreement_end_date || account.scope_summary || account.billing_terms) && (
+        <Card>
+          <FL>Partner Agreement</FL>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 6 }}>
+            {account.scope_summary && (
+              <div>
+                <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 3 }}>Scope</div>
+                <div style={{ fontSize: 13, color: C.textSub, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{account.scope_summary}</div>
+              </div>
+            )}
+            {(account.agreement_end_date || account.billing_terms) && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                {account.agreement_end_date && (
+                  <div>
+                    <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 3 }}>Agreement End</div>
+                    <div style={{ fontSize: 13, color: C.text, fontVariantNumeric: "tabular-nums" }}>
+                      {new Date(account.agreement_end_date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    </div>
+                  </div>
+                )}
+                {account.billing_terms && (
+                  <div>
+                    <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 3 }}>Billing</div>
+                    <div style={{ fontSize: 13, color: C.text }}>{account.billing_terms}</div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {/* Revenue trend — customer only */}
+      {isCustomerType && (function () {
         var rh      = revenueHistory || [];
         var sm      = shopMetrics || [];
         var latest  = latestRecord(rh, account.id);

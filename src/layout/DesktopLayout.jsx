@@ -9,14 +9,17 @@ var MONO = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
 
 var NAV_ITEMS = [
-  { id: "accounts",  label: "Accounts",  icon: "▣"  },
-  { id: "meetings",  label: "Meetings",  icon: "◷"  },
-  { id: "pipeline",  label: "Pipeline",  icon: "▦"  },
-  { id: "cadence",   label: "Cadence",   icon: "↻"  },
-  { id: "gauge",     label: "Gauge",     icon: "gauge" },
-  { id: "pip",       label: "Pip",       icon: null },
-  { id: "settings",  label: "Team",      icon: "◈"  },
-  { id: "routes",    label: "Route",     icon: "⊕"  },
+  { id: "accounts",    label: "Accounts",    icon: "▣"     },
+  { id: "departments", label: "Departments", icon: "◰"     },
+  { id: "partners",    label: "Partners",    icon: "◳"     },
+  { id: "__divider__", divider: true                       },
+  { id: "meetings",    label: "Meetings",    icon: "◷"     },
+  { id: "pipeline",    label: "Pipeline",    icon: "▦"     },
+  { id: "cadence",     label: "Cadence",     icon: "↻"     },
+  { id: "gauge",       label: "Gauge",       icon: "gauge" },
+  { id: "pip",         label: "Pip",         icon: null    },
+  { id: "settings",    label: "Team",        icon: "◈"     },
+  { id: "routes",      label: "Route",       icon: "⊕"     },
 ];
 
 export function DesktopLayout({
@@ -103,6 +106,14 @@ export function DesktopLayout({
         {/* Nav */}
         <nav style={{ display: "flex", flexDirection: "column", gap: 1, flex: 1 }}>
           {NAV_ITEMS.map(function (item) {
+            if (item.divider) {
+              return (
+                <div
+                  key="__divider__"
+                  style={{ borderBottom: "1px solid " + C.rule, margin: "8px 4px 8px" }}
+                />
+              );
+            }
             var active = view === item.id;
             var isGauge = item.id === "gauge";
             var isPip   = item.id === "pip";
@@ -175,7 +186,7 @@ export function DesktopLayout({
               textAlign: "center",
             }}
           >
-            + Account
+            {view === "departments" ? "+ Department" : view === "partners" ? "+ Partner" : "+ Account"}
           </button>
           <div style={{ borderTop: "1px solid " + C.rule, paddingTop: 10 }}>
             <UserMenu userMeta={userMeta} onSignOut={onSignOut} onTour={onTour} onSettings={function () { setView("settings"); }} dropUp />

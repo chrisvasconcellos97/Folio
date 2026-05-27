@@ -45,9 +45,15 @@ function setDefaultTab(accountId, tab) {
 }
 
 export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit, onDelete, onUpdate, onSelectAccount, pipPrefill, onPipPrefillHandled, initialHubCadenceId, onHubConsumed, revenueHistory, shopMetrics, onAddAccount }) {
+  var isInternalTeam = account.account_type === 'internal_team';
+  var isPartner      = account.account_type === 'partner';
+  var isCustomerType = !isInternalTeam && !isPartner;
+
   var TABS = account.account_type === 'mso'
     ? ["overview", "shops", "meetings", "tasks", "contacts", "cadence", "projects"]
     : ["overview", "meetings", "tasks", "contacts", "cadence", "projects"];
+
+  var workspaceLabel = isInternalTeam ? "Departments" : isPartner ? "Partners" : "Accounts";
 
   var [tab, setTab]               = useState(function() {
     return getDefaultTab(account.id) || "overview";
@@ -165,7 +171,7 @@ export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit
             gap: 4,
           }}
         >
-          ← Accounts › {account.name}
+          ← {workspaceLabel} › {account.name}
         </button>
 
         <div
@@ -207,7 +213,7 @@ export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit
               </div>
             )}
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-              {account.tier && (
+              {account.tier && isCustomerType && (
                 <Pill color={TIER_COLORS[account.tier] || C.textSoft}>
                   {account.tier}
                 </Pill>
@@ -321,29 +327,60 @@ export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit
           </div>
 
           <div style={{ textAlign: "right", flexShrink: 0 }}>
-            <div
-              style={{
-                fontFamily: SERIF,
-                fontSize: 28,
-                fontWeight: 400,
-                color: C.accent,
-                fontFeatureSettings: '"tnum"',
-              }}
-            >
-              {displayRevenue(account)}
-            </div>
-            <div
-              style={{
-                fontFamily: MONO,
-                fontSize: 9.5,
-                color: C.textMuted,
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-                marginTop: 2,
-              }}
-            >
-              Revenue YTD
-            </div>
+            {isCustomerType && (
+              <>
+                <div
+                  style={{
+                    fontFamily: SERIF,
+                    fontSize: 28,
+                    fontWeight: 400,
+                    color: C.accent,
+                    fontFeatureSettings: '"tnum"',
+                  }}
+                >
+                  {displayRevenue(account)}
+                </div>
+                <div
+                  style={{
+                    fontFamily: MONO,
+                    fontSize: 9.5,
+                    color: C.textMuted,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
+                    marginTop: 2,
+                  }}
+                >
+                  Revenue YTD
+                </div>
+              </>
+            )}
+            {isPartner && account.spend_ytd != null && (
+              <>
+                <div
+                  style={{
+                    fontFamily: SERIF,
+                    fontSize: 28,
+                    fontWeight: 400,
+                    color: C.accent,
+                    fontFeatureSettings: '"tnum"',
+                  }}
+                >
+                  ${Number(account.spend_ytd).toLocaleString()}
+                </div>
+                <div
+                  style={{
+                    fontFamily: MONO,
+                    fontSize: 9.5,
+                    color: C.textMuted,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
+                    marginTop: 2,
+                  }}
+                >
+                  Spend YTD
+                </div>
+              </>
+            )}
             {(function() {
               if (meetings.length === 0) return null;
               var now = new Date();

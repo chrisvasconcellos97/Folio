@@ -55,6 +55,7 @@ export default function App() {
   var [selectedAccount, setSelected]    = useState(null);
   var [pendingHubCadenceId, setPendingHubCadenceId] = useState(null);
   var [showAddAccount, setShowAddAccount] = useState(false);
+  var [addAccountDefaultType, setAddAccountDefaultType] = useState(null);
   var [editingAccount, setEditingAccount] = useState(null);
   var [pipPrefill, setPipPrefill]       = useState(null);
   var [showOnboarding, setShowOnboarding] = useState(false);
@@ -263,34 +264,54 @@ export default function App() {
 
   /* ---------- Content panes ---------- */
 
-  var accountsListPane = (
-    <AccountsView
-      accounts={accounts}
-      loading={acctLoading}
-      onSelect={handleSelectAccount}
-      onAddAccount={function () { setShowAddAccount(true); }}
-      tasks={tasks}
-      addTask={addTask}
-      updateTask={updateTask}
-      deleteTask={deleteTask}
-      hasMeetings={meetings.length > 0}
-      hasCadences={cadences.length > 0}
-      revenueHistory={revenueHistory}
-      items={allItems}
-      meetings={meetings}
-      contacts={allContacts}
-      onColdClick={function() { handleSetView("accounts"); }}
-      onOverdueClick={function() { handleSetView("cadence"); }}
-      onFollowUpClick={function() { handleSetView("meetings"); }}
-      onLogMeeting={function(accountId, date, title) {
-        return addMeeting({ account_id: accountId, meeting_date: date, title: title });
-      }}
-    />
-  );
+  function workspaceTypeFor(v) {
+    if (v === "departments") return "internal_team";
+    if (v === "partners")    return "partner";
+    return "customer";
+  }
+
+  function buildWorkspacePane(typeFilter) {
+    return (
+      <AccountsView
+        accounts={accounts}
+        loading={acctLoading}
+        typeFilter={typeFilter}
+        onSelect={handleSelectAccount}
+        onAddAccount={function () {
+          var t = typeFilter === "internal_team" ? "internal_team"
+                : typeFilter === "partner"       ? "partner"
+                : null;
+          setAddAccountDefaultType(t);
+          setShowAddAccount(true);
+        }}
+        tasks={tasks}
+        addTask={addTask}
+        updateTask={updateTask}
+        deleteTask={deleteTask}
+        hasMeetings={meetings.length > 0}
+        hasCadences={cadences.length > 0}
+        revenueHistory={revenueHistory}
+        items={allItems}
+        meetings={meetings}
+        contacts={allContacts}
+        onColdClick={function() { handleSetView("accounts"); }}
+        onOverdueClick={function() { handleSetView("cadence"); }}
+        onFollowUpClick={function() { handleSetView("meetings"); }}
+        onLogMeeting={function(accountId, date, title) {
+          return addMeeting({ account_id: accountId, meeting_date: date, title: title });
+        }}
+      />
+    );
+  }
+
+  var currentWorkspaceType = workspaceTypeFor(view);
+  var accountsListPane = buildWorkspacePane(currentWorkspaceType);
 
   var mainContent = null;
 
-  if (view === "accounts") {
+  var isWorkspaceView = view === "accounts" || view === "departments" || view === "partners";
+
+  if (isWorkspaceView) {
     if (selectedAccount) {
       mainContent = (
         <div key={selectedAccount.id} className="view-fade-in">
@@ -446,8 +467,9 @@ export default function App() {
       userId={userId}
       existing={editingAccount || null}
       accounts={accounts}
+      defaultType={editingAccount ? null : addAccountDefaultType}
       onSave={editingAccount ? handleEditAccount : handleAddAccount}
-      onClose={function () { setShowAddAccount(false); setEditingAccount(null); }}
+      onClose={function () { setShowAddAccount(false); setEditingAccount(null); setAddAccountDefaultType(null); }}
     />
   );
 
@@ -496,11 +518,17 @@ export default function App() {
         <DesktopLayout
           view={view}
           setView={handleSetView}
-          onAddAccount={function () { setShowAddAccount(true); }}
+          onAddAccount={function () {
+            var t = view === "departments" ? "internal_team"
+                  : view === "partners"    ? "partner"
+                  : null;
+            setAddAccountDefaultType(t);
+            setShowAddAccount(true);
+          }}
           onSignOut={signOut}
           onTour={replayTour}
           userMeta={userMeta}
-          accountsPane={view === "accounts" ? accountsListPane : null}
+          accountsPane={isWorkspaceView ? accountsListPane : null}
           detailPane={mainContent}
         />
         {addAccountModal}
@@ -562,7 +590,13 @@ export default function App() {
       <MobileLayout
         view={view}
         setView={handleSetView}
-        onAddAccount={function () { setShowAddAccount(true); }}
+        onAddAccount={function () {
+          var t = view === "departments" ? "internal_team"
+                : view === "partners"    ? "partner"
+                : null;
+          setAddAccountDefaultType(t);
+          setShowAddAccount(true);
+        }}
         onSignOut={signOut}
         onTour={replayTour}
         onSettings={function () { handleSetView("settings"); }}

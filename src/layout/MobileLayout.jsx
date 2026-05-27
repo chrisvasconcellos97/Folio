@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { C } from "../lib/colors";
 import { FolioIcon } from "../components/FolioIcon";
 import { GaugeIcon } from "../components/GaugeIcon";
@@ -16,21 +16,30 @@ var TOOLTIP_TIPS = {
   pip:     "Your AI field analyst — ask anything about your accounts.",
 };
 
+var WORKSPACE_IDS = ["accounts", "departments", "partners"];
+var WORKSPACE_LABELS = { accounts: "Accounts", departments: "Departments", partners: "Partners" };
+
 var NAV_ITEMS = [
-  { id: "accounts", label: "Accounts", icon: "▣"     },
-  { id: "meetings", label: "Meetings", icon: "◷"     },
-  { id: "pipeline", label: "Pipeline", icon: "▦"     },
-  { id: "cadence",  label: "Cadence",  icon: "↻"     },
-  { id: "gauge",    label: "Gauge",    icon: "gauge"  },
-  { id: "routes",   label: "Route",    icon: "⊕"     },
+  { id: "workspaces", label: "Workspaces", icon: "▣",  isWorkspaces: true },
+  { id: "meetings",   label: "Meetings",   icon: "◷"     },
+  { id: "pipeline",   label: "Pipeline",   icon: "▦"     },
+  { id: "cadence",    label: "Cadence",    icon: "↻"     },
+  { id: "gauge",      label: "Gauge",      icon: "gauge"  },
+  { id: "routes",     label: "Route",      icon: "⊕"     },
 ];
 
 export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, onSettings, userMeta, children }) {
   var scrollRef = useRef(null);
+  var [wsOpen, setWsOpen] = useState(false);
+  var isWorkspaceView = WORKSPACE_IDS.indexOf(view) !== -1;
 
   useEffect(function () {
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
   }, [view]);
+
+  useEffect(function () {
+    if (!isWorkspaceView) setWsOpen(false);
+  }, [view, isWorkspaceView]);
 
   return (
     <div
@@ -90,7 +99,7 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <AmberBtn onClick={onAddAccount} style={{ fontSize: 11, padding: "6px 13px" }}>
-              + Account
+              {view === "departments" ? "+ Dept" : view === "partners" ? "+ Partner" : "+ Account"}
             </AmberBtn>
             <UserMenu userMeta={userMeta} onSignOut={onSignOut} onTour={onTour} onSettings={onSettings} />
           </div>
@@ -110,6 +119,67 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
           {children}
         </div>
       </div>
+
+      {/* Workspaces popover */}
+      {wsOpen && (
+        <>
+          <div
+            onClick={function () { setWsOpen(false); }}
+            style={{
+              position: "fixed", inset: 0, zIndex: 49, background: "rgba(0,0,0,0.35)",
+            }}
+          />
+          <div
+            role="menu"
+            style={{
+              position: "fixed",
+              left: 16,
+              right: 16,
+              bottom: "calc(74px + env(safe-area-inset-bottom))",
+              background: C.surface,
+              border: "1px solid " + C.rule,
+              borderRadius: 12,
+              padding: 8,
+              zIndex: 60,
+              boxShadow: "0 12px 32px rgba(0,0,0,0.45)",
+              display: "flex",
+              flexDirection: "column",
+              gap: 2,
+            }}
+          >
+            <div style={{
+              fontFamily: MONO, fontSize: 9, color: C.textFaint,
+              letterSpacing: "0.1em", textTransform: "uppercase",
+              padding: "6px 10px 4px",
+            }}>
+              Workspaces
+            </div>
+            {WORKSPACE_IDS.map(function (id) {
+              var active = view === id;
+              return (
+                <button
+                  key={id}
+                  role="menuitem"
+                  onClick={function () { setWsOpen(false); setView(id); }}
+                  style={{
+                    background: active ? C.accentFaint : "transparent",
+                    border: "1px solid " + (active ? C.accentLine : "transparent"),
+                    borderRadius: 8,
+                    padding: "11px 12px",
+                    fontFamily: "'Inter', system-ui, sans-serif",
+                    fontSize: 14,
+                    color: active ? C.accent : C.textSoft,
+                    textAlign: "left",
+                    cursor: "pointer",
+                  }}
+                >
+                  {WORKSPACE_LABELS[id]}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       {/* Bottom nav */}
       <div
@@ -134,12 +204,27 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
           }}
         >
           {NAV_ITEMS.map(function (item) {
-            var active = view === item.id;
+            var isWorkspaces = !!item.isWorkspaces;
+            var active = isWorkspaces ? isWorkspaceView : view === item.id;
             var isGauge = item.id === "gauge";
+            var displayLabel = isWorkspaces && isWorkspaceView
+              ? WORKSPACE_LABELS[view]
+              : item.label;
             var btn = (
               <button
                 key={item.id}
-                onClick={function () { setView(item.id); }}
+                onClick={function () {
+                  if (isWorkspaces) {
+                    if (isWorkspaceView) {
+                      setWsOpen(function (o) { return !o; });
+                    } else {
+                      setView("accounts");
+                    }
+                    return;
+                  }
+                  setWsOpen(false);
+                  setView(item.id);
+                }}
                 style={{
                   flex: 1,
                   padding: "10px 6px",
@@ -158,6 +243,8 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
                   alignItems: "center",
                   gap: 3,
                 }}
+                aria-expanded={isWorkspaces ? wsOpen : undefined}
+                aria-haspopup={isWorkspaces ? "menu" : undefined}
               >
                 {isGauge ? (
                   <GaugeIcon size={14} color={active ? C.blue : C.textMuted} />
@@ -166,7 +253,10 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
                 ) : (
                   <PipOrb size="xs" />
                 )}
-                {item.label}
+                {displayLabel}
+                {isWorkspaces && (
+                  <span style={{ fontSize: 7, marginTop: -1, opacity: 0.7 }}>{wsOpen ? "▾" : "▴"}</span>
+                )}
               </button>
             );
             if (TOOLTIP_TIPS[item.id]) {

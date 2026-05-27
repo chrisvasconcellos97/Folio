@@ -26,6 +26,10 @@ create table if not exists folio_accounts (
   address                 text,
   lat                     float8,
   lng                     float8,
+  agreement_end_date      date,
+  scope_summary           text,
+  billing_terms           text,
+  spend_ytd               numeric,
   created_at              timestamptz default now(),
   updated_at              timestamptz default now()
 );
@@ -46,6 +50,8 @@ create table if not exists folio_contacts (
   email      text,
   linkedin   text,
   is_poc     boolean default false,
+  is_leader  boolean default false,
+  is_primary boolean default false,
   notes      text,
   created_at timestamptz default now()
 );
