@@ -63,7 +63,7 @@ export function PrintAccountSheet({ account, contacts, meetings, items }) {
         </div>
       )}
 
-      <p style={{ marginTop: 24, fontSize: 11, color: "#999" }}>Exported from Folio · {new Date().toLocaleDateString()}</p>
+      <p style={{ marginTop: 24, fontSize: 11, color: "#999" }}>Exported from Folios · {new Date().toLocaleDateString()}</p>
     </div>
   );
 }
