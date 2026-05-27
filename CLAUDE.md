@@ -141,6 +141,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
    - Pip context improvement — pass full account history (all meetings, open items, contacts) into Pip system prompt
    - Auto-create open items from meeting action items — checkbox in Add Meeting modal to promote each action item to an open item
    - In-app notification banner — shows on login: accounts gone cold, items overdue, follow-ups due this week
+   - **Cadence Hub** — clicking a cadence row in CadenceView opens a dedicated all-access screen for that specific recurring meeting. Pip brief at top (what this cadence is, last touchpoint, next due). One freeform notes pane that Pip cleans into summary / action items / promised deliveries / follow-up dates on demand. Past meetings log showing every prior instance with their Pip outputs. Open + closed tasks tied to this cadence (filtered from `folio_items`). Scheduled follow-ups surfaced as a timeline. One note in, structured output out, full history in one place.
 
 4. **Native feel:** *(no open items)*
 
