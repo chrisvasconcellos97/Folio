@@ -111,13 +111,10 @@ export function AuthView({ onSignIn, onSignUp }) {
             </div>
           </div>
           <div style={{ fontSize: 26, fontWeight: 600, color: C.text, letterSpacing: "0.02em" }}>
-            Folio
+            Folios
           </div>
           <div style={{ fontSize: 11, color: C.textMuted, letterSpacing: "0.12em", marginTop: 4, textTransform: "uppercase" }}>
             Account Management
-          </div>
-          <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4, letterSpacing: "0.08em" }}>
-            part of Briefcase
           </div>
         </div>
 
