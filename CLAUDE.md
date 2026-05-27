@@ -127,6 +127,17 @@ This app is currently single-user but should be built with multi-tenancy in mind
 - Never execute immediately on a feature request — queue it first
 - **Before shipping items 4–7:** do a full layout audit first — review placement, spacing, and information hierarchy across every screen to make sure new features land cleanly into a well-organized foundation
 
+### Idea Capture Rule (read this every session)
+
+**Nothing Chris mentions gets discarded.** Ideas have been lost across chats — this is the fix.
+
+- **Capture aggressively, not selectively.** If Chris says "could we also...", "what about...", "I'd love...", "I'm wondering if...", "would be nice to have...", or even floats a half-formed idea mid-conversation → it goes into **Pending Updates** or **Feature Wishlist / Roadmap** *that same turn*, before responding to anything else.
+- **Even rejected/deferred ideas get logged** in the Wishlist with a one-line note on why deferred — so they resurface if context changes.
+- **Asides count.** "Side note, the Departments thing would be cool" → that's an idea, capture it.
+- **Tangents in the middle of another feature discussion count.** If Chris is walking through Cadence Hub and mentions a Departments tab → capture Departments immediately, don't lose it in the Cadence Hub conversation.
+- **When in doubt, log it.** A half-captured idea is recoverable. A forgotten idea is gone.
+- **Confirm capture out loud** when you log something new mid-conversation: "Queued under [section]." So Chris sees it landed.
+
 ---
 
 ## Pending Updates
@@ -152,6 +163,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
      - **Account Meetings tab:** stays as all-cadence rollup view (and home for cadence-less conversations on accounts without cadences set up).
      - **Backfill:** one-time per-account prompt to assign cadences to existing meetings.
      - **Open discussion (not in v1):** how action items / promised deliveries feed into Gauge.
+   - **Departments tab** — internal-teams workspace (marketing, sales, product, ops, etc). Click a department → full hub for working notes, tasks, conversations with team leads, optional cadences. Two modeling options to decide before build: (a) separate top-level concept with new `folio_departments` table, distinct nav, no revenue/shop fields — clean separation; (b) reuse `folio_accounts` with `account_type = 'internal_team'` alongside `mso`/`shop` — free reuse of Cadence Hub, conversations, contacts, Pip stack. Lean toward (b) so internal teams inherit the same workflow muscle, with conditional UI hiding revenue/shop sections for `internal_team` type. Decide whether to fold into Cadence Hub build or ship after.
 
 4. **Native feel:** *(no open items)*
 
