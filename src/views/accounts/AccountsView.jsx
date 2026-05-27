@@ -30,8 +30,15 @@ function saveSearchHistory(query) {
 
 var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red };
 var STATUS_LABELS = { green: "Healthy", yellow: "Watch",  red: "At Risk" };
-var TIER_COLORS   = { Major: C.blue,   Mid: C.purple,    Growth: C.green };
+var TIER_COLORS   = { Major: C.blue, Mid: C.yellow, Growth: C.purple };
 var TIER_ORDER    = { Major: 1, Mid: 2, Growth: 3 };
+
+// Left-edge fade tints per tier (alpha tuned to match the Gauge style)
+var TIER_FADE = {
+  Major:  "rgba(103, 200, 249, 0.28)",
+  Mid:    "rgba(232, 200, 56, 0.28)",
+  Growth: "rgba(180, 140, 232, 0.28)",
+};
 
 var FILTERS = ["All", "Major", "Mid", "Growth", "Watching", "At Risk"];
 
@@ -580,14 +587,18 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
       <div style={{ display: "flex", gap: 5, marginBottom: 6, overflowX: "auto", paddingBottom: 2 }}>
         {FILTERS.map(function (f) {
           var active = filter === f;
+          var tint   = TIER_COLORS[f] || (f === "Watching" ? C.yellow : f === "At Risk" ? C.red : null);
+          var bg     = active ? (tint || C.accent) : "transparent";
+          var border = active ? (tint || C.accent) : (tint ? "rgba(255,255,255,0.18)" : C.rule);
+          var color  = active ? C.bg : (tint || C.textMuted);
           return (
             <button
               key={f}
               onClick={function () { setFilter(f); }}
               style={{
-                background: active ? C.accent : "transparent",
-                color: active ? C.bg : C.textMuted,
-                border: "1px solid " + (active ? C.accent : C.rule),
+                background: bg,
+                color: color,
+                border: "1px solid " + border,
                 borderRadius: 999,
                 padding: "4px 12px",
                 fontFamily: MONO,
@@ -595,8 +606,18 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                 fontWeight: 400,
                 cursor: "pointer",
                 whiteSpace: "nowrap",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
               }}
             >
+              {tint && (
+                <span style={{
+                  width: 7, height: 7, borderRadius: "50%",
+                  background: tint, display: "inline-block",
+                  boxShadow: active ? "0 0 0 1px " + C.bg : "none",
+                }} />
+              )}
               {f}
             </button>
           );
@@ -753,7 +774,9 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
               onKeyDown={function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(a); } }}
               style={{
                 flex: isChild ? 1 : undefined,
-                background: C.surface,
+                background: TIER_FADE[a.tier]
+                  ? "linear-gradient(to right, " + TIER_FADE[a.tier] + " 0%, " + C.surface + " 55%)"
+                  : C.surface,
                 border: "1px solid " + C.rule,
                 borderRadius: 6,
                 padding: isChild ? (isCompact ? "6px 10px" : "10px 12px") : (isCompact ? "8px 12px" : "11px 12px"),
@@ -774,7 +797,6 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                     }}>
                       {a.name}
                     </div>
-                    {a.tier && <Pill color={TIER_COLORS[a.tier] || C.textSoft}>{a.tier}</Pill>}
                   </div>
                   {((a.revenue_amount != null || a.revenue) || a.next_meeting) && !isCompact && (
                     <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
