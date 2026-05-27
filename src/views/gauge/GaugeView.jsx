@@ -3,6 +3,7 @@ import { C } from "../../lib/colors";
 import { GaugeIcon } from "../../components/GaugeIcon";
 import { useProjects } from "../../hooks/useProjects";
 import { ProjectModal } from "./ProjectModal";
+import { ProjectStageEditor } from "./ProjectStageEditor";
 import { TemplatePickerModal } from "./TemplatePickerModal";
 import { PipLoader } from "../../components/PipLoader";
 
@@ -83,6 +84,7 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
   var [showAdd, setShowAdd]         = useState(false);
   var [showPicker, setShowPicker]   = useState(false);
   var [editing, setEditing]         = useState(null);
+  var [expandedRows, setExpandedRows] = useState({});
   var [prefillTemplate, setPrefill] = useState(null);
 
   var filtered = (function () {
@@ -316,26 +318,37 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
           var statusKey   = p.status.split("_").map(function(w) { return w.charAt(0).toUpperCase() + w.slice(1); }).join("");
           var statusStyle = C["status" + statusKey] || C.statusPlanned;
 
+          var isOpen = !!expandedRows[p.id];
+          function toggleRow() { setExpandedRows(function (prev) { return Object.assign({}, prev, { [p.id]: !prev[p.id] }); }); }
+
           return (
             <div
               key={p.id}
-              onClick={function () { setEditing(p); }}
-              role="button"
-              tabIndex={0}
-              onKeyDown={function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setEditing(p); } }}
               style={{
                 background: C.surface,
                 border: "1px solid " + (p.status === "blocked" ? C.statusBlocked.border : C.rule),
                 borderRadius: 8,
+                opacity: isComplete ? 0.45 : 1,
+              }}
+            >
+            <div
+              onClick={toggleRow}
+              role="button"
+              tabIndex={0}
+              onKeyDown={function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleRow(); } }}
+              style={{
                 padding: "14px 16px",
                 cursor: "pointer",
-                opacity: isComplete ? 0.45 : 1,
                 display: "grid",
-                gridTemplateColumns: "1fr 200px",
-                gap: 16,
+                gridTemplateColumns: "auto 1fr 200px auto",
+                gap: 12,
                 alignItems: "start",
               }}
             >
+              {/* Chevron */}
+              <div style={{ fontFamily: MONO, fontSize: 12, color: C.textMuted, paddingTop: 3, userSelect: "none" }}>
+                {isOpen ? "▾" : "▸"}
+              </div>
               {/* Left: title + description + meta */}
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
@@ -442,27 +455,84 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
               </div>
 
               {/* Right: stages + gradient progress bar */}
-              {steps.total > 0 && (
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontFamily: MONO, fontSize: 10.5, color: C.textMuted, marginBottom: 6 }}>
-                    {steps.done}/{steps.total} steps · {pct}%
-                  </div>
-                  {/* Gradient progress track */}
-                  <div style={{ position: "relative", height: 4, background: C.surface3, borderRadius: 2, overflow: "hidden" }}>
-                    <div style={{
-                      position: "absolute", inset: 0,
-                      background: "linear-gradient(to right, oklch(0.42 0.09 232), oklch(0.55 0.12 200), oklch(0.68 0.13 178), oklch(0.80 0.13 162))",
-                      borderRadius: 2,
-                    }} />
-                    {/* Mask covering unfilled portion */}
-                    <div style={{
-                      position: "absolute", top: 0, right: 0, bottom: 0,
-                      width: (100 - pct) + "%",
-                      background: C.surface3,
-                    }} />
-                  </div>
+              <div style={{ textAlign: "right" }}>
+                {steps.total > 0 && (
+                  <>
+                    <div style={{ fontFamily: MONO, fontSize: 10.5, color: C.textMuted, marginBottom: 6 }}>
+                      {steps.done}/{steps.total} steps · {pct}%
+                    </div>
+                    <div style={{ position: "relative", height: 4, background: C.surface3, borderRadius: 2, overflow: "hidden" }}>
+                      <div style={{
+                        position: "absolute", inset: 0,
+                        background: "linear-gradient(to right, oklch(0.42 0.09 232), oklch(0.55 0.12 200), oklch(0.68 0.13 178), oklch(0.80 0.13 162))",
+                        borderRadius: 2,
+                      }} />
+                      <div style={{
+                        position: "absolute", top: 0, right: 0, bottom: 0,
+                        width: (100 - pct) + "%",
+                        background: C.surface3,
+                      }} />
+                    </div>
+                  </>
+                )}
+              </div>
+              {/* Edit button (stops propagation so row doesn't toggle) */}
+              <button
+                onClick={function (e) { e.stopPropagation(); setEditing(p); }}
+                style={{
+                  background: "transparent", border: "1px solid " + C.rule,
+                  borderRadius: 6, color: C.textMuted,
+                  fontFamily: MONO, fontSize: 10, letterSpacing: "0.05em",
+                  padding: "6px 10px", cursor: "pointer",
+                  whiteSpace: "nowrap", alignSelf: "start",
+                }}
+              >
+                Edit →
+              </button>
+            </div>
+
+            {/* Expanded body */}
+            {isOpen && (
+              <div style={{ padding: "0 16px 14px 16px", borderTop: "1px solid " + C.rule }}>
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "auto 1fr",
+                  columnGap: 16, rowGap: 6,
+                  marginTop: 12, marginBottom: 14,
+                  fontFamily: MONO, fontSize: 11,
+                }}>
+                  {p.requested_by && (<>
+                    <div style={{ color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", fontSize: 9.5 }}>Requested by</div>
+                    <div style={{ color: C.text }}>{p.requested_by}</div>
+                  </>)}
+                  {p.assignee && (<>
+                    <div style={{ color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", fontSize: 9.5 }}>Assigned</div>
+                    <div style={{ color: C.text }}>{p.assignee}</div>
+                  </>)}
+                  {p.start_date && (<>
+                    <div style={{ color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", fontSize: 9.5 }}>Started</div>
+                    <div style={{ color: C.text, fontFeatureSettings: '"tnum"' }}>{fmt(p.start_date)}</div>
+                  </>)}
+                  {p.due_date && (<>
+                    <div style={{ color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", fontSize: 9.5 }}>Due</div>
+                    <div style={{ color: overdue ? C.red : C.text, fontFeatureSettings: '"tnum"' }}>{fmt(p.due_date)}</div>
+                  </>)}
+                  {p.description && (<>
+                    <div style={{ color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", fontSize: 9.5 }}>Scope</div>
+                    <div style={{ color: C.textSoft, fontFamily: SERIF, fontSize: 13, lineHeight: 1.5 }}>{p.description}</div>
+                  </>)}
                 </div>
-              )}
+
+                <div style={{
+                  fontFamily: MONO, fontSize: 9.5, color: C.textMuted,
+                  textTransform: "uppercase", letterSpacing: "0.08em",
+                  marginBottom: 8,
+                }}>
+                  Stages
+                </div>
+                <ProjectStageEditor project={p} onUpdate={updateProject} />
+              </div>
+            )}
             </div>
           );
         })}

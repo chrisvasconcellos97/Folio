@@ -1,0 +1,306 @@
+import { useState } from "react";
+import { C } from "../../lib/colors";
+
+var MONO  = "'JetBrains Mono', ui-monospace, monospace";
+var SERIF = "'Fraunces', Georgia, serif";
+var INTER = "'Inter', system-ui, sans-serif";
+
+function fmt(d) {
+  if (!d) return "";
+  return new Date(d + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function StageIcon({ stage, onClick }) {
+  var done    = !!stage.completed_at;
+  var blocked = stage.blocked_reason !== null && stage.blocked_reason !== undefined;
+  var color   = blocked ? C.red : done ? C.green : C.textMuted;
+  var glyph   = blocked ? "⊘" : done ? "✓" : "○";
+  return (
+    <span
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
+      style={{
+        display: "inline-flex", alignItems: "center", justifyContent: "center",
+        width: 18, height: 18, borderRadius: "50%",
+        border: "1.5px solid " + color,
+        color: color,
+        fontSize: 12, lineHeight: 1, fontWeight: 700,
+        cursor: "pointer", flexShrink: 0, userSelect: "none",
+        background: done ? C.greenFaint || "transparent" : "transparent",
+      }}
+      aria-label={blocked ? "Blocked stage — click to clear" : done ? "Completed — click to undo" : "Mark stage complete"}
+    >
+      {glyph}
+    </span>
+  );
+}
+
+function SubStageIcon({ sub, onClick }) {
+  var done = !!sub.completed_at;
+  return (
+    <span
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
+      style={{
+        display: "inline-flex", alignItems: "center", justifyContent: "center",
+        width: 14, height: 14, borderRadius: 3,
+        border: "1.5px solid " + (done ? C.green : C.textMuted),
+        color: done ? C.green : "transparent",
+        fontSize: 10, lineHeight: 1, fontWeight: 700,
+        cursor: "pointer", flexShrink: 0, userSelect: "none",
+      }}
+    >
+      ✓
+    </span>
+  );
+}
+
+export function ProjectStageEditor({ project, onUpdate }) {
+  var [expanded, setExpanded] = useState({});
+  var [newStageTitle, setNewStageTitle] = useState("");
+  var [addingSub, setAddingSub] = useState({}); // { stageIdx: "title text" }
+
+  var stages = project.stages || [];
+
+  function commitStages(next) { return onUpdate(project.id, { stages: next }); }
+
+  function toggleStageComplete(idx) {
+    var next = stages.map(function (s, i) {
+      if (i !== idx) return s;
+      // Can't toggle complete on a blocked stage — clear blocker first
+      if (s.blocked_reason !== null && s.blocked_reason !== undefined) return s;
+      return Object.assign({}, s, { completed_at: s.completed_at ? null : new Date().toISOString() });
+    });
+    commitStages(next);
+  }
+
+  function toggleStageBlocked(idx) {
+    var next = stages.map(function (s, i) {
+      if (i !== idx) return s;
+      var becomingBlocked = !(s.blocked_reason !== null && s.blocked_reason !== undefined);
+      return Object.assign({}, s, {
+        blocked_reason: becomingBlocked ? "" : null,
+        completed_at: becomingBlocked ? null : s.completed_at,
+      });
+    });
+    commitStages(next);
+    if (!(stages[idx].blocked_reason !== null && stages[idx].blocked_reason !== undefined)) {
+      setExpanded(function (prev) { return Object.assign({}, prev, { [idx]: true }); });
+    }
+  }
+
+  function updateBlockedReason(idx, text) {
+    var next = stages.map(function (s, i) {
+      return i === idx ? Object.assign({}, s, { blocked_reason: text }) : s;
+    });
+    commitStages(next);
+  }
+
+  function toggleSub(stageIdx, subIdx) {
+    var next = stages.map(function (s, i) {
+      if (i !== stageIdx) return s;
+      var subs = (s.sub_stages || []).map(function (sub, j) {
+        return j === subIdx ? Object.assign({}, sub, { completed_at: sub.completed_at ? null : new Date().toISOString() }) : sub;
+      });
+      return Object.assign({}, s, { sub_stages: subs });
+    });
+    commitStages(next);
+  }
+
+  function addStage() {
+    var t = newStageTitle.trim();
+    if (!t) return;
+    var next = stages.concat([{ title: t, completed_at: null, is_external: false, blocked_reason: null, sub_stages: [] }]);
+    setNewStageTitle("");
+    commitStages(next);
+  }
+
+  function addSub(stageIdx) {
+    var t = (addingSub[stageIdx] || "").trim();
+    if (!t) return;
+    var next = stages.map(function (s, i) {
+      if (i !== stageIdx) return s;
+      var subs = (s.sub_stages || []).concat([{ title: t, completed_at: null }]);
+      return Object.assign({}, s, { sub_stages: subs });
+    });
+    setAddingSub(function (prev) { var n = Object.assign({}, prev); delete n[stageIdx]; return n; });
+    commitStages(next);
+  }
+
+  function removeStage(idx) {
+    var next = stages.filter(function (_, i) { return i !== idx; });
+    commitStages(next);
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      {stages.map(function (s, idx) {
+        var blocked    = s.blocked_reason !== null && s.blocked_reason !== undefined;
+        var done       = !!s.completed_at;
+        var subs       = s.sub_stages || [];
+        var subsDone   = subs.filter(function (x) { return x.completed_at; }).length;
+        var isExpanded = !!expanded[idx];
+        var statusText = blocked ? "blocked" : done ? "done · " + new Date(s.completed_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                       : subs.length > 0 && subsDone > 0 ? "in progress · " + Math.round((subsDone / subs.length) * 100) + "%"
+                       : "planned";
+
+        return (
+          <div key={idx} style={{
+            background: C.surface3 || "rgba(0,0,0,0.18)",
+            border: "1px solid " + (blocked ? C.redLine : C.rule),
+            borderRadius: 8, padding: "8px 10px",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <StageIcon stage={s} onClick={function () { toggleStageComplete(idx); }} />
+              <div
+                onClick={function () { if (subs.length > 0) setExpanded(function (prev) { return Object.assign({}, prev, { [idx]: !prev[idx] }); }); }}
+                style={{
+                  flex: 1, minWidth: 0, fontFamily: INTER, fontSize: 13, color: C.text,
+                  textDecoration: done ? "line-through" : "none", opacity: done ? 0.6 : 1,
+                  cursor: subs.length > 0 ? "pointer" : "default",
+                }}
+              >
+                {s.title}
+              </div>
+              <div style={{ fontFamily: MONO, fontSize: 9.5, color: blocked ? C.red : C.textMuted, textTransform: "lowercase" }}>
+                {statusText}
+              </div>
+              {subs.length > 0 && (
+                <button
+                  onClick={function () { setExpanded(function (prev) { return Object.assign({}, prev, { [idx]: !prev[idx] }); }); }}
+                  style={{
+                    background: "none", border: "none", color: C.textMuted, cursor: "pointer",
+                    fontSize: 12, padding: "2px 4px",
+                  }}
+                  aria-label={isExpanded ? "Collapse sub-stages" : "Expand sub-stages"}
+                >
+                  {isExpanded ? "▾" : "▸"}
+                </button>
+              )}
+              <button
+                onClick={function () { toggleStageBlocked(idx); }}
+                title={blocked ? "Clear blocker" : "Mark blocked"}
+                style={{
+                  background: "none", border: "1px solid " + (blocked ? C.red : C.rule),
+                  borderRadius: 4, color: blocked ? C.red : C.textMuted,
+                  fontSize: 10, padding: "2px 6px", cursor: "pointer",
+                  fontFamily: MONO,
+                }}
+              >
+                ⊘
+              </button>
+              <button
+                onClick={function () { removeStage(idx); }}
+                title="Remove stage"
+                style={{
+                  background: "none", border: "none", color: C.textMuted, cursor: "pointer",
+                  fontSize: 14, padding: "2px 4px",
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {blocked && (
+              <textarea
+                value={s.blocked_reason || ""}
+                onChange={function (e) { updateBlockedReason(idx, e.target.value); }}
+                placeholder="What's blocking this?"
+                rows={2}
+                style={{
+                  width: "100%", marginTop: 6,
+                  background: C.surface, border: "1px solid " + C.redLine,
+                  borderRadius: 6, padding: "6px 8px",
+                  fontFamily: INTER, fontSize: 12, color: C.text,
+                  resize: "vertical",
+                }}
+              />
+            )}
+
+            {isExpanded && subs.length > 0 && (
+              <div style={{ marginTop: 8, marginLeft: 28, display: "flex", flexDirection: "column", gap: 5 }}>
+                {subs.map(function (sub, j) {
+                  return (
+                    <div key={j} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <SubStageIcon sub={sub} onClick={function () { toggleSub(idx, j); }} />
+                      <span style={{
+                        fontFamily: INTER, fontSize: 12, color: C.textSoft,
+                        textDecoration: sub.completed_at ? "line-through" : "none",
+                        opacity: sub.completed_at ? 0.55 : 1,
+                      }}>
+                        {sub.title}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {isExpanded && (
+              <div style={{ marginTop: 8, marginLeft: 28, display: "flex", gap: 6, alignItems: "center" }}>
+                <input
+                  type="text"
+                  value={addingSub[idx] || ""}
+                  onChange={function (e) {
+                    var v = e.target.value;
+                    setAddingSub(function (prev) { return Object.assign({}, prev, { [idx]: v }); });
+                  }}
+                  onKeyDown={function (e) { if (e.key === "Enter") { e.preventDefault(); addSub(idx); } }}
+                  placeholder="+ Add sub-step"
+                  style={{
+                    flex: 1, background: C.surface, border: "1px solid " + C.rule,
+                    borderRadius: 6, padding: "4px 8px",
+                    fontFamily: INTER, fontSize: 11, color: C.text,
+                  }}
+                />
+                {addingSub[idx] && (
+                  <button
+                    onClick={function () { addSub(idx); }}
+                    style={{
+                      background: C.accentFaint, border: "1px solid " + C.accentLine,
+                      color: C.accent, borderRadius: 6, padding: "4px 10px",
+                      fontFamily: MONO, fontSize: 10, cursor: "pointer",
+                    }}
+                  >
+                    Add
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 4 }}>
+        <input
+          type="text"
+          value={newStageTitle}
+          onChange={function (e) { setNewStageTitle(e.target.value); }}
+          onKeyDown={function (e) { if (e.key === "Enter") { e.preventDefault(); addStage(); } }}
+          placeholder="+ Add stage"
+          style={{
+            flex: 1, background: C.surface, border: "1px solid " + C.rule,
+            borderRadius: 6, padding: "6px 10px",
+            fontFamily: INTER, fontSize: 12, color: C.text,
+          }}
+        />
+        {newStageTitle.trim() && (
+          <button
+            onClick={addStage}
+            style={{
+              background: C.accentFaint, border: "1px solid " + C.accentLine,
+              color: C.accent, borderRadius: 6, padding: "6px 12px",
+              fontFamily: MONO, fontSize: 11, cursor: "pointer",
+            }}
+          >
+            Add stage
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
