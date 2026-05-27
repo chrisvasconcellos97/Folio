@@ -48,16 +48,12 @@ function fadeForProject(p) {
   return FADE_START[p.priority] || null;
 }
 
-var FILTERS = [
-  { id: "all",         label: "All"         },
-  { id: "my_queue",    label: "My Queue"    },
-  { id: "planned",     label: "Planned"     },
-  { id: "in_progress", label: "In Progress" },
-  { id: "blocked",     label: "Blocked"     },
-  { id: "complete",    label: "Complete"    },
-  { id: "on_hold",     label: "On Hold"     },
-  { id: "team",        label: "Team"        },
-  { id: "personal",    label: "Personal"    },
+// Scope filter (the row of pills below the status boxes)
+var SCOPE_FILTERS = [
+  { id: "all",      label: "All"      },
+  { id: "my_queue", label: "My Queue" },
+  { id: "team",     label: "Team"     },
+  { id: "personal", label: "Personal" },
 ];
 
 function fmt(dateStr) {
@@ -154,7 +150,8 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
     return function () { window.removeEventListener("resize", onResize); };
   }, []);
 
-  var [filter, setFilter]           = useState("all");
+  var [scopeFilter, setScopeFilter]   = useState("all");
+  var [statusFilter, setStatusFilter] = useState("all");
   var [showAdd, setShowAdd]         = useState(false);
   var [showPicker, setShowPicker]   = useState(false);
   var [editing, setEditing]         = useState(null);
@@ -162,23 +159,23 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
   var [prefillTemplate, setPrefill] = useState(null);
 
   var filtered = (function () {
-    if (filter === "my_queue") {
-      return projects.filter(function (p) {
-        // Project-level assignee match
+    var byScope = projects;
+    if (scopeFilter === "my_queue") {
+      byScope = projects.filter(function (p) {
         if (userEmail && p.assignee && p.assignee.toLowerCase() === userEmail.toLowerCase()) return true;
-        // Personal scope + owner
         if (p.scope === "personal" && p.user_id === userId) return true;
-        // Assignee in any stage
         var stages = p.stages || [];
         return stages.some(function (s) {
           return s.assignee_email && userEmail && s.assignee_email.toLowerCase() === userEmail.toLowerCase();
         });
       });
+    } else if (scopeFilter === "team") {
+      byScope = projects.filter(function (p) { return p.scope === "team"; });
+    } else if (scopeFilter === "personal") {
+      byScope = projects.filter(function (p) { return !p.scope || p.scope === "personal"; });
     }
-    if (filter === "team")    return projects.filter(function (p) { return p.scope === "team"; });
-    if (filter === "personal") return projects.filter(function (p) { return !p.scope || p.scope === "personal"; });
-    if (filter === "all")     return projects;
-    return projects.filter(function (p) { return p.status === filter; });
+    if (statusFilter === "all") return byScope;
+    return byScope.filter(function (p) { return p.status === statusFilter; });
   })();
 
   // Dim complete to bottom
@@ -298,19 +295,27 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
         }}
       >
         {[
-          { label: "Total",       value: totalCount,      color: C.textSoft,              isZero: totalCount === 0      },
-          { label: "In Progress", value: inProgressCount, color: C.accent,                isZero: inProgressCount === 0 },
-          { label: "Blocked",     value: blockedCount,    color: C.red,                   isZero: blockedCount === 0    },
-          { label: "On Hold",     value: onHoldCount,     color: C.yellow,                isZero: onHoldCount === 0     },
-          { label: "Complete",    value: completedCount,  color: C.statusComplete.text,   isZero: completedCount === 0  },
+          { label: "Total",       value: totalCount,      color: C.textSoft,              isZero: totalCount === 0,      statusId: "all"         },
+          { label: "In Progress", value: inProgressCount, color: C.accent,                isZero: inProgressCount === 0, statusId: "in_progress" },
+          { label: "Blocked",     value: blockedCount,    color: C.red,                   isZero: blockedCount === 0,    statusId: "blocked"     },
+          { label: "On Hold",     value: onHoldCount,     color: C.yellow,                isZero: onHoldCount === 0,     statusId: "on_hold"     },
+          { label: "Complete",    value: completedCount,  color: C.statusComplete.text,   isZero: completedCount === 0,  statusId: "complete"    },
         ].map(function (s) {
+          var active = statusFilter === s.statusId;
           return (
             <div
               key={s.label}
+              onClick={function () { setStatusFilter(s.statusId); }}
+              role="button"
+              tabIndex={0}
+              onKeyDown={function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setStatusFilter(s.statusId); } }}
               style={{
-                background: C.surface,
-                padding: "14px 14px",
+                background: active ? C.accentFaint : C.surface,
+                borderTop:    active ? "2px solid " + s.color : "2px solid transparent",
+                padding: "12px 14px",
                 textAlign: "center",
+                cursor: "pointer",
+                transition: "background 0.12s",
               }}
             >
               {s.isZero ? (
@@ -320,7 +325,7 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
                   {s.value}
                 </div>
               )}
-              <div style={{ fontFamily: MONO, fontSize: 9.5, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", marginTop: 4 }}>
+              <div style={{ fontFamily: MONO, fontSize: 9.5, color: active ? s.color : C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", marginTop: 4 }}>
                 {s.label}
               </div>
             </div>
@@ -338,12 +343,12 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
           paddingBottom: 2,
         }}
       >
-        {FILTERS.map(function (f) {
-          var active = filter === f.id;
+        {SCOPE_FILTERS.map(function (f) {
+          var active = scopeFilter === f.id;
           return (
             <button
               key={f.id}
-              onClick={function () { setFilter(f.id); }}
+              onClick={function () { setScopeFilter(f.id); }}
               style={{
                 flex: "0 0 auto",
                 padding: "4px 12px",
@@ -375,15 +380,15 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
             fontSize: 13,
           }}
         >
-          {filter === "all"
+          {scopeFilter === "all" && statusFilter === "all"
             ? "No projects yet. Hit + New Project to get started."
-            : filter === "my_queue"
+            : scopeFilter === "my_queue"
             ? "Nothing assigned to you right now."
-            : filter === "team"
+            : scopeFilter === "team"
             ? "No team projects yet."
-            : filter === "personal"
+            : scopeFilter === "personal"
             ? "No personal projects yet."
-            : "No " + (STATUS_LABELS[filter] || filter) + " projects."}
+            : "No " + (STATUS_LABELS[statusFilter] || statusFilter) + " projects."}
         </div>
       )}
 
