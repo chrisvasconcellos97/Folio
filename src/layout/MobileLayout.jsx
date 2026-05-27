@@ -72,7 +72,7 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
                   lineHeight: 1.1,
                 }}
               >
-                Folio
+                Folios
               </div>
               <div
                 style={{

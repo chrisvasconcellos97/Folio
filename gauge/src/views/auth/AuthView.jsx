@@ -79,16 +79,6 @@ export function AuthView({ onSignIn }) {
           >
             Project Management
           </div>
-          <div
-            style={{
-              fontSize: 10,
-              color: C.textMuted,
-              marginTop: 4,
-              letterSpacing: "0.08em",
-            }}
-          >
-            part of Briefcase
-          </div>
         </div>
 
         {/* Card */}
@@ -108,7 +98,7 @@ export function AuthView({ onSignIn }) {
               textAlign: "center",
             }}
           >
-            Sign in with your Folio account
+            Sign in with your Folios account
           </div>
 
           <form onSubmit={handleSubmit}>
@@ -202,7 +192,7 @@ export function AuthView({ onSignIn }) {
             letterSpacing: "0.05em",
           }}
         >
-          Gauge · Briefcase Suite
+          Gauge · part of Folios
         </div>
       </div>
     </div>
