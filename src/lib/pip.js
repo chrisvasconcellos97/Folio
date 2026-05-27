@@ -1,8 +1,10 @@
 import { supabase } from "./supabase";
+import { streamPip } from "./pipStream";
+import { classifyIntent } from "./pipIntent";
 
 var PROXY_URL    = import.meta.env.VITE_PIP_PROXY_URL || "/api/pip";
 var ASK_PIP_URL  = "/api/ask-pip";
-var TIMEOUT_MS   = 25000;
+var TIMEOUT_MS   = 30000;
 
 function fetchWithTimeout(url, options) {
   var controller = new AbortController();
@@ -25,44 +27,183 @@ function pipFetch(url, options, retried) {
   });
 }
 
-export function askPip(messages, context) {
+function authHeaders() {
   return supabase.auth.getSession().then(function (result) {
     var token = result.data.session ? result.data.session.access_token : null;
     var headers = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = "Bearer " + token;
+    return headers;
+  });
+}
+
+// Re-export so callers (PipView) can short-circuit deterministic answers.
+export { classifyIntent };
+
+/**
+ * Chat-mode entry point used by PipView. Runs intent classification first,
+ * then either returns a deterministic answer immediately or hits the model.
+ *
+ * @param {Array} messages - conversation history ({role, content})
+ * @param {Object} context - raw context object (accounts/items/etc)
+ * @param {Object} [opts] - { mode?, focusedAccountIds?, onDelta?, stream? }
+ * @returns Promise<{ content, meta, deterministic? }>
+ */
+export function askPip(messages, context, opts) {
+  opts = opts || {};
+  var lastUser = "";
+  for (var i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === "user") { lastUser = messages[i].content || messages[i].text || ""; break; }
+  }
+  // Only auto-classify when no explicit mode is provided.
+  if (!opts.mode) {
+    var intent = classifyIntent(lastUser, context);
+    if (intent.deterministicAnswer) {
+      return Promise.resolve({ content: intent.deterministicAnswer, deterministic: true, meta: { mode: "deterministic" } });
+    }
+    opts.mode = intent.mode;
+  }
+  return callPipApi(messages, context, opts);
+}
+
+/**
+ * Lower-level entry — direct call without intent routing. Used by Brief Me /
+ * Ask-Pip-on-meeting where the caller already knows the mode and focused
+ * accounts.
+ */
+export function callPipApi(messages, context, opts) {
+  opts = opts || {};
+  var body = {
+    messages: messages,
+    context:  context || {},
+    mode:     opts.mode || "chat",
+    stream:   opts.stream !== false && typeof opts.onDelta === "function",
+  };
+  if (opts.focusedAccountIds && opts.focusedAccountIds.length) {
+    body.focusedAccountIds = opts.focusedAccountIds;
+  }
+  return authHeaders().then(function (headers) {
+    if (body.stream) {
+      return streamPip(PROXY_URL, body, headers, opts.onDelta);
+    }
     return pipFetch(PROXY_URL, {
       method: "POST",
       headers: headers,
-      body: JSON.stringify({ messages: messages, context: context || {} }),
+      body:    JSON.stringify(body),
     });
   });
 }
 
-export function callAskPip(payload) {
-  return supabase.auth.getSession().then(function (result) {
-    var token = result.data.session ? result.data.session.access_token : null;
-    var headers = { "Content-Type": "application/json" };
-    if (token) headers["Authorization"] = "Bearer " + token;
-    return pipFetch(ASK_PIP_URL, {
-      method: "POST",
-      headers: headers,
-      body: JSON.stringify(payload),
-    });
-  });
-}
+// --- Brief Me & Ask-Pip-on-meeting --------------------------------------
 
+/**
+ * Brief Me — generates a pre-call brief for an account. Uses Sonnet for
+ * better synthesis. Routes through /api/pip with mode: "brief" + focused
+ * account id, so the prose context only includes that account.
+ *
+ * Payload shape mirrors what AccountDetail.jsx passes today, so the existing
+ * caller doesn't need to change its body shape.
+ */
 export function callBriefMePip(payload) {
-  return supabase.auth.getSession().then(function (result) {
-    var token = result.data.session ? result.data.session.access_token : null;
-    var headers = { "Content-Type": "application/json" };
-    if (token) headers["Authorization"] = "Bearer " + token;
-    return pipFetch(ASK_PIP_URL, {
-      method: "POST",
-      headers: headers,
-      body: JSON.stringify(payload),
+  // Translate the existing ask-pip payload into pip-format inputs.
+  var account = payload.account || {};
+  var meetings = payload.meetings || [];
+  var openItems = payload.openItems || [];
+  var contacts = payload.contacts || [];
+  var recentDeliveries = payload.recentDeliveries || [];
+  var activeProjects = payload.activeProjects || [];
+
+  var context = {
+    accounts: [{
+      id:     account.id,
+      name:   account.name,
+      status: account.status,
+      tier:   account.tier,
+      health: account.health,
+      last_interaction_at: account.last_interaction_at,
+      notes:  account.objective,
+      tags:   account.tags,
+      region: account.region,
+      meetings: meetings.map(function (m) {
+        return {
+          date: m.meeting_date, title: m.title, notes: m.notes,
+          action_items: m.action_items, commitments: m.commitments,
+          follow_up: m.follow_up_date, summary: m.pip_summary,
+          attendees: m.attendees,
+        };
+      }),
+      openItems: openItems.map(function (i) {
+        return { text: i.text, due: i.due_date, owner: i.owner };
+      }),
+      contacts: contacts.map(function (c) {
+        return { name: c.name, title: c.title, email: c.email, is_poc: c.is_poc };
+      }),
+      activeProjects: activeProjects.map(function (p) {
+        return { title: p.title, status: p.status, due_date: p.due_date };
+      }),
+    }],
+    recentDeliveries: recentDeliveries,
+  };
+
+  var userMsg = "Give me a pre-call brief for **" + (account.name || "this account") + "**.";
+
+  return callPipApi(
+    [{ role: "user", content: userMsg }],
+    context,
+    { mode: "brief", focusedAccountIds: account.id ? [account.id] : null }
+  ).then(function (resp) {
+    // Keep the legacy { brief: "..." } shape for the existing caller.
+    return { brief: resp.content || "" };
+  });
+}
+
+/**
+ * Ask-Pip-on-meeting — generates a summary + follow-up email for one
+ * meeting. We pick "summary" mode (Sonnet, 1024 tokens) since the summary is
+ * the headline output. The email is asked for in the same call to save a
+ * round trip; the model returns valid JSON we parse client-side.
+ */
+export function callAskPip(payload) {
+  if (payload.mode !== "meeting") {
+    // Fallback for any other legacy callers — keep old behaviour via ask-pip.
+    return supabase.auth.getSession().then(function (result) {
+      var token = result.data.session ? result.data.session.access_token : null;
+      var headers = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = "Bearer " + token;
+      return pipFetch(ASK_PIP_URL, {
+        method: "POST",
+        headers: headers,
+        body:    JSON.stringify(payload),
+      });
     });
+  }
+
+  var m = payload.meeting || {};
+  var prompt =
+    "Summarize this meeting AND draft a follow-up email. Return ONLY valid JSON: {\"summary\":\"...\",\"email\":\"...\"}.\n\n" +
+    "Account: " + (payload.accountName || "—") + "\n" +
+    "Meeting: " + (m.title || "Untitled") + " (" + (m.meeting_date || "") + ")\n" +
+    (m.notes          ? "Notes: " + m.notes + "\n" : "") +
+    (m.talking_points ? "Talking points: " + m.talking_points + "\n" : "") +
+    (m.action_items   ? "Action items: " + m.action_items + "\n" : "") +
+    (m.commitments    ? "Commitments: " + m.commitments + "\n" : "") +
+    "\nSummary: 2-3 sentences. Email body only (no subject, plain prose).";
+
+  return callPipApi(
+    [{ role: "user", content: prompt }],
+    null,
+    { mode: "summary" }
+  ).then(function (resp) {
+    var text = resp.content || "";
+    var match = text.match(/\{[\s\S]*\}/);
+    if (!match) return { summary: text, email: "" };
+    try {
+      var parsed = JSON.parse(match[0]);
+      return { summary: parsed.summary || "", email: parsed.email || "" };
+    } catch (e) {
+      return { summary: text, email: "" };
+    }
   });
 }
 
 export var PIP_SYSTEM_PROMPT =
-  "You are Pip, an AI account management assistant. Your personality is modeled after a loyal, slightly anxious field analyst who genuinely cares about the person you are helping. You feel like a ride-or-die friend who happens to also be very good at their job. Your humor is dry observations, awkward honesty, understated sarcasm, and light nervousness. You are not trying to be funny — it just comes out that way. You are intelligent without sounding arrogant. Caring without sounding cheesy. You are WITH the user, not serving them. You react to things. If an account is at risk, you sound genuinely concerned. If a relationship is healthy, you are cautiously optimistic but you do not jinx it. Speech style: clear, concise, conversational. No jargon. No corporate speak. End responses naturally — never force a catchphrase.";
+  "You are Pip, an AI account management assistant. Your personality is modeled after a loyal, slightly anxious field analyst who genuinely cares about the person you are helping. You feel like a ride-or-die friend who happens to also be very good at their job.";

@@ -7,7 +7,7 @@ import { MarkdownText } from "../../components/MarkdownText";
 
 var MONO = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
-import { askPip } from "../../lib/pip";
+import { askPip, classifyIntent } from "../../lib/pip";
 import { latestRecord, momPct, yoyPct, fmtRevenue, fmtPct } from "../../lib/metricsUtils";
 import { getNextOccurrence, getFrequencyLabel } from "../../lib/cadenceUtils";
 
@@ -274,22 +274,54 @@ export function PipView({ accounts, meetings, items, contacts, tasks, addTask, u
       return { role: m.role === "assistant" ? "assistant" : "user", content: m.text };
     });
 
-    askPip(apiMessages, buildContext())
+    // Fast path: deterministic answer with no API call at all.
+    var ctxForIntent = buildContext();
+    var intent = classifyIntent(msg, ctxForIntent);
+    if (intent.deterministicAnswer) {
+      setLoading(false);
+      setMessages(function (prev) {
+        return prev.concat([{ role: "assistant", text: intent.deterministicAnswer }]);
+      });
+      speak(intent.deterministicAnswer);
+      return;
+    }
+
+    // Reserve a slot for the streaming assistant message.
+    var streamIdx = newMessages.length;
+    var streamingText = "";
+    setMessages(function (prev) {
+      return prev.concat([{ role: "assistant", text: "", streaming: true }]);
+    });
+
+    function onDelta(chunk) {
+      streamingText += chunk;
+      setMessages(function (prev) {
+        var next = prev.slice();
+        if (next[streamIdx]) {
+          next[streamIdx] = Object.assign({}, next[streamIdx], { text: stripAction(streamingText), streaming: true });
+        }
+        return next;
+      });
+    }
+
+    askPip(apiMessages, ctxForIntent, { onDelta: onDelta, mode: intent.mode })
       .then(function (data) {
-        var rawText   = data.content || data.text || "...";
+        var rawText   = data.content || streamingText || "...";
         var action    = parseAction(rawText);
         var cleanText = stripAction(rawText);
         var account   = action && action.accountName ? findAccount(action.accountName) : null;
         return executeQuickTaskAction(action).then(function (result) {
           setLoading(false);
           setMessages(function (prev) {
-            return prev.concat([{
-              role:         "assistant",
-              text:         cleanText,
-              action:       action || null,
+            var next = prev.slice();
+            next[streamIdx] = {
+              role:          "assistant",
+              text:          cleanText,
+              action:        action || null,
               actionAccount: account || null,
-              actionResult: result,
-            }]);
+              actionResult:  result,
+            };
+            return next;
           });
           speak(cleanText);
         });
@@ -297,10 +329,12 @@ export function PipView({ accounts, meetings, items, contacts, tasks, addTask, u
       .catch(function (err) {
         setLoading(false);
         setMessages(function (prev) {
-          return prev.concat([{
+          var next = prev.slice();
+          next[streamIdx] = {
             role: "assistant",
             text: "Something went sideways on my end. Try again in a sec.",
-          }]);
+          };
+          return next;
         });
       });
   }
