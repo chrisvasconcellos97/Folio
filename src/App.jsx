@@ -20,7 +20,7 @@ import { CadenceView } from "./views/cadence/CadenceView";
 import { GaugeView } from "./views/gauge/GaugeView";
 import { RouteBuilder } from "./views/routes/RouteBuilder";
 import { SettingsView } from "./views/settings/SettingsView";
-import { DirectorView } from "./views/director/DirectorView";
+import { LeadershipView } from "./views/leadership/LeadershipView";
 import { OnboardingTour } from "./views/welcome/OnboardingTour";
 import { ReturningWelcome } from "./views/welcome/ReturningWelcome";
 import { DesktopLayout } from "./layout/DesktopLayout";
@@ -191,12 +191,11 @@ export default function App() {
     );
   }
 
-  // Directors get a completely different read-only view
-  if (role === "director") {
+  if (role === "leadership") {
     return (
       <>
         <Toast />
-        <DirectorView
+        <LeadershipView
           org={org}
           orgId={orgId}
           userId={userId}

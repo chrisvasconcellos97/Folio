@@ -7,8 +7,8 @@ import { AmberBtn } from "../../components/Buttons";
 import { showToast } from "../../components/Toast";
 import { supabase } from "../../lib/supabase";
 
-var ROLE_LABELS = { owner: "Owner", member: "Member", director: "Director (read-only)" };
-var ROLE_COLORS = { owner: C.accent, member: C.blue, director: C.textSub };
+var ROLE_LABELS = { owner: "Owner", member: "Member", leadership: "Leadership (read-only)" };
+var ROLE_COLORS = { owner: C.accent, member: C.blue, leadership: C.textSub };
 
 function ProfileSection({ userMeta }) {
   var [name, setName]     = useState(userMeta ? userMeta.full_name || "" : "");
@@ -239,7 +239,7 @@ function TeamSection({ org, role, members, pendingInvites, onInvite, onRevoke })
                 }}
               >
                 <option value="member">Member</option>
-                <option value="director">Director (read-only)</option>
+                <option value="leadership">Leadership (read-only)</option>
               </select>
             </div>
             <AmberBtn onClick={handleInvite} disabled={!email.trim() || inviting} style={{ fontSize: 12, flexShrink: 0 }}>
@@ -247,7 +247,7 @@ function TeamSection({ org, role, members, pendingInvites, onInvite, onRevoke })
             </AmberBtn>
           </div>
           <div style={{ fontSize: 11, color: C.textMuted, marginTop: 8, lineHeight: 1.5 }}>
-            Members can log meetings and manage accounts. Directors get a read-only portfolio view.
+            Members can log meetings and manage accounts. Leadership gets a read-only portfolio view.
           </div>
         </div>
       )}

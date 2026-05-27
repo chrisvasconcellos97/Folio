@@ -83,7 +83,7 @@ function AccountCard({ account, openItemCount }) {
   );
 }
 
-export function DirectorView({ org, orgId, userMeta, onSignOut }) {
+export function LeadershipView({ org, orgId, userMeta, onSignOut }) {
   var [accounts, setAccounts]     = useState([]);
   var [items, setItems]           = useState([]);
   var [activity, setActivity]     = useState([]);
@@ -207,7 +207,7 @@ export function DirectorView({ org, orgId, userMeta, onSignOut }) {
               <PipMark size={6} color={C.accent} opacity={0.5} />
             </div>
             <div style={{ fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em" }}>
-              Director View · Read only
+              Leadership · Read only
             </div>
           </div>
         </div>

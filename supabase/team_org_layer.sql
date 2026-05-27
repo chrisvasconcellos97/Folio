@@ -50,7 +50,7 @@ create table if not exists folio_org_members (
   id            uuid primary key default gen_random_uuid(),
   org_id        uuid references folio_orgs on delete cascade not null,
   user_id       uuid references auth.users on delete cascade,  -- nullable until invite accepted
-  role          text check (role in ('owner','member','director')) not null,
+  role          text check (role in ('owner','member','leadership')) not null,
   invited_email text,
   accepted      boolean default false,
   created_at    timestamptz default now()
@@ -117,13 +117,13 @@ create policy "activity_insert" on folio_activity
 -- ─── org_id on folio_accounts ──────────────────────────────────────────────
 alter table folio_accounts add column if not exists org_id uuid references folio_orgs;
 
--- Org members can read all accounts in their org (directors included)
+-- Org members can read all accounts in their org (leadership included)
 create policy "accounts_org_read" on folio_accounts
   for select using (
     org_id is not null and org_id in (select folio_user_org_ids())
   );
 
--- Non-director org members can write org accounts
+-- Non-leadership org members can write org accounts
 create policy "accounts_org_write" on folio_accounts
   for all using (
     org_id is not null and org_id in (select folio_user_writable_org_ids())
