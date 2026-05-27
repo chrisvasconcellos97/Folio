@@ -1,9 +1,13 @@
 import { describe, it, expect, vi } from "vitest";
 import {
   PIP_TOOLS,
+  TOOL_META,
   classifyTool,
   describeToolCall,
+  displayTitleFor,
   findAccountByName,
+  getFieldsForTool,
+  needsConfirm,
   planToolCalls,
   routeToolCall,
   CONFIRM_THRESHOLD,
@@ -81,41 +85,113 @@ describe("describeToolCall", function () {
   });
 });
 
-describe("planToolCalls", function () {
-  it("returns no-confirmation for small batches", function () {
-    var tools = [
-      { name: "create_open_item", input: { account_id: "a1", text: "x" } },
-      { name: "create_open_item", input: { account_id: "a2", text: "y" } },
-    ];
-    var p = planToolCalls(tools);
-    expect(p.needsConfirmation).toBe(false);
-    expect(p.immediate.length).toBe(2);
-  });
-
-  it("requires confirmation when one type exceeds threshold", function () {
-    var tools = [];
-    for (var i = 0; i < CONFIRM_THRESHOLD + 5; i++) {
-      tools.push({ name: "create_open_item", input: { account_id: "a1", text: "x" + i } });
-    }
-    var p = planToolCalls(tools);
-    expect(p.needsConfirmation).toBe(true);
-    expect(p.confirm.length).toBe(tools.length);
-    expect(p.dominantType).toBe("create_open_item");
-  });
-
-  it("ignores navigate / remember_fact when counting", function () {
-    var tools = [];
-    for (var i = 0; i < 10; i++) {
-      tools.push({ name: "remember_fact", input: { fact: "f" + i } });
-    }
-    var p = planToolCalls(tools);
-    expect(p.needsConfirmation).toBe(false);
-  });
-
+describe("planToolCalls (Phase 2.5)", function () {
   it("handles empty input", function () {
     var p = planToolCalls([]);
     expect(p.needsConfirmation).toBe(false);
     expect(p.immediate.length).toBe(0);
+    expect(p.mode).toBe("none");
+  });
+
+  it("routes a single confirm-required tool to mode 'single'", function () {
+    var p = planToolCalls([
+      { name: "create_open_item", input: { account_id: "a1", text: "x" } },
+    ]);
+    expect(p.needsConfirmation).toBe(true);
+    expect(p.confirm.length).toBe(1);
+    expect(p.immediate.length).toBe(0);
+    expect(p.mode).toBe("single");
+  });
+
+  it("routes ≥2 confirm-required tools to mode 'batch'", function () {
+    var p = planToolCalls([
+      { name: "create_open_item", input: { account_id: "a1", text: "x" } },
+      { name: "log_meeting",      input: { account_id: "a1", title: "y", meeting_date: "2026-05-20" } },
+    ]);
+    expect(p.needsConfirmation).toBe(true);
+    expect(p.confirm.length).toBe(2);
+    expect(p.mode).toBe("batch");
+  });
+
+  it("splits mixed responses — frictionless go immediate, confirms go to card", function () {
+    var p = planToolCalls([
+      { name: "navigate",        input: { view: "pipeline" } },
+      { name: "complete_task",   input: { task_id: "abc" } },
+      { name: "open_meeting",    input: { account_name: "KSI" } },
+      { name: "create_open_item",input: { account_id: "a1", text: "x" } },
+      { name: "create_open_item",input: { account_id: "a2", text: "y" } },
+      { name: "create_open_item",input: { account_id: "a3", text: "z" } },
+    ]);
+    expect(p.immediate.length).toBe(3);  // nav + complete + open
+    expect(p.confirm.length).toBe(3);    // three open-items
+    expect(p.mode).toBe("batch");
+    expect(p.dominantType).toBe("create_open_item");
+  });
+
+  it("remember_fact now requires confirmation (Phase 2.5 change)", function () {
+    var p = planToolCalls([
+      { name: "remember_fact", input: { fact: "Covers the West" } },
+    ]);
+    expect(p.needsConfirmation).toBe(true);
+    expect(p.mode).toBe("single");
+  });
+
+  it("CONFIRM_THRESHOLD constant is exported (back-compat)", function () {
+    expect(typeof CONFIRM_THRESHOLD).toBe("number");
+  });
+});
+
+describe("TOOL_META + helpers", function () {
+  it("classifies every tool", function () {
+    PIP_TOOLS.forEach(function (t) {
+      expect(TOOL_META[t.name]).toBeTruthy();
+      expect(["open", "navigate", "frictionless", "confirm"]).toContain(TOOL_META[t.name].category);
+    });
+  });
+
+  it("needsConfirm returns true only for category=confirm", function () {
+    expect(needsConfirm("create_open_item")).toBe(true);
+    expect(needsConfirm("log_meeting")).toBe(true);
+    expect(needsConfirm("remember_fact")).toBe(true);
+    expect(needsConfirm("complete_task")).toBe(false);
+    expect(needsConfirm("navigate")).toBe(false);
+    expect(needsConfirm("open_meeting")).toBe(false);
+    expect(needsConfirm("not_a_tool")).toBe(false);
+  });
+
+  it("displayTitleFor returns the configured title", function () {
+    expect(displayTitleFor("create_open_item")).toBe("create an open item");
+    expect(displayTitleFor("log_meeting")).toBe("log a meeting");
+    expect(displayTitleFor("not_a_tool")).toBe("not a tool");
+  });
+});
+
+describe("getFieldsForTool", function () {
+  it("returns required-flag matching input_schema", function () {
+    var fields = getFieldsForTool("create_open_item", { account_id: "a1", text: "Send CAPA" }, sampleAccounts);
+    var account = fields.find(function (f) { return f.key === "account_id"; });
+    var text    = fields.find(function (f) { return f.key === "text"; });
+    var due     = fields.find(function (f) { return f.key === "due_date"; });
+    expect(account.required).toBe(true);
+    expect(text.required).toBe(true);
+    expect(due.required).toBe(false);
+  });
+
+  it("resolves account_id to display name", function () {
+    var fields = getFieldsForTool("create_open_item", { account_id: "a1", text: "x" }, sampleAccounts);
+    var account = fields.find(function (f) { return f.key === "account_id"; });
+    expect(account.displayValue).toBe("KSI Auto Parts");
+  });
+
+  it("formats dates as 'Mon DD, YYYY'", function () {
+    var fields = getFieldsForTool("set_follow_up", { account_id: "a1", follow_up_date: "2026-06-15" }, sampleAccounts);
+    var f = fields.find(function (x) { return x.key === "follow_up_date"; });
+    expect(f.displayValue).toContain("Jun");
+    expect(f.displayValue).toContain("2026");
+  });
+
+  it("returns empty array for unknown tool", function () {
+    expect(getFieldsForTool("not_a_tool", {}, sampleAccounts)).toEqual([]);
   });
 });
 

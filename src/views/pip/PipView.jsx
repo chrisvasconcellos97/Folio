@@ -4,7 +4,9 @@ import { PipOrb } from "../../components/PipMark";
 import { InputField } from "../../components/InputField";
 import { MarkdownText } from "../../components/MarkdownText";
 import { PipActionBatch } from "../../components/PipActionBatch";
+import { PipActionCard } from "../../components/PipActionCard";
 import { showToast } from "../../components/Toast";
+import { executeTool } from "../../lib/pipExecutor";
 
 var MONO = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
@@ -12,6 +14,7 @@ import { askPip, classifyIntent } from "../../lib/pip";
 import { latestRecord, momPct, yoyPct, fmtRevenue } from "../../lib/metricsUtils";
 import { getNextOccurrence, getFrequencyLabel } from "../../lib/cadenceUtils";
 import { routeToolCall, planToolCalls, describeToolCall, classifyTool, CONFIRM_THRESHOLD } from "../../lib/pipTools";
+// (CONFIRM_THRESHOLD re-export below; routeToolCall still used by executeTools.)
 import { usePipFacts } from "../../hooks/usePipFacts";
 import { usePipAccountState, findStaleAccountIds } from "../../hooks/usePipAccountState";
 
@@ -279,55 +282,109 @@ export function PipView(props) {
     };
   }
 
-  function executeTools(toolCalls, replaceMsgIdx) {
+  // Sequentially run a set of tool calls through the unified executor.
+  // Used for the "immediate" batch (frictionless tools) right after stream.
+  function executeTools(toolCalls) {
     if (!toolCalls || !toolCalls.length) return Promise.resolve([]);
-    var ctx = buildToolCtx();
+    var hooks = buildToolCtx();
     return toolCalls.reduce(function (chain, tc) {
       return chain.then(function (results) {
-        return routeToolCall(tc, ctx).then(function (r) {
+        return executeTool({ tool: tc, hooks: hooks }).then(function (r) {
           results.push(r);
           return results;
         });
       });
     }, Promise.resolve([])).then(function (results) {
-      // Toast a summary if anything actually executed.
-      var executed = results.filter(function (r) { return r && r.kind === "executed"; }).length;
-      var errored  = results.filter(function (r) { return r && r.kind === "error"; }).length;
+      var executed = results.filter(function (r) { return r && r.ok; }).length;
+      var errored  = results.filter(function (r) { return r && !r.ok && r.kind === "error"; }).length;
       if (executed > 0) {
         showToast(executed + " action" + (executed === 1 ? "" : "s") + " done");
       }
       if (errored > 0) {
         showToast(errored + " action" + (errored === 1 ? "" : "s") + " failed", "warning");
       }
-      if (replaceMsgIdx != null) {
-        setMessages(function (prev) {
-          var next = prev.slice();
-          if (next[replaceMsgIdx]) {
-            next[replaceMsgIdx] = Object.assign({}, next[replaceMsgIdx], {
-              pendingTools: null,
-              executedSummary: { executed: executed, errored: errored, results: results },
-            });
-          }
-          return next;
-        });
-      }
       return results;
     });
   }
 
+  // Execute one confirm-required tool from a card.
+  function handleConfirmOne(msgIdx, tool) {
+    var hooks = buildToolCtx();
+    return executeTool({ tool: tool, hooks: hooks }).then(function (r) {
+      if (r.ok) {
+        showToast(r.message || "Done");
+        // Drop from this message's pending list
+        setMessages(function (prev) {
+          var next = prev.slice();
+          var m = next[msgIdx];
+          if (m && m.pending) {
+            var remaining = m.pending.filter(function (t) { return (t.id || t.name) !== (tool.id || tool.name); });
+            next[msgIdx] = Object.assign({}, m, { pending: remaining.length ? remaining : null });
+          }
+          return next;
+        });
+      } else {
+        showToast(r.message || r.error || "Failed", "warning");
+      }
+      return r;
+    });
+  }
+
+  // Fire every still-pending action on a message in sequence.
   function handleConfirmAll(msgIdx, tools) {
-    return executeTools(tools, msgIdx);
+    var hooks = buildToolCtx();
+    return tools.reduce(function (chain, t) {
+      return chain.then(function (results) {
+        return executeTool({ tool: t, hooks: hooks }).then(function (r) {
+          results.push(r);
+          return results;
+        });
+      });
+    }, Promise.resolve([])).then(function (results) {
+      var executed = results.filter(function (r) { return r && r.ok; }).length;
+      var errored  = results.filter(function (r) { return r && !r.ok; }).length;
+      if (executed) showToast(executed + " action" + (executed === 1 ? "" : "s") + " done");
+      if (errored)  showToast(errored  + " action" + (errored  === 1 ? "" : "s") + " failed", "warning");
+      // Clear all confirmed tools from pending
+      var firedIds = {};
+      tools.forEach(function (t) { firedIds[t.id || t.name] = true; });
+      setMessages(function (prev) {
+        var next = prev.slice();
+        var m = next[msgIdx];
+        if (m && m.pending) {
+          var remaining = m.pending.filter(function (t) { return !firedIds[t.id || t.name]; });
+          next[msgIdx] = Object.assign({}, m, { pending: remaining.length ? remaining : null });
+        }
+        return next;
+      });
+      return results;
+    });
   }
 
-  function handleReviewSelected(msgIdx, tools) {
-    return executeTools(tools, msgIdx);
-  }
-
-  function handleDiscard(msgIdx) {
+  // Skip (drop without firing) a single card from a batch.
+  function handleDiscardOne(msgIdx, toolId) {
     setMessages(function (prev) {
       var next = prev.slice();
-      if (next[msgIdx]) {
-        next[msgIdx] = Object.assign({}, next[msgIdx], { pendingTools: null, discarded: true });
+      var m = next[msgIdx];
+      if (m && m.pending) {
+        var remaining = m.pending.filter(function (t) { return (t.id || t.name) !== toolId; });
+        var discardedList = (m.discardedItems || []).concat([toolId]);
+        next[msgIdx] = Object.assign({}, m, {
+          pending: remaining.length ? remaining : null,
+          discardedItems: discardedList,
+        });
+      }
+      return next;
+    });
+  }
+
+  // Drop every still-pending card without firing.
+  function handleDiscardAll(msgIdx) {
+    setMessages(function (prev) {
+      var next = prev.slice();
+      var m = next[msgIdx];
+      if (m) {
+        next[msgIdx] = Object.assign({}, m, { pending: null, discarded: true });
       }
       return next;
     });
@@ -387,25 +444,25 @@ export function PipView(props) {
         var rawText   = data.content || streamingText || "...";
         var toolCalls = data.toolCalls || [];
 
-        // Decide bulk vs. immediate.
+        // Split: frictionless fires now, confirm-required goes into card(s).
         var plan = planToolCalls(toolCalls);
 
         setLoading(false);
         setMessages(function (prev) {
           var next = prev.slice();
           next[streamIdx] = {
-            role:         "assistant",
-            text:         rawText,
-            toolCalls:    toolCalls,
-            pendingTools: plan.needsConfirmation ? plan.confirm : null,
+            role:      "assistant",
+            text:      rawText,
+            toolCalls: toolCalls,
+            pending:   plan.confirm.length ? plan.confirm : null,
+            mode:      plan.mode,
           };
           return next;
         });
         speak(rawText);
 
-        if (!plan.needsConfirmation && plan.immediate.length) {
-          // Execute single/small batches inline.
-          executeTools(plan.immediate, streamIdx);
+        if (plan.immediate.length) {
+          executeTools(plan.immediate);
         }
       })
       .catch(function (err) {
@@ -430,13 +487,20 @@ export function PipView(props) {
 
   function renderToolReceipts(m, idx) {
     if (!m.toolCalls || !m.toolCalls.length) return null;
-    if (m.pendingTools && m.pendingTools.length) return null; // shown in the batch card below
     if (m.discarded) return null;
-    var single = m.toolCalls.filter(function (t) { return classifyTool(t.name) !== "navigate"; });
-    if (!single.length) return null;
+    // Only receipt the tools that already fired (immediate / frictionless).
+    // Confirm-required tools still in `pending` are NOT receipted yet.
+    var pendingIds = {};
+    (m.pending || []).forEach(function (t) { pendingIds[t.id || t.name] = true; });
+    var receipts = m.toolCalls.filter(function (t) {
+      if (classifyTool(t.name) === "navigate") return false;
+      if (pendingIds[t.id || t.name]) return false;
+      return true;
+    });
+    if (!receipts.length) return null;
     return (
       <div style={{ marginLeft: 42, marginTop: 4, display: "flex", flexDirection: "column", gap: 3 }}>
-        {single.map(function (t, i) {
+        {receipts.map(function (t, i) {
           return (
             <div
               key={i}
@@ -558,18 +622,34 @@ export function PipView(props) {
                 </div>
               )}
               {isPip && renderToolReceipts(m, i)}
-              {isPip && m.pendingTools && m.pendingTools.length > 0 && (
+              {isPip && m.pending && m.pending.length === 1 && (
+                <div style={{ width: "100%" }}>
+                  <PipActionCard
+                    tool={m.pending[0]}
+                    accounts={accounts}
+                    onConfirm={function (tool) { return handleConfirmOne(i, tool); }}
+                    onDiscard={function () { handleDiscardOne(i, m.pending[0].id || m.pending[0].name); }}
+                  />
+                </div>
+              )}
+              {isPip && m.pending && m.pending.length >= 2 && (
                 <PipActionBatch
-                  tools={m.pendingTools}
+                  tools={m.pending}
                   accounts={accounts}
+                  onConfirmOne={function (tool) { return handleConfirmOne(i, tool); }}
+                  onDiscardOne={function (toolId) { handleDiscardOne(i, toolId); }}
                   onConfirmAll={function (tools) { return handleConfirmAll(i, tools); }}
-                  onReviewSelected={function (tools) { return handleReviewSelected(i, tools); }}
-                  onDiscard={function () { handleDiscard(i); }}
+                  onDiscardAll={function () { handleDiscardAll(i); }}
                 />
               )}
               {isPip && m.discarded && (
                 <div style={{ marginLeft: 42, fontFamily: MONO, fontSize: 10, color: C.textMuted }}>
                   Discarded.
+                </div>
+              )}
+              {isPip && m.discardedItems && m.discardedItems.length > 0 && !m.discarded && (
+                <div style={{ marginLeft: 42, fontFamily: MONO, fontSize: 10, color: C.textMuted }}>
+                  {m.discardedItems.length} skipped.
                 </div>
               )}
             </div>

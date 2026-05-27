@@ -188,6 +188,183 @@ export var PIP_TOOLS = [
   },
 ];
 
+// ----- Tool metadata (display + classification) ------------------------
+//
+// TOOL_META is the single source of truth for per-tool display + execution
+// behavior. PipActionCard uses `displayTitle` for the card header, and the
+// `category` field drives confirm/frictionless routing in PipView.
+//
+//   category: "open"         — opens a prefilled modal; the modal IS the confirm
+//             "navigate"     — harmless view change; never needs confirm
+//             "frictionless" — reversible single-action write; no confirm
+//             "confirm"      — destructive/non-trivial write; ALWAYS needs confirm
+
+export var TOOL_META = {
+  open_meeting:          { category: "open",         displayTitle: "open the Log Meeting modal" },
+  open_item:             { category: "open",         displayTitle: "open the Add Open Item modal" },
+  open_contact:          { category: "open",         displayTitle: "open the Add Contact modal" },
+  open_cadence:          { category: "open",         displayTitle: "open the Set Cadence modal" },
+  navigate:              { category: "navigate",     displayTitle: "navigate" },
+  complete_task:         { category: "frictionless", displayTitle: "complete a task" },
+  add_quick_task:        { category: "confirm",      displayTitle: "add a quick task" },
+  create_open_item:      { category: "confirm",      displayTitle: "create an open item" },
+  log_meeting:           { category: "confirm",      displayTitle: "log a meeting" },
+  set_follow_up:         { category: "confirm",      displayTitle: "set a follow-up date" },
+  update_account_health: { category: "confirm",      displayTitle: "update account health" },
+  schedule_cadence:      { category: "confirm",      displayTitle: "schedule a cadence" },
+  remember_fact:         { category: "confirm",      displayTitle: "remember a fact" },
+};
+
+// Returns true if this tool's write must be confirmed by the user before
+// committing. Open-modal/navigate/frictionless tools return false.
+export function needsConfirm(toolName) {
+  var meta = TOOL_META[toolName];
+  return !!(meta && meta.category === "confirm");
+}
+
+// Returns the human-readable title for the confirm card header.
+// e.g. "Pip wants to <displayTitle>"
+export function displayTitleFor(toolName) {
+  var meta = TOOL_META[toolName];
+  return meta ? meta.displayTitle : (toolName || "do something").replace(/_/g, " ");
+}
+
+// ----- Field rendering --------------------------------------------------
+//
+// getFieldsForTool(toolName, input, accounts) returns an array of
+//   { key, label, value, displayValue, kind, required }
+// driving both preview rendering and edit field generation inside PipActionCard.
+//
+//   kind: "text" | "textarea" | "account" | "date" | "health_status"
+//         | "frequency" | "day_of_week" | "monthly_type" | "monthly_ordinal"
+//         | "time" | "integer"
+
+var DOW_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function fmtAccount(accounts, id) {
+  if (!id) return null;
+  var match = (accounts || []).find(function (a) { return a.id === id; });
+  return match ? match.name : null;
+}
+
+function fmtDate(s) {
+  if (!s) return null;
+  var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (!m) return s;
+  var d = new Date(Date.UTC(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10)));
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+}
+
+function fmtHealth(s) {
+  if (s === "active")  return "Active (green)";
+  if (s === "at_risk") return "At risk (yellow)";
+  if (s === "cold")    return "Cold (red)";
+  return s || null;
+}
+
+function fmtDow(n) {
+  if (n == null || n === "") return null;
+  return DOW_LABELS[n] || String(n);
+}
+
+function requiredFor(name) {
+  for (var i = 0; i < PIP_TOOLS.length; i++) {
+    if (PIP_TOOLS[i].name === name) {
+      return PIP_TOOLS[i].input_schema && PIP_TOOLS[i].input_schema.required
+        ? PIP_TOOLS[i].input_schema.required.slice()
+        : [];
+    }
+  }
+  return [];
+}
+
+export function getFieldsForTool(toolName, input, accounts) {
+  input = input || {};
+  accounts = accounts || [];
+  var req = requiredFor(toolName);
+  function isReq(k) { return req.indexOf(k) !== -1; }
+  function mk(key, label, kind, value, displayValue) {
+    return {
+      key: key,
+      label: label,
+      kind: kind,
+      value: value == null ? "" : value,
+      displayValue: displayValue == null ? (value == null || value === "" ? "—" : String(value)) : (displayValue || "—"),
+      required: isReq(key),
+    };
+  }
+
+  switch (toolName) {
+    case "add_quick_task":
+      return [
+        mk("title", "Task",  "text",     input.title || ""),
+        mk("notes", "Notes", "textarea", input.notes || ""),
+        mk("account_id", "Account", "account", input.account_id || "", fmtAccount(accounts, input.account_id)),
+      ];
+
+    case "create_open_item":
+      return [
+        mk("account_id", "Account", "account",  input.account_id || "", fmtAccount(accounts, input.account_id)),
+        mk("text",       "Item",    "textarea", input.text  || ""),
+        mk("due_date",   "Due",     "date",     input.due_date || "", fmtDate(input.due_date)),
+        mk("owner",      "Owner",   "text",     input.owner || ""),
+      ];
+
+    case "log_meeting":
+      return [
+        mk("account_id",     "Account",      "account",  input.account_id || "", fmtAccount(accounts, input.account_id)),
+        mk("title",          "Title",        "text",     input.title || ""),
+        mk("meeting_date",   "Date",         "date",     input.meeting_date || "", fmtDate(input.meeting_date)),
+        mk("notes",          "Notes",        "textarea", input.notes || ""),
+        mk("action_items",   "Action Items", "textarea", input.action_items || ""),
+        mk("follow_up_date", "Follow-up",    "date",     input.follow_up_date || "", fmtDate(input.follow_up_date)),
+      ];
+
+    case "set_follow_up":
+      return [
+        mk("account_id",     "Account",   "account", input.account_id || "", fmtAccount(accounts, input.account_id)),
+        mk("follow_up_date", "Follow-up", "date",    input.follow_up_date || "", fmtDate(input.follow_up_date)),
+      ];
+
+    case "update_account_health":
+      return [
+        mk("account_id", "Account", "account",       input.account_id || "", fmtAccount(accounts, input.account_id)),
+        mk("status",     "Status",  "health_status", input.status || "",     fmtHealth(input.status)),
+      ];
+
+    case "schedule_cadence":
+      return [
+        mk("account_id",      "Account",       "account",         input.account_id || "", fmtAccount(accounts, input.account_id)),
+        mk("frequency",       "Frequency",     "frequency",       input.frequency || ""),
+        mk("day_of_week",     "Day of week",   "day_of_week",     input.day_of_week == null ? "" : input.day_of_week, fmtDow(input.day_of_week)),
+        mk("day_of_month",    "Day of month",  "integer",         input.day_of_month == null ? "" : String(input.day_of_month)),
+        mk("monthly_type",    "Monthly type",  "monthly_type",    input.monthly_type || ""),
+        mk("monthly_ordinal", "Monthly ord.",  "monthly_ordinal", input.monthly_ordinal || ""),
+        mk("meeting_time",    "Time",          "time",            input.meeting_time || ""),
+      ];
+
+    case "remember_fact":
+      return [
+        mk("fact", "Fact", "textarea", input.fact || ""),
+      ];
+
+    // Open-modal / navigate / complete_task aren't expected to land here
+    // (they don't show a confirm card) but render a minimal preview as a
+    // safety net so edge cases don't crash.
+    case "open_meeting":
+    case "open_item":
+    case "open_contact":
+    case "open_cadence":
+      return [ mk("account_name", "Account", "text", input.account_name || "") ];
+    case "navigate":
+      return [ mk("view", "View", "text", input.view || "") ];
+    case "complete_task":
+      return [ mk("task_id", "Task ID", "text", input.task_id || "") ];
+    default:
+      return [];
+  }
+}
+
 // ----- Client-side routing helpers --------------------------------------
 //
 // routeToolCall(tool, ctx) executes ONE tool call against the user's Supabase
@@ -373,31 +550,58 @@ export function routeToolCall(tool, ctx) {
   }
 }
 
-// Group an array of tool calls and decide if confirmation is needed.
-// Returns { needsConfirmation: boolean, immediate: Tool[], confirm: Tool[], dominantType?: string }
+// Group an array of tool calls into immediate-fire vs needs-confirm.
 //
-// Rule: if more than CONFIRM_THRESHOLD calls of the same destructive type
-// appear in one response, require confirmation for ALL of them. Otherwise
-// execute immediately.
-export var CONFIRM_THRESHOLD = 3;
+// Phase 2.5 rule:
+//   - 0 confirm-required tools → mode "none", all tools go to `immediate`
+//   - 1 confirm-required tool → mode "single", render a single PipActionCard
+//   - ≥2 confirm-required tools → mode "batch", render PipActionBatch
+//   - Frictionless tools (navigate / open_* / complete_task) ALWAYS land in
+//     `immediate` regardless of company, so mixed responses split cleanly
+//
+// Returns:
+//   {
+//     needsConfirmation: boolean,
+//     immediate:         Tool[],
+//     confirm:           Tool[],
+//     mode:              "none" | "single" | "batch",
+//     dominantType?:     string,
+//   }
+//
+// CONFIRM_THRESHOLD is kept for backward-compat but the actual gate is
+// TOOL_META[name].category === "confirm".
+export var CONFIRM_THRESHOLD = 1;
 
 export function planToolCalls(tools) {
   if (!Array.isArray(tools) || tools.length === 0) {
-    return { needsConfirmation: false, immediate: [], confirm: [] };
+    return { needsConfirmation: false, immediate: [], confirm: [], mode: "none" };
   }
+  var immediate = [];
+  var confirm   = [];
   var counts = {};
-  tools.forEach(function (t) { counts[t.name] = (counts[t.name] || 0) + 1; });
-  var triggers = Object.keys(counts).filter(function (k) {
-    // Only count writes/opens — `navigate` and `remember_fact` don't bulk up.
-    return counts[k] > CONFIRM_THRESHOLD && k !== "navigate" && k !== "remember_fact";
+  tools.forEach(function (t) {
+    if (needsConfirm(t.name)) {
+      confirm.push(t);
+      counts[t.name] = (counts[t.name] || 0) + 1;
+    } else {
+      immediate.push(t);
+    }
   });
-  if (triggers.length) {
-    return {
-      needsConfirmation: true,
-      immediate: [],
-      confirm: tools,
-      dominantType: triggers[0],
-    };
-  }
-  return { needsConfirmation: false, immediate: tools, confirm: [] };
+  var mode = "none";
+  if (confirm.length === 1) mode = "single";
+  else if (confirm.length >= 2) mode = "batch";
+
+  var dominantType = null;
+  var dominantCount = 0;
+  Object.keys(counts).forEach(function (k) {
+    if (counts[k] > dominantCount) { dominantCount = counts[k]; dominantType = k; }
+  });
+
+  return {
+    needsConfirmation: confirm.length > 0,
+    immediate:         immediate,
+    confirm:           confirm,
+    mode:              mode,
+    dominantType:      dominantType,
+  };
 }
