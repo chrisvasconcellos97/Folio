@@ -8,6 +8,7 @@ import { FL } from "../../components/FieldLabel";
 import { getFrequencyLabel, getNextOccurrence, daysUntil, formatDateFull, formatTime } from "../../lib/cadenceUtils";
 import { summarizeDraftPip, callCadenceBriefPip } from "../../lib/pip";
 import { supabase } from "../../lib/supabase";
+import { CadenceBackfillBanner } from "./CadenceBackfillBanner";
 
 var INTER = "'Inter', system-ui, sans-serif";
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
@@ -472,6 +473,7 @@ export function CadenceHub({
   userId,
   meetings,         // all meetings for the account
   items,            // all items for the account
+  cadences,         // all cadences for the account (for backfill banner)
   addMeeting,
   updateMeeting,
   deleteMeeting,
@@ -742,6 +744,13 @@ export function CadenceHub({
     return (
       <div>
         {header}
+        <CadenceBackfillBanner
+          account={account}
+          cadences={cadences}
+          meetings={meetings}
+          onUpdateMeeting={updateMeeting}
+          defaultCadenceId={cadence.id}
+        />
         {briefSection}
         <div style={{
           display: "flex", gap: 4,
@@ -787,6 +796,13 @@ export function CadenceHub({
   return (
     <div>
       {header}
+      <CadenceBackfillBanner
+        account={account}
+        cadences={cadences}
+        meetings={meetings}
+        onUpdateMeeting={updateMeeting}
+        defaultCadenceId={cadence.id}
+      />
       <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
         {briefSection}
         {draftsSection}

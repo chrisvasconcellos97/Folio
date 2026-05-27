@@ -13,7 +13,7 @@ export function isBackfillDismissed(accountId) {
   try { return localStorage.getItem(dismissKey(accountId)) === "1"; } catch (e) { return false; }
 }
 
-export function CadenceBackfillBanner({ account, cadences, meetings, onUpdateMeeting, onDismiss }) {
+export function CadenceBackfillBanner({ account, cadences, meetings, onUpdateMeeting, onDismiss, defaultCadenceId }) {
   var [open, setOpen]       = useState(false);
   var [saving, setSaving]   = useState(false);
   var [assignments, setAssignments] = useState({});
@@ -26,6 +26,15 @@ export function CadenceBackfillBanner({ account, cadences, meetings, onUpdateMee
     return m.account_id === account.id && !m.cadence_id && m.status !== "draft";
   });
   if (unassigned.length === 0) return null;
+
+  function openAndPrefill() {
+    if (defaultCadenceId) {
+      var pre = {};
+      unassigned.forEach(function (m) { pre[m.id] = defaultCadenceId; });
+      setAssignments(pre);
+    }
+    setOpen(true);
+  }
 
   function handleDismiss() {
     try { localStorage.setItem(dismissKey(account.id), "1"); } catch (e) {}
@@ -43,7 +52,9 @@ export function CadenceBackfillBanner({ account, cadences, meetings, onUpdateMee
       setSaving(false);
       var n = ops.length;
       showToast(n + " meeting" + (n !== 1 ? "s" : "") + " assigned");
-      handleDismiss();
+      var remaining = unassigned.length - n;
+      if (remaining <= 0) handleDismiss();
+      else setOpen(false);
     }).catch(function () {
       setSaving(false);
       showToast("Couldn't save assignments", "error");
@@ -68,7 +79,7 @@ export function CadenceBackfillBanner({ account, cadences, meetings, onUpdateMee
         </div>
         <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
           <SecBtn onClick={handleDismiss} style={{ fontSize: 11, padding: "5px 10px" }}>Dismiss</SecBtn>
-          <AmberBtn onClick={function () { setOpen(true); }} style={{ fontSize: 11, padding: "5px 10px" }}>
+          <AmberBtn onClick={openAndPrefill} style={{ fontSize: 11, padding: "5px 10px" }}>
             Assign →
           </AmberBtn>
         </div>

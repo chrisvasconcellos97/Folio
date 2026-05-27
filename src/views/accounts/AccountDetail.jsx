@@ -126,6 +126,7 @@ export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit
         userId={userId}
         meetings={meetings}
         items={items}
+        cadences={cadences}
         addMeeting={addMeeting}
         updateMeeting={updateMeeting}
         deleteMeeting={deleteMeeting}
