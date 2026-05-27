@@ -30,7 +30,7 @@ export default async function handler(req, res) {
 
     var orgName = org.name;
     var inviterEmail = user.email || "a teammate";
-    var signupUrl = (appUrl || "https://folio.vercel.app").replace(/\/$/, "") + "/";
+    var signupUrl = (appUrl || "https://folioshq.com").replace(/\/$/, "") + "/";
     var roleLabel = role === "director" ? "Director" : "Member";
 
     var subject = "You've been invited to " + orgName + " on Folio";
