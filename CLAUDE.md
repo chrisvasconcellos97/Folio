@@ -143,6 +143,8 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 6. **Meeting log: single notes field + Pip parsing** — strip LogMeetingModal down to title + one large notes textarea (remove the separate observations / topics / action items / promises fields). Pressing Enter auto-prepends a bullet. On save, Pip parses the freeform notes into structured sections (summary, action items, promises/commitments, follow-up meeting time) **once**, stored on the meeting row. MeetingsTab renders the parsed sections as styled, scannable blocks with clear section headers — not raw notes. Original freeform notes preserved alongside the structured output.
 
+7. **Pip output formatting overhaul** — Pip currently outputs plain text walls and the renderer is plain text, so even markdown would render literal. Fix both sides: (a) update `PIP_SYSTEM` prompt in `api/pip.js` with explicit formatting rules — use markdown headers, bold for emphasis, bullet lists, group multi-account answers by account, lead with a one-line summary, separate sections (Action Items / Promises / Follow-ups / Risks). (b) Render Pip messages with `react-markdown` (+ `remark-gfm` for tables/checklists) in PipView so styling actually shows. Result: when Pip summarizes ABPA action items, output looks scannable and structured like Claude's own responses.
+
 **Already shipped (drop from list):**
 - ✅ Pipeline V2 + Revenue History + Shop Metrics — Log Month modal, MoM/YoY deltas, sparklines, shop metrics dots on pipeline cards
 - ✅ Data Visualization — 8-point sparklines + MoM trend arrows on account cards; 6-month meeting frequency bars on account detail header
