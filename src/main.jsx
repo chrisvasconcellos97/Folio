@@ -8,17 +8,36 @@ import { registerSW } from "virtual:pwa-register";
 import App from "./App";
 import { showToast } from "./components/Toast";
 
-// Auto-reload on update. Folios autosaves everything (notes, drafts, items)
-// so a silent refresh is safe. A 2s toast hints at why the page just blipped.
+// With skipWaiting+clientsClaim, a new SW activates silently and `onNeedRefresh`
+// never fires. The page keeps running stale JS. Listening to `controllerchange`
+// is the canonical signal that a new SW took over — we reload then.
+// We skip the *first* controllerchange (which fires on a fresh visit when the
+// SW takes initial control) so first-time visitors aren't bounced.
+var hadControllerAtStart = "serviceWorker" in navigator ? !!navigator.serviceWorker.controller : true;
+var reloading = false;
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.addEventListener("controllerchange", function () {
+    if (reloading) return;
+    if (!hadControllerAtStart) { hadControllerAtStart = true; return; }
+    reloading = true;
+    showToast("Updating Folios…", "warning");
+    setTimeout(function () { window.location.reload(); }, 400);
+  });
+}
+
 var updateSW = registerSW({
   immediate: true,
   onNeedRefresh: function () {
+    if (reloading) return;
+    reloading = true;
     showToast("Updating Folios…", "warning");
-    setTimeout(function () { updateSW(true); }, 600);
+    setTimeout(function () { updateSW(true); }, 400);
   },
   onRegisteredSW: function (_swUrl, registration) {
     if (!registration) return;
-    setInterval(function () { registration.update(); }, 10 * 60 * 1000);
+    registration.update();
+    setInterval(function () { registration.update(); }, 5 * 60 * 1000);
     document.addEventListener("visibilitychange", function () {
       if (document.visibilityState === "visible") registration.update();
     });
