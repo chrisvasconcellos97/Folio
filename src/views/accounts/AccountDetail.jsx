@@ -3,6 +3,7 @@ import { C } from "../../lib/colors";
 import { showToast } from "../../components/Toast";
 import { Pill } from "../../components/Pill";
 import { AmberBtn, SecBtn, DangerBtn } from "../../components/Buttons";
+import { MarkdownText } from "../../components/MarkdownText";
 import { Modal } from "../../components/Modal";
 import { PipOrb } from "../../components/PipMark";
 
@@ -593,7 +594,7 @@ export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit
             <div style={{ color: C.red, fontSize: 13 }}>{briefError}</div>
           )}
           {briefText && (
-            <div style={{ fontSize: 14, color: C.textSub, lineHeight: 1.75, whiteSpace: "pre-wrap" }}>{briefText}</div>
+            <MarkdownText text={briefText} style={{ fontSize: 14, color: C.textSub, lineHeight: 1.75 }} />
           )}
         </Modal>
       )}

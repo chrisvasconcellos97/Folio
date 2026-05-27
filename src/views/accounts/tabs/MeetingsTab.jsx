@@ -3,6 +3,7 @@ import { C } from "../../../lib/colors";
 import { AmberBtn, DangerBtn, SecBtn } from "../../../components/Buttons";
 import { Card } from "../../../components/Card";
 import { FL } from "../../../components/FieldLabel";
+import { MarkdownText } from "../../../components/MarkdownText";
 import { PipMark } from "../../../components/PipMark";
 import { PipInsightCard } from "../../../components/PipInsightCard";
 import { callAskPip } from "../../../lib/pip";
@@ -251,7 +252,7 @@ export function MeetingsTab({ meetings, accountName, userId, onLogMeeting, onDel
                   <PipMark size={7} color={C.accent} glow />
                   <span style={{ fontSize: 10, color: C.accent, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em" }}>Pip Summary</span>
                 </div>
-                <div style={{ fontSize: 14, color: C.textSub, lineHeight: 1.65 }}>{m.pip_summary}</div>
+                <MarkdownText text={m.pip_summary} style={{ fontSize: 14, color: C.textSub, lineHeight: 1.65 }} />
               </div>
             )}
 

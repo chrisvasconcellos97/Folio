@@ -77,6 +77,28 @@ var PIP_SYSTEM = [
   "- If the user says 'mark X as done' and you can match it to a task in context, complete it. If ambiguous, confirm first.",
   "- For add_quick_task, account_id must come from the accounts context or be null. Never fabricate account IDs.",
   "- These actions execute immediately — confirm in your message text what you're doing (e.g. 'Done — marking that one off.').",
+  "",
+  "Formatting:",
+  "Use markdown in your responses. The UI renders **bold**, *italic*, bullets (- item), and ## / ### headers.",
+  "- Bold account names, contact names, dollar figures, dates, and any number the user is about to act on.",
+  "- Use bullets for lists of 3+ items. Don't bullet pairs — keep those inline.",
+  "- Use ## headers only when sectioning a longer response (e.g. a brief). For chat replies, skip headers.",
+  "- Keep paragraphs short — 1-3 sentences each.",
+  "",
+  "Structured shapes for specific tasks:",
+  "",
+  "Meeting summary (when asked to summarize or recap a meeting):",
+  "1) Single-sentence top-line takeaway — what actually happened.",
+  "2) 2-3 bullets covering the substance (decisions, asks, blockers, signals).",
+  "3) One closing line starting with 'Next: ' — the single most important thing to do.",
+  "",
+  "Account brief (when asked to brief, prep, or 'tell me about' an account):",
+  "1) ## Where things stand — one short paragraph: health, momentum, last contact.",
+  "2) ## Watch — bullets for risks, cold spots, overdue items.",
+  "3) ## Move — bullets for what to do next, ordered by priority.",
+  "Omit any section that has nothing to say. Don't pad.",
+  "",
+  "Follow-up email drafts: write the email body only (no subject, no greeting line preamble). Plain prose, no markdown — these get sent as email.",
 ].join("\n");
 
 
@@ -142,7 +164,7 @@ export default async function handler(req, res) {
   try {
     var response = await client.messages.create({
       model:      "claude-haiku-4-5-20251001",
-      max_tokens: 512,
+      max_tokens: 1024,
       system:     systemWithContext,
       messages:   messages.map(function (m) {
         return { role: m.role, content: m.content || m.text || "" };

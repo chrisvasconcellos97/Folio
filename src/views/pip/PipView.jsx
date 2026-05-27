@@ -3,6 +3,7 @@ import { C } from "../../lib/colors";
 import { PipOrb } from "../../components/PipMark";
 import { AmberBtn } from "../../components/Buttons";
 import { InputField } from "../../components/InputField";
+import { MarkdownText } from "../../components/MarkdownText";
 
 var MONO = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
@@ -395,11 +396,10 @@ export function PipView({ accounts, meetings, items, contacts, tasks, addTask, u
                     <div style={{ fontFamily: MONO, fontSize: 9.5, color: C.accent, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>
                       PIP · {i === 0 ? "JUST NOW" : "EARLIER"}
                     </div>
-                    <div style={{
-                      fontFamily: SERIF, fontSize: 17, color: C.text, lineHeight: 1.5,
-                    }}>
-                      {m.text}
-                    </div>
+                    <MarkdownText
+                      text={m.text}
+                      style={{ fontFamily: SERIF, fontSize: 17, color: C.text, lineHeight: 1.5 }}
+                    />
                   </div>
                 </div>
               ) : (
