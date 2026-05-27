@@ -1,4 +1,4 @@
-# Folio — Claude Development Context
+# Folios — Claude Development Context
 
 ## Deployment Rule
 **Vercel production branch is `claude/build-folio-desktop-app-XzvZ5`.** Always push to both `main` AND this branch on every commit:
@@ -20,28 +20,28 @@ git push origin HEAD:claude/build-folio-desktop-app-XzvZ5
 - Patch commits and pushes to `main` when done — one clean commit per batch
 - The stop hook has a 10-minute grace period so Patch can work without triggering mid-batch commits
 
-## The Briefcase Suite
+## Architecture
 
-Briefcase is a suite of three apps built around account management, conference work, and project tracking. Folio is the hub — Lanyard and Gauge are spokes that punch out from Folio and feed data back.
+**Folios is the umbrella product** — a year-round account management app. Lanyard and Gauge are connected modules that live inside the Folios world, not separate apps with equal billing. The product name is **Folios** (plural); the GitHub repo is still named `Folio` (singular) for historical reasons — don't rename the repo.
 
-- **Folio** (`chrisvasconcellos97/Folio`) — year-round account management. Accounts, meetings, pipeline, contacts, open items, Pip AI. The hub.
-- **Lanyard** (separate repo) — conference-specific app. Schedule, partner profiles, team chat, personal meeting notes, Pip AI. Punches out from Folio during conferences, feeds notes and partner data back.
-- **Gauge** (not yet built) — project management. Tracks commitments and deliverables from account meetings (Phase 1), then expands to company-wide product team integration where PMs manage work and AMs are linked to relevant projects (Phase 2). Feeds project status back into Folio account views.
+- **Folios** (`chrisvasconcellos97/Folio`) — the main app. Year-round account management: accounts, meetings, pipeline, contacts, open items, Pip AI. Production domain: `folioshq.com`.
+- **Lanyard** (separate repo) — conference-specific module. Schedule, partner profiles, team chat, personal meeting notes, Pip AI. Punches out from Folios during conferences, feeds notes and partner data back.
+- **Gauge** (lives under `gauge/` in this repo) — project management module. Tracks commitments and deliverables from account meetings (Phase 1), then expands to company-wide product team integration where PMs manage work and AMs are linked to relevant projects (Phase 2). Feeds project status back into Folios account views.
 
-All three apps share the **same Supabase project**: `https://yrpdjmyfidhxlpmxasao.supabase.co`
+All three share the **same Supabase project**: `https://yrpdjmyfidhxlpmxasao.supabase.co`
 
 ### Gauge — Build Notes
-- Phase 1: AM-facing. Commitments from meetings graduate into tracked projects in Gauge, visible on the account in Folio.
+- Phase 1: AM-facing. Commitments from meetings graduate into tracked projects in Gauge, visible on the account in Folios.
 - Phase 2: Company-wide. Product team uses Gauge as their primary tool, AMs linked to relevant projects. Get input from OEC product team and PMs before building Phase 2 — they'll know what's missing.
-- Same security model as Folio and Lanyard — shared Supabase, RLS, 2FA inherited automatically.
+- Same security model as Folios and Lanyard — shared Supabase, RLS, 2FA inherited automatically.
 
 ---
 
-## Folio — Current State
+## Folios — Current State
 
-- React + Vite, deployed on Vercel, live as of May 2026
+- React + Vite, deployed on Vercel at `folioshq.com`, live as of May 2026
 - Supabase Auth (real email/password accounts)
-- Tables: `folio_accounts`, `folio_contacts`, `folio_meetings`, `folio_items` — all with RLS tied to `auth.uid()`
+- Tables: `folio_accounts`, `folio_contacts`, `folio_meetings`, `folio_items` — all with RLS tied to `auth.uid()`. (Table names keep the `folio_` prefix — they're DB identifiers, not user-facing brand.)
 - `folio_meetings` has two extra columns added post-launch: `pip_summary text`, `pip_email text`
 - Pip AI proxy at `api/pip.js` using `claude-haiku-4-5-20251001`, requires `ANTHROPIC_API_KEY` in Vercel env vars
 - Schema is in `supabase/schema.sql` — run in production
@@ -78,16 +78,16 @@ All three apps share the **same Supabase project**: `https://yrpdjmyfidhxlpmxasa
 
 ---
 
-## Folio ↔ Lanyard Integration — Current Status
+## Folios ↔ Lanyard Integration — Current Status
 
-- Lanyard ABPA 2026 partner data and meeting notes have been imported into Folio
+- Lanyard ABPA 2026 partner data and meeting notes have been imported into Folios
 - Going forward, Lanyard will need real auth before bidirectional sync makes sense
 
 ---
 
 ## Pip
 
-Both apps use the same Pip personality — a loyal, slightly anxious field analyst. Pip has access to account/meeting context injected into the system prompt. Model: `claude-haiku-4-5-20251001`.
+Both Folios and Lanyard use the same Pip personality — a loyal, slightly anxious field analyst. Pip has access to account/meeting context injected into the system prompt. Model: `claude-haiku-4-5-20251001`.
 
 ### Pip cost strategy
 - Generate Pip outputs once, save to DB (`pip_summary`, `pip_email` columns)
@@ -99,8 +99,8 @@ Both apps use the same Pip personality — a loyal, slightly anxious field analy
 ## Supabase
 
 - Project URL: `https://yrpdjmyfidhxlpmxasao.supabase.co`
-- Same project for both Folio and Lanyard
-- Folio tables have proper RLS via `auth.uid()`
+- Same project for Folios and Lanyard
+- Folios tables have proper RLS via `auth.uid()`
 - Lanyard tables use text `user_id` fields (not auth UUIDs)
 
 ---
@@ -171,7 +171,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
 - ✅ Gauge + Account Change Log — deliveries in Brief Me, active projects fed into Pip context, Recent Deliveries on Overview (already shipped)
 - ✅ Route Builder — TSP optimizer, Nominatim geocoding, schedule sidebar with arrival times and drive estimates, Google Maps handoff, save routes to DB
 - ✅ Team/Org Layer + Director View — `folio_orgs`, `folio_org_members`, `folio_account_notes`, `folio_activity` tables + migration SQL (`supabase/team_org_layer.sql`). `useOrg` hook, `useAccountNotes` hook (migrates from `account.objective`), fire-and-forget `logActivity` in all write hooks. Settings view with create-team + invite/revoke UI. Director view (full-width read-only portfolio dashboard). Invite banner on login. Role-aware rendering: directors get DirectorView; everyone else gets normal app. "Team" nav item on desktop sidebar. "Team & Org" in UserMenu (mobile).
-- ✅ Gauge V2 — stages, requested_by, assignee multi-user RLS, My Queue filter, New Request from Folio, status values fixed (planned/in_progress/blocked/complete/on_hold)
+- ✅ Gauge V2 — stages, requested_by, assignee multi-user RLS, My Queue filter, New Request from Folios, status values fixed (planned/in_progress/blocked/complete/on_hold)
 - ✅ Quick Tasks — tray on main page, modal with account dropdown + reminder presets, Pip integration (surface open tasks on load, complete/add via natural language)
 - ✅ Sub-accounts — UI + migration (`parent_account_id` column live), nested display with faded ↳ arrow on accounts list
 - ✅ Pip Summarize with date range (30d / 90d / all time presets, saves to account)
@@ -236,6 +236,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
 - ✅ Health auto-score — calculated green/yellow/red from days since last contact, overdue items, follow-up status; shown alongside manual status on Overview
 - ✅ Brief Me modal — "✦ Brief Me" button on account detail header; Pip generates pre-call brief (last meeting, open items, contacts, sharp observation); caches per account
 - ✅ Multi-select email contacts — checkboxes on Contacts tab; "Email Selected" builds mailto with all checked addresses
+- ✅ Rebrand to Folios — product name changed from Folio to Folios across all user-facing copy, PWA manifest, page title, invite emails, print export, Pip system prompts (Folios + Gauge). "Briefcase Suite" framing dropped; Folios is now the umbrella with Lanyard/Gauge as connected modules. Domain `folioshq.com` live on Vercel/Porkbun.
 
 **Security hardening — shipped in code, two items need Supabase dashboard toggle:**
 
@@ -270,14 +271,11 @@ This app is currently single-user but should be built with multi-tenancy in mind
 - [ ] **Cadence analytics** — meeting frequency per account, open item age, account health trends over time, Pip flags accounts untouched in 30+ days. Hold until enough data exists to make it meaningful.
 - [ ] **Power BI integration** — connect Supabase directly to Power BI via Postgres connection string for full dashboard reporting. No special integration needed, just expose the DB connection. Hold until data volume justifies it.
 
-### Briefcase Landing Page
-- [ ] **Separate repo: `chrisvasconcellos97/Briefcase`** — standalone marketing/intro page for the full suite. Interactive icon selector to preview each app, live link to Folio, suite overview. Pitch line: "From the conference floor to year-round relationships. One suite. Powered by Pip." Reference image saved in Chris's previous Claude chat showing the three-app layout with Folio center, Lanyard left, Gauge right, SYNC connectors between them.
-
 ### Future / bigger features
 - [ ] **Director view** — a read-only leadership layer built on the same Supabase data. High-level portfolio health across all accounts: which accounts are going cold, open item counts by account, revenue trend summaries, cadence compliance. A director doesn't log meetings or set cadences — they just need the pulse. Same data, different lens. Requires team/org support first so accounts can be scoped to a rep.
 - [ ] **Team support** — org layer, multiple users per account, shared accounts
-- [ ] **Lanyard real auth** — connect Lanyard users to Folio users via Supabase Auth
-- [ ] **Lanyard → Folio live sync** — post-conference notes flow into Folio automatically once auth is shared
+- [ ] **Lanyard real auth** — connect Lanyard users to Folios users via Supabase Auth
+- [ ] **Lanyard → Folios live sync** — post-conference notes flow into Folios automatically once auth is shared
 - [ ] **CRM integrations** — Salesforce / HubSpot sync
 - [ ] **Mobile app** — React Native wrapper or PWA improvements
 
@@ -287,4 +285,4 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 - [ ] Add real Supabase Auth to Lanyard
 - [ ] Run `notifications` and `messages` SQL in Supabase to activate Lanyard features
-- [ ] Connect Folio and Lanyard bidirectionally once Lanyard has real auth
+- [ ] Connect Folios and Lanyard bidirectionally once Lanyard has real auth
