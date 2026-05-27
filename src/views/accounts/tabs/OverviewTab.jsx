@@ -189,7 +189,7 @@ function MiniSparkline({ records }) {
   );
 }
 
-export function OverviewTab({ account, userId, orgId, openItems, meetings, onQuickMeeting, onLogMeeting, onAddItem, onSaveSummary, subAccounts, onSelectAccount, revenueHistory, shopMetrics, onUpdateAccount, projects }) {
+export function OverviewTab({ account, userId, orgId, openItems, meetings, onQuickMeeting, onLogMeeting, onAddItem, onSaveSummary, subAccounts, onSelectAccount, revenueHistory, shopMetrics, onUpdateAccount, projects, onSwitchTab }) {
   var pipInsight = useMemo(function () {
     return buildPipInsight(account, openItems, revenueHistory, shopMetrics, projects);
   }, [account, openItems, revenueHistory, shopMetrics, projects]);
@@ -436,7 +436,7 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
 
       {/* Stats grid */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-        <Card>
+        <Card onClick={account.last_meeting && onSwitchTab ? function () { onSwitchTab("meetings"); } : undefined}>
           <FL>Last Meeting</FL>
           <div style={{ fontSize: 14, color: C.text, fontVariantNumeric: "tabular-nums" }}>
             {account.last_meeting
@@ -444,7 +444,7 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
               : "—"}
           </div>
         </Card>
-        <Card>
+        <Card onClick={account.next_meeting && onSwitchTab ? function () { onSwitchTab("meetings"); } : undefined}>
           <FL>Next Meeting</FL>
           <div style={{ fontSize: 14, color: account.next_meeting ? C.accent : C.textMuted, fontVariantNumeric: "tabular-nums" }}>
             {account.next_meeting
@@ -453,7 +453,7 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
           </div>
         </Card>
         {followUp && (
-          <Card>
+          <Card onClick={onSwitchTab ? function () { onSwitchTab("meetings"); } : undefined}>
             <FL>Follow-up Due</FL>
             <div style={{ fontSize: 14, color: followUpOverdue ? C.red : C.accent, fontVariantNumeric: "tabular-nums" }}>
               {new Date(followUp + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
@@ -461,7 +461,7 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
             </div>
           </Card>
         )}
-        <Card>
+        <Card onClick={onSwitchTab ? function () { onSwitchTab("tasks"); } : undefined}>
           <FL>Open Items</FL>
           <div
             style={{

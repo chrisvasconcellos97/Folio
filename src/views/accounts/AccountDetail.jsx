@@ -217,7 +217,11 @@ export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit
                 {STATUS_LABELS[account.status] || account.status}
               </Pill>
               {openCount > 0 && (
-                <Pill color={C.yellow} style={{ fontFeatureSettings: '"tnum"' }}>
+                <Pill
+                  color={C.yellow}
+                  onClick={function () { setTab("tasks"); }}
+                  style={{ fontFeatureSettings: '"tnum"', cursor: "pointer" }}
+                >
                   {openCount + " open"}
                 </Pill>
               )}
@@ -504,6 +508,7 @@ export function AccountDetail({ account, userId, orgId, accounts, onBack, onEdit
           revenueHistory={revenueHistory || []}
           shopMetrics={shopMetrics || []}
           projects={projects}
+          onSwitchTab={setTab}
         />
       )}
 
