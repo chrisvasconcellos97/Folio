@@ -20,6 +20,18 @@ The PWA service worker has bitten Chris twice — every deploy must update clean
 
 Symptoms of SW staleness: app won't load, blank page, old UI showing despite recent deploy. Fix-in-the-moment: DevTools → Application → Service Workers → Unregister, then hard reload. But the system should prevent this from being needed.
 
+## Sanity-Pass Rule (read before claiming a fix is shipped)
+
+Chris has burned cycles on "fixes" that compiled clean but didn't actually fire at runtime — e.g. relying on `onNeedRefresh` when `skipWaiting + clientsClaim` make it never fire. Before declaring any fix done, do a 60-second sanity pass:
+
+1. **Trace the actual runtime sequence, not the apparent one.** For event-driven code, ask: *what literally triggers this callback, and does my config produce that trigger?* Don't assume from a function name.
+2. **For library/framework APIs, check the docs or source for trigger conditions** — especially when flags interact (e.g. `autoUpdate` mode + `skipWaiting` + `onNeedRefresh`).
+3. **For "this should never happen again" fixes, mentally walk through the failure case** and confirm the new code path catches it. If you can't articulate the trigger sequence in one sentence, you don't understand the fix yet.
+4. **For PWA / SW / auth / RLS / cache layers especially** — these are silent-failure surfaces. A build passing ≠ a fix working. The only validation is reasoning about the runtime sequence.
+5. **If a previous fix on the same problem already shipped and didn't work, the bar is higher.** Don't try the same shape of solution twice. Re-derive from first principles.
+
+This rule applies to me (Claude) AND to Patch when spawned for batch builds.
+
 ## Font Rule
 **Never use Google Fonts CDN.** All fonts must be self-hosted via `@fontsource-variable` packages installed through npm and imported in `src/main.jsx`. Google Fonts calls get blocked by corporate network proxies. Current fonts: `@fontsource-variable/inter`, `@fontsource-variable/fraunces`, `@fontsource-variable/jetbrains-mono`.
 
