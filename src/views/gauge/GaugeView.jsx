@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { C } from "../../lib/colors";
 import { GaugeIcon } from "../../components/GaugeIcon";
 import { useProjects } from "../../hooks/useProjects";
@@ -14,6 +14,7 @@ import { PipInsightCard } from "../../components/PipInsightCard";
 import { Glow } from "../../components/Glow";
 import { Mark } from "../../components/Mark";
 import { pickV } from "../../lib/metricsUtils";
+import { useBreakpoint } from "../../hooks/useBreakpoint";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
@@ -145,12 +146,8 @@ function buildGaugeInsight(projects, accountsById, handlers) {
 
 export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
   var { projects, loading, error: projectsError, refetch: refetchProjects, addProject, updateProject, deleteProject, templates, addTemplate, updateTemplate, deleteTemplate } = useProjects(userId, null, orgId);
-  var [isMobile, setIsMobile] = useState(typeof window !== "undefined" ? window.innerWidth < 640 : false);
-  useEffect(function () {
-    function onResize() { setIsMobile(window.innerWidth < 640); }
-    window.addEventListener("resize", onResize);
-    return function () { window.removeEventListener("resize", onResize); };
-  }, []);
+  var isDesktop = useBreakpoint();
+  var isMobile  = !isDesktop;
 
   var [scopeFilter, setScopeFilter]   = useState("all");
   var [statusFilter, setStatusFilter] = useState("all");
@@ -247,18 +244,20 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
       <div
         style={{
           display: "flex",
+          flexDirection: isMobile ? "column" : "row",
           justifyContent: "space-between",
-          alignItems: "flex-start",
+          alignItems: isMobile ? "stretch" : "flex-start",
+          gap: isMobile ? 12 : 0,
           marginBottom: 20,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <Mark tab="gauge" size={52} />
+        <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 10 : 14 }}>
+          <Mark tab="gauge" size={isMobile ? 32 : 52} />
           <div>
-            <div style={{ fontFamily: SERIF, fontSize: 40, fontWeight: 400, color: C.text, letterSpacing: "-0.02em", lineHeight: 1 }}>
+            <div style={{ fontFamily: SERIF, fontSize: isMobile ? 26 : 40, fontWeight: 400, color: C.text, letterSpacing: "-0.02em", lineHeight: 1 }}>
               Gauge
             </div>
-            <div style={{ fontFamily: MONO, fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", marginTop: 4 }}>
+            <div style={{ fontFamily: MONO, fontSize: isMobile ? 10 : 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", marginTop: 4 }}>
               Project Management · {inProgressCount} Active
             </div>
           </div>
@@ -303,7 +302,7 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(5, 1fr)",
+          gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(5, 1fr)",
           gap: 1,
           marginBottom: 20,
           background: C.rule,

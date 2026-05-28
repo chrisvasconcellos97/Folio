@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useDeferredValue } from "react";
 import { C } from "../../lib/colors";
 import { ownerInitials, findOwner } from "../../lib/ownerLabel";
 import { Mark } from "../../components/Mark";
+import { useBreakpoint } from "../../hooks/useBreakpoint";
 import { latestRecord, accountRecords, momPct, displayRevenue } from "../../lib/metricsUtils";
 import { Pill } from "../../components/Pill";
 import { InputField } from "../../components/InputField";
@@ -95,6 +96,8 @@ function matchesTypeFilter(account, typeFilter) {
 }
 
 export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks, addTask, updateTask, deleteTask, hasMeetings, hasCadences, revenueHistory, items, meetings, contacts, onColdClick, onOverdueClick, onFollowUpClick, onOpenConversation, typeFilter, userId, members, bannerFilter, onClearBannerFilter }) {
+  var isDesktop = useBreakpoint();
+  var isMobile  = !isDesktop;
   var activeType = typeFilter || "customer";
   var copy = WORKSPACE_COPY[activeType] || WORKSPACE_COPY.customer;
   accounts = (accounts || []).filter(function (a) { return matchesTypeFilter(a, activeType); });
@@ -311,13 +314,13 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
         }
       `}</style>
 
-      <div style={{ marginBottom: 18, display: "flex", alignItems: "center", gap: 14 }}>
-        <Mark tab={workspaceMarkId} size={52} />
+      <div style={{ marginBottom: 18, display: "flex", alignItems: "center", gap: isMobile ? 10 : 14 }}>
+        <Mark tab={workspaceMarkId} size={isMobile ? 32 : 52} />
         <div>
-          <div style={{ fontFamily: SERIF, fontSize: 40, fontWeight: 400, color: C.text, letterSpacing: "-0.02em", lineHeight: 1 }}>
+          <div style={{ fontFamily: SERIF, fontSize: isMobile ? 26 : 40, fontWeight: 400, color: C.text, letterSpacing: "-0.02em", lineHeight: 1 }}>
             {workspaceTitle}
           </div>
-          <div style={{ fontFamily: MONO, fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", marginTop: 4 }}>
+          <div style={{ fontFamily: MONO, fontSize: isMobile ? 10 : 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", marginTop: 4 }}>
             {workspaceSubtitle}
           </div>
         </div>
@@ -469,7 +472,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 1fr 1fr",
+          gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr",
           gap: 6,
           marginBottom: 14,
         }}
@@ -555,7 +558,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
 
       {/* Search + density toggle */}
       <div style={{ marginBottom: 10 }}>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: 8, alignItems: isMobile ? "stretch" : "center" }}>
           <div style={{ flex: 1 }}>
             <InputField
               value={search}
@@ -569,6 +572,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
               }}
             />
           </div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: isMobile ? "wrap" : "nowrap" }}>
           {members && members.length > 1 && (
             <button
               onClick={function () { setMineOnly(function (v) { return !v; }); }}
@@ -641,6 +645,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
           >
             {density === "comfortable" ? "⊟" : "⊞"}
           </button>
+          </div>
         </div>
         {searchFocused && !search && loadSearchHistory().length > 0 && (
           <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 6 }}>

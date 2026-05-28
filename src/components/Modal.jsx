@@ -1,10 +1,13 @@
 import { useEffect, useRef } from "react";
 import { C } from "../lib/colors";
+import { useBreakpoint } from "../hooks/useBreakpoint";
 
 var FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
 export function Modal({ title, onClose, children, width }) {
   var innerRef = useRef(null);
+  var isDesktop = useBreakpoint();
+  var isMobile = !isDesktop;
 
   useEffect(function () {
     var trigger = document.activeElement;
@@ -49,7 +52,7 @@ export function Modal({ title, onClose, children, width }) {
         alignItems: "center",
         justifyContent: "center",
         zIndex: 200,
-        padding: 20,
+        padding: isMobile ? 8 : 20,
       }}
     >
       <div
@@ -59,9 +62,11 @@ export function Modal({ title, onClose, children, width }) {
           background: C.bgCard,
           border: "1px solid " + C.border,
           borderRadius: 16,
-          padding: 24,
+          padding: isMobile ? 18 : 24,
           width: "100%",
-          maxWidth: width || 480,
+          maxWidth: isMobile
+            ? "min(" + (width || 480) + "px, calc(100vw - 16px))"
+            : width || 480,
           maxHeight: "90vh",
           overflowY: "auto",
         }}

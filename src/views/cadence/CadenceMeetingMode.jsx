@@ -4,6 +4,7 @@ import { C, glass } from "../../lib/colors";
 import { PipMark } from "../../components/PipMark";
 import { showToast } from "../../components/Toast";
 import { PipBriefPanel, HubProjectCard, OpenItemRow } from "./CadenceHub";
+import { useBreakpoint } from "../../hooks/useBreakpoint";
 
 var INTER = "'Inter', system-ui, sans-serif";
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
@@ -119,19 +120,24 @@ export function CadenceMeetingMode({
   summarizing,
   summarizeErr,
 }) {
+  var isDesktop                         = useBreakpoint();
+  var isMobile                          = !isDesktop;
   var [notes, setNotes]                 = useState(draft.notes || "");
-  var [sidebarCollapsed, setCollapsed]  = useState(false);
+  // Start collapsed by default on mobile; the user can expand it if they want
+  // to see the sidebar context. Below the desktop breakpoint the sidebar is
+  // effectively hidden (44px icon-strip toggle) so the notepad gets the
+  // whole viewport.
+  var [sidebarCollapsed, setCollapsed]  = useState(isMobile);
   var [quickItem, setQuickItem]         = useState("");
   var [attendees, setAttendees]         = useState(Array.isArray(draft.attendees) ? draft.attendees.slice() : []);
   var saveTimer = useRef(null);
   var attendeesTimer = useRef(null);
   var notesRef  = useRef(null);
 
-  // Auto-collapse sidebar on narrow viewports
+  // Auto-collapse sidebar whenever crossing into mobile width.
   useEffect(function () {
-    if (typeof window === "undefined") return;
-    if (window.innerWidth < 1100) setCollapsed(true);
-  }, []);
+    if (isMobile) setCollapsed(true);
+  }, [isMobile]);
 
   // Focus the textarea on mount
   useEffect(function () {
@@ -226,7 +232,9 @@ export function CadenceMeetingMode({
       });
   }
 
-  var sidebarWidth = sidebarCollapsed ? 44 : 480;
+  // When expanded on mobile we still cap to a viewport-friendly width so
+  // the notepad column doesn't disappear entirely.
+  var sidebarWidth = sidebarCollapsed ? 44 : (isMobile ? Math.min(320, typeof window !== "undefined" ? window.innerWidth - 60 : 320) : 480);
   var hasBrief     = Boolean(brief && brief.trim());
   var topLabel     = cadenceLabel
     ? cadenceLabel
@@ -298,15 +306,15 @@ export function CadenceMeetingMode({
           style={{
             display: "flex", alignItems: "center", gap: 6,
             background: C.accentGlow, border: "1px solid " + C.accentSubtle,
-            borderRadius: 8, padding: "7px 14px",
-            fontSize: 12, fontWeight: 600, color: C.accent,
+            borderRadius: 8, padding: isMobile ? "6px 10px" : "7px 14px",
+            fontSize: isMobile ? 11 : 12, fontWeight: 600, color: C.accent,
             fontFamily: INTER, cursor: summarizing ? "default" : "pointer",
             opacity: summarizing ? 0.6 : 1,
             whiteSpace: "nowrap",
           }}
         >
           <PipMark size={7} color={C.accent} glow pulse={summarizing} />
-          {summarizing ? "Summarizing…" : "End & Summarize with Pip"}
+          {summarizing ? "Summarizing…" : isMobile ? "Summarize ✦" : "End & Summarize with Pip"}
         </button>
       </div>
 
@@ -340,30 +348,53 @@ export function CadenceMeetingMode({
         </div>
       )}
 
-      {/* Vitals strip */}
-      <div style={{
-        flexShrink: 0,
-        display: "flex", gap: 10, flexWrap: "wrap",
-        padding: "10px 18px",
-        background: C.surface2,
-        borderBottom: "1px solid " + C.rule,
-      }}>
-        {daysSinceLast !== null && (
-          <MetaChip label="Last meeting" value={daysSinceLast + "d ago"} tone={daysSinceLast > 45 ? "warn" : "muted"} />
-        )}
-        {openItemCount > 0 ? (
-          <MetaChip
-            label="Open items"
-            value={openItemCount + (overdueItems > 0 ? " (" + overdueItems + " overdue)" : "")}
-            tone={overdueItems > 0 ? "warn" : "muted"}
-          />
-        ) : (
-          <MetaChip label="Open items" value="0 — all clear" tone="ok" />
-        )}
-        {projectHealth && (
-          <MetaChip label="Projects" value={projectHealth.label} tone={projectHealth.tone} />
-        )}
-      </div>
+      {/* Vitals strip — desktop shows chips; mobile collapses to a one-liner
+          so the notepad stays close to the top of the screen. */}
+      {isMobile ? (
+        <div style={{
+          flexShrink: 0,
+          padding: "6px 14px",
+          background: C.surface2,
+          borderBottom: "1px solid " + C.rule,
+          fontFamily: MONO, fontSize: 10.5, color: C.textSoft,
+          letterSpacing: "0.04em",
+          fontVariantNumeric: "tabular-nums",
+          whiteSpace: "nowrap",
+          overflow: "hidden", textOverflow: "ellipsis",
+        }}>
+          {(function () {
+            var bits = [];
+            if (daysSinceLast !== null) bits.push(daysSinceLast + "d ago");
+            bits.push(openItemCount + " open" + (overdueItems > 0 ? " (" + overdueItems + " od)" : ""));
+            if (projectHealth) bits.push(projectHealth.label);
+            return bits.join(" · ");
+          })()}
+        </div>
+      ) : (
+        <div style={{
+          flexShrink: 0,
+          display: "flex", gap: 10, flexWrap: "wrap",
+          padding: "10px 18px",
+          background: C.surface2,
+          borderBottom: "1px solid " + C.rule,
+        }}>
+          {daysSinceLast !== null && (
+            <MetaChip label="Last meeting" value={daysSinceLast + "d ago"} tone={daysSinceLast > 45 ? "warn" : "muted"} />
+          )}
+          {openItemCount > 0 ? (
+            <MetaChip
+              label="Open items"
+              value={openItemCount + (overdueItems > 0 ? " (" + overdueItems + " overdue)" : "")}
+              tone={overdueItems > 0 ? "warn" : "muted"}
+            />
+          ) : (
+            <MetaChip label="Open items" value="0 — all clear" tone="ok" />
+          )}
+          {projectHealth && (
+            <MetaChip label="Projects" value={projectHealth.label} tone={projectHealth.tone} />
+          )}
+        </div>
+      )}
 
       {/* Body */}
       <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
@@ -468,7 +499,7 @@ export function CadenceMeetingMode({
           <div style={{
             flex: 1, overflowY: "auto",
             display: "flex", justifyContent: "center",
-            padding: "32px 32px 8px 32px",
+            padding: isMobile ? "14px 14px 6px 14px" : "32px 32px 8px 32px",
           }}>
             <div style={{
               width: "100%", maxWidth: 920,
@@ -487,13 +518,13 @@ export function CadenceMeetingMode({
                 onChange={function (e) { setNotes(e.target.value); }}
                 placeholder="Start typing — Pip will summarize when you end the meeting…"
                 style={{
-                  flex: 1, width: "100%", minHeight: 440,
+                  flex: 1, width: "100%", minHeight: isMobile ? 300 : 440,
                   background: C.surface,
                   color: C.text,
                   border: "1px solid " + C.rule,
                   borderRadius: 12,
                   outline: "none",
-                  padding: "22px 26px",
+                  padding: isMobile ? "14px 16px" : "22px 26px",
                   fontFamily: INTER, fontSize: 15.5, lineHeight: 1.7,
                   resize: "none",
                   boxSizing: "border-box",

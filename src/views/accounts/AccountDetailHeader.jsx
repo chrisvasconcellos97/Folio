@@ -15,6 +15,7 @@ import { Pill } from "../../components/Pill";
 import { SecBtn, DangerBtn } from "../../components/Buttons";
 import { ownerInitials, findOwner } from "../../lib/ownerLabel";
 import { displayRevenue } from "../../lib/metricsUtils";
+import { useBreakpoint } from "../../hooks/useBreakpoint";
 
 var MONO = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
@@ -51,7 +52,9 @@ export function AccountDetailHeader({
   onConfirmDelete,
   onCancelDelete,
 }) {
-  var isInactive = !!account.is_inactive;
+  var isDesktop   = useBreakpoint();
+  var isMobile    = !isDesktop;
+  var isInactive  = !!account.is_inactive;
   var statusColor = STATUS_COLORS[account.status] || C.textSub;
 
   var meetingBars = (function () {
@@ -75,6 +78,14 @@ export function AccountDetailHeader({
 
   return (
     <div style={{ marginBottom: 18 }}>
+      {isMobile && (
+        <style>{`
+          .acc-hdr-pills > * {
+            font-size: 9px !important;
+            padding: 2px 7px !important;
+          }
+        `}</style>
+      )}
       <button
         onClick={onBack}
         style={{
@@ -99,19 +110,20 @@ export function AccountDetailHeader({
       <div
         style={{
           display: "flex",
+          flexDirection: isMobile ? "column" : "row",
           justifyContent: "space-between",
-          alignItems: "flex-start",
+          alignItems: isMobile ? "stretch" : "flex-start",
           gap: 12,
         }}
       >
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div
             style={{
               fontFamily: SERIF,
-              fontSize: 36,
+              fontSize: isMobile ? 26 : 36,
               fontWeight: 400,
               letterSpacing: "-0.022em",
-              lineHeight: 1,
+              lineHeight: 1.05,
               color: C.text,
               marginBottom: 10,
             }}
@@ -134,7 +146,7 @@ export function AccountDetailHeader({
               #{account.account_number}
             </div>
           )}
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+          <div className="acc-hdr-pills" style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", overflow: "hidden", maxWidth: "100%" }}>
             {isInactive && (
               <Pill color={C.yellow}>
                 <span style={{ display: "inline-block", width: 5, height: 5, borderRadius: "50%", background: C.yellow, marginRight: 4, verticalAlign: "middle" }} />
@@ -214,7 +226,7 @@ export function AccountDetailHeader({
             })()}
           </div>
           {account.tags && account.tags.length > 0 && isCustomerType && (
-            <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 8 }}>
+            <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 8, overflow: "hidden", maxWidth: "100%" }}>
               {account.tags.map(function (t) {
                 return (
                   <span key={t} style={{
@@ -265,7 +277,7 @@ export function AccountDetailHeader({
           </button>
         </div>
 
-        <div style={{ textAlign: "right", flexShrink: 0 }}>
+        <div style={{ textAlign: isMobile ? "left" : "right", flexShrink: 0 }}>
           {isCustomerType && (
             <>
               <div
@@ -323,7 +335,7 @@ export function AccountDetailHeader({
           {meetingBars && (
             <div style={{ marginTop: 10, marginBottom: 4 }}>
               <div style={{ fontFamily: MONO, fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Meeting Cadence</div>
-              <div style={{ display: "flex", gap: 2, alignItems: "flex-end", height: 20, justifyContent: "flex-end" }}>
+              <div style={{ display: "flex", gap: 2, alignItems: "flex-end", height: 20, justifyContent: isMobile ? "flex-start" : "flex-end" }}>
                 {meetingBars.bars.map(function (b, i) {
                   var h = b.count === 0 ? 2 : Math.max(3, Math.round((b.count / meetingBars.maxCount) * 20));
                   var isLast = i === meetingBars.bars.length - 1;
@@ -334,7 +346,7 @@ export function AccountDetailHeader({
               </div>
             </div>
           )}
-          <div style={{ display: "flex", gap: 6, marginTop: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 6, marginTop: 8, justifyContent: isMobile ? "flex-start" : "flex-end", flexWrap: "wrap" }}>
             <SecBtn
               onClick={onPrint}
               style={{ fontSize: 11, padding: "5px 12px" }}

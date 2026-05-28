@@ -101,7 +101,7 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <AmberBtn onClick={onAddAccount} style={{ fontSize: 11, padding: "6px 13px" }}>
+            <AmberBtn onClick={onAddAccount} style={{ fontSize: 10, padding: "5px 10px" }}>
               {view === "departments" ? "+ Dept" : view === "partners" ? "+ Partner" : "+ Account"}
             </AmberBtn>
             <UserMenu userMeta={userMeta} onSignOut={onSignOut} onTour={onTour} onSettings={onSettings} onDiagnostics={onDiagnostics} diagnosticsCount={diagnosticsCount} />

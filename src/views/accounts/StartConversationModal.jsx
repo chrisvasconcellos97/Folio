@@ -4,6 +4,7 @@ import { Modal } from "../../components/Modal";
 import { AmberBtn, SecBtn } from "../../components/Buttons";
 import { InputField } from "../../components/InputField";
 import { FL } from "../../components/FieldLabel";
+import { useBreakpoint } from "../../hooks/useBreakpoint";
 
 var INTER = "'Inter', system-ui, sans-serif";
 
@@ -44,6 +45,8 @@ function formatDateLong(iso) {
  *  - onClose
  */
 export function StartConversationModal({ accountId, accounts, userId, onStart, onClose }) {
+  var isDesktop = useBreakpoint();
+  var isMobile  = !isDesktop;
   var needsAccountPicker = !accountId;
   var activeAccounts = useMemo(function () {
     return (accounts || [])
@@ -187,7 +190,7 @@ export function StartConversationModal({ accountId, accounts, userId, onStart, o
 
         <div>
           <FL>Method</FL>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 6 }}>
             {METHODS.map(function (m) {
               var active = method === m.value;
               return (

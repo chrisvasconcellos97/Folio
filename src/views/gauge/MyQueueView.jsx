@@ -119,15 +119,17 @@ export function MyQueueView({ projects, accounts, members, userEmail, onUpdate, 
         }}
       >
         {/* Project context — always visible at top of row */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", minWidth: 0 }}>
           <button
             onClick={function (e) { e.stopPropagation(); onOpenProject(p.id); }}
-            title="Open project"
+            title={p.title}
             style={{
               background: "transparent", border: "none",
               fontFamily: MONO, fontSize: 9.5, color: C.accent,
               textTransform: "uppercase", letterSpacing: "0.08em",
               cursor: "pointer", padding: 0,
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+              minWidth: 0, maxWidth: "100%",
             }}
           >
             {p.title}

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { C } from "../../lib/colors";
 import { taskStatusLabel, formatFieldValue } from "../../lib/gaugeFields";
 import { TaskDetailPanel } from "./TaskDetailPanel";
+import { useBreakpoint } from "../../hooks/useBreakpoint";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var INTER = "'Inter', system-ui, sans-serif";
@@ -12,6 +13,8 @@ var INTER = "'Inter', system-ui, sans-serif";
 // is) when completed_at is set, so the kanban and the done flag stay
 // consistent visually.
 export function StandingBoardView({ project, accounts, members, userEmail, onUpdate }) {
+  var isDesktop = useBreakpoint();
+  var isMobile  = !isDesktop;
   var [panelTask, setPanelTask]   = useState(null);   // task object or null
   var [panelIndex, setPanelIndex] = useState(null);   // index for edit, null for new
   var [panelOpen, setPanelOpen]   = useState(false);
@@ -74,9 +77,11 @@ export function StandingBoardView({ project, accounts, members, userEmail, onUpd
     <div>
       <div style={{
         display: "grid",
-        gridTemplateColumns: "repeat(" + columns.length + ", minmax(220px, 1fr))",
+        // On mobile the kanban stacks vertically so each status column gets
+        // full width — no horizontal scroll, every card stays readable.
+        gridTemplateColumns: isMobile ? "1fr" : "repeat(" + columns.length + ", minmax(160px, 1fr))",
         gap: 10,
-        overflowX: "auto",
+        overflowX: isMobile ? "visible" : "auto",
       }}>
         {columns.map(function (col) {
           var list = buckets[col] || [];
