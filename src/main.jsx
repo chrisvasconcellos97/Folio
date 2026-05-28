@@ -17,10 +17,25 @@ installGlobalErrorHandlers();
 // === Update path 1: controllerchange (the "right" way, when it works) ===
 var hadControllerAtStart = "serviceWorker" in navigator ? !!navigator.serviceWorker.controller : true;
 var reloading = false;
+var RELOAD_COOLDOWN_MS = 60 * 1000;
+var RELOAD_TS_KEY = "folio_last_reload_ts";
+
+function recentlyReloaded() {
+  try {
+    var ts = parseInt(sessionStorage.getItem(RELOAD_TS_KEY) || "0", 10);
+    if (!ts) return false;
+    return Date.now() - ts < RELOAD_COOLDOWN_MS;
+  } catch (e) { return false; }
+}
 
 function triggerReload() {
   if (reloading) return;
+  // Cross-load guard: if we just reloaded within the cooldown, suppress.
+  // Mid-deploy the served index.html can flip-flop between two bundle hashes
+  // across CDN edges, which previously caused a reload-every-second loop.
+  if (recentlyReloaded()) return;
   reloading = true;
+  try { sessionStorage.setItem(RELOAD_TS_KEY, String(Date.now())); } catch (e) {}
   showToast("Updating Folios…", "warning");
   setTimeout(function () { window.location.reload(); }, 400);
 }
