@@ -62,6 +62,14 @@ export function isRealtimeHealthy() {
 export function useRealtimeSync(table, userId, onChange) {
   var debounceRef = useRef(null);
   var onChangeRef = useRef(onChange);
+  // Per-mount unique suffix so two hooks subscribing to the same (table,userId)
+  // — e.g. useProjects called from both GaugeView (no accountId) and
+  // AccountDetail (per-account) — don't collide on a shared channel and trip
+  // Supabase's "cannot add callbacks after subscribe()" error.
+  var instanceRef = useRef(null);
+  if (instanceRef.current === null) {
+    instanceRef.current = Math.random().toString(36).slice(2, 10);
+  }
   // Keep latest callback without resubscribing — resubscribes blow away the
   // channel and would cause connect/disconnect churn on every refetch.
   useEffect(function () { onChangeRef.current = onChange; }, [onChange]);
@@ -69,7 +77,7 @@ export function useRealtimeSync(table, userId, onChange) {
   useEffect(function () {
     if (!userId || !table) return;
 
-    var channelKey = "rt:" + table + ":" + userId;
+    var channelKey = "rt:" + table + ":" + userId + ":" + instanceRef.current;
     publishStatus(channelKey, "idle");
 
     function fireDebounced(payload) {
