@@ -137,6 +137,22 @@ export default function App() {
   useCadenceSync(userId, cadences, cadenceLoading);
   var reminderApi = useCadenceReminders(userId, cadences, accounts);
 
+  // Discreet one-time permission prompt — surfaces the first time a cadence
+  // with a meeting_time exists, the user hasn't been asked yet, and the
+  // browser supports Notifications. Persist "asked" so the prompt never
+  // re-appears regardless of grant/deny outcome.
+  var [showNotifPrompt, setShowNotifPrompt] = useState(false);
+  useEffect(function () {
+    if (!session || !cadences || cadences.length === 0) return;
+    if (typeof Notification === "undefined") return;
+    if (Notification.permission !== "default") return;
+    var prompted = false;
+    try { prompted = localStorage.getItem("folio_meeting_notif_prompted") === "1"; } catch (e) {}
+    if (prompted) return;
+    var hasTimedCadence = cadences.some(function (c) { return c && c.meeting_time; });
+    if (hasTimedCadence) setShowNotifPrompt(true);
+  }, [session, cadences]);
+
   function handleOpenReminder(reminder) {
     var acct = (accounts || []).find(function (a) { return a.id === reminder.accountId; });
     if (!acct) return;
@@ -629,22 +645,6 @@ export default function App() {
       onOpen={handleOpenReminder}
     />
   );
-
-  // Discreet one-time permission prompt — surfaces the first time a cadence
-  // with a meeting_time exists, the user hasn't been asked yet, and the
-  // browser supports Notifications. Persist "asked" so the prompt never
-  // re-appears regardless of grant/deny outcome.
-  var [showNotifPrompt, setShowNotifPrompt] = useState(false);
-  useEffect(function () {
-    if (!session || !cadences || cadences.length === 0) return;
-    if (typeof Notification === "undefined") return;
-    if (Notification.permission !== "default") return;
-    var prompted = false;
-    try { prompted = localStorage.getItem("folio_meeting_notif_prompted") === "1"; } catch (e) {}
-    if (prompted) return;
-    var hasTimedCadence = cadences.some(function (c) { return c && c.meeting_time; });
-    if (hasTimedCadence) setShowNotifPrompt(true);
-  }, [session, cadences]);
 
   function handleAllowNotifs() {
     reminderApi.requestPermission().finally(function () {
