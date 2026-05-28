@@ -3,7 +3,6 @@ import { createPortal } from "react-dom";
 import { C, glass } from "../../lib/colors";
 import { PipMark } from "../../components/PipMark";
 import { showToast } from "../../components/Toast";
-import { summarizeDraftPip } from "../../lib/pip";
 import { PipBriefPanel, HubProjectCard, OpenItemRow } from "./CadenceHub";
 
 var INTER = "'Inter', system-ui, sans-serif";
@@ -79,12 +78,12 @@ export function CadenceMeetingMode({
   onCloseItem,
   onUpdateProject,
   onClose,
-  onSummarized,
+  onSummarizeRequest,
+  summarizing,
+  summarizeErr,
 }) {
   var [notes, setNotes]                 = useState(draft.notes || "");
   var [sidebarCollapsed, setCollapsed]  = useState(false);
-  var [summarizing, setSummarizing]     = useState(false);
-  var [summarizeErr, setSummarizeErr]   = useState(null);
   var [quickItem, setQuickItem]         = useState("");
   var saveTimer = useRef(null);
   var notesRef  = useRef(null);
@@ -141,43 +140,10 @@ export function CadenceMeetingMode({
 
   function handleSummarize() {
     if (summarizing) return;
-    setSummarizing(true);
-    setSummarizeErr(null);
     var draftPayload = Object.assign({}, draft, { notes: notes });
-    flushPendingSave()
-      .then(function () {
-        return summarizeDraftPip({
-          draft:        draftPayload,
-          accountName:  account.name,
-          cadenceLabel: cadenceLabel,
-        });
-      })
-      .then(function (out) {
-        var followUp = out.follow_up_date || null;
-        var updatePromise = onUpdate(draft.id, {
-          pip_summary:    out.summary || null,
-          follow_up_date: followUp,
-          status:         "summarized",
-        });
-        var actionPromises = (out.action_items || []).map(function (ai) {
-          if (!ai || !ai.text) return null;
-          return onAddItem({
-            text:     ai.text,
-            due_date: ai.promised_date || null,
-          });
-        }).filter(Boolean);
-        return Promise.all([updatePromise].concat(actionPromises)).then(function () { return out; });
-      })
-      .then(function (out) {
-        setSummarizing(false);
-        showToast("Summarized — " + (out.action_items || []).length + " action item" + ((out.action_items || []).length !== 1 ? "s" : "") + " logged");
-        if (onSummarized) onSummarized();
-        if (onClose) onClose();
-      })
-      .catch(function (err) {
-        setSummarizing(false);
-        setSummarizeErr(err && err.message ? err.message : "Pip couldn't summarize.");
-      });
+    flushPendingSave().finally(function () {
+      onSummarizeRequest(draftPayload);
+    });
   }
 
   function handleAddQuickItem() {

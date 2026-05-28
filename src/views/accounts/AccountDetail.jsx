@@ -206,6 +206,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
         deleteMeeting={deleteMeeting}
         updateProject={updateProject}
         addItem={function (data) { return addItem(Object.assign({ account_id: account.id }, data)); }}
+        updateItem={updateItem}
         closeItem={closeItem}
         onUpdateCadence={function (id, data) {
           return updateCadence(id, data).then(function () {

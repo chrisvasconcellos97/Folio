@@ -284,24 +284,118 @@ export function callAskPip(payload) {
 }
 
 /**
- * Summarize a conversation draft. Returns structured JSON with summary,
- * action items (with optional promised dates), and a follow-up date so the
- * caller can promote items into folio_items and set follow_up_date.
+ * Summarize a conversation draft. Returns a structured plan: summary,
+ * follow_up_date, plus a `plan` array describing each intended mutation
+ * against existing folio_items + Gauge tasks. Callers must run the plan
+ * through PipSummarizePreview before applying.
+ *
+ * Backwards-compat: if Pip returns the old flat shape (summary +
+ * action_items[]), we synthesize a plan of new_item rows so the preview
+ * still renders something meaningful.
+ *
+ * @param {Object} payload
+ * @param {Object} payload.draft           - the meeting/draft object
+ * @param {string} payload.accountName     - parent account name
+ * @param {string} payload.cadenceLabel    - cadence label for context
+ * @param {string} [payload.accountId]     - the account id (for hints)
+ * @param {Array}  [payload.existingItems] - open folio_items on the account
+ * @param {Array}  [payload.activeProjects]- gauge projects (with .stages tasks)
+ * @param {Array}  [payload.orgMembers]    - org members (for assignee options)
+ * @param {Array}  [payload.assignmentHints] - learned hints rows
  */
 export function summarizeDraftPip(payload) {
-  var m = payload.draft || {};
+  var m              = payload.draft || {};
+  var existingItems  = Array.isArray(payload.existingItems)  ? payload.existingItems  : [];
+  var activeProjects = Array.isArray(payload.activeProjects) ? payload.activeProjects : [];
+  var orgMembers     = Array.isArray(payload.orgMembers)     ? payload.orgMembers     : [];
+  var hints          = Array.isArray(payload.assignmentHints) ? payload.assignmentHints : [];
+
+  var itemLines = existingItems.length
+    ? existingItems.map(function (i) {
+        return "I-" + i.id + ": " + (i.text || "(no text)") + ", due " + (i.due_date || "—");
+      }).join("\n")
+    : "(none)";
+
+  var taskLines = [];
+  activeProjects.forEach(function (p) {
+    var stages = Array.isArray(p.stages) ? p.stages : [];
+    stages.forEach(function (t) {
+      if (t && !t.completed_at) {
+        var title = t.title || t.text || "(untitled)";
+        taskLines.push(
+          "T-" + t.id + " (" + (p.title || "Untitled project") + "): " + title +
+          ", status " + (t.task_status || t.status || "—") +
+          ", due " + (t.due_date || "—") +
+          ", project_id " + p.id
+        );
+      }
+    });
+  });
+  var taskBlock = taskLines.length ? taskLines.join("\n") : "(none)";
+
+  var memberLines = orgMembers.length
+    ? orgMembers.map(function (mb) {
+        return "- " + (mb.invited_email || mb.email || "(unknown)");
+      }).join("\n")
+    : "(none — leave suggested_assignee null)";
+
+  var hintLines = hints.length
+    ? hints.map(function (h) {
+        return "- tasks like \"" + h.task_pattern + "\" → " + h.assignee_email;
+      }).join("\n")
+    : "(no hints yet)";
+
   var prompt =
-    "Summarize this conversation and extract action items + follow-up date.\n" +
-    "Return ONLY valid JSON: {\"summary\":\"2-3 sentences\",\"action_items\":[{\"text\":\"...\",\"promised_date\":\"YYYY-MM-DD or null\"}],\"follow_up_date\":\"YYYY-MM-DD or null\"}.\n\n" +
+    "You are planning post-meeting bookkeeping. Compare the meeting notes against the user's " +
+    "existing open items and existing in-flight Gauge tasks. Return a structured plan that " +
+    "AVOIDS duplicates and prefers updates/closes over new rows.\n\n" +
+    "Return ONLY valid JSON with this exact shape (no preamble, no markdown):\n" +
+    "{\n" +
+    "  \"summary\": \"2-3 sentence summary\",\n" +
+    "  \"follow_up_date\": \"YYYY-MM-DD or null\",\n" +
+    "  \"plan\": [\n" +
+    "    { \"kind\": \"new_item\",    \"text\": \"...\", \"due_date\": \"YYYY-MM-DD or null\", \"suggested_assignee\": \"email or null\", \"confidence\": \"high|medium|low\" },\n" +
+    "    { \"kind\": \"update_item\", \"target_id\": \"I-...\", \"fields\": { \"due_date\": \"...\", \"text\": \"...\" }, \"confidence\": \"high|medium|low\" },\n" +
+    "    { \"kind\": \"close_item\",  \"target_id\": \"I-...\", \"reason\": \"...\", \"confidence\": \"high|medium|low\" },\n" +
+    "    { \"kind\": \"new_task\",    \"project_id\": \"uuid\", \"title\": \"...\", \"due_date\": \"YYYY-MM-DD or null\", \"suggested_assignee\": \"email or null\", \"confidence\": \"high|medium|low\" },\n" +
+    "    { \"kind\": \"update_task\", \"project_id\": \"uuid\", \"task_id\": \"T-...\", \"fields\": { \"due_date\": \"...\", \"task_status\": \"...\" }, \"confidence\": \"high|medium|low\" },\n" +
+    "    { \"kind\": \"skip\",        \"reason\": \"duplicate of T-... or I-...\", \"confidence\": \"high\" }\n" +
+    "  ]\n" +
+    "}\n\n" +
+    "Rules:\n" +
+    "- If the notes mention something that already exists as an open item or in-flight task, " +
+    "PREFER update_item / update_task with shifted dates over creating new ones. If it sounds " +
+    "done, use close_item.\n" +
+    "- If something looks like a duplicate but you can't tell, emit a `skip` row with the reason " +
+    "so the user can see your reasoning.\n" +
+    "- For new_item vs new_task: pick new_task only when it clearly belongs to one of the listed " +
+    "Gauge projects. Otherwise default to new_item.\n" +
+    "- target_id MUST be the literal id including the I- or T- prefix from the lists below.\n" +
+    "- project_id is the UUID from the project list (the value after `project_id ` in the task lines, " +
+    "or the leading id of an active project).\n" +
+    "- suggested_assignee MUST be one of the listed org member emails or null. Use the assignment " +
+    "hints to default to historically correct people for similar tasks.\n" +
+    "- confidence: high = obvious from the notes, medium = a reasonable inference, low = stretching.\n" +
+    "- Be GENEROUS extracting commitments — promises, follow-ups, things to verify — but route " +
+    "them as updates whenever a relevant existing item/task exists.\n\n" +
+    "── CONTEXT ──\n" +
     "Account: " + (payload.accountName || "—") + "\n" +
     "Cadence: " + (payload.cadenceLabel || "—") + "\n" +
-    "Method: " + (m.method || "—") + "\n" +
-    "Date: " + (m.meeting_date || "") + "\n" +
-    "Title: " + (m.title || "Conversation") + "\n" +
-    (m.notes          ? "Notes:\n" + m.notes + "\n" : "") +
-    (m.action_items   ? "Action notes: " + m.action_items + "\n" : "") +
-    (m.commitments    ? "Commitments: " + m.commitments + "\n" : "") +
-    "\nKeep the summary tight. Pull every promise or follow-up into action_items.";
+    "Method: "  + (m.method || "—") + "\n" +
+    "Date: "    + (m.meeting_date || "") + "\n" +
+    "Title: "   + (m.title || "Conversation") + "\n\n" +
+    "Existing open items on this account:\n" + itemLines + "\n\n" +
+    "Existing in-flight Gauge tasks on this account (incl. child accounts):\n" + taskBlock + "\n\n" +
+    "Active Gauge projects (use these ids for project_id):\n" +
+    (activeProjects.length
+      ? activeProjects.map(function (p) { return "- " + p.id + " · " + (p.title || "Untitled"); }).join("\n")
+      : "(none)") + "\n\n" +
+    "Org members (valid assignee emails):\n" + memberLines + "\n\n" +
+    "Assignment hints (historical overrides on this account):\n" + hintLines + "\n\n" +
+    "── NOTES ──\n" +
+    (m.notes        ? m.notes + "\n" : "(empty)\n") +
+    (m.action_items ? "\nExtra action notes: " + m.action_items + "\n" : "") +
+    (m.commitments  ? "Commitments: " + m.commitments + "\n" : "");
 
   return callPipApi(
     [{ role: "user", content: prompt }],
@@ -310,18 +404,110 @@ export function summarizeDraftPip(payload) {
   ).then(function (resp) {
     var text = resp.content || "";
     var match = text.match(/\{[\s\S]*\}/);
-    if (!match) return { summary: text, action_items: [], follow_up_date: null };
+    if (!match) return { summary: text, plan: [], action_items: [], follow_up_date: null };
     try {
       var parsed = JSON.parse(match[0]);
+      var planRaw = Array.isArray(parsed.plan) ? parsed.plan : null;
+      var follow  = parsed.follow_up_date || null;
+      var summary = parsed.summary || "";
+
+      if (planRaw) {
+        var plan = planRaw.map(normalizePlanRow).filter(Boolean);
+        return {
+          summary:        summary,
+          follow_up_date: follow,
+          plan:           plan,
+          // Keep legacy field populated from new_item rows for any caller
+          // that hasn't migrated yet.
+          action_items:   plan
+            .filter(function (r) { return r.kind === "new_item"; })
+            .map(function (r) { return { text: r.text, promised_date: r.due_date || null }; }),
+        };
+      }
+
+      // Old-shape fallback — synthesize new_item plan rows.
+      var legacyItems = Array.isArray(parsed.action_items) ? parsed.action_items : [];
+      var synthPlan = legacyItems
+        .map(function (ai) {
+          if (!ai) return null;
+          if (typeof ai === "string") return { kind: "new_item", text: ai, due_date: null, suggested_assignee: null, confidence: "medium" };
+          return {
+            kind: "new_item",
+            text: ai.text || "",
+            due_date: ai.promised_date || ai.due_date || null,
+            suggested_assignee: null,
+            confidence: "medium",
+          };
+        })
+        .filter(function (r) { return r && r.text; });
       return {
-        summary:        parsed.summary || "",
-        action_items:   Array.isArray(parsed.action_items) ? parsed.action_items : [],
-        follow_up_date: parsed.follow_up_date || null,
+        summary:        summary,
+        follow_up_date: follow,
+        plan:           synthPlan,
+        action_items:   legacyItems,
       };
     } catch (e) {
-      return { summary: text, action_items: [], follow_up_date: null };
+      return { summary: text, plan: [], action_items: [], follow_up_date: null };
     }
   });
+}
+
+function normalizePlanRow(r) {
+  if (!r || typeof r !== "object" || !r.kind) return null;
+  var conf = r.confidence === "high" || r.confidence === "medium" || r.confidence === "low" ? r.confidence : "medium";
+  var out  = { kind: r.kind, confidence: conf };
+  switch (r.kind) {
+    case "new_item":
+      if (!r.text) return null;
+      out.text = String(r.text);
+      out.due_date = r.due_date || null;
+      out.suggested_assignee = r.suggested_assignee || null;
+      return out;
+    case "update_item":
+      if (!r.target_id) return null;
+      out.target_id = stripIdPrefix(r.target_id, "I-");
+      out.fields = sanitizeFields(r.fields, ["text", "due_date"]);
+      if (!Object.keys(out.fields).length) return null;
+      return out;
+    case "close_item":
+      if (!r.target_id) return null;
+      out.target_id = stripIdPrefix(r.target_id, "I-");
+      out.reason = r.reason || "";
+      return out;
+    case "new_task":
+      if (!r.project_id || !r.title) return null;
+      out.project_id = String(r.project_id);
+      out.title = String(r.title);
+      out.due_date = r.due_date || null;
+      out.suggested_assignee = r.suggested_assignee || null;
+      return out;
+    case "update_task":
+      if (!r.project_id || !r.task_id) return null;
+      out.project_id = String(r.project_id);
+      out.task_id = stripIdPrefix(r.task_id, "T-");
+      out.fields = sanitizeFields(r.fields, ["due_date", "task_status", "title"]);
+      if (!Object.keys(out.fields).length) return null;
+      return out;
+    case "skip":
+      out.reason = r.reason || "duplicate";
+      return out;
+    default:
+      return null;
+  }
+}
+
+function stripIdPrefix(id, prefix) {
+  var s = String(id);
+  return s.indexOf(prefix) === 0 ? s.slice(prefix.length) : s;
+}
+
+function sanitizeFields(fields, allowed) {
+  var out = {};
+  if (!fields || typeof fields !== "object") return out;
+  allowed.forEach(function (k) {
+    if (fields[k] !== undefined && fields[k] !== null && fields[k] !== "") out[k] = fields[k];
+  });
+  return out;
 }
 
 /**

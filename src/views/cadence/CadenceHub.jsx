@@ -9,9 +9,12 @@ import { summarizeDraftPip, callCadenceBriefPip } from "../../lib/pip";
 import { CadenceBackfillBanner } from "./CadenceBackfillBanner";
 import { AddToTasksButton } from "../../components/AddToTasksButton";
 import { CadenceMeetingMode } from "./CadenceMeetingMode";
+import { PipSummarizePreview } from "./PipSummarizePreview";
 import { ProjectStageEditor } from "../gauge/ProjectStageEditor";
 import { StandingBoardView } from "../gauge/StandingBoardView";
 import { ProjectNotesEditor } from "../gauge/ProjectNotesEditor";
+import { usePipAssignmentHints } from "../../hooks/usePipAssignmentHints";
+import { applyPipPlan } from "../../lib/pipPlanApply";
 
 var INTER = "'Inter', system-ui, sans-serif";
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
@@ -44,11 +47,9 @@ function formatTodayLong() {
 }
 
 /* ---- Draft scratchpad card (kept for drafts that already exist) ---- */
-function DraftCard({ draft, accountName, cadenceLabel, onUpdate, onDelete, onSummarized, onAddItem, onResume }) {
+function DraftCard({ draft, onUpdate, onDelete, onSummarizeRequest, onResume, summarizing, summarizeErr }) {
   var [notes, setNotes]     = useState(draft.notes || "");
   var [title, setTitle]     = useState(draft.title || "");
-  var [summarizing, setSummarizing] = useState(false);
-  var [summarizeErr, setSummarizeErr] = useState(null);
   var [confirmDelete, setConfirmDelete] = useState(false);
   var saveTimer = useRef(null);
   var stale = isStale(draft);
@@ -81,42 +82,10 @@ function DraftCard({ draft, accountName, cadenceLabel, onUpdate, onDelete, onSum
   function handleSummarize() {
     if (summarizing) return;
     if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null; }
-    setSummarizing(true);
-    setSummarizeErr(null);
     var draftPayload = Object.assign({}, draft, { notes: notes, title: title });
     onUpdate(draft.id, { notes: notes, title: title })
-      .then(function () {
-        return summarizeDraftPip({
-          draft:        draftPayload,
-          accountName:  accountName,
-          cadenceLabel: cadenceLabel,
-        });
-      })
-      .then(function (out) {
-        var followUp = out.follow_up_date || null;
-        var updatePromise = onUpdate(draft.id, {
-          pip_summary:    out.summary || null,
-          follow_up_date: followUp,
-          status:         "summarized",
-        });
-        var actionPromises = (out.action_items || []).map(function (ai) {
-          if (!ai || !ai.text) return null;
-          return onAddItem({
-            text:     ai.text,
-            due_date: ai.promised_date || null,
-          });
-        }).filter(Boolean);
-        return Promise.all([updatePromise].concat(actionPromises)).then(function () { return out; });
-      })
-      .then(function (out) {
-        setSummarizing(false);
-        showToast("Summarized — " + (out.action_items || []).length + " action item" + ((out.action_items || []).length !== 1 ? "s" : "") + " logged");
-        if (onSummarized) onSummarized();
-      })
-      .catch(function (err) {
-        setSummarizing(false);
-        setSummarizeErr(err && err.message ? err.message : "Pip couldn't summarize.");
-      });
+      .then(function () { onSummarizeRequest(draftPayload); })
+      .catch(function () { onSummarizeRequest(draftPayload); });
   }
 
   return (
@@ -576,6 +545,7 @@ export function CadenceHub({
   deleteMeeting,
   updateProject,
   addItem,
+  updateItem,
   closeItem,
   onUpdateCadence,
   onEditMeeting,
@@ -589,6 +559,13 @@ export function CadenceHub({
   var [tab, setTab] = useState("notes");
   var [meetingMode, setMeetingMode] = useState(null); // { draft } when active
   var [startingMeeting, setStartingMeeting] = useState(false);
+  // Summarize-preview state — keyed by draft id so multiple draft cards
+  // each track their own in-flight state without colliding.
+  var [summarizingId, setSummarizingId]     = useState(null);
+  var [summarizeErrors, setSummarizeErrors] = useState({}); // { draftId: msg }
+  var [previewPlan, setPreviewPlan]         = useState(null); // { plan, summary, draftId }
+
+  var hintsApi = usePipAssignmentHints(userId, account.id);
 
   var cadenceMeetings = useMemo(function () {
     return (meetings || []).filter(function (m) { return m.cadence_id === cadence.id; });
@@ -716,6 +693,65 @@ export function CadenceHub({
     setMeetingMode({ draft: draft });
   }
 
+  function handleSummarizeRequest(draftPayload) {
+    var draftId = draftPayload.id;
+    if (summarizingId) return;
+    setSummarizingId(draftId);
+    setSummarizeErrors(function (prev) { var next = Object.assign({}, prev); delete next[draftId]; return next; });
+    summarizeDraftPip({
+      draft:            draftPayload,
+      accountName:      account.name,
+      cadenceLabel:     cadenceLabel,
+      accountId:        account.id,
+      existingItems:    openItems,
+      activeProjects:   activeProjects,
+      orgMembers:       members,
+      assignmentHints:  hintsApi.hints,
+    }).then(function (out) {
+      var followUp = out.follow_up_date || null;
+      return updateMeeting(draftId, {
+        pip_summary:    out.summary || null,
+        follow_up_date: followUp,
+        status:         "summarized",
+      }).then(function () { return out; });
+    }).then(function (out) {
+      setSummarizingId(null);
+      setPreviewPlan({ plan: out.plan || [], summary: out.summary || "", draftId: draftId });
+      // The meeting is already marked summarized; close meeting mode if it was open.
+      if (meetingMode && meetingMode.draft && meetingMode.draft.id === draftId) {
+        setMeetingMode(null);
+      }
+    }).catch(function (err) {
+      setSummarizingId(null);
+      setSummarizeErrors(function (prev) {
+        var next = Object.assign({}, prev);
+        next[draftId] = err && err.message ? err.message : "Pip couldn't summarize.";
+        return next;
+      });
+    });
+  }
+
+  function handleApplyPlan(selected) {
+    return applyPipPlan(selected, {
+      addItem:        addItem,
+      updateItem:     function (id, fields) {
+        // useItems exposes updateItem already — call through whatever the
+        // hub was passed. The shape we need is (id, fields).
+        return updateItem(id, fields);
+      },
+      closeItem:      closeItem,
+      updateProject:  updateProject,
+      addHint:        hintsApi.addHint,
+      accountId:      account.id,
+      activeProjects: activeProjects,
+    }).then(function (result) {
+      setPreviewPlan(null);
+      return result;
+    });
+  }
+
+  function handleCancelPlan() { setPreviewPlan(null); }
+
   // After updateMeeting in meeting mode, the draft object passed to the
   // overlay can fall behind. The overlay reads only `draft.notes` for its
   // initial state, so passing the latest meeting from the meetings list keeps
@@ -770,13 +806,12 @@ export function CadenceHub({
             <DraftCard
               key={d.id}
               draft={d}
-              accountName={account.name}
-              cadenceLabel={cadenceLabel}
               onUpdate={updateMeeting}
               onDelete={deleteMeeting}
-              onAddItem={addItem}
               onResume={handleResumeDraft}
-              onSummarized={function () { /* state syncs via parent hook refetch */ }}
+              onSummarizeRequest={handleSummarizeRequest}
+              summarizing={summarizingId === d.id}
+              summarizeErr={summarizeErrors[d.id] || null}
             />
           );
         })}
@@ -953,7 +988,20 @@ export function CadenceHub({
       onCloseItem={closeItem}
       onUpdateProject={updateProject}
       onClose={function () { setMeetingMode(null); }}
-      onSummarized={function () { setMeetingMode(null); }}
+      onSummarizeRequest={handleSummarizeRequest}
+      summarizing={summarizingId != null && meetingMode && summarizingId === meetingMode.draft.id}
+      summarizeErr={meetingMode ? summarizeErrors[meetingMode.draft.id] || null : null}
+    />
+  ) : null;
+
+  var previewModal = previewPlan ? (
+    <PipSummarizePreview
+      plan={previewPlan.plan}
+      existingItems={openItems}
+      activeProjects={activeProjects}
+      orgMembers={members}
+      onApply={handleApplyPlan}
+      onCancel={handleCancelPlan}
     />
   ) : null;
 
@@ -1019,6 +1067,7 @@ export function CadenceHub({
           {tab === "followups" && followUpsSection}
         </div>
         {overlay}
+        {previewModal}
       </div>
     );
   }
@@ -1044,6 +1093,7 @@ export function CadenceHub({
         {historySection}
       </div>
       {overlay}
+      {previewModal}
     </div>
   );
 }
