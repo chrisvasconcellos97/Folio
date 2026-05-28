@@ -40,6 +40,12 @@ var PRIORITY_COLORS = {
   low:    C.green,
 };
 
+var PRIORITY_SURFACE = {
+  high:   C.redFaint,
+  medium: C.yellowFaint,
+  low:    C.greenFaint,
+};
+
 // Scope filter (the row of pills below the status boxes)
 var SCOPE_FILTERS = [
   { id: "all",      label: "All"      },
@@ -474,7 +480,8 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
           var isOpen = !!expandedRows[p.id];
           function toggleRow() { setExpandedRows(function (prev) { return Object.assign({}, prev, { [p.id]: !prev[p.id] }); }); }
 
-          var rowBg = C.surface;
+          var rowBg     = PRIORITY_SURFACE[p.priority] || C.surface;
+          var leftEdge  = PRIORITY_COLORS[p.priority];
 
           return (
             <div
@@ -483,6 +490,7 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
               style={{
                 background: rowBg,
                 border: "1px solid " + (p.status === "blocked" ? C.statusBlocked.border : C.rule),
+                borderLeft: leftEdge ? "3px solid " + leftEdge : "1px solid " + C.rule,
                 borderRadius: 8,
                 opacity: isComplete ? 0.45 : 1,
               }}
@@ -625,13 +633,20 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
                 </div>
               </div>
 
-              {/* Right: stages + gradient progress bar (desktop only) */}
+              {/* Right: stages + progress bar (desktop only) */}
               {!isMobile && (
                 <div style={{ textAlign: "right" }}>
                   {steps.total > 0 && (
                     <>
-                      <div style={{ fontFamily: MONO, fontSize: 10.5, color: C.textMuted, marginBottom: 6 }}>
-                        {steps.done}/{steps.total} steps · {pct}%
+                      <div style={{
+                        fontFamily: MONO, fontSize: 13.5, fontWeight: 700,
+                        color: C.accent, marginBottom: 8, lineHeight: 1.1,
+                        textShadow: "0 0 12px " + C.accentGlow + ", 0 0 24px " + C.accentGlow2,
+                        fontVariantNumeric: "tabular-nums",
+                      }}>
+                        <span style={{ color: C.text }}>{steps.done}<span style={{ color: C.textMuted }}>/{steps.total}</span></span>
+                        <span style={{ color: C.textMuted, margin: "0 6px" }}>·</span>
+                        {pct}%
                       </div>
                       <div style={{ position: "relative", height: 4, background: C.surface3, borderRadius: 2, overflow: "hidden" }}>
                         <div style={{
@@ -673,9 +688,16 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
             {/* Mobile-only full-width progress strip below the row */}
             {isMobile && steps.total > 0 && (
               <div style={{ padding: "0 14px 12px 14px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                  <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted }}>
-                    {steps.done}/{steps.total} steps · {pct}%
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                  <div style={{
+                    fontFamily: MONO, fontSize: 13, fontWeight: 700,
+                    color: C.accent,
+                    textShadow: "0 0 12px " + C.accentGlow + ", 0 0 24px " + C.accentGlow2,
+                    fontVariantNumeric: "tabular-nums", lineHeight: 1.1,
+                  }}>
+                    <span style={{ color: C.text }}>{steps.done}<span style={{ color: C.textMuted }}>/{steps.total}</span></span>
+                    <span style={{ color: C.textMuted, margin: "0 6px" }}>·</span>
+                    {pct}%
                   </div>
                 </div>
                 <div style={{ position: "relative", height: 4, background: C.surface3, borderRadius: 2, overflow: "hidden" }}>

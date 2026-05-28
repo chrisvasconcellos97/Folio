@@ -57,6 +57,7 @@ export const C = {
   redFaint:    "var(--c-red-faint)",
   redLine:     "var(--c-red-line)",
   yellowFaint: "var(--c-yellow-faint)",
+  greenFaint:  "var(--c-green-faint)",
   blueFaint:   "var(--c-blue-faint)",
   blueLine:    "var(--c-blue-line)",
 
