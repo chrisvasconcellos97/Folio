@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useDeferredValue } from "react";
 import { C } from "../../lib/colors";
 import { ownerInitials, findOwner } from "../../lib/ownerLabel";
 import { latestRecord, accountRecords, momPct, displayRevenue } from "../../lib/metricsUtils";
@@ -96,6 +96,9 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
   var copy = WORKSPACE_COPY[activeType] || WORKSPACE_COPY.customer;
   accounts = (accounts || []).filter(function (a) { return matchesTypeFilter(a, activeType); });
   var [search, setSearch]           = useState("");
+  // Deferred so the input stays responsive — heavy filter logic uses the
+  // lagged value while typing.
+  var deferredSearch = useDeferredValue(search);
   var [searchFocused, setSearchFocused] = useState(false);
   var [filter, setFilter]           = useState(function() { return loadPrefs().filter || "All"; });
   var [sortMode, setSortMode]       = useState(function() { return loadPrefs().sort || "tier"; });
@@ -183,7 +186,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
 
   var accountIdsWithContactMatch = useMemo(function () {
     var set = {};
-    var q = search.trim().toLowerCase();
+    var q = deferredSearch.trim().toLowerCase();
     if (!q || !contacts) return set;
     contacts.forEach(function (c) {
       var match = (c.name && c.name.toLowerCase().includes(q))
@@ -192,12 +195,12 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
       if (match) set[c.account_id] = true;
     });
     return set;
-  }, [search, contacts]);
+  }, [deferredSearch, contacts]);
 
   var filtered = useMemo(function () {
     return accounts
       .filter(function (a) {
-        var q = search.trim().toLowerCase();
+        var q = deferredSearch.trim().toLowerCase();
         var matchSearch = !q
           || a.name.toLowerCase().includes(q)
           || (a.tags && a.tags.some(function(t) { return t.toLowerCase().includes(q); }))
@@ -245,7 +248,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
         if (tierDiff !== 0) return tierDiff;
         return a.name.localeCompare(b.name);
       });
-  }, [accounts, search, filter, tagFilter, regionFilter, sortMode, accountIdsWithContactMatch, mineOnly, userId, bannerFilter, items, todayStr]);
+  }, [accounts, deferredSearch, filter, tagFilter, regionFilter, sortMode, accountIdsWithContactMatch, mineOnly, userId, bannerFilter, items, todayStr]);
 
   // Build display list: parents in sort order, children nested immediately below
   var displayList = useMemo(function () {

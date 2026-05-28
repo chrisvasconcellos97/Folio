@@ -28,7 +28,19 @@ export default defineConfig({
       },
     }),
   ],
-  build: { sourcemap: false },
+  build: {
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: function (id) {
+          if (id.indexOf("node_modules") === -1) return undefined;
+          if (id.indexOf("@supabase") !== -1) return "supabase";
+          if (id.indexOf("react-dom") !== -1 || /node_modules\/react\//.test(id)) return "react";
+          return "vendor";
+        },
+      },
+    },
+  },
   test: {
     environment: "node",
     include: ["src/**/*.test.js"],
