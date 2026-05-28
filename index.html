@@ -131,9 +131,12 @@
         --c-tier-surface-major:  oklch(0.18 0.025 252);
         --c-tier-surface-mid:    oklch(0.18 0.025 80);
         --c-tier-surface-growth: oklch(0.18 0.030 10);
-        --c-tier-shadow-major:   -3px 0 14px -2px var(--c-tier-major), inset 8px 0 18px -10px var(--c-tier-major);
-        --c-tier-shadow-mid:     -3px 0 14px -2px var(--c-tier-mid),   inset 8px 0 18px -10px var(--c-tier-mid);
-        --c-tier-shadow-growth:  -3px 0 14px -2px var(--c-tier-growth),inset 8px 0 18px -10px var(--c-tier-growth);
+        --c-tier-shadow-major:   -2px 0 8px -3px var(--c-tier-major);
+        --c-tier-shadow-mid:     -2px 0 8px -3px var(--c-tier-mid);
+        --c-tier-shadow-growth:  -2px 0 8px -3px var(--c-tier-growth);
+        --c-tier-shadow-major-hover: -3px 0 14px -3px var(--c-tier-major);
+        --c-tier-shadow-mid-hover:   -3px 0 14px -3px var(--c-tier-mid);
+        --c-tier-shadow-growth-hover:-3px 0 14px -3px var(--c-tier-growth);
 
         /* Cadence event tints — keyed parallel to TINT_BY_HEX entries */
         --c-cadence-tint-accent: oklch(0.18 0.025 162);
@@ -275,9 +278,12 @@
         --c-tier-surface-major:  #ffffff;
         --c-tier-surface-mid:    #ffffff;
         --c-tier-surface-growth: #ffffff;
-        --c-tier-shadow-major:   -4px 0 16px -2px oklch(0.46 0.10 260 / 0.55);
-        --c-tier-shadow-mid:     -4px 0 16px -2px oklch(0.58 0.10 72  / 0.55);
-        --c-tier-shadow-growth:  -4px 0 16px -2px oklch(0.52 0.11 355 / 0.55);
+        --c-tier-shadow-major:   -2px 0 8px -3px oklch(0.46 0.10 260 / 0.45);
+        --c-tier-shadow-mid:     -2px 0 8px -3px oklch(0.58 0.10 72  / 0.45);
+        --c-tier-shadow-growth:  -2px 0 8px -3px oklch(0.52 0.11 355 / 0.45);
+        --c-tier-shadow-major-hover: -3px 0 14px -3px oklch(0.46 0.10 260 / 0.65);
+        --c-tier-shadow-mid-hover:   -3px 0 14px -3px oklch(0.58 0.10 72  / 0.65);
+        --c-tier-shadow-growth-hover:-3px 0 14px -3px oklch(0.52 0.11 355 / 0.65);
 
         /* Cadence event tints — light uses gentle paper-tones with hue hint */
         --c-cadence-tint-accent: oklch(0.97 0.015 162);
@@ -350,12 +356,12 @@
          hover-lift on cards, mark pulse on active tab. Gated to light so dark
          renders unchanged. Honor reduced-motion users. */
       @media (prefers-reduced-motion: no-preference) {
-        :root[data-theme="light"] .acct-card,
-        :root[data-theme="light"] .hover-lift {
+        .acct-card,
+        .hover-lift {
           transition: transform .18s ease, box-shadow .25s ease;
         }
-        :root[data-theme="light"] .acct-card:hover,
-        :root[data-theme="light"] .hover-lift:hover {
+        .acct-card:hover,
+        .hover-lift:hover {
           transform: translateY(-2px);
         }
       }
