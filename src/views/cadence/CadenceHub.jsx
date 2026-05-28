@@ -3,13 +3,14 @@ import { C, glass } from "../../lib/colors";
 import { showToast } from "../../components/Toast";
 import { PipMark } from "../../components/PipMark";
 import { MarkdownText } from "../../components/MarkdownText";
-import { AmberBtn, SecBtn, DangerBtn } from "../../components/Buttons";
-import { FL } from "../../components/FieldLabel";
-import { getFrequencyLabel, getNextOccurrence, daysUntil, formatDateFull, formatTime } from "../../lib/cadenceUtils";
+import { SecBtn, DangerBtn } from "../../components/Buttons";
+import { getFrequencyLabel, getNextOccurrence, daysUntil, formatTime } from "../../lib/cadenceUtils";
 import { summarizeDraftPip, callCadenceBriefPip } from "../../lib/pip";
-import { supabase } from "../../lib/supabase";
 import { CadenceBackfillBanner } from "./CadenceBackfillBanner";
 import { AddToTasksButton } from "../../components/AddToTasksButton";
+import { CadenceMeetingMode } from "./CadenceMeetingMode";
+import { ProjectStageEditor } from "../gauge/ProjectStageEditor";
+import { StandingBoardView } from "../gauge/StandingBoardView";
 
 var INTER = "'Inter', system-ui, sans-serif";
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
@@ -36,8 +37,13 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
-/* ---- Draft scratchpad card ---- */
-function DraftCard({ draft, accountName, cadenceLabel, onUpdate, onDelete, onSummarized, onAddItem }) {
+function formatTodayLong() {
+  var d = new Date();
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+/* ---- Draft scratchpad card (kept for drafts that already exist) ---- */
+function DraftCard({ draft, accountName, cadenceLabel, onUpdate, onDelete, onSummarized, onAddItem, onResume }) {
   var [notes, setNotes]     = useState(draft.notes || "");
   var [title, setTitle]     = useState(draft.title || "");
   var [summarizing, setSummarizing] = useState(false);
@@ -55,11 +61,24 @@ function DraftCard({ draft, accountName, cadenceLabel, onUpdate, onDelete, onSum
       });
     }, 1500);
     return function () { if (saveTimer.current) clearTimeout(saveTimer.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notes, title]);
+
+  function handleResumeClick() {
+    if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null; }
+    var pending = notes !== (draft.notes || "") || title !== (draft.title || "");
+    var resumePromise = pending
+      ? onUpdate(draft.id, { notes: notes, title: title })
+      : Promise.resolve();
+    resumePromise.then(function () {
+      onResume(Object.assign({}, draft, { notes: notes, title: title }));
+    }).catch(function () {
+      onResume(Object.assign({}, draft, { notes: notes, title: title }));
+    });
+  }
 
   function handleSummarize() {
     if (summarizing) return;
-    // Force-flush any pending edit before summarizing
     if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null; }
     setSummarizing(true);
     setSummarizeErr(null);
@@ -121,7 +140,7 @@ function DraftCard({ draft, accountName, cadenceLabel, onUpdate, onDelete, onSum
           {stale && (
             <span style={{
               fontSize: 9, fontWeight: 700, color: C.yellow,
-              background: "rgba(212,147,42,0.12)", border: "1px solid rgba(212,147,42,0.3)",
+              background: C.yellowFaint, border: "1px solid " + C.yellow,
               borderRadius: 4, padding: "2px 6px",
               fontFamily: MONO, letterSpacing: "0.07em", textTransform: "uppercase",
             }}>Stale</span>
@@ -143,12 +162,12 @@ function DraftCard({ draft, accountName, cadenceLabel, onUpdate, onDelete, onSum
       <textarea
         value={notes}
         onChange={function (e) { setNotes(e.target.value); }}
-        placeholder="Notes — autosaves as you type. Add as much or as little as you want, then summarize when you're done."
+        placeholder="Notes — autosaves as you type."
         style={{
-          width: "100%", background: "rgba(0,0,0,0.2)",
-          border: "1px solid " + C.border, borderRadius: 8,
+          width: "100%", background: C.surface,
+          border: "1px solid " + C.rule, borderRadius: 8,
           padding: "10px 12px", color: C.text, fontSize: 14, lineHeight: 1.55,
-          fontFamily: INTER, resize: "vertical", minHeight: 110, outline: "none",
+          fontFamily: INTER, resize: "vertical", minHeight: 90, outline: "none",
           boxSizing: "border-box",
         }}
       />
@@ -158,21 +177,35 @@ function DraftCard({ draft, accountName, cadenceLabel, onUpdate, onDelete, onSum
       )}
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-        <button
-          onClick={handleSummarize}
-          disabled={summarizing}
-          style={{
-            display: "flex", alignItems: "center", gap: 6,
-            background: C.accentGlow, border: "1px solid " + C.accentSubtle,
-            borderRadius: 8, padding: "7px 14px",
-            fontSize: 12, fontWeight: 600, color: C.accent,
-            fontFamily: INTER, cursor: summarizing ? "default" : "pointer",
-            opacity: summarizing ? 0.6 : 1,
-          }}
-        >
-          <PipMark size={7} color={C.accent} glow pulse={summarizing} />
-          {summarizing ? "Pip is summarizing…" : "✦ Summarize with Pip"}
-        </button>
+        <div style={{ display: "flex", gap: 6 }}>
+          {onResume && (
+            <button
+              onClick={handleResumeClick}
+              style={{
+                background: C.accentDeep, border: "none", borderRadius: 8,
+                padding: "7px 14px", fontSize: 12, fontWeight: 600,
+                color: C.bg, fontFamily: INTER, cursor: "pointer",
+              }}
+            >
+              Resume in full screen →
+            </button>
+          )}
+          <button
+            onClick={handleSummarize}
+            disabled={summarizing}
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              background: C.accentGlow, border: "1px solid " + C.accentSubtle,
+              borderRadius: 8, padding: "7px 14px",
+              fontSize: 12, fontWeight: 600, color: C.accent,
+              fontFamily: INTER, cursor: summarizing ? "default" : "pointer",
+              opacity: summarizing ? 0.6 : 1,
+            }}
+          >
+            <PipMark size={7} color={C.accent} glow pulse={summarizing} />
+            {summarizing ? "Pip is summarizing…" : "✦ Summarize with Pip"}
+          </button>
+        </div>
         {!confirmDelete ? (
           <button
             onClick={function () { setConfirmDelete(true); }}
@@ -190,109 +223,6 @@ function DraftCard({ draft, accountName, cadenceLabel, onUpdate, onDelete, onSum
             <SecBtn onClick={function () { setConfirmDelete(false); }} style={{ fontSize: 11, padding: "4px 10px" }}>No</SecBtn>
           </div>
         )}
-      </div>
-    </div>
-  );
-}
-
-/* ---- New conversation composer (always visible) ---- */
-function NewConversationComposer({ onCreate, accountName, cadenceLabel }) {
-  var [open, setOpen]       = useState(false);
-  var [title, setTitle]     = useState("");
-  var [method, setMethod]   = useState("phone");
-  var [date, setDate]       = useState(todayISO());
-  var [saving, setSaving]   = useState(false);
-
-  function reset() {
-    setTitle(""); setMethod("phone"); setDate(todayISO()); setSaving(false);
-  }
-
-  function handleStart() {
-    if (!title.trim()) return;
-    setSaving(true);
-    onCreate({
-      title:        title.trim(),
-      method:       method,
-      meeting_date: date,
-      notes:        "",
-      status:       "draft",
-    }).then(function () {
-      reset();
-      setOpen(false);
-    }).catch(function () {
-      setSaving(false);
-    });
-  }
-
-  if (!open) {
-    return (
-      <button
-        onClick={function () { setOpen(true); }}
-        style={{
-          width: "100%",
-          background: C.accentFaint, border: "1px dashed " + C.accentSubtle,
-          borderRadius: 10, padding: "12px 14px",
-          fontSize: 13, fontWeight: 600, color: C.accent,
-          fontFamily: INTER, cursor: "pointer",
-        }}
-      >
-        + New conversation
-      </button>
-    );
-  }
-
-  return (
-    <div style={Object.assign({}, glass, {
-      borderRadius: 10, padding: "12px 14px",
-      display: "flex", flexDirection: "column", gap: 10,
-    })}>
-      <div style={{ fontSize: 10, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.07em", fontFamily: MONO }}>
-        New Conversation · {cadenceLabel}
-      </div>
-      <input
-        type="text"
-        value={title}
-        onChange={function (e) { setTitle(e.target.value); }}
-        placeholder="What's this conversation about?"
-        autoFocus
-        style={{
-          background: "rgba(0,0,0,0.2)", border: "1px solid " + C.border,
-          borderRadius: 8, padding: "9px 12px", color: C.text, fontSize: 14,
-          fontFamily: INTER, outline: "none", boxSizing: "border-box",
-        }}
-      />
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-        <input
-          type="date"
-          value={date}
-          onChange={function (e) { setDate(e.target.value); }}
-          style={{
-            background: "rgba(0,0,0,0.2)", border: "1px solid " + C.border,
-            borderRadius: 8, padding: "9px 12px", color: C.text, fontSize: 13,
-            fontFamily: INTER, outline: "none", colorScheme: "dark",
-          }}
-        />
-        <select
-          value={method}
-          onChange={function (e) { setMethod(e.target.value); }}
-          style={{
-            background: "rgba(0,0,0,0.2)", border: "1px solid " + C.border,
-            borderRadius: 8, padding: "9px 12px", color: C.text, fontSize: 13,
-            fontFamily: INTER, outline: "none", cursor: "pointer", appearance: "none",
-            colorScheme: "dark",
-          }}
-        >
-          <option value="phone">Phone</option>
-          <option value="email">Email</option>
-          <option value="video">Video</option>
-          <option value="in_person">In Person</option>
-        </select>
-      </div>
-      <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
-        <SecBtn onClick={function () { reset(); setOpen(false); }} style={{ fontSize: 11, padding: "5px 12px" }}>Cancel</SecBtn>
-        <AmberBtn onClick={handleStart} disabled={saving || !title.trim()} style={{ fontSize: 11, padding: "5px 12px" }}>
-          {saving ? "Starting…" : "Start draft"}
-        </AmberBtn>
       </div>
     </div>
   );
@@ -376,15 +306,26 @@ function PipBriefPanel({ brief, briefAt, loading, error, onRefresh, mobileCollap
   );
 }
 
-/* ---- Meeting history row ---- */
-function HistoryRow({ meeting, onEdit, onDelete, accountId, openItems, addItem }) {
+/* ---- Meeting history row (with CADENCE/AD-HOC tag) ---- */
+function HistoryRow({ meeting, onEdit, onDelete, accountId, openItems, addItem, isCadenceTied }) {
   var [confirm, setConfirm] = useState(false);
+  var tagBg    = isCadenceTied ? C.accentFaint : C.surface2;
+  var tagBorder = isCadenceTied ? C.accentLine : C.rule;
+  var tagColor = isCadenceTied ? C.accent     : C.textMuted;
   return (
     <div style={Object.assign({}, glass, { borderRadius: 10, padding: "11px 13px" })}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3, flexWrap: "wrap" }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{meeting.title || "Conversation"}</span>
+            <span style={{
+              fontSize: 9, fontWeight: 700, color: tagColor,
+              background: tagBg, border: "1px solid " + tagBorder,
+              borderRadius: 4, padding: "1px 6px",
+              fontFamily: MONO, letterSpacing: "0.07em", textTransform: "uppercase",
+            }}>
+              {isCadenceTied ? "Cadence" : "Ad-hoc"}
+            </span>
             {meeting.method && (
               <span style={{ fontSize: 9, color: C.textMuted, fontFamily: MONO, textTransform: "uppercase", letterSpacing: "0.07em" }}>
                 {METHOD_LABEL[meeting.method] || meeting.method}
@@ -477,18 +418,135 @@ function OpenItemRow({ item, onClose }) {
   );
 }
 
+/* ---- Inline-expandable Gauge project card ---- */
+function HubProjectCard({ project, accounts, members, userEmail, onUpdateProject }) {
+  var [open, setOpen] = useState(false);
+  var isPlanning   = project.status === "planned" || project.status === "on_hold";
+  var statusColor  = isPlanning ? C.yellow : C.accent;
+  var statusKey    = (project.status || "planned").split("_").map(function(w) { return w.charAt(0).toUpperCase() + w.slice(1); }).join("");
+  var statusStyle  = C["status" + statusKey] || C.statusPlanned;
+  var tasks        = project.stages || [];
+  var doneCount    = tasks.filter(function (t) { return t.completed_at; }).length;
+
+  return (
+    <div style={{
+      background: C.surface,
+      border: "1px solid " + (project.status === "blocked" ? C.statusBlocked.border : C.rule),
+      borderRadius: 10,
+      overflow: "hidden",
+    }}>
+      <div
+        onClick={function () { setOpen(function (v) { return !v; }); }}
+        role="button"
+        tabIndex={0}
+        onKeyDown={function (e) {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen(function (v) { return !v; }); }
+        }}
+        style={{
+          padding: "12px 14px",
+          display: "grid",
+          gridTemplateColumns: "auto 1fr auto",
+          gap: 12, alignItems: "center",
+          cursor: "pointer",
+        }}
+      >
+        <div style={{ fontFamily: MONO, fontSize: 12, color: C.textMuted, userSelect: "none" }}>
+          {open ? "▾" : "▸"}
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span style={{ fontFamily: SERIF, fontSize: 15, color: C.text, lineHeight: 1.3 }}>
+              {project.title || "Untitled project"}
+            </span>
+            <span style={{
+              background: statusStyle.bg,
+              border: "1px solid " + statusStyle.border,
+              borderRadius: 999,
+              padding: "2px 8px",
+              fontFamily: MONO, fontSize: 9,
+              color: statusStyle.text,
+              textTransform: "uppercase", letterSpacing: "0.07em",
+              whiteSpace: "nowrap",
+            }}>
+              {(project.status || "planned").replace("_", " ")}
+            </span>
+            {project.is_standing && (
+              <span style={{
+                fontFamily: MONO, fontSize: 9, color: C.textMuted,
+                letterSpacing: "0.08em", textTransform: "uppercase",
+              }}>
+                Standing
+              </span>
+            )}
+          </div>
+          <div style={{
+            display: "flex", gap: 10, marginTop: 4,
+            fontFamily: MONO, fontSize: 10, color: C.textMuted,
+            fontVariantNumeric: "tabular-nums",
+          }}>
+            {project.due_date && <span>Due {new Date(project.due_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>}
+            {tasks.length > 0 && <span>{doneCount}/{tasks.length} tasks</span>}
+            {project.assignee && <span>{project.assignee}</span>}
+          </div>
+        </div>
+        <div style={{
+          fontSize: 10, color: statusColor, fontFamily: MONO,
+          letterSpacing: "0.08em", textTransform: "uppercase",
+        }}>
+          {open ? "Collapse" : "Expand"}
+        </div>
+      </div>
+      {open && (
+        <div style={{ padding: "0 16px 14px 16px", borderTop: "1px solid " + C.rule }}>
+          {project.description && (
+            <div style={{
+              fontFamily: SERIF, fontSize: 13, color: C.textSoft,
+              lineHeight: 1.5, marginTop: 12, marginBottom: 12,
+            }}>
+              {project.description}
+            </div>
+          )}
+          <div style={{
+            fontFamily: MONO, fontSize: 9.5, color: C.textMuted,
+            textTransform: "uppercase", letterSpacing: "0.08em",
+            marginTop: 10, marginBottom: 8,
+          }}>
+            Tasks
+          </div>
+          {project.is_standing ? (
+            <StandingBoardView
+              project={project}
+              accounts={accounts}
+              members={members}
+              userEmail={userEmail}
+              onUpdate={onUpdateProject}
+            />
+          ) : (
+            <ProjectStageEditor project={project} onUpdate={onUpdateProject} />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ---- Main hub ---- */
 export function CadenceHub({
   cadence,
   account,
   userId,
-  meetings,         // all meetings for the account
-  items,            // all items for the account
-  cadences,         // all cadences for the account (for backfill banner)
-  projects,         // all gauge projects for the account
+  userEmail,
+  members,
+  accounts,
+  meetings,
+  items,
+  cadences,
+  projects,
+  contacts,
   addMeeting,
   updateMeeting,
   deleteMeeting,
+  updateProject,
   addItem,
   closeItem,
   onUpdateCadence,
@@ -501,6 +559,8 @@ export function CadenceHub({
   var [briefError, setBriefError]     = useState(null);
   var [briefExpanded, setBriefExpanded] = useState(false);
   var [tab, setTab] = useState("notes");
+  var [meetingMode, setMeetingMode] = useState(null); // { draft } when active
+  var [startingMeeting, setStartingMeeting] = useState(false);
 
   var cadenceMeetings = useMemo(function () {
     return (meetings || []).filter(function (m) { return m.cadence_id === cadence.id; });
@@ -516,13 +576,14 @@ export function CadenceHub({
       });
   }, [cadenceMeetings]);
 
+  // History — widened to ALL meetings on the account, not just this cadence
   var history = useMemo(function () {
-    return cadenceMeetings
+    return (meetings || [])
       .filter(function (m) { return m.status !== "draft"; })
       .sort(function (a, b) {
         return (b.meeting_date || "") > (a.meeting_date || "") ? 1 : -1;
       });
-  }, [cadenceMeetings]);
+  }, [meetings]);
 
   var openItems = useMemo(function () {
     return (items || []).filter(function (i) { return !i.done; });
@@ -550,22 +611,6 @@ export function CadenceHub({
 
   var cadenceLabel = getFrequencyLabel(cadence) || "Cadence";
 
-  function handleNewDraft(partial) {
-    return addMeeting(Object.assign({
-      account_id: account.id,
-      user_id:    userId,
-      cadence_id: cadence.id,
-    }, partial)).then(function (m) {
-      showToast("Draft started");
-      return m;
-    });
-  }
-
-  // Cost-floor: if Pip already wrote a brief within the freshness window,
-  // skip the Anthropic call entirely and reuse the cached one. The
-  // PipBriefPanel reads cadence.pip_brief / pip_brief_at directly, so a no-op
-  // here just lets the existing brief stand. Force re-run is still possible
-  // by clearing the brief from the DB first.
   var BRIEF_FRESH_MS = 6 * 60 * 60 * 1000; // 6 hours
 
   function handleRefreshBrief() {
@@ -598,6 +643,50 @@ export function CadenceHub({
     });
   }
 
+  function handleStartMeeting() {
+    if (startingMeeting) return;
+    // Reuse today's draft for this cadence if one exists
+    var today = todayISO();
+    var existing = drafts.find(function (d) { return d.meeting_date === today; });
+    if (existing) {
+      setMeetingMode({ draft: existing });
+      return;
+    }
+    setStartingMeeting(true);
+    var title = cadenceLabel + " — " + formatTodayLong();
+    addMeeting({
+      account_id:   account.id,
+      user_id:      userId,
+      cadence_id:   cadence.id,
+      title:        title,
+      method:       "phone",
+      meeting_date: today,
+      notes:        "",
+      status:       "draft",
+    }).then(function (m) {
+      setStartingMeeting(false);
+      setMeetingMode({ draft: m });
+    }).catch(function (e) {
+      setStartingMeeting(false);
+      showToast("Couldn't start meeting — try again");
+      console.error(e);
+    });
+  }
+
+  function handleResumeDraft(draft) {
+    setMeetingMode({ draft: draft });
+  }
+
+  // After updateMeeting in meeting mode, the draft object passed to the
+  // overlay can fall behind. The overlay reads only `draft.notes` for its
+  // initial state, so passing the latest meeting from the meetings list keeps
+  // it consistent if the user re-enters meeting mode.
+  var currentMeetingModeDraft = useMemo(function () {
+    if (!meetingMode) return null;
+    var match = (meetings || []).find(function (m) { return m.id === meetingMode.draft.id; });
+    return match || meetingMode.draft;
+  }, [meetingMode, meetings]);
+
   /* ---- Sections ---- */
   var briefSection = (
     <PipBriefPanel
@@ -611,61 +700,69 @@ export function CadenceHub({
     />
   );
 
-  var draftsSection = (
+  var startMeetingSection = (
+    <button
+      onClick={handleStartMeeting}
+      disabled={startingMeeting}
+      style={{
+        width: "100%",
+        background: C.accentDeep,
+        border: "none",
+        borderRadius: 12,
+        padding: isMobile ? "16px 18px" : "18px 22px",
+        fontSize: isMobile ? 15 : 16, fontWeight: 700,
+        color: C.bg, fontFamily: INTER,
+        cursor: startingMeeting ? "default" : "pointer",
+        opacity: startingMeeting ? 0.7 : 1,
+        display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+        letterSpacing: "0.01em",
+      }}
+    >
+      {startingMeeting ? "Starting…" : "▶ Start Meeting"}
+    </button>
+  );
+
+  var draftsSection = drafts.length > 0 ? (
     <div>
       <SectionHeader count={drafts.length}>Active Drafts</SectionHeader>
-      {drafts.length === 0 ? (
-        <div style={{ fontSize: 12, color: C.textMuted, padding: "6px 0 10px" }}>
-          No active drafts. Start one below.
-        </div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {drafts.map(function (d) {
-            return (
-              <DraftCard
-                key={d.id}
-                draft={d}
-                accountName={account.name}
-                cadenceLabel={cadenceLabel}
-                onUpdate={updateMeeting}
-                onDelete={deleteMeeting}
-                onAddItem={addItem}
-                onSummarized={function () { /* state syncs via parent hook refetch */ }}
-              />
-            );
-          })}
-        </div>
-      )}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {drafts.map(function (d) {
+          return (
+            <DraftCard
+              key={d.id}
+              draft={d}
+              accountName={account.name}
+              cadenceLabel={cadenceLabel}
+              onUpdate={updateMeeting}
+              onDelete={deleteMeeting}
+              onAddItem={addItem}
+              onResume={handleResumeDraft}
+              onSummarized={function () { /* state syncs via parent hook refetch */ }}
+            />
+          );
+        })}
+      </div>
     </div>
-  );
+  ) : null;
 
-  var composerSection = (
-    <NewConversationComposer
-      onCreate={handleNewDraft}
-      accountName={account.name}
-      cadenceLabel={cadenceLabel}
-    />
-  );
-
-  var historySection = (
+  var projectsSection = (
     <div>
-      <SectionHeader count={history.length}>Meeting History</SectionHeader>
-      {history.length === 0 ? (
+      <SectionHeader count={activeProjects.length}>Gauge Projects · Account</SectionHeader>
+      {activeProjects.length === 0 ? (
         <div style={{ fontSize: 12, color: C.textMuted, padding: "6px 0" }}>
-          No summarized conversations yet for this cadence.
+          No active projects on this account.
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {history.map(function (m) {
+          {activeProjects.map(function (p) {
             return (
-              <HistoryRow
-                key={m.id}
-                meeting={m}
-                onEdit={onEditMeeting}
-                onDelete={deleteMeeting}
-                accountId={account.id}
-                openItems={openItems}
-                addItem={addItem}
+              <HubProjectCard
+                key={p.id}
+                project={p}
+                accounts={accounts}
+                members={members}
+                userEmail={userEmail}
+                onUpdateProject={updateProject}
               />
             );
           })}
@@ -685,41 +782,6 @@ export function CadenceHub({
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {openItems.map(function (i) {
             return <OpenItemRow key={i.id} item={i} onClose={closeItem} />;
-          })}
-        </div>
-      )}
-    </div>
-  );
-
-  var projectsSection = (
-    <div>
-      <SectionHeader count={activeProjects.length}>Gauge Projects · Account</SectionHeader>
-      {activeProjects.length === 0 ? (
-        <div style={{ fontSize: 12, color: C.textMuted, padding: "6px 0" }}>
-          No active projects on this account.
-        </div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          {activeProjects.map(function (p) {
-            var statusLabel = (p.status || "").replace("_", " ");
-            var isPlanning  = p.status === "planned" || p.status === "on_hold";
-            return (
-              <div key={p.id} style={Object.assign({}, glass, {
-                borderRadius: 8, padding: "9px 12px",
-                display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10,
-              })}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 12, color: C.text, fontWeight: 600 }}>{p.title || "Untitled project"}</div>
-                  <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2, display: "flex", gap: 8, flexWrap: "wrap", fontVariantNumeric: "tabular-nums" }}>
-                    <span style={{
-                      fontFamily: MONO, fontSize: 9.5, textTransform: "uppercase", letterSpacing: "0.08em",
-                      color: isPlanning ? C.yellow : C.accent, fontWeight: 700,
-                    }}>{statusLabel}</span>
-                    {p.due_date && <span>due {new Date(p.due_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>}
-                  </div>
-                </div>
-              </div>
-            );
           })}
         </div>
       )}
@@ -751,6 +813,34 @@ export function CadenceHub({
                   {new Date(m.follow_up_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                 </div>
               </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+
+  var historySection = (
+    <div>
+      <SectionHeader count={history.length}>Meeting History · Account</SectionHeader>
+      {history.length === 0 ? (
+        <div style={{ fontSize: 12, color: C.textMuted, padding: "6px 0" }}>
+          No summarized conversations yet on this account.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {history.map(function (m) {
+            return (
+              <HistoryRow
+                key={m.id}
+                meeting={m}
+                onEdit={onEditMeeting}
+                onDelete={deleteMeeting}
+                accountId={account.id}
+                openItems={openItems}
+                addItem={addItem}
+                isCadenceTied={!!m.cadence_id}
+              />
             );
           })}
         </div>
@@ -804,6 +894,23 @@ export function CadenceHub({
     </div>
   );
 
+  /* ---- Meeting mode overlay (renders into portal, covers global chrome) ---- */
+  var overlay = (meetingMode && currentMeetingModeDraft) ? (
+    <CadenceMeetingMode
+      draft={currentMeetingModeDraft}
+      account={account}
+      cadenceLabel={cadenceLabel}
+      brief={cadence.pip_brief}
+      projects={activeProjects}
+      openItems={openItems}
+      contacts={contacts || []}
+      onUpdate={updateMeeting}
+      onAddItem={addItem}
+      onClose={function () { setMeetingMode(null); }}
+      onSummarized={function () { setMeetingMode(null); }}
+    />
+  ) : null;
+
   /* ---- Mobile (segmented tabs) ---- */
   if (isMobile) {
     var tabs = [
@@ -823,9 +930,10 @@ export function CadenceHub({
           defaultCadenceId={cadence.id}
         />
         {briefSection}
+        <div style={{ marginTop: 14 }}>{startMeetingSection}</div>
         <div style={{
           display: "flex", gap: 4,
-          background: "rgba(0,0,0,0.25)", borderRadius: 10, padding: 3,
+          background: C.surface, borderRadius: 10, padding: 3,
           margin: "14px 0",
         }}>
           {tabs.map(function (pair) {
@@ -852,7 +960,7 @@ export function CadenceHub({
           {tab === "notes" && (
             <>
               {draftsSection}
-              {composerSection}
+              {projectsSection}
             </>
           )}
           {tab === "history" && historySection}
@@ -864,6 +972,7 @@ export function CadenceHub({
           )}
           {tab === "followups" && followUpsSection}
         </div>
+        {overlay}
       </div>
     );
   }
@@ -881,13 +990,14 @@ export function CadenceHub({
       />
       <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
         {briefSection}
+        {startMeetingSection}
         {draftsSection}
-        {composerSection}
-        {historySection}
         {projectsSection}
         {tasksSection}
         {followUpsSection}
+        {historySection}
       </div>
+      {overlay}
     </div>
   );
 }

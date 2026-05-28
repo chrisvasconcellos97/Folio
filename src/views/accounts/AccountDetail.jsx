@@ -41,7 +41,7 @@ function setDefaultTab(accountId, tab) {
   try { localStorage.setItem("folio_default_tab_" + accountId, tab); } catch(e) {}
 }
 
-export function AccountDetail({ account, userId, orgId, accounts, members, onBack, onEdit, onDelete, onReactivate, onMerge, onUpdate, onSelectAccount, pipPrefill, onPipPrefillHandled, initialHubCadenceId, onHubConsumed, revenueHistory, shopMetrics, onAddAccount }) {
+export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, accounts, members, onBack, onEdit, onDelete, onReactivate, onMerge, onUpdate, onSelectAccount, pipPrefill, onPipPrefillHandled, initialHubCadenceId, onHubConsumed, revenueHistory, shopMetrics, onAddAccount }) {
   var isInternalTeam = account.account_type === 'internal_team';
   var isPartner      = account.account_type === 'partner';
   var isCustomerType = !isInternalTeam && !isPartner;
@@ -189,13 +189,18 @@ export function AccountDetail({ account, userId, orgId, accounts, members, onBac
         cadence={hubCadence}
         account={account}
         userId={userId}
+        userEmail={userEmail}
+        members={members}
+        accounts={accounts}
         meetings={meetings}
         items={items}
         cadences={cadences}
         projects={projects}
+        contacts={contacts}
         addMeeting={addMeeting}
         updateMeeting={updateMeeting}
         deleteMeeting={deleteMeeting}
+        updateProject={updateProject}
         addItem={function (data) { return addItem(Object.assign({ account_id: account.id }, data)); }}
         closeItem={closeItem}
         onUpdateCadence={function (id, data) {
@@ -205,6 +210,7 @@ export function AccountDetail({ account, userId, orgId, accounts, members, onBac
         }}
         onBack={function () { setHubCadence(null); }}
         onOpenAccount={function () { setHubCadence(null); setTab("overview"); }}
+        isMobile={!isDesktop}
       />
     );
   }

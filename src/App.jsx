@@ -399,6 +399,8 @@ export default function App() {
           <AccountDetail
             account={selectedAccount}
             userId={userId}
+            userEmail={userEmail}
+            isDesktop={isDesktop}
             orgId={orgId}
             accounts={accounts}
             members={members}
