@@ -543,6 +543,7 @@ export default function App() {
         role={role}
         members={members}
         pendingInvites={pendingInvites}
+        accounts={accounts}
         onCreateOrg={createOrg}
         onInvite={inviteMember}
         onRevoke={revokeMember}

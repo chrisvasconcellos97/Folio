@@ -9,6 +9,7 @@ import { Modal } from "../../components/Modal";
 import { supabase } from "../../lib/supabase";
 import { usePipFacts } from "../../hooks/usePipFacts";
 import { usePipUsage } from "../../hooks/usePipUsage";
+import { useActivity } from "../../hooks/useActivity";
 import { useTheme } from "../../hooks/useTheme";
 import { NavMark } from "../../components/NavMark";
 
@@ -708,6 +709,259 @@ function PipUsageSection({ userId }) {
 var SETTINGS_MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var SETTINGS_SERIF = "'Fraunces', Georgia, serif";
 
+var EVENT_LABELS = {
+  meeting_logged:     "Meeting logged",
+  item_added:         "Item added",
+  item_completed:     "Item completed",
+  contact_added:      "Contact added",
+  account_created:    "Account created",
+  account_updated:    "Account updated",
+  account_archived:   "Account archived",
+  account_reactivated:"Account reactivated",
+  account_merged:     "Account merged",
+  gauge_status_changed: "Project status changed",
+  cadence_set:        "Cadence set",
+  note_saved:         "Note saved",
+};
+
+function formatEvent(type) {
+  if (EVENT_LABELS[type]) return EVENT_LABELS[type];
+  return type.replace(/_/g, " ").replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+}
+
+function ActivitySection({ userId, orgId, role, members, accounts }) {
+  var isOwner = role === "owner";
+  var [accountFilter,   setAccountFilter]   = useState(null);
+  var [eventFilter,     setEventFilter]     = useState(null);
+  var [userFilter,      setUserFilter]      = useState(null);
+  var [rangeFilter,     setRangeFilter]     = useState("30d");
+
+  var fromDate = (function () {
+    if (rangeFilter === "all") return null;
+    var days = rangeFilter === "7d" ? 7 : rangeFilter === "30d" ? 30 : 90;
+    return new Date(Date.now() - days * 86400000).toISOString();
+  })();
+
+  var filters = useMemo(function () {
+    return {
+      accountId: accountFilter,
+      eventType: eventFilter,
+      userId:    userFilter,
+      fromDate:  fromDate,
+    };
+  }, [accountFilter, eventFilter, userFilter, fromDate]);
+
+  var { rows, loading, error, done, loadMore } = useActivity(orgId, userId, isOwner, filters);
+
+  var accountById = useMemo(function () {
+    var m = {};
+    (accounts || []).forEach(function (a) { m[a.id] = a; });
+    return m;
+  }, [accounts]);
+
+  var memberById = useMemo(function () {
+    var m = {};
+    (members || []).forEach(function (x) { if (x.user_id) m[x.user_id] = x; });
+    return m;
+  }, [members]);
+
+  var eventTypes = useMemo(function () {
+    var seen = {};
+    rows.forEach(function (r) { seen[r.event_type] = true; });
+    return Object.keys(seen).sort();
+  }, [rows]);
+
+  if (!orgId) {
+    return (
+      <Card>
+        <FL>Activity</FL>
+        <div style={{ fontSize: 13, color: C.textMuted, marginTop: 6 }}>
+          Create or join an org to see the activity feed.
+        </div>
+      </Card>
+    );
+  }
+
+  function clearFilters() {
+    setAccountFilter(null); setEventFilter(null); setUserFilter(null);
+  }
+  var hasFilters = accountFilter || eventFilter || userFilter;
+
+  var rangeChips = [
+    { id: "7d",  label: "7d"   },
+    { id: "30d", label: "30d"  },
+    { id: "90d", label: "90d"  },
+    { id: "all", label: "All"  },
+  ];
+
+  return (
+    <Card>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+        <FL style={{ marginBottom: 0 }}>Activity</FL>
+        <div style={{ fontFamily: SETTINGS_MONO, fontSize: 10, color: C.textMuted, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+          {isOwner ? "Org-wide" : "Your actions"}
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+        {rangeChips.map(function (c) {
+          var active = rangeFilter === c.id;
+          return (
+            <button
+              key={c.id}
+              onClick={function () { setRangeFilter(c.id); }}
+              style={{
+                background: active ? C.accent : "transparent",
+                color: active ? C.bg : C.textMuted,
+                border: "1px solid " + (active ? C.accent : C.rule),
+                borderRadius: 999, padding: "3px 10px",
+                fontFamily: SETTINGS_MONO, fontSize: 10, cursor: "pointer",
+                letterSpacing: "0.06em", textTransform: "uppercase",
+              }}
+            >
+              {c.label}
+            </button>
+          );
+        })}
+
+        <select
+          value={accountFilter || ""}
+          onChange={function (e) { setAccountFilter(e.target.value || null); }}
+          aria-label="Filter by account"
+          style={{
+            background: C.surface, border: "1px solid " + C.rule, borderRadius: 6,
+            padding: "3px 8px", color: C.textSoft, fontSize: 11, fontFamily: SETTINGS_MONO, cursor: "pointer",
+          }}
+        >
+          <option value="">All accounts</option>
+          {(accounts || []).map(function (a) {
+            return <option key={a.id} value={a.id}>{a.name}</option>;
+          })}
+        </select>
+
+        {eventTypes.length > 0 && (
+          <select
+            value={eventFilter || ""}
+            onChange={function (e) { setEventFilter(e.target.value || null); }}
+            aria-label="Filter by event type"
+            style={{
+              background: C.surface, border: "1px solid " + C.rule, borderRadius: 6,
+              padding: "3px 8px", color: C.textSoft, fontSize: 11, fontFamily: SETTINGS_MONO, cursor: "pointer",
+            }}
+          >
+            <option value="">All events</option>
+            {eventTypes.map(function (e) {
+              return <option key={e} value={e}>{formatEvent(e)}</option>;
+            })}
+          </select>
+        )}
+
+        {isOwner && members && members.length > 1 && (
+          <select
+            value={userFilter || ""}
+            onChange={function (e) { setUserFilter(e.target.value || null); }}
+            aria-label="Filter by user"
+            style={{
+              background: C.surface, border: "1px solid " + C.rule, borderRadius: 6,
+              padding: "3px 8px", color: C.textSoft, fontSize: 11, fontFamily: SETTINGS_MONO, cursor: "pointer",
+            }}
+          >
+            <option value="">All users</option>
+            {members.map(function (m) {
+              return <option key={m.user_id || m.id} value={m.user_id || ""}>{m.invited_email || "Team member"}</option>;
+            })}
+          </select>
+        )}
+
+        {hasFilters && (
+          <button
+            onClick={clearFilters}
+            style={{
+              background: "transparent", border: "none", color: C.textMuted,
+              fontSize: 11, cursor: "pointer", fontFamily: SETTINGS_MONO, padding: "3px 8px",
+            }}
+          >
+            Clear
+          </button>
+        )}
+      </div>
+
+      {error && (
+        <div role="alert" style={{ fontSize: 12, color: C.red, marginBottom: 10 }}>{error}</div>
+      )}
+
+      {!loading && rows.length === 0 && (
+        <div style={{ fontSize: 13, color: C.textMuted, padding: "16px 0", textAlign: "center" }}>
+          No activity in this range.
+        </div>
+      )}
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {rows.map(function (r) {
+          var when = new Date(r.created_at);
+          var dateLabel = when.toLocaleDateString("en-US", { month: "short", day: "numeric" }) +
+                          " · " + when.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+          var who = memberById[r.user_id];
+          var whoLabel = who ? (who.invited_email || "Team member") : "Someone";
+          var what = formatEvent(r.event_type);
+          var acct = r.account_id ? accountById[r.account_id] : null;
+          var payloadStr = r.payload && Object.keys(r.payload).length > 0
+            ? Object.keys(r.payload).map(function (k) { return r.payload[k]; }).filter(Boolean).join(" · ")
+            : null;
+          return (
+            <div key={r.id} style={{
+              display: "grid",
+              gridTemplateColumns: "1fr auto",
+              gap: 8,
+              padding: "8px 10px",
+              background: C.surface,
+              border: "1px solid " + C.rule,
+              borderRadius: 6,
+            }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 12.5, color: C.text }}>
+                  <span style={{ color: C.accent, fontWeight: 500 }}>{whoLabel}</span>
+                  <span style={{ color: C.textSoft }}> {what.toLowerCase()}</span>
+                  {acct && (
+                    <>
+                      <span style={{ color: C.textMuted }}> on </span>
+                      <span style={{ color: C.textSoft }}>{acct.name}</span>
+                    </>
+                  )}
+                </div>
+                {payloadStr && (
+                  <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {payloadStr}
+                  </div>
+                )}
+              </div>
+              <div style={{ fontFamily: SETTINGS_MONO, fontSize: 10, color: C.textMuted, fontFeatureSettings: '"tnum"', whiteSpace: "nowrap" }}>
+                {dateLabel}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {!done && rows.length >= 50 && (
+        <button
+          onClick={loadMore}
+          disabled={loading}
+          style={{
+            marginTop: 10, background: "transparent", border: "1px solid " + C.rule,
+            borderRadius: 6, padding: "6px 14px", color: C.textSoft,
+            fontFamily: SETTINGS_MONO, fontSize: 11, cursor: "pointer",
+            opacity: loading ? 0.5 : 1, width: "100%",
+          }}
+        >
+          {loading ? "Loading…" : "Load more"}
+        </button>
+      )}
+    </Card>
+  );
+}
+
 function AppearanceSection() {
   var t = useTheme();
   var options = [
@@ -760,7 +1014,7 @@ function AppearanceSection() {
   );
 }
 
-export function SettingsView({ userId, userMeta, org, role, members, pendingInvites, onCreateOrg, onInvite, onRevoke, onArchiveMember, onReactivateMember }) {
+export function SettingsView({ userId, userMeta, org, orgId, role, members, pendingInvites, accounts, onCreateOrg, onInvite, onRevoke, onArchiveMember, onReactivateMember }) {
   return (
     <div style={{ maxWidth: 600, margin: "0 auto", padding: "8px 0 40px" }}>
       <div style={{ marginBottom: 24, display: "flex", alignItems: "center", gap: 14 }}>
@@ -785,6 +1039,16 @@ export function SettingsView({ userId, userMeta, org, role, members, pendingInvi
         {userId && <PipPrefsSection userId={userId} />}
 
         {userId && <PipUsageSection userId={userId} />}
+
+        {orgId && (
+          <ActivitySection
+            userId={userId}
+            orgId={orgId}
+            role={role}
+            members={members}
+            accounts={accounts}
+          />
+        )}
 
         {org ? (
           <TeamSection
