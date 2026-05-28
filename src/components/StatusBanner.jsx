@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { C } from "../lib/colors";
 import { PipOrb } from "./PipMark";
 
@@ -6,15 +6,12 @@ var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
 
 export function StatusBanner({ accounts, items, meetings, onColdClick, onOverdueClick, onFollowUpClick }) {
-  // Session-only dismiss — reloading brings the card back.
-  // Also purge any leftover per-day dismiss flags from the previous behavior
-  // so users who already tapped × today don't stay stuck.
+  // One-time purge of leftover per-day dismiss flags from the prior behavior.
   try {
     Object.keys(localStorage).forEach(function (k) {
       if (k.indexOf("folio_banner_dismissed_") === 0) localStorage.removeItem(k);
     });
   } catch (e) {}
-  var [dismissed, setDismissed] = useState(false);
 
   var stats = useMemo(function () {
     var now      = Date.now();
@@ -40,12 +37,7 @@ export function StatusBanner({ accounts, items, meetings, onColdClick, onOverdue
     return { cold: cold, overdue: overdue, followUps: followUps };
   }, [accounts, items, meetings]);
 
-  if (dismissed) return null;
   if (stats.cold === 0 && stats.overdue === 0 && stats.followUps === 0) return null;
-
-  function dismiss() {
-    setDismissed(true);
-  }
 
   var segments = [];
   if (stats.cold > 0)      segments.push({ key: "cold", label: stats.cold + " account" + (stats.cold !== 1 ? "s" : "") + " going cold", onClick: onColdClick });
@@ -60,7 +52,7 @@ export function StatusBanner({ accounts, items, meetings, onColdClick, onOverdue
       padding: "14px 16px",
       marginBottom: 12,
     }}>
-      <div style={{ display: "grid", gridTemplateColumns: "32px 1fr auto", gap: 10, alignItems: "start" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "32px 1fr", gap: 10, alignItems: "start" }}>
         <PipOrb size="md" />
         <div>
           <div style={{ fontFamily: MONO, fontSize: 9.5, color: C.accent, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>
@@ -91,18 +83,6 @@ export function StatusBanner({ accounts, items, meetings, onColdClick, onOverdue
             })}
           </div>
         </div>
-        <button
-          onClick={dismiss}
-          aria-label="Dismiss"
-          title="Hide until next reload"
-          style={{
-            background: "none", border: "none", color: C.textMuted,
-            cursor: "pointer", fontSize: 16, lineHeight: 1, padding: "0 4px",
-            alignSelf: "flex-start",
-          }}
-        >
-          ×
-        </button>
       </div>
     </div>
   );
