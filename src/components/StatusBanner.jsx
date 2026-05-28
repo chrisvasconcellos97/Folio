@@ -1,38 +1,11 @@
 import { useMemo } from "react";
 import { C } from "../lib/colors";
 import { PipOrb } from "./PipMark";
+import { Glow } from "./Glow";
 import { pickV } from "../lib/metricsUtils";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
-
-// Inline clickable highlight inside Pip's prose. Glows accent, underlines,
-// and clicks through to whatever filter/list the caller wired.
-function Glow(props) {
-  return (
-    <button
-      onClick={props.onClick}
-      disabled={!props.onClick}
-      style={{
-        background: "none",
-        border: "none",
-        padding: 0,
-        margin: 0,
-        font: "inherit",
-        fontWeight: 600,
-        color: C.accent,
-        textDecoration: props.onClick ? "underline" : "none",
-        textUnderlineOffset: 3,
-        textDecorationColor: C.accentLine,
-        textDecorationThickness: "1px",
-        cursor: props.onClick ? "pointer" : "default",
-        letterSpacing: "inherit",
-      }}
-    >
-      {props.children}
-    </button>
-  );
-}
 
 function plural(n, s) { return n + " " + s + (n !== 1 ? "s" : ""); }
 

@@ -7,6 +7,7 @@ import { ProjectStageEditor } from "./ProjectStageEditor";
 import { TemplatePickerModal } from "./TemplatePickerModal";
 import { PipLoader } from "../../components/PipLoader";
 import { PipInsightCard } from "../../components/PipInsightCard";
+import { Glow } from "../../components/Glow";
 import { pickV } from "../../lib/metricsUtils";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
@@ -90,7 +91,7 @@ function countExternal(stages) {
   return stages.filter(function (s) { return s.is_external && !s.completed_at; }).length;
 }
 
-function buildGaugeInsight(projects, accountsById) {
+function buildGaugeInsight(projects, accountsById, handlers) {
   var prjs = projects || [];
   var active   = prjs.filter(function (p) { return p.status === "in_progress"; });
   var blocked  = prjs.filter(function (p) { return p.status === "blocked"; });
@@ -98,47 +99,61 @@ function buildGaugeInsight(projects, accountsById) {
   var overdue  = active.filter(function (p) { return isOverdue(p.due_date); });
   var highPri  = active.filter(function (p) { return p.priority === "high"; });
 
-  var seed  = String(new Date().getDate()) + ":" + prjs.length;
-  var parts = [];
+  var seed = String(new Date().getDate()) + ":" + prjs.length;
+  var h    = handlers || {};
+
+  // Hot phrases — only the urgent stuff gets glow.
+  var overdueGlow = (
+    <Glow onClick={h.onClickOverdue}>
+      {overdue.length + " project" + (overdue.length !== 1 ? "s" : "") + (overdue.length === 1 ? " is" : " are") + " past due"}
+    </Glow>
+  );
+  var blockedGlow = (
+    <Glow onClick={h.onClickBlocked}>
+      {blocked.length + " project" + (blocked.length !== 1 ? "s" : "") + " blocked"}
+    </Glow>
+  );
+  function projectGlow(p) {
+    var name = p.title;
+    var acct = p.account_id ? accountsById[p.account_id] : null;
+    return (
+      <Glow onClick={function () { h.onClickProject && h.onClickProject(p.id); }}>
+        {name}{acct ? " (" + acct.name + ")" : ""}
+      </Glow>
+    );
+  }
 
   if (overdue.length > 0) {
-    var first = overdue[0];
-    var acct  = first.account_id ? accountsById[first.account_id] : null;
-    parts.push(pickV(seed + "a", [
-      overdue.length + " project" + (overdue.length !== 1 ? "s are" : " is") + " past due. " + first.title + (acct ? " (" + acct.name + ")" : "") + " needs eyes first.",
-      "Past due: " + overdue.length + ". Top of the pile is " + first.title + (acct ? " for " + acct.name : "") + ".",
-    ]));
-  } else if (blocked.length > 0) {
-    var bf = blocked[0];
-    var ba = bf.account_id ? accountsById[bf.account_id] : null;
-    parts.push(pickV(seed + "a", [
-      blocked.length + " project" + (blocked.length !== 1 ? "s" : "") + " blocked. " + bf.title + (ba ? " (" + ba.name + ")" : "") + " is waiting on something — unstick it.",
-      "Blocked work: " + blocked.length + ". Start with " + bf.title + ".",
-    ]));
-  } else if (highPri.length > 0) {
-    parts.push(pickV(seed + "a", [
-      highPri.length + " high-priority project" + (highPri.length !== 1 ? "s" : "") + " in flight. Keep momentum.",
-      "Top of mind: " + highPri.length + " high-priority. Stay on " + highPri[0].title + ".",
-    ]));
-  } else if (active.length > 0) {
-    parts.push(pickV(seed + "a", [
-      active.length + " project" + (active.length !== 1 ? "s" : "") + " in flight. No blockers, no overdues — clean board.",
-      active.length + " active project" + (active.length !== 1 ? "s" : "") + ". Things are moving.",
-    ]));
-  } else {
-    parts.push(pickV(seed + "a", [
-      "No active projects right now. Nothing on fire.",
-      "Gauge is quiet. Take a breath.",
-    ]));
+    return pickV(seed + "a", [
+      <>{overdueGlow}. {projectGlow(overdue[0])} needs eyes first.</>,
+      <>Past due: {overdueGlow}. Top of the pile is {projectGlow(overdue[0])}.</>,
+    ]);
   }
-
-  if (onHold.length > 0 && parts.length < 2) {
-    parts.push(pickV(seed + "b", [
-      onHold.length + " on hold — worth revisiting if context has changed.",
-    ]));
+  if (blocked.length > 0) {
+    return pickV(seed + "a", [
+      <>{blockedGlow}. {projectGlow(blocked[0])} is waiting on something — unstick it.</>,
+      <>Blocked work: {blockedGlow}. Start with {projectGlow(blocked[0])}.</>,
+    ]);
   }
-
-  return parts.join(" ");
+  if (highPri.length > 0) {
+    return pickV(seed + "a", [
+      <>{highPri.length} high-priority project{highPri.length !== 1 ? "s" : ""} in flight. Keep momentum on {projectGlow(highPri[0])}.</>,
+      <>Top of mind: {highPri.length} high-priority. Stay on {projectGlow(highPri[0])}.</>,
+    ]);
+  }
+  if (active.length > 0) {
+    return pickV(seed + "a", [
+      <>{active.length} project{active.length !== 1 ? "s" : ""} in flight. No blockers, no overdues — clean board.</>,
+      <>{active.length} active project{active.length !== 1 ? "s" : ""}. Things are moving.</>,
+    ]);
+  }
+  if (onHold.length > 0) {
+    return <>{onHold.length} on hold — worth revisiting if context has changed.</>;
+  }
+  return pickV(seed + "a", [
+    "No active projects right now. Nothing on fire.",
+    "Gauge is quiet. Take a breath.",
+  ]);
 }
 
 export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
@@ -152,6 +167,7 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
 
   var [scopeFilter, setScopeFilter]   = useState("all");
   var [statusFilter, setStatusFilter] = useState("all");
+  var [overdueOnly, setOverdueOnly]   = useState(false);
   var [showAdd, setShowAdd]         = useState(false);
   var [showPicker, setShowPicker]   = useState(false);
   var [editing, setEditing]         = useState(null);
@@ -174,8 +190,11 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
     } else if (scopeFilter === "personal") {
       byScope = projects.filter(function (p) { return !p.scope || p.scope === "personal"; });
     }
-    if (statusFilter === "all") return byScope;
-    return byScope.filter(function (p) { return p.status === statusFilter; });
+    var byStatus = statusFilter === "all" ? byScope : byScope.filter(function (p) { return p.status === statusFilter; });
+    if (overdueOnly) {
+      byStatus = byStatus.filter(function (p) { return p.status === "in_progress" && isOverdue(p.due_date); });
+    }
+    return byStatus;
   })();
 
   // Dim complete to bottom
@@ -194,9 +213,18 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
     (accounts || []).forEach(function (a) { map[a.id] = a; });
     return map;
   }, [accounts]);
-  var gaugeInsight = useMemo(function () {
-    return buildGaugeInsight(projects, accountsById);
-  }, [projects, accountsById]);
+  var gaugeInsight = buildGaugeInsight(projects, accountsById, {
+    onClickOverdue: function () { setStatusFilter("all"); setScopeFilter("all"); setOverdueOnly(true); },
+    onClickBlocked: function () { setOverdueOnly(false); setStatusFilter("blocked"); },
+    onClickProject: function (id) {
+      setOverdueOnly(false); setStatusFilter("all");
+      setExpandedRows(function (prev) { return Object.assign({}, prev, { [id]: true }); });
+      setTimeout(function () {
+        var el = document.querySelector('[data-project-id="' + id + '"]');
+        if (el && el.scrollIntoView) el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 50);
+    },
+  });
 
   function getAccountName(id) {
     if (!id) return null;
@@ -368,6 +396,24 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
         })}
       </div>
 
+      {overdueOnly && (
+        <div style={{ marginBottom: 10 }}>
+          <button
+            onClick={function () { setOverdueOnly(false); }}
+            style={{
+              background: C.accentFaint, border: "1px solid " + C.accentLine,
+              borderRadius: 999, padding: "4px 12px",
+              fontFamily: MONO, fontSize: 10.5, color: C.accent, fontWeight: 600,
+              cursor: "pointer", letterSpacing: "0.06em", textTransform: "uppercase",
+              display: "inline-flex", alignItems: "center", gap: 8,
+            }}
+          >
+            Showing past due
+            <span style={{ fontSize: 13, lineHeight: 1, opacity: 0.7 }}>×</span>
+          </button>
+        </div>
+      )}
+
       {/* Project list */}
       {loading && <PipLoader />}
 
@@ -394,7 +440,7 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
 
       {projects && projects.length > 0 && (
         <div style={{ marginBottom: 10 }}>
-          <PipInsightCard text={gaugeInsight} />
+          <PipInsightCard segments={[gaugeInsight]} />
         </div>
       )}
 
@@ -423,6 +469,7 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
           return (
             <div
               key={p.id}
+              data-project-id={p.id}
               style={{
                 background: rowBg,
                 border: "1px solid " + (p.status === "blocked" ? C.statusBlocked.border : C.rule),

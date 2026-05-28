@@ -41,7 +41,7 @@ export function ListView({ cadences, onSelectAccount, onCreateItem, onOpenHub })
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       {filled.map(function (group) {
         return (
-          <div key={group.key}>
+          <div key={group.key} data-cadence-group={group.key}>
             <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
               {group.label}
             </div>

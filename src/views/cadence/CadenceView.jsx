@@ -12,14 +12,21 @@ import { pickV } from "../../lib/metricsUtils";
 import { CalendarView } from "./CalendarView";
 import { WeekView } from "./WeekView";
 import { ListView } from "./ListView";
+import { Glow } from "../../components/Glow";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
 var INTER = "'Inter', system-ui, sans-serif";
 
-function buildGlobalCadenceInsight(cadences) {
+function scrollToCadenceGroup(groupKey) {
+  var el = document.querySelector('[data-cadence-group="' + groupKey + '"]');
+  if (el && el.scrollIntoView) el.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function buildGlobalCadenceInsight(cadences, handlers) {
   var seed  = "global" + new Date().getDate().toString();
   var today = new Date(); today.setHours(0, 0, 0, 0);
+  var h     = handlers || {};
 
   if (!cadences || cadences.length === 0) {
     return pickV(seed + "g0", [
@@ -40,49 +47,48 @@ function buildGlobalCadenceInsight(cadences) {
   var weekCount  = upcoming.filter(function (u) { return u.daysOut <= 7; }).length;
   var soonest    = upcoming.length > 0 ? upcoming[0] : null;
 
-  var parts = [];
+  var todayGlow = <Glow onClick={h.onClickToday}>{todayCount + " cadence" + (todayCount !== 1 ? "s" : "") + " due today"}</Glow>;
+  var weekGlow  = <Glow onClick={h.onClickThisWeek}>{weekCount + " cadence" + (weekCount !== 1 ? "s" : "") + " this week"}</Glow>;
 
-  // Lead — today vs this week vs general
   if (todayCount > 0) {
-    parts.push(pickV(seed + "gl", [
-      todayCount + " cadence" + (todayCount !== 1 ? "s" : "") + " due today. Make sure you're ready.",
-      todayCount === 1 ? "One on the schedule today. Don't let it slip." : todayCount + " things on the board today.",
-    ]));
-  } else if (weekCount > 0) {
-    parts.push(pickV(seed + "gl", [
-      weekCount + " coming up this week across your accounts.",
-      "This week has " + weekCount + " cadence" + (weekCount !== 1 ? "s" : "") + " lined up. Solid pipeline.",
-    ]));
-  } else if (soonest) {
+    return pickV(seed + "gl", [
+      <>{todayGlow}. Make sure you're ready.</>,
+      <>{todayGlow} — don't let any of them slip.</>,
+    ]);
+  }
+  if (weekCount > 0) {
+    return pickV(seed + "gl", [
+      <>{weekGlow}. Solid pipeline — block the time.</>,
+      <>{weekGlow} across your accounts. Stay ready.</>,
+    ]);
+  }
+  if (soonest) {
     var acctName = soonest.cadence.folio_accounts && soonest.cadence.folio_accounts.name
       ? soonest.cadence.folio_accounts.name
       : "your next account";
-    parts.push(pickV(seed + "gl", [
-      cadences.length + " cadence" + (cadences.length !== 1 ? "s" : "") + " active. Next up in " + soonest.daysOut + " days.",
-      "Quiet week ahead — " + acctName + " is next in " + soonest.daysOut + " day" + (soonest.daysOut !== 1 ? "s" : "") + ".",
-    ]));
+    return pickV(seed + "gl", [
+      <>{cadences.length} cadence{cadences.length !== 1 ? "s" : ""} active. Next up in {soonest.daysOut} days.</>,
+      <>Quiet week ahead — {acctName} is next in {soonest.daysOut} day{soonest.daysOut !== 1 ? "s" : ""}.</>,
+    ]);
   }
 
-  // Secondary — mix context
   if (meetingCads.length > 0 && taskCads.length > 0) {
-    parts.push(pickV(seed + "gs", [
-      meetingCads.length + " meeting cadence" + (meetingCads.length !== 1 ? "s" : "") + " and " + taskCads.length + " recurring task" + (taskCads.length !== 1 ? "s" : "") + " across all accounts.",
-      "Good mix — meetings and tasks both tracked.",
-    ]));
-  } else if (taskCads.length > 0) {
-    parts.push(pickV(seed + "gs", [
-      taskCads.length + " recurring task" + (taskCads.length !== 1 ? "s" : "") + " running. No meeting cadences set.",
-      "All tasks, no meeting cadences — consider setting a check-in frequency for your key accounts.",
-    ]));
+    return <>{meetingCads.length} meeting cadence{meetingCads.length !== 1 ? "s" : ""} and {taskCads.length} recurring task{taskCads.length !== 1 ? "s" : ""} across all accounts.</>;
   }
-
-  return parts.join(" ");
+  if (taskCads.length > 0) {
+    return <>{taskCads.length} recurring task{taskCads.length !== 1 ? "s" : ""} running. No meeting cadences set yet.</>;
+  }
+  return null;
 }
 
 /* ---- Main CadenceView ---- */
 export function CadenceView({ cadences, accounts, onSelectAccount, addCadence, onCreateItem, onOpenHub }) {
-  var cadenceInsight = useMemo(function () { return buildGlobalCadenceInsight(cadences); }, [cadences]);
   var [viewMode, setViewMode] = useState('list');
+  var insightHandlers = {
+    onClickToday:    function () { setViewMode('list'); setTimeout(function () { scrollToCadenceGroup('today'); }, 50); },
+    onClickThisWeek: function () { setViewMode('week'); },
+  };
+  var cadenceInsight = buildGlobalCadenceInsight(cadences, insightHandlers);
   var [showAddModal, setShowAddModal] = useState(false);
   var [calDate,  setCalDate]  = useState(function () {
     var d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0); return d;
@@ -161,7 +167,7 @@ export function CadenceView({ cadences, accounts, onSelectAccount, addCadence, o
             + Set Cadence
           </button>
         </div>
-        <PipInsightCard text={cadenceInsight} />
+        <PipInsightCard segments={[cadenceInsight]} />
         {viewToggle}
         <div style={{ textAlign: 'center', padding: '60px 0', color: C.textMuted }}>
           <PipMark size={16} color={C.accentDim} glow />
@@ -218,7 +224,7 @@ export function CadenceView({ cadences, accounts, onSelectAccount, addCadence, o
           + Set Cadence
         </button>
       </div>
-      <PipInsightCard text={buildGlobalCadenceInsight(cadences)} />
+      <PipInsightCard segments={[cadenceInsight]} />
       {viewToggle}
 
       {viewMode === 'calendar' && (
