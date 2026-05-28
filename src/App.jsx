@@ -54,6 +54,7 @@ export default function App() {
   var [view, setView]                   = useState("accounts");
   var [selectedAccount, setSelected]    = useState(null);
   var [pendingHubCadenceId, setPendingHubCadenceId] = useState(null);
+  var [bannerFilter, setBannerFilter]   = useState(null); // 'cold' | 'overdue' | null
   var [showAddAccount, setShowAddAccount] = useState(false);
   var [addAccountDefaultType, setAddAccountDefaultType] = useState(null);
   var [editingAccount, setEditingAccount] = useState(null);
@@ -296,9 +297,11 @@ export default function App() {
         items={allItems}
         meetings={meetings}
         contacts={allContacts}
-        onColdClick={function() { handleSetView("accounts"); }}
-        onOverdueClick={function() { handleSetView("cadence"); }}
+        onColdClick={function() { setBannerFilter("cold");    handleSetView("accounts"); }}
+        onOverdueClick={function() { setBannerFilter("overdue"); handleSetView("accounts"); }}
         onFollowUpClick={function() { handleSetView("meetings"); }}
+        bannerFilter={bannerFilter}
+        onClearBannerFilter={function() { setBannerFilter(null); }}
         onLogMeeting={function(accountId, date, title) {
           return addMeeting({ account_id: accountId, meeting_date: date, title: title });
         }}

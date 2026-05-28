@@ -91,7 +91,7 @@ function matchesTypeFilter(account, typeFilter) {
   return !t || t === "standard" || t === "mso" || t === "shop";
 }
 
-export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks, addTask, updateTask, deleteTask, hasMeetings, hasCadences, revenueHistory, items, meetings, contacts, onColdClick, onOverdueClick, onFollowUpClick, onLogMeeting, typeFilter, userId, members }) {
+export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks, addTask, updateTask, deleteTask, hasMeetings, hasCadences, revenueHistory, items, meetings, contacts, onColdClick, onOverdueClick, onFollowUpClick, onLogMeeting, typeFilter, userId, members, bannerFilter, onClearBannerFilter }) {
   var activeType = typeFilter || "customer";
   var copy = WORKSPACE_COPY[activeType] || WORKSPACE_COPY.customer;
   accounts = (accounts || []).filter(function (a) { return matchesTypeFilter(a, activeType); });
@@ -215,7 +215,15 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
         var matchMine   = !mineOnly
           || a.owner_user_id === userId
           || (!a.owner_user_id && a.user_id === userId);
-        return matchSearch && matchFilter && matchTag && matchRegion && matchMine;
+        var matchBanner = true;
+        if (bannerFilter === "cold") {
+          var last = a.last_interaction_at ? new Date(a.last_interaction_at).getTime()
+            : a.last_meeting ? new Date(a.last_meeting + "T00:00:00").getTime() : null;
+          matchBanner = last === null || (Date.now() - last) > (30 * 86400000);
+        } else if (bannerFilter === "overdue") {
+          matchBanner = (items || []).some(function (i) { return i.account_id === a.id && !i.done && i.due_date && i.due_date < todayStr; });
+        }
+        return matchSearch && matchFilter && matchTag && matchRegion && matchMine && matchBanner;
       })
       .sort(function (a, b) {
         if (sortMode === "revenue") {
@@ -237,7 +245,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
         if (tierDiff !== 0) return tierDiff;
         return a.name.localeCompare(b.name);
       });
-  }, [accounts, search, filter, tagFilter, regionFilter, sortMode, accountIdsWithContactMatch, mineOnly, userId]);
+  }, [accounts, search, filter, tagFilter, regionFilter, sortMode, accountIdsWithContactMatch, mineOnly, userId, bannerFilter, items, todayStr]);
 
   // Build display list: parents in sort order, children nested immediately below
   var displayList = useMemo(function () {
@@ -612,6 +620,24 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
           </div>
         )}
       </div>
+
+      {bannerFilter && onClearBannerFilter && (
+        <div style={{ marginBottom: 8 }}>
+          <button
+            onClick={onClearBannerFilter}
+            style={{
+              background: C.accentFaint, border: "1px solid " + C.accentLine,
+              borderRadius: 999, padding: "4px 12px",
+              fontFamily: MONO, fontSize: 10.5, color: C.accent, fontWeight: 600,
+              cursor: "pointer", letterSpacing: "0.06em", textTransform: "uppercase",
+              display: "inline-flex", alignItems: "center", gap: 8,
+            }}
+          >
+            {bannerFilter === "cold" ? "Showing cold accounts" : "Showing accounts with overdue items"}
+            <span style={{ fontSize: 13, lineHeight: 1, opacity: 0.7 }}>×</span>
+          </button>
+        </div>
+      )}
 
       {/* Filter pills — tier / status */}
       <div style={{ display: "flex", gap: 5, marginBottom: 6, overflowX: "auto", paddingBottom: 2 }}>
