@@ -10,6 +10,28 @@ var INTER = "'Inter', system-ui, sans-serif";
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
 
+function MetaChip({ label, value, tone }) {
+  var color = tone === "warn" ? C.yellow : tone === "ok" ? C.green : C.textSoft;
+  var border = tone === "warn" ? C.yellow : tone === "ok" ? C.green : C.rule;
+  return (
+    <div style={{
+      display: "inline-flex", alignItems: "center", gap: 8,
+      background: C.surface,
+      border: "1px solid " + border,
+      borderRadius: 999,
+      padding: "5px 11px",
+      fontFamily: INTER,
+      fontVariantNumeric: "tabular-nums",
+    }}>
+      <span style={{
+        fontFamily: MONO, fontSize: 9, color: C.textMuted,
+        letterSpacing: "0.07em", textTransform: "uppercase",
+      }}>{label}</span>
+      <span style={{ fontSize: 12, color: color, fontWeight: 600 }}>{value}</span>
+    </div>
+  );
+}
+
 /* ---- Sidebar sections ---- */
 function SidebarSection({ title, count, children, collapsed }) {
   if (collapsed) return null;
@@ -51,6 +73,7 @@ export function CadenceMeetingMode({
   accounts,
   members,
   userEmail,
+  lastMeetingAt,
   onUpdate,
   onAddItem,
   onCloseItem,
@@ -173,6 +196,26 @@ export function CadenceMeetingMode({
   var sidebarWidth = sidebarCollapsed ? 44 : 480;
   var hasBrief     = Boolean(brief && brief.trim());
 
+  // Meta-strip vitals
+  var daysSinceLast = lastMeetingAt
+    ? Math.floor((Date.now() - new Date(lastMeetingAt + "T00:00:00").getTime()) / 86400000)
+    : null;
+  var openItemCount = (openItems || []).length;
+  var overdueItems  = (openItems || []).filter(function (i) {
+    return i.due_date && i.due_date < new Date().toISOString().slice(0, 10);
+  }).length;
+  var projectHealth = (function () {
+    var list = projects || [];
+    if (!list.length) return null;
+    var atRisk = list.filter(function (p) {
+      return p.status === "blocked" || p.status === "on_hold" ||
+             (p.due_date && p.due_date < new Date().toISOString().slice(0, 10) && p.status !== "complete");
+    }).length;
+    return atRisk > 0
+      ? { label: atRisk + " at risk", tone: "warn" }
+      : { label: list.length + " on track", tone: "ok" };
+  })();
+
   var overlay = (
     <div
       role="dialog"
@@ -260,6 +303,31 @@ export function CadenceMeetingMode({
           />
         </div>
       )}
+
+      {/* Vitals strip */}
+      <div style={{
+        flexShrink: 0,
+        display: "flex", gap: 10, flexWrap: "wrap",
+        padding: "10px 18px",
+        background: C.surface2,
+        borderBottom: "1px solid " + C.rule,
+      }}>
+        {daysSinceLast !== null && (
+          <MetaChip label="Last meeting" value={daysSinceLast + "d ago"} tone={daysSinceLast > 45 ? "warn" : "muted"} />
+        )}
+        {openItemCount > 0 ? (
+          <MetaChip
+            label="Open items"
+            value={openItemCount + (overdueItems > 0 ? " (" + overdueItems + " overdue)" : "")}
+            tone={overdueItems > 0 ? "warn" : "muted"}
+          />
+        ) : (
+          <MetaChip label="Open items" value="0 — all clear" tone="ok" />
+        )}
+        {projectHealth && (
+          <MetaChip label="Projects" value={projectHealth.label} tone={projectHealth.tone} />
+        )}
+      </div>
 
       {/* Body */}
       <div style={{ display: "flex", flex: 1, minHeight: 0 }}>

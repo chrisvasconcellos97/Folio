@@ -947,6 +947,7 @@ export function CadenceHub({
       accounts={accounts}
       members={members}
       userEmail={userEmail}
+      lastMeetingAt={history.length ? history[0].meeting_date : null}
       onUpdate={updateMeeting}
       onAddItem={addItem}
       onCloseItem={closeItem}
