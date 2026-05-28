@@ -485,6 +485,7 @@ export function CadenceHub({
   meetings,         // all meetings for the account
   items,            // all items for the account
   cadences,         // all cadences for the account (for backfill banner)
+  projects,         // all gauge projects for the account
   addMeeting,
   updateMeeting,
   deleteMeeting,
@@ -526,6 +527,12 @@ export function CadenceHub({
   var openItems = useMemo(function () {
     return (items || []).filter(function (i) { return !i.done; });
   }, [items]);
+
+  var activeProjects = useMemo(function () {
+    return (projects || []).filter(function (p) {
+      return p.status !== "complete";
+    });
+  }, [projects]);
 
   var scheduledFollowUps = useMemo(function () {
     var today = todayISO();
@@ -572,11 +579,12 @@ export function CadenceHub({
     setBriefLoading(true);
     setBriefError(null);
     callCadenceBriefPip({
-      cadence:      cadence,
-      account:      account,
-      cadenceLabel: cadenceLabel,
-      meetings:     history,
-      openItems:    openItems,
+      cadence:        cadence,
+      account:        account,
+      cadenceLabel:   cadenceLabel,
+      meetings:       history,
+      openItems:      openItems,
+      activeProjects: activeProjects,
     }).then(function (out) {
       var brief = out.brief || "";
       var when  = new Date().toISOString();
@@ -677,6 +685,41 @@ export function CadenceHub({
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {openItems.map(function (i) {
             return <OpenItemRow key={i.id} item={i} onClose={closeItem} />;
+          })}
+        </div>
+      )}
+    </div>
+  );
+
+  var projectsSection = (
+    <div>
+      <SectionHeader count={activeProjects.length}>Gauge Projects · Account</SectionHeader>
+      {activeProjects.length === 0 ? (
+        <div style={{ fontSize: 12, color: C.textMuted, padding: "6px 0" }}>
+          No active projects on this account.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {activeProjects.map(function (p) {
+            var statusLabel = (p.status || "").replace("_", " ");
+            var isPlanning  = p.status === "planned" || p.status === "on_hold";
+            return (
+              <div key={p.id} style={Object.assign({}, glass, {
+                borderRadius: 8, padding: "9px 12px",
+                display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10,
+              })}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, color: C.text, fontWeight: 600 }}>{p.title || "Untitled project"}</div>
+                  <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2, display: "flex", gap: 8, flexWrap: "wrap", fontVariantNumeric: "tabular-nums" }}>
+                    <span style={{
+                      fontFamily: MONO, fontSize: 9.5, textTransform: "uppercase", letterSpacing: "0.08em",
+                      color: isPlanning ? C.yellow : C.accent, fontWeight: 700,
+                    }}>{statusLabel}</span>
+                    {p.due_date && <span>due {new Date(p.due_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>}
+                  </div>
+                </div>
+              </div>
+            );
           })}
         </div>
       )}
@@ -813,7 +856,12 @@ export function CadenceHub({
             </>
           )}
           {tab === "history" && historySection}
-          {tab === "tasks" && tasksSection}
+          {tab === "tasks" && (
+            <>
+              {projectsSection}
+              {tasksSection}
+            </>
+          )}
           {tab === "followups" && followUpsSection}
         </div>
       </div>
@@ -836,6 +884,7 @@ export function CadenceHub({
         {draftsSection}
         {composerSection}
         {historySection}
+        {projectsSection}
         {tasksSection}
         {followUpsSection}
       </div>

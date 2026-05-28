@@ -192,6 +192,7 @@ export function AccountDetail({ account, userId, orgId, accounts, members, onBac
         meetings={meetings}
         items={items}
         cadences={cadences}
+        projects={projects}
         addMeeting={addMeeting}
         updateMeeting={updateMeeting}
         deleteMeeting={deleteMeeting}

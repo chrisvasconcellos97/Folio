@@ -329,10 +329,18 @@ export function summarizeDraftPip(payload) {
  * meeting history filtered to this cadence, plus open items.
  */
 export function callCadenceBriefPip(payload) {
-  var cadence  = payload.cadence  || {};
-  var account  = payload.account  || {};
-  var meetings = payload.meetings || [];
-  var openItems = payload.openItems || [];
+  var cadence        = payload.cadence        || {};
+  var account        = payload.account        || {};
+  var meetings       = payload.meetings       || [];
+  var openItems      = payload.openItems      || [];
+  var activeProjects = payload.activeProjects || [];
+
+  var projectLines = activeProjects.slice(0, 6).map(function (p) {
+    var bits = [];
+    bits.push((p.status || "").replace("_", " "));
+    if (p.due_date) bits.push("due " + p.due_date);
+    return "- " + (p.title || "Untitled") + " (" + bits.join(" · ") + ")";
+  }).join("\n");
 
   var prompt =
     "Give me a short per-cadence brief.\n\n" +
@@ -342,8 +350,13 @@ export function callCadenceBriefPip(payload) {
     (meetings.length === 0 ? "(none yet)\n" : meetings.slice(0, 4).map(function (m) {
       return "- " + (m.meeting_date || "") + " " + (m.title || "") + (m.pip_summary ? " — " + m.pip_summary : (m.notes ? " — " + m.notes.slice(0, 200) : ""));
     }).join("\n") + "\n") +
-    "Open items: " + (openItems.length === 0 ? "none" : openItems.map(function (i) { return i.text; }).slice(0, 5).join("; ")) + "\n\n" +
-    "Two short paragraphs: (1) where this cadence stands, (2) one sharp thing to keep in mind for the next conversation.";
+    "Open items: " + (openItems.length === 0 ? "none" : openItems.map(function (i) { return i.text; }).slice(0, 5).join("; ")) + "\n" +
+    "Active Gauge projects on this account:\n" +
+    (projectLines || "(none)") + "\n\n" +
+    "Two short paragraphs: (1) where this cadence stands and what's open " +
+    "(if there's an active Gauge project, name it and call out its status — " +
+    "especially if it's blocked, planning, or due soon), (2) one sharp thing " +
+    "to keep in mind for the next conversation.";
 
   return callPipApi(
     [{ role: "user", content: prompt }],
