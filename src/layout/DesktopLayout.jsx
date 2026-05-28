@@ -4,6 +4,7 @@ import { PipOrb } from "../components/PipMark";
 import { NavMark } from "../components/NavMark";
 import { AmberBtn } from "../components/Buttons";
 import { UserMenu } from "../components/UserMenu";
+import { ConnectionStatus } from "../components/ConnectionStatus";
 
 var MONO = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
@@ -243,6 +244,7 @@ export function DesktopLayout({
           {detailPane || children}
         </div>
       </div>
+      <ConnectionStatus />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { logActivity } from "../lib/activity";
 import { timed } from "../lib/net";
+import { useRealtimeSync } from "./useRealtimeSync";
 
 export function useMeetings(userId, accountId, orgId) {
   var [meetings, setMeetings] = useState([]);
@@ -36,6 +37,9 @@ export function useMeetings(userId, accountId, orgId) {
   }, [userId, accountId, cacheKey]);
 
   useEffect(function () { fetch(); }, [fetch]);
+
+  // Phase 8 — multi-device realtime sync. See useRealtimeSync.js.
+  useRealtimeSync("folio_meetings", userId, fetch);
 
   function addMeeting(data) {
     return supabase

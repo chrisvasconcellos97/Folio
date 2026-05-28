@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
+import { useRealtimeSync } from "./useRealtimeSync";
 
 export function useCadences(userId, accountId) {
   var [cadences, setCadences] = useState([]);
@@ -27,6 +28,9 @@ export function useCadences(userId, accountId) {
   }, [userId, accountId]);
 
   useEffect(function () { fetch(); }, [fetch]);
+
+  // Phase 8 — multi-device realtime sync. See useRealtimeSync.js.
+  useRealtimeSync("folio_cadences", userId, fetch);
 
   function addCadence(data) {
     return supabase

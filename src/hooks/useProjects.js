@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { logActivity } from "../lib/activity";
+import { useRealtimeSync } from "./useRealtimeSync";
 
 export function useProjects(userId, accountId, orgId) {
   var [projects, setProjects]   = useState([]);
@@ -44,6 +45,9 @@ export function useProjects(userId, accountId, orgId) {
 
   useEffect(function () { fetch(); }, [fetch]);
   useEffect(function () { fetchTemplates(); }, [fetchTemplates]);
+
+  // Phase 8 — multi-device realtime sync. See useRealtimeSync.js.
+  useRealtimeSync("gauge_projects", userId, fetch);
 
   function addProject(data) {
     return supabase

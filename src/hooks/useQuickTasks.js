@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
+import { useRealtimeSync } from "./useRealtimeSync";
 
 export function useQuickTasks(userId) {
   var [tasks, setTasks]     = useState([]);
@@ -22,6 +23,9 @@ export function useQuickTasks(userId) {
   }, [userId]);
 
   useEffect(function () { fetch(); }, [fetch]);
+
+  // Phase 8 — multi-device realtime sync. See useRealtimeSync.js.
+  useRealtimeSync("folio_quick_tasks", userId, fetch);
 
   function addTask(data) {
     return supabase

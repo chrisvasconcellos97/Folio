@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { logActivity } from "../lib/activity";
+import { useRealtimeSync } from "./useRealtimeSync";
 
 export function useItems(userId, accountId, orgId) {
   var [items, setItems]   = useState([]);
@@ -28,6 +29,9 @@ export function useItems(userId, accountId, orgId) {
   }, [userId, accountId]);
 
   useEffect(function () { fetch(); }, [fetch]);
+
+  // Phase 8 — multi-device realtime sync. See useRealtimeSync.js.
+  useRealtimeSync("folio_items", userId, fetch);
 
   function addItem(data) {
     return supabase

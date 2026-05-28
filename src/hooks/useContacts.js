@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { logActivity } from "../lib/activity";
+import { useRealtimeSync } from "./useRealtimeSync";
 
 export function useContacts(userId, accountId, orgId) {
   var [contacts, setContacts] = useState([]);
@@ -27,6 +28,9 @@ export function useContacts(userId, accountId, orgId) {
   }, [userId, accountId]);
 
   useEffect(function () { fetch(); }, [fetch]);
+
+  // Phase 8 — multi-device realtime sync. See useRealtimeSync.js.
+  useRealtimeSync("folio_contacts", userId, fetch);
 
   function addContact(data) {
     return supabase

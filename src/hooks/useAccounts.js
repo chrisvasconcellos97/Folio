@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { timed } from "../lib/net";
+import { useRealtimeSync } from "./useRealtimeSync";
 
 export function useAccounts(userId) {
   var [accounts, setAccounts] = useState([]);
@@ -34,6 +35,10 @@ export function useAccounts(userId) {
   }, [userId, cacheKey]);
 
   useEffect(function () { fetch(); }, [fetch]);
+
+  // Phase 8 — multi-device realtime sync. A change to folio_accounts on any
+  // device (filtered to this user) triggers a debounced refetch here.
+  useRealtimeSync("folio_accounts", userId, fetch);
 
   function addAccount(data) {
     return supabase

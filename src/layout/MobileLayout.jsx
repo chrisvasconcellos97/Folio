@@ -5,6 +5,7 @@ import { GaugeIcon } from "../components/GaugeIcon";
 import { PipOrb } from "../components/PipMark";
 import { AmberBtn } from "../components/Buttons";
 import { UserMenu } from "../components/UserMenu";
+import { ConnectionStatus } from "../components/ConnectionStatus";
 import { NavMark } from "../components/NavMark";
 import { FirstRunTooltip } from "../components/Tooltip";
 
@@ -272,6 +273,7 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
           })}
         </div>
       </div>
+      <ConnectionStatus />
     </div>
   );
 }
