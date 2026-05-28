@@ -25,13 +25,17 @@ import { ShopsTab } from "./tabs/ShopsTab";
 import { UpdatesTab } from "./tabs/UpdatesTab";
 import { AddAccountModal } from "./AddAccountModal";
 import { AccountMergeModal } from "./AccountMergeModal";
-import { LogConversationModal } from "./LogConversationModal";
-import { QuickMeetingModal } from "./QuickMeetingModal";
+import { StartConversationModal } from "./StartConversationModal";
 import { AddItemModal } from "./AddItemModal";
 import { AddContactModal } from "./AddContactModal";
 import { PrintAccountSheet } from "../../components/PrintAccountSheet";
 import { CadenceHub } from "../cadence/CadenceHub";
+import { CadenceMeetingMode } from "../cadence/CadenceMeetingMode";
+import { PipSummarizePreview } from "../cadence/PipSummarizePreview";
 import { CadenceBackfillBanner } from "../cadence/CadenceBackfillBanner";
+import { summarizeDraftPip } from "../../lib/pip";
+import { applyPipPlan } from "../../lib/pipPlanApply";
+import { usePipAssignmentHints } from "../../hooks/usePipAssignmentHints";
 import { ErrorBanner } from "../../components/ErrorBanner";
 import { supabase } from "../../lib/supabase";
 import { buildAccountExport, downloadAccountExport } from "../../lib/accountExport";
@@ -59,7 +63,10 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
   });
   var [tabSlideDir, setTabSlideDir] = useState("right");
   var [showMeetingModal, setMeetingModal] = useState(false);
-  var [showQuickModal, setQuickModal]     = useState(false);
+  var [adHocDraftId, setAdHocDraftId]     = useState(null);
+  var [adHocSummarizing, setAdHocSummarizing] = useState(false);
+  var [adHocSummarizeErr, setAdHocSummarizeErr] = useState(null);
+  var [adHocPreviewPlan, setAdHocPreviewPlan] = useState(null);
   var [showItemModal, setItemModal]       = useState(false);
   var [showContactModal, setContactModal] = useState(false);
   var [showAddShopModal, setAddShopModal] = useState(false);
@@ -68,7 +75,6 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
 
   var [cadencePrefill, setCadencePrefill] = useState(null);
   var [hubCadence, setHubCadence]         = useState(null);
-  var [logConvDefaultCadenceId, setLogConvDefaultCadenceId] = useState(null);
 
   var [showBriefModal, setBriefModal]   = useState(false);
   var [briefText, setBriefText]         = useState(null);
@@ -161,6 +167,79 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
     : null;
 
   var openCount = items.filter(function (i) { return !i.done; }).length;
+
+  /* ---- Ad-hoc conversation (Log Conversation → full-screen meeting mode) ---- */
+  var adHocHintsApi = usePipAssignmentHints(userId, account.id);
+  var adHocDraft = adHocDraftId
+    ? (meetings || []).find(function (m) { return m.id === adHocDraftId; }) || null
+    : null;
+  var openItemsList = items.filter(function (i) { return !i.done; });
+  var activeProjects = (projects || []).filter(function (p) { return p.status !== "complete"; });
+  var lastNonDraftMeetingAt = (meetings || [])
+    .filter(function (m) { return m.status !== "draft" && m.id !== adHocDraftId; })
+    .map(function (m) { return m.meeting_date; })
+    .filter(Boolean)
+    .sort()
+    .reverse()[0] || null;
+
+  function handleAdHocSummarize(draftPayload) {
+    if (adHocSummarizing || !draftPayload) return;
+    setAdHocSummarizing(true);
+    setAdHocSummarizeErr(null);
+    var methodLabel = draftPayload.method
+      ? ({ phone: "Phone", in_person: "In Person", video: "Video", email: "Email" }[draftPayload.method] || draftPayload.method)
+      : "Ad-hoc conversation";
+    summarizeDraftPip({
+      draft:           draftPayload,
+      accountName:     account.name,
+      cadenceLabel:    methodLabel,
+      accountId:       account.id,
+      existingItems:   openItemsList,
+      activeProjects:  activeProjects,
+      orgMembers:      members,
+      assignmentHints: adHocHintsApi.hints,
+    }).then(function (out) {
+      var followUp = out.follow_up_date || null;
+      return updateMeeting(draftPayload.id, {
+        pip_summary:    out.summary || null,
+        follow_up_date: followUp,
+        status:         "summarized",
+      }).then(function () { return out; });
+    }).then(function (out) {
+      setAdHocSummarizing(false);
+      setAdHocPreviewPlan({ plan: out.plan || [], summary: out.summary || "", draftId: draftPayload.id });
+    }).catch(function (err) {
+      setAdHocSummarizing(false);
+      setAdHocSummarizeErr((err && err.message) || "Pip couldn't summarize.");
+    });
+  }
+
+  function handleAdHocApplyPlan(selected) {
+    var pDraftId = adHocPreviewPlan && adHocPreviewPlan.draftId;
+    return applyPipPlan(selected, {
+      addItem:        function (data) { return addItem(Object.assign({ account_id: account.id }, data)); },
+      updateItem:     updateItem,
+      closeItem:      closeItem,
+      updateProject:  updateProject,
+      addHint:        adHocHintsApi.addHint,
+      accountId:      account.id,
+      activeProjects: activeProjects,
+    }).then(function (result) {
+      if (pDraftId) {
+        updateMeeting(pDraftId, { plan_applied_at: new Date().toISOString() })
+          .catch(function () { /* badge-only failure */ });
+      }
+      setAdHocPreviewPlan(null);
+      setAdHocDraftId(null);
+      showToast("Conversation summarized");
+      return result;
+    });
+  }
+
+  function handleAdHocCancelPlan() {
+    setAdHocPreviewPlan(null);
+    setAdHocDraftId(null);
+  }
 
   function handleBriefMe() {
     setBriefModal(true);
@@ -284,7 +363,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
           orgId={orgId}
           openItems={items}
           meetings={meetings}
-          onQuickMeeting={function () { setQuickModal(true); }}
+          onQuickMeeting={function () { setMeetingModal(true); }}
           onLogMeeting={function () { setMeetingModal(true); }}
           onAddItem={function () { setItemModal(true); }}
           onSaveSummary={function (summary) {
@@ -418,37 +497,54 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
       </div>
 
       {/* Modals */}
-      {showQuickModal && (
-        <QuickMeetingModal
-          accountId={account.id}
-          userId={userId}
-          accountName={account.name}
-          contacts={contacts}
-          onSave={function (data) {
-            return addMeeting(data).then(function (m) { showToast("Meeting logged"); return m; });
-          }}
-          onClose={function () { setQuickModal(false); }}
-        />
-      )}
-
       {showMeetingModal && (
-        <LogConversationModal
+        <StartConversationModal
           accountId={account.id}
           userId={userId}
-          contacts={contacts}
-          cadences={cadences}
-          defaultCadenceId={logConvDefaultCadenceId}
-          onSave={function (data) {
+          onStart={function (data) {
             return addMeeting(data).then(function (m) {
-              showToast(data.status === "draft" ? "Draft started" : "Conversation logged");
-              if (data.cadence_id && data.status === "draft") {
-                var c = cadences.find(function (cc) { return cc.id === data.cadence_id; });
-                if (c) setHubCadence(c);
-              }
+              setMeetingModal(false);
+              setAdHocDraftId(m.id);
               return m;
             });
           }}
-          onClose={function () { setMeetingModal(false); setLogConvDefaultCadenceId(null); }}
+          onClose={function () { setMeetingModal(false); }}
+        />
+      )}
+
+      {adHocDraft && !adHocPreviewPlan && (
+        <CadenceMeetingMode
+          draft={adHocDraft}
+          account={account}
+          cadenceLabel={null}
+          brief={null}
+          briefAt={null}
+          projects={activeProjects}
+          openItems={openItemsList}
+          contacts={contacts || []}
+          accounts={accounts}
+          members={members}
+          userEmail={userEmail}
+          lastMeetingAt={lastNonDraftMeetingAt}
+          onUpdate={updateMeeting}
+          onAddItem={function (data) { return addItem(Object.assign({ account_id: account.id }, data)); }}
+          onCloseItem={closeItem}
+          onUpdateProject={updateProject}
+          onClose={function () { setAdHocDraftId(null); }}
+          onSummarizeRequest={handleAdHocSummarize}
+          summarizing={adHocSummarizing}
+          summarizeErr={adHocSummarizeErr}
+        />
+      )}
+
+      {adHocPreviewPlan && (
+        <PipSummarizePreview
+          plan={adHocPreviewPlan.plan}
+          existingItems={openItemsList}
+          activeProjects={activeProjects}
+          orgMembers={members}
+          onApply={handleAdHocApplyPlan}
+          onCancel={handleAdHocCancelPlan}
         />
       )}
 

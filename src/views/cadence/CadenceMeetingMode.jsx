@@ -48,17 +48,54 @@ function SidebarSection({ title, count, children, collapsed }) {
   );
 }
 
-function ContactCard({ contact }) {
+function ContactCard({ contact, selected, onToggle }) {
+  var canToggle = typeof onToggle === "function";
   return (
-    <div style={Object.assign({}, glass, {
-      borderRadius: 8, padding: "8px 10px", marginBottom: 6,
-    })}>
-      <div style={{ fontSize: 12, color: C.text, fontWeight: 500 }}>{contact.name}</div>
-      {contact.title && <div style={{ fontSize: 10.5, color: C.textMuted, marginTop: 2 }}>{contact.title}</div>}
-      {contact.email && <div style={{ fontSize: 10, color: C.accent, marginTop: 2 }}>{contact.email}</div>}
+    <div
+      role={canToggle ? "button" : undefined}
+      tabIndex={canToggle ? 0 : undefined}
+      onClick={canToggle ? function () { onToggle(contact.name); } : undefined}
+      onKeyDown={canToggle ? function (e) {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(contact.name); }
+      } : undefined}
+      style={Object.assign({}, glass, {
+        borderRadius: 8, padding: "8px 10px", marginBottom: 6,
+        cursor: canToggle ? "pointer" : "default",
+        display: "flex", alignItems: "flex-start", gap: 8,
+        border: selected ? "1px solid " + C.accentBorder : glass.border,
+        background: selected ? C.accentFaint : glass.background,
+      })}
+    >
+      {canToggle && (
+        <div
+          aria-hidden="true"
+          style={{
+            width: 14, height: 14, flexShrink: 0, marginTop: 2,
+            borderRadius: 4,
+            border: "1.5px solid " + (selected ? C.accent : C.accentDim),
+            background: selected ? C.accent : "transparent",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color: C.bg, fontSize: 10, lineHeight: 1, fontWeight: 700,
+          }}
+        >
+          {selected ? "✓" : ""}
+        </div>
+      )}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 12, color: C.text, fontWeight: 500 }}>{contact.name}</div>
+        {contact.title && <div style={{ fontSize: 10.5, color: C.textMuted, marginTop: 2 }}>{contact.title}</div>}
+        {contact.email && <div style={{ fontSize: 10, color: C.accent, marginTop: 2 }}>{contact.email}</div>}
+      </div>
     </div>
   );
 }
+
+var METHOD_LABEL = {
+  phone:     "Phone",
+  email:     "Email",
+  video:     "Video",
+  in_person: "In Person",
+};
 
 export function CadenceMeetingMode({
   draft,
@@ -85,7 +122,9 @@ export function CadenceMeetingMode({
   var [notes, setNotes]                 = useState(draft.notes || "");
   var [sidebarCollapsed, setCollapsed]  = useState(false);
   var [quickItem, setQuickItem]         = useState("");
+  var [attendees, setAttendees]         = useState(Array.isArray(draft.attendees) ? draft.attendees.slice() : []);
   var saveTimer = useRef(null);
+  var attendeesTimer = useRef(null);
   var notesRef  = useRef(null);
 
   // Auto-collapse sidebar on narrow viewports
@@ -114,6 +153,29 @@ export function CadenceMeetingMode({
     return function () { if (saveTimer.current) clearTimeout(saveTimer.current); };
   }, [notes]);
 
+  // Debounced attendees sync — fires 600ms after the last toggle.
+  useEffect(function () {
+    if (attendeesTimer.current) clearTimeout(attendeesTimer.current);
+    var draftAttendees = Array.isArray(draft.attendees) ? draft.attendees : [];
+    var same = draftAttendees.length === attendees.length &&
+               draftAttendees.every(function (n, i) { return n === attendees[i]; });
+    if (same) return;
+    attendeesTimer.current = setTimeout(function () {
+      onUpdate(draft.id, { attendees: attendees.length ? attendees : null }).catch(function (e) {
+        console.error("Meeting mode attendees save failed:", e);
+      });
+    }, 600);
+    return function () { if (attendeesTimer.current) clearTimeout(attendeesTimer.current); };
+  }, [attendees]);
+
+  function toggleAttendee(name) {
+    setAttendees(function (prev) {
+      return prev.indexOf(name) >= 0
+        ? prev.filter(function (n) { return n !== name; })
+        : prev.concat([name]);
+    });
+  }
+
   // ESC closes
   useEffect(function () {
     function onKey(e) {
@@ -126,10 +188,15 @@ export function CadenceMeetingMode({
 
   function flushPendingSave() {
     if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null; }
-    if (notes !== (draft.notes || "")) {
-      return onUpdate(draft.id, { notes: notes });
-    }
-    return Promise.resolve();
+    if (attendeesTimer.current) { clearTimeout(attendeesTimer.current); attendeesTimer.current = null; }
+    var pending = {};
+    if (notes !== (draft.notes || "")) pending.notes = notes;
+    var draftAttendees = Array.isArray(draft.attendees) ? draft.attendees : [];
+    var attendeesChanged = draftAttendees.length !== attendees.length ||
+                           draftAttendees.some(function (n, i) { return n !== attendees[i]; });
+    if (attendeesChanged) pending.attendees = attendees.length ? attendees : null;
+    if (Object.keys(pending).length === 0) return Promise.resolve();
+    return onUpdate(draft.id, pending);
   }
 
   function handleClose() {
@@ -161,6 +228,9 @@ export function CadenceMeetingMode({
 
   var sidebarWidth = sidebarCollapsed ? 44 : 480;
   var hasBrief     = Boolean(brief && brief.trim());
+  var topLabel     = cadenceLabel
+    ? cadenceLabel
+    : (draft.method && METHOD_LABEL[draft.method]) || "Ad-hoc conversation";
 
   // Meta-strip vitals
   var daysSinceLast = lastMeetingAt
@@ -219,7 +289,7 @@ export function CadenceMeetingMode({
             {account.name}
           </div>
           <div style={{ fontFamily: MONO, fontSize: 10, color: C.accent, letterSpacing: "0.07em", textTransform: "uppercase", marginTop: 2 }}>
-            {cadenceLabel} · {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+            {topLabel} · {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
           </div>
         </div>
         <button
@@ -367,12 +437,22 @@ export function CadenceMeetingMode({
                   </div>
                 )}
               </SidebarSection>
-              <SidebarSection title="Contacts" count={(contacts || []).length}>
+              <SidebarSection
+                title={"Contacts" + (attendees.length ? " · " + attendees.length + " attending" : "")}
+                count={(contacts || []).length}
+              >
                 {(contacts || []).length === 0 ? (
                   <div style={{ fontSize: 11, color: C.textMuted }}>No contacts.</div>
                 ) : (
                   (contacts || []).map(function (c) {
-                    return <ContactCard key={c.id} contact={c} />;
+                    return (
+                      <ContactCard
+                        key={c.id}
+                        contact={c}
+                        selected={attendees.indexOf(c.name) >= 0}
+                        onToggle={toggleAttendee}
+                      />
+                    );
                   })
                 )}
               </SidebarSection>

@@ -94,7 +94,7 @@ function matchesTypeFilter(account, typeFilter) {
   return !t || t === "standard" || t === "mso" || t === "shop";
 }
 
-export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks, addTask, updateTask, deleteTask, hasMeetings, hasCadences, revenueHistory, items, meetings, contacts, onColdClick, onOverdueClick, onFollowUpClick, onLogMeeting, typeFilter, userId, members, bannerFilter, onClearBannerFilter }) {
+export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks, addTask, updateTask, deleteTask, hasMeetings, hasCadences, revenueHistory, items, meetings, contacts, onColdClick, onOverdueClick, onFollowUpClick, onOpenConversation, typeFilter, userId, members, bannerFilter, onClearBannerFilter }) {
   var activeType = typeFilter || "customer";
   var copy = WORKSPACE_COPY[activeType] || WORKSPACE_COPY.customer;
   accounts = (accounts || []).filter(function (a) { return matchesTypeFilter(a, activeType); });
@@ -337,7 +337,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
       <QuickActionBar
         accounts={accounts}
         onAddAccount={onAddAccount}
-        onLogMeeting={onLogMeeting || function() { return Promise.resolve(); }}
+        onOpenConversation={onOpenConversation || function() {}}
         onAddTask={function(accountId, title) {
           return addTask({ title: title, account_id: accountId || undefined });
         }}

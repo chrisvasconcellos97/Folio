@@ -16,6 +16,8 @@ import { AuthView } from "./views/auth/AuthView";
 import { AccountsView } from "./views/accounts/AccountsView";
 import { AccountDetail } from "./views/accounts/AccountDetail";
 import { AddAccountModal } from "./views/accounts/AddAccountModal";
+import { StartConversationModal } from "./views/accounts/StartConversationModal";
+import { AdHocConversationFlow } from "./views/accounts/AdHocConversationFlow";
 import { OnboardingTour } from "./views/welcome/OnboardingTour";
 import { ReturningWelcome } from "./views/welcome/ReturningWelcome";
 import { PipLoader } from "./components/PipLoader";
@@ -62,6 +64,8 @@ export default function App() {
   var [showReturning, setShowReturning]   = useState(false);
   var [pipTransition, setPipTransition] = useState("idle");
   var [showPalette, setShowPalette]     = useState(false);
+  var [showStartConv, setShowStartConv] = useState(false);
+  var [adHocFlow, setAdHocFlow]         = useState(null); // { accountId, draftId }
   var welcomeShown = useRef(false);
 
   function replayTour() {
@@ -411,9 +415,7 @@ export default function App() {
         onFollowUpClick={function() { handleSetView("meetings"); }}
         bannerFilter={bannerFilter}
         onClearBannerFilter={function() { setBannerFilter(null); }}
-        onLogMeeting={function(accountId, date, title) {
-          return addMeeting({ account_id: accountId, meeting_date: date, title: title });
-        }}
+        onOpenConversation={function () { setShowStartConv(true); }}
       />
     );
   }
@@ -613,6 +615,43 @@ export default function App() {
     />
   );
 
+  // Global Log Conversation flow — fired by the "+ Conversation" pill in the
+  // workspace quick-action bar. The modal collects account/method/date, drops
+  // a draft meeting, then mounts AdHocConversationFlow to host the full-screen
+  // notepad + Pip summarize-with-preview. Self-contained so it survives view
+  // changes underneath.
+  var startConvModal = showStartConv && (
+    <StartConversationModal
+      accounts={accounts}
+      userId={userId}
+      onStart={function (data) {
+        return addMeeting(data).then(function (m) {
+          setShowStartConv(false);
+          setAdHocFlow({ accountId: data.account_id, draftId: m.id });
+          return m;
+        });
+      }}
+      onClose={function () { setShowStartConv(false); }}
+    />
+  );
+
+  var adHocFlowOverlay = adHocFlow && (function () {
+    var acct = (accounts || []).find(function (a) { return a.id === adHocFlow.accountId; });
+    if (!acct) return null;
+    return (
+      <AdHocConversationFlow
+        draftId={adHocFlow.draftId}
+        account={acct}
+        accounts={accounts}
+        members={members}
+        userId={userId}
+        userEmail={userEmail}
+        orgId={orgId}
+        onClose={function () { setAdHocFlow(null); }}
+      />
+    );
+  })();
+
   var inviteBanner = myInvite && (
     <div style={{
       position: "fixed", top: 0, left: 0, right: 0, zIndex: 200,
@@ -725,6 +764,8 @@ export default function App() {
           diagnosticsCount={diagnosticsCount}
         />
         {addAccountModal}
+        {startConvModal}
+        {adHocFlowOverlay}
         {/* Floating Pip (desktop) */}
         {view !== "pip" && (
           <div
@@ -804,6 +845,8 @@ export default function App() {
         </ErrorBoundary>
       </MobileLayout>
       {addAccountModal}
+      {startConvModal}
+      {adHocFlowOverlay}
       {/* Floating Pip (mobile) */}
       {view !== "pip" && (
         <div
