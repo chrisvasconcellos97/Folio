@@ -1,0 +1,1064 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Agent Village</title>
+<style>
+  :root {
+    --ink: #1a1c2c;
+    --paper: #f4f0d8;
+    --paper-edge: #c2b280;
+    --shadow: #333c57;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: #0d0f1a;
+    color: var(--paper);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    overflow: hidden;
+    -webkit-font-smoothing: none;
+    image-rendering: pixelated;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background:
+      radial-gradient(ellipse at top, #1d2138 0%, #0d0f1a 70%);
+    padding: 16px;
+    gap: 12px;
+  }
+  header {
+    text-align: center;
+    line-height: 1.4;
+  }
+  h1 {
+    margin: 0;
+    font-size: 18px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #ffcd75;
+    text-shadow: 2px 2px 0 #5d275d;
+  }
+  header small {
+    color: #94b0c2;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+  }
+  .stage {
+    position: relative;
+    display: inline-block;
+    border: 4px solid #1a1c2c;
+    border-radius: 4px;
+    box-shadow:
+      0 0 0 2px #ffcd75,
+      0 0 0 6px #1a1c2c,
+      0 12px 32px rgba(0,0,0,0.6);
+    background: #1a1c2c;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+  }
+  canvas {
+    display: block;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+    cursor: crosshair;
+  }
+  .dialog {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    background: var(--paper);
+    color: var(--ink);
+    border: 3px solid var(--ink);
+    border-radius: 4px;
+    box-shadow: inset 0 0 0 2px var(--paper-edge), 4px 4px 0 rgba(0,0,0,0.4);
+    padding: 10px 14px 12px 14px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 13px;
+    line-height: 1.45;
+    display: none;
+    user-select: none;
+  }
+  .dialog.is-open { display: block; animation: pop 0.12s ease-out; }
+  @keyframes pop {
+    from { transform: translateY(6px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .dialog h2 {
+    margin: 0 0 4px 0;
+    font-size: 14px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #5d275d;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .dialog h2 .badge {
+    display: inline-block;
+    padding: 1px 6px;
+    background: #b13e53;
+    color: #f4f0d8;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    border-radius: 2px;
+  }
+  .dialog p { margin: 4px 0; }
+  .dialog .role { color: #b13e53; font-weight: bold; }
+  .dialog .hint {
+    margin-top: 8px;
+    text-align: right;
+    color: #566c86;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+  }
+  .dialog .hint .arrow {
+    display: inline-block;
+    animation: blink 0.8s steps(2) infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+  footer {
+    color: #566c86;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Agent Village</h1>
+    <small>click a building to meet its agent &middot; esc to close</small>
+  </header>
+
+  <div class="stage" id="stage">
+    <canvas id="world" width="384" height="288"></canvas>
+    <div class="dialog" id="dialog" role="dialog" aria-live="polite">
+      <h2><span id="dlg-name">—</span><span class="badge" id="dlg-tag">AGENT</span></h2>
+      <p class="role" id="dlg-role">—</p>
+      <p id="dlg-body">—</p>
+      <p class="hint">tap to close <span class="arrow">▼</span></p>
+    </div>
+  </div>
+
+  <footer id="footer">a quiet hamlet where the agents live</footer>
+
+<script>
+(() => {
+  // ---------- Setup ----------
+  const canvas = document.getElementById('world');
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+
+  const W = canvas.width;   // 384
+  const H = canvas.height;  // 288
+  const TILE = 16;
+  const COLS = W / TILE;    // 24
+  const ROWS = H / TILE;    // 18
+
+  // Scale canvas up via CSS for a chunky pixelated look
+  function fit() {
+    const maxW = Math.min(window.innerWidth - 48, 960);
+    const maxH = Math.min(window.innerHeight - 140, 720);
+    const scale = Math.max(1, Math.floor(Math.min(maxW / W, maxH / H)));
+    canvas.style.width = (W * scale) + 'px';
+    canvas.style.height = (H * scale) + 'px';
+  }
+  fit();
+  window.addEventListener('resize', fit);
+
+  // ---------- Palette ----------
+  const P = {
+    // grass
+    g1: '#3d8a4f', g2: '#2e6b3c', g3: '#5aab63', flower1: '#ffcd75', flower2: '#ef7d57', flower3: '#f4f4f4',
+    // dirt path
+    d1: '#c2a679', d2: '#a88a5c', d3: '#8a6b3f', d4: '#6b4a26',
+    // water
+    w1: '#41a6f6', w2: '#3b5dc9', w3: '#73eff7', wlily: '#a7f070',
+    // tree
+    tDark: '#1f4a2a', tMid: '#2e6b3c', tLight: '#5aab63', tTrunk: '#6b4a26', tTrunkD: '#3f2a14',
+    // stone
+    s1: '#94b0c2', s2: '#566c86', s3: '#333c57',
+    // wood
+    woodL: '#b07a3f', woodM: '#8a5a28', woodD: '#5a3a18', woodVD: '#3a2410',
+    // roof reds
+    rL: '#ef7d57', rM: '#b13e53', rD: '#5d275d',
+    // roof teal (library)
+    teaL: '#73eff7', teaM: '#257179', teaD: '#1a3a44',
+    // roof gold (town hall)
+    gL: '#ffcd75', gM: '#ef9b3e', gD: '#a85a1a',
+    // roof purple (plan tower)
+    pL: '#a26ac9', pM: '#5d275d', pD: '#2e1538',
+    // roof pink (tailor)
+    piL: '#f4a3c2', piM: '#b13e53', piD: '#5d1a2a',
+    // roof green (cafe)
+    cL: '#a7f070', cM: '#38b764', cD: '#1a5a30',
+    // roof brown (inn / lookout)
+    brL: '#c2a679', brM: '#8a5a28', brD: '#3a2410',
+    // window
+    win: '#73eff7', winD: '#3b5dc9', winFrame: '#1a1c2c',
+    // door
+    door: '#5a3a18', doorD: '#3a2410', doorKnob: '#ffcd75',
+    // chimney + smoke
+    smoke: '#c2c2c2', smokeL: '#e8e8e8',
+    // ink
+    ink: '#1a1c2c', shadow: 'rgba(20,18,28,0.35)',
+    // sprite skin / hair
+    skin: '#ffcd75', skinShade: '#ef9b3e',
+    hairBrown: '#5a3a18', hairBlack: '#1a1c2c', hairBlonde: '#ffcd75',
+    hairRed: '#b13e53', hairPurple: '#5d275d', hairWhite: '#f4f4f4',
+    hairTeal: '#257179', hairGreen: '#38b764',
+  };
+
+  // ---------- Tile rendering ----------
+  function px(x, y, color) {
+    ctx.fillStyle = color;
+    ctx.fillRect(x | 0, y | 0, 1, 1);
+  }
+  function rect(x, y, w, h, color) {
+    ctx.fillStyle = color;
+    ctx.fillRect(x | 0, y | 0, w | 0, h | 0);
+  }
+
+  // Deterministic hash for sprinkling details
+  function h(x, y, seed = 0) {
+    let n = (x * 374761393 + y * 668265263 + seed * 2147483647) ^ 0;
+    n = (n ^ (n >>> 13)) * 1274126177;
+    return ((n ^ (n >>> 16)) >>> 0) / 4294967295;
+  }
+
+  // Grass tile with subtle texture
+  function drawGrass(tx, ty) {
+    const x = tx * TILE, y = ty * TILE;
+    rect(x, y, TILE, TILE, P.g1);
+    for (let i = 0; i < 6; i++) {
+      const r = h(tx * 31 + i, ty * 17 + i, 1);
+      const dx = (r * TILE) | 0;
+      const dy = ((r * 7919) % TILE) | 0;
+      px(x + dx, y + dy, r > 0.5 ? P.g2 : P.g3);
+    }
+    // sometimes a tiny flower
+    const fr = h(tx, ty, 2);
+    if (fr > 0.92) {
+      const fx = x + 4 + ((fr * 8) | 0);
+      const fy = y + 4 + ((fr * 6) | 0);
+      const c = fr > 0.97 ? P.flower3 : (fr > 0.95 ? P.flower2 : P.flower1);
+      px(fx, fy, c);
+      px(fx + 1, fy, c);
+      px(fx, fy + 1, c);
+      px(fx + 1, fy + 1, c);
+    }
+  }
+
+  // Dirt path tile
+  function drawPath(tx, ty) {
+    const x = tx * TILE, y = ty * TILE;
+    rect(x, y, TILE, TILE, P.d2);
+    // speckles
+    for (let i = 0; i < 8; i++) {
+      const r = h(tx + i, ty - i, 5);
+      const dx = (r * TILE) | 0;
+      const dy = ((r * 7919) % TILE) | 0;
+      px(x + dx, y + dy, r > 0.6 ? P.d1 : P.d3);
+    }
+    // pebble
+    const pr = h(tx, ty, 9);
+    if (pr > 0.85) {
+      px(x + 6, y + 9, P.d4);
+      px(x + 7, y + 9, P.d3);
+      px(x + 6, y + 10, P.d3);
+    }
+  }
+
+  // Water tile
+  function drawWater(tx, ty, t) {
+    const x = tx * TILE, y = ty * TILE;
+    rect(x, y, TILE, TILE, P.w2);
+    // shimmer animation
+    const wave = (Math.sin((tx + ty + t * 0.5) * 0.7) + 1) * 0.5;
+    for (let row = 0; row < TILE; row += 2) {
+      for (let col = 0; col < TILE; col += 4) {
+        const o = (row + Math.floor(t * 0.3 + tx)) % 4;
+        if ((col + o) % 4 === 0) {
+          ctx.fillStyle = wave > 0.5 ? P.w1 : P.w2;
+          ctx.fillRect(x + col, y + row, 2, 1);
+        }
+      }
+    }
+    // sparkle
+    const sr = h(tx, ty, 7);
+    if (sr > 0.7) {
+      const sx = x + 4 + ((sr * 8) | 0);
+      const sy = y + 4 + ((sr * 8) | 0);
+      const blink = Math.floor(t * 3 + tx + ty) % 4 === 0;
+      if (blink) px(sx, sy, P.w3);
+    }
+  }
+
+  // Tree (16x16) — drawn on top of grass
+  function drawTree(tx, ty, seed = 0) {
+    const x = tx * TILE, y = ty * TILE;
+    // trunk
+    rect(x + 7, y + 11, 2, 4, P.tTrunkD);
+    rect(x + 7, y + 11, 1, 4, P.tTrunk);
+    // canopy — round-ish
+    const shape = [
+      "..GGGGGG..",
+      ".GGGGGGGG.",
+      "GGGgggGGGG",
+      "GGggGGgGGG",
+      "GggGGGggGG",
+      "GGggGGgGGG",
+      "GGGGGgGGGG",
+      ".GGGGGGGG.",
+      "..GgGGGg..",
+    ];
+    for (let r = 0; r < shape.length; r++) {
+      for (let c = 0; c < shape[r].length; c++) {
+        const ch = shape[r][c];
+        if (ch === '.') continue;
+        const col = ch === 'G' ? P.tMid : (ch === 'g' ? P.tLight : P.tDark);
+        px(x + 3 + c, y + 1 + r, col);
+      }
+    }
+    // shaded edge
+    for (let r = 0; r < shape.length; r++) {
+      const row = shape[r];
+      let firstSolid = -1;
+      for (let c = 0; c < row.length; c++) {
+        if (row[c] !== '.') { firstSolid = c; break; }
+      }
+      if (firstSolid >= 0) px(x + 3 + firstSolid, y + 1 + r, P.tDark);
+    }
+  }
+
+  // Bush (smaller decoration)
+  function drawBush(tx, ty) {
+    const x = tx * TILE, y = ty * TILE;
+    const shape = [
+      ".GGGGG.",
+      "GGgGgGG",
+      "GggGggG",
+      ".GGGGG.",
+    ];
+    for (let r = 0; r < shape.length; r++) {
+      for (let c = 0; c < shape[r].length; c++) {
+        const ch = shape[r][c];
+        if (ch === '.') continue;
+        px(x + 4 + c, y + 6 + r, ch === 'G' ? P.tMid : P.tLight);
+      }
+    }
+  }
+
+  // Sign post
+  function drawSign(tx, ty, text) {
+    const x = tx * TILE, y = ty * TILE;
+    rect(x + 7, y + 9, 2, 5, P.woodD);
+    rect(x + 4, y + 4, 8, 6, P.woodM);
+    rect(x + 4, y + 4, 8, 1, P.woodL);
+    rect(x + 4, y + 9, 8, 1, P.woodD);
+    // little nail dots
+    px(x + 5, y + 5, P.woodVD);
+    px(x + 10, y + 5, P.woodVD);
+    px(x + 5, y + 8, P.woodVD);
+    px(x + 10, y + 8, P.woodVD);
+  }
+
+  // ---------- Buildings ----------
+  // Each building is defined as: rows of color codes mapped to palette keys
+  // '.' = transparent, ' ' = skipped
+  function paintGrid(x0, y0, grid, palette) {
+    for (let r = 0; r < grid.length; r++) {
+      const row = grid[r];
+      for (let c = 0; c < row.length; c++) {
+        const ch = row[c];
+        if (ch === '.' || ch === ' ') continue;
+        const col = palette[ch];
+        if (!col) continue;
+        px(x0 + c, y0 + r, col);
+      }
+    }
+  }
+
+  // Returns a [w,h] bounding box in pixels for the given grid
+  function gridSize(grid) {
+    return [grid[0].length, grid.length];
+  }
+
+  // ---- CLAUDE — Town Hall (40x24) ----
+  // Big stone civic building with gold roof and clock
+  const CLAUDE_BUILDING = [
+    "..........AAAAAAAAAAAAAAAAAAAA..........",
+    ".........AGGGGGGGGGGGGGGGGGGGGA.........",
+    "........AGgggggggggggggggggggGA.........",
+    ".......AGggggggggggggggggggggGA.........",
+    "......AGggggggggggggggggggggggGA........",
+    ".....AGggggggggggggggggggggggggGA.......",
+    "....AGggggggggggggggggggggggggggGA......",
+    "...AGgggggggggggggggggggggggggggGA......",
+    "..AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.....",
+    ".SSSSSSSSSSSSSCCCCCCCCCSSSSSSSSSSSS.....",
+    ".SsSsSsSsSsSsCw1111111wCsSsSsSsSsSS.....",
+    ".SsSsSsSsSsSsCw2222222wCsSsSsSsSsSS.....",
+    ".SsSsSsSsSsSsCwwwwwwwwwCsSsSsSsSsSS.....",
+    ".SSSSSSSSSSSSCCCCCCCCCCCSSSSSSSSSSS.....",
+    ".SwwwSSSwwwSSSSSSSSSSSSSSwwwSSSwwwS.....",
+    ".Sw11SSSw11SSSSSSSSSSSSSSw11SSSw11S.....",
+    ".Sw22SSSw22SSSDDDDDDDDDDSw22SSSw22S.....",
+    ".SwwwSSSwwwSSSDddddddddDSwwwSSSwwwS.....",
+    ".SSSSSSSSSSSSSDddddddddDSSSSSSSSSSS.....",
+    ".SSSSSSSSSSSSSDdddkddddDSSSSSSSSSSS.....",
+    ".SSSSSSSSSSSSSDddddddddDSSSSSSSSSSS.....",
+    ".SSSSSSSSSSSSSDDDDDDDDDDSSSSSSSSSSS.....",
+    ".ssssssssssssssssssssssssssssssssss.....",
+  ];
+  const CLAUDE_PAL = {
+    A: P.gD, G: P.gM, g: P.gL,
+    S: P.s2, s: P.s3, C: P.s1,
+    w: P.win, '1': P.winD, '2': P.win,
+    W: P.win, D: P.door, d: P.doorD, k: P.doorKnob,
+  };
+
+  // ---- PATCH — Workshop with chimney (36x28) ----
+  const PATCH_BUILDING = [
+    "....CC..............................",
+    "....CC..............................",
+    "....CC..............................",
+    "....cc..............................",
+    "...AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA...",
+    "..ARRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA..",
+    ".ARrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrRA.",
+    "ARrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrRA",
+    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+    "WwwwwwwWWWWWWWWWWWWWWWWWWWWWWwwwwwwW",
+    "Ww1221wWWWWWWWWHHHHHWWWWWWWWWw1221wW",
+    "Ww2112wWWWWWWWWH222HWWWWWWWWWw2112wW",
+    "WwwwwwwWWWWWWWWHHHHHWWWWWWWWWwwwwwwW",
+    "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+    "WWWWWWWWWWWWDDDDDDDDDDDDWWWWWWWWWWWW",
+    "WWWWWWWWWWWWDddddddddddDWWWWWWWWWWWW",
+    "WwwwwwwWWWWWDddddddddddDWWWWWwwwwwwW",
+    "Ww1221wWWWWWDdddddkdddDDWWWWWw1221wW",
+    "Ww2112wWWWWWDddddddddddDWWWWWw2112wW",
+    "WwwwwwwWWWWWDddddddddddDWWWWWwwwwwwW",
+    "WWWWWWWWWWWWDDDDDDDDDDDDWWWWWWWWWWWW",
+    "ssssssssssssssssssssssssssssssssssss",
+  ];
+  const PATCH_PAL = {
+    C: P.s2, c: P.s3,
+    A: P.rD, R: P.rM, r: P.rL,
+    W: P.woodM, w: P.win, '1': P.winD, '2': P.win,
+    D: P.door, d: P.doorD, k: P.doorKnob,
+    s: P.d3, H: P.woodD,
+  };
+
+  // ---- PIP — Café (36x20) — green awning, planter, chalkboard ----
+  const PIP_BUILDING = [
+    "...AAAAAAAAAAAAAAAAAAAAAAAAAAAAA....",
+    "..ABBBBBBBBBBBBBBBBBBBBBBBBBBBBBA...",
+    ".ABbbbbbbbbbbbbbbbbbbbbbbbbbbbbbBA..",
+    "ABbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbBA.",
+    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.",
+    "GgGgGgGgGgGgGgGgGgGgGgGgGgGgGgGgGgG.",
+    "GgGgGgGgGgGgGgGgGgGgGgGgGgGgGgGgGgG.",
+    "PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP.",
+    "PwwwwwwwPPPPPPPPPPPPPPPPPPPwwwwwwwP.",
+    "Pw1111wPPPPPPPMMMMMMMPPPPPPw1111wwP.",
+    "Pw2222wPPPPPPPmmmmmmmPPPPPPw2222wwP.",
+    "PwwwwwwwPPPPPPmmmmmmmPPPPPPwwwwwwwP.",
+    "PPPPPPPPPPPPPPMMMMMMMPPPPPPPPPPPPPP.",
+    "PPPPPPPPPPPPPPDDDDDDDPPPPPPPPPPPPPP.",
+    "PPPPPPPPPPPPPPDdddddDPPPPPPPPPPPPPP.",
+    "PPPPPPPPPPPPPPDdkdddDPPPPPPPPPPPPPP.",
+    "PPPPPPPPPPLLLLDdddddDLLLLLPPPPPPPPP.",
+    "PPPPPPPPPPLfLfDDDDDDDLfLfLPPPPPPPPP.",
+    "sssssssssssssssssssssssssssssssssss.",
+  ];
+  const PIP_PAL = {
+    A: P.cD, B: P.cM, b: P.cL,
+    G: P.cD, g: P.cL,
+    P: '#f4f0d8',
+    w: P.win, '1': P.winD, '2': P.win,
+    M: P.ink, m: P.s1,
+    D: P.door, d: P.doorD, k: P.doorKnob,
+    L: P.tDark, f: P.flower2,
+    s: P.d3,
+  };
+
+  // ---- PLAN — Wizard Tower (24x56) tall ----
+  const PLAN_BUILDING = [
+    "...........TT...........",
+    "..........TPPT..........",
+    ".........TPPPPT.........",
+    "........TPPPPPPT........",
+    ".......TPPPPPPPPT.......",
+    "......TPPpppppPPPT......",
+    ".....TPPppppppppPPT.....",
+    "....TPPpppppppppppPPT...",
+    "...TPPppppppppppppppPPT.",
+    "..TTTTTTTTTTTTTTTTTTTTTT",
+    "..XYYYYYYYYYYYYYYYYYYYYX",
+    "..XYYYYYYYYYYYYYYYYYYYYX",
+    "..XYwwwwYXXYwwwwYXXYwwwY",
+    "..XYw11wYXXYw11wYXXYw11Y",
+    "..XYw22wYXXYw22wYXXYw22Y",
+    "..XYwwwwYXXYwwwwYXXYwwwY",
+    "..XYYYYYYYYYYYYYYYYYYYYX",
+    "..XYYYYYYYYYYYYYYYYYYYYX",
+    "..XYYYYYYYYYYYYYYYYYYYYX",
+    "..XYwwwwYXXYwwwwYXXYwwwY",
+    "..XYw11wYXXYw11wYXXYw11Y",
+    "..XYw22wYXXYw22wYXXYw22Y",
+    "..XYwwwwYXXYwwwwYXXYwwwY",
+    "..XYYYYYYYYYYYYYYYYYYYYX",
+    "..XYYYYYYYYYYYYYYYYYYYYX",
+    "..XYYYYYDDDDDDDDYYYYYYYX",
+    "..XYYYYYDddddddDYYYYYYYX",
+    "..XYYYYYDdkdddDDYYYYYYYX",
+    "..XYYYYYDDDDDDDDYYYYYYYX",
+    "..ssssssDDDDDDDDsssssssX",
+  ];
+  const PLAN_PAL = {
+    T: P.pD, P: P.pM, p: P.pL,
+    X: P.s3, Y: P.s2,
+    w: P.win, '1': P.winD, '2': P.win,
+    D: P.door, d: P.doorD, k: P.doorKnob, s: P.d3,
+  };
+
+  // ---- EXPLORE — Lookout Cabin on stilts (40x40) ----
+  const EXPLORE_BUILDING = [
+    ".....AAAAAAAAAAAAAAAAAAAAAAAAAAA........",
+    "....ARRRRRRRRRRRRRRRRRRRRRRRRRRRA.......",
+    "...ARrrrrrrrrrrrrrrrrrrrrrrrrrrRA.......",
+    "..ARrrrrrrrrrrrrrrrrrrrrrrrrrrrRA.......",
+    ".AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.......",
+    "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW.......",
+    "Wwwwwwwww.........wwwwwwwww...TTT.......",
+    "Ww1212wwwW.O.....Wwww1212ww...TtT.......",
+    "Ww2121wwwWWWWWWWWWwww2121ww...TtT.......",
+    "WwwwwwwwwWDDDDDDDWwwwwwwwww...TtT.......",
+    "WWWWWWWWWWDddddddDWWWWWWWWW...TtT.......",
+    "WWWWWWWWWWDdkddddDWWWWWWWWW...TtT.......",
+    "WWWWWWWWWWDddddddDWWWWWWWWW...TtT.......",
+    "WWWWWWWWWWDDDDDDDDWWWWWWWWW...TtT.......",
+    "WWWWWWWWWWWWWWWWWWWWWWWWWWW...TtT.......",
+    "L.L........L.L........L.L....TtT.......",
+    "L.L........L.L........L.L....TtT.......",
+    "L.L........L.L........L.L....TtT.......",
+    "ssssssssssssssssssssssssssssssss........",
+  ];
+  const EXPLORE_PAL = {
+    A: P.brD, R: P.brM, r: P.brL,
+    W: P.woodM, w: P.win, '1': P.winD, '2': P.win,
+    O: P.s1, D: P.door, d: P.doorD, k: P.doorKnob,
+    L: P.woodD, T: P.s3, t: P.s2, s: P.d3,
+  };
+
+  // ---- GUIDE — Library (44x40) — claude-code-guide ----
+  const GUIDE_BUILDING = [
+    "..AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA....",
+    ".ATTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTA...",
+    "ATtttttttttttttttttttttttttttttttttttttttA..",
+    "ATTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTA..",
+    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA..",
+    "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB..",
+    "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB..",
+    "BCCBCCBCCBCCBCCBCCBCCBCCBCCBCCBCCBCCBCCBBB..",
+    "BCCBCCBCCBCCBCCBCCBCCBCCBCCBCCBCCBCCBCCBBB..",
+    "BCCBCCBCCBCCBCCBCCBCCBCCBCCBCCBCCBCCBCCBBB..",
+    "BCCBCCBCCBCCBCCBCCBCCBCCBCCBCCBCCBCCBCCBBB..",
+    "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB..",
+    "Bwwwww..wwwww..wwwww..wwwww..wwwww..wwwwwB..",
+    "Bw121w..w121w..w121w..w121w..w121w..w121wB..",
+    "Bw212w..w212w..w212w..w212w..w212w..w212wB..",
+    "Bwwwww..wwwww..wwwww..wwwww..wwwww..wwwwwB..",
+    "BBBBBBBBBBBBBBDDDDDDDDDDBBBBBBBBBBBBBBBBBB..",
+    "BBBBBBBBBBBBBBDddddddddDBBBBBBBBBBBBBBBBBB..",
+    "BBBBBBBBBBBBBBDdddkdddDDBBBBBBBBBBBBBBBBBB..",
+    "BBBBBBBBBBBBBBDDDDDDDDDDBBBBBBBBBBBBBBBBBB..",
+    "sssssssssssssssssssssssssssssssssssssssss...",
+  ];
+  const GUIDE_PAL = {
+    A: P.teaD, T: P.teaM, t: P.teaL,
+    B: P.s1, C: P.s2,
+    w: P.win, '1': P.winD, '2': P.win,
+    D: P.door, d: P.doorD, k: P.doorKnob, s: P.d3,
+  };
+
+  // ---- GENERAL-PURPOSE — Inn (52x44) ----
+  const GENERAL_BUILDING = [
+    "....AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA....",
+    "...ARRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA...",
+    "..ARrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrRA..",
+    ".ARrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrRA..",
+    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA..",
+    "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB..",
+    "Bwwwwww...wwwwww...wwwwww...wwwwww...wwwwwwwB..",
+    "Bw1221w...w1221w...w1221w...w1221w...w1221wwB..",
+    "Bw2112w...w2112w...w2112w...w2112w...w2112wwB..",
+    "Bwwwwww...wwwwww...wwwwww...wwwwww...wwwwwwwB..",
+    "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB..",
+    "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB..",
+    "Bwwwwww...wwwwww...wwwwww...wwwwww...wwwwwwwB..",
+    "Bw1221w...w1221w...w1221w...w1221w...w1221wwB..",
+    "Bw2112w...w2112w...w2112w...w2112w...w2112wwB..",
+    "Bwwwwww...wwwwww...wwwwww...wwwwww...wwwwwwwB..",
+    "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB..",
+    "BBBBBBBBBBBBBBBBBBBBDDDDDDDDBBBBBBBBBBBBBBBBBB..",
+    "BBBBBBBBBBBBBBBBBBBBDddddddDBBBBBBBBBBBBBBBBBB..",
+    "BBBBBBBBBBBBBBBBBBBBDdkddddDBBBBBBBBBBBBBBBBBB..",
+    "BBBBBBBBBBBBBBBBBBBBDddddddDBBBBBBBBBBBBBBBBBB..",
+    "BBBBBBBBBBBBBBBBBBBBDDDDDDDDBBBBBBBBBBBBBBBBBB..",
+    "ssssssssssssssssssssDDDDDDDDsssssssssssssssss...",
+  ];
+  const GENERAL_PAL = {
+    A: P.brD, R: P.gM, r: P.gL,
+    B: '#f4f0d8',
+    w: P.win, '1': P.winD, '2': P.win,
+    D: P.door, d: P.doorD, k: P.doorKnob, s: P.d3,
+  };
+
+  // ---- STATUSLINE — Tailor Shop (28x18) — striped awning, spool sign ----
+  const STATUSLINE_BUILDING = [
+    "...AAAAAAAAAAAAAAAAAAAA.....",
+    "..APpPpPpPpPpPpPpPpPpPpA....",
+    ".APpPpPpPpPpPpPpPpPpPpPPA...",
+    ".AAAAAAAAAAAAAAAAAAAAAAAA...",
+    ".BBBBBBBBBBBBBBBBBBBBBBBB...",
+    ".BwwwwwBBBBssssssBBwwwwwB...",
+    ".Bw121wBBBssoosssBBw121wB...",
+    ".Bw212wBBBsssooosBBw212wB...",
+    ".BwwwwwBBBssssssssBBwwwwB...",
+    ".BBBBBBBBBBBBBBBBBBBBBBBB...",
+    ".BBBBBBBBBDDDDDDDDBBBBBBB...",
+    ".BBBBBBBBBDddddddDBBBBBBB...",
+    ".BBBBBBBBBDdkddddDBBBBBBB...",
+    ".BBBBBBBBBDddddddDBBBBBBB...",
+    ".BBBBBBBBBDDDDDDDDBBBBBBB...",
+    "ssssssssssssssssssssssss....",
+  ];
+  const STATUSLINE_PAL = {
+    A: P.piD, P: P.piM, p: P.paper === undefined ? '#f4f0d8' : '#f4f0d8',
+    B: '#f4f0d8',
+    w: P.win, '1': P.winD, '2': P.win,
+    D: P.door, d: P.doorD, k: P.doorKnob,
+    s: P.woodM, o: P.doorKnob,
+  };
+  STATUSLINE_PAL.p = '#f4f0d8';
+
+  // ---------- World layout ----------
+  // Map of static tile types: 'g' grass, 'p' path, 'w' water
+  const map = [];
+  for (let y = 0; y < ROWS; y++) {
+    map.push(new Array(COLS).fill('g'));
+  }
+
+  function setPath(x, y) { if (y>=0 && y<ROWS && x>=0 && x<COLS) map[y][x] = 'p'; }
+  function setWater(x, y) { if (y>=0 && y<ROWS && x>=0 && x<COLS) map[y][x] = 'w'; }
+
+  // Main horizontal path (the village high street)
+  for (let x = 2; x < COLS - 2; x++) {
+    setPath(x, 9);
+    setPath(x, 10);
+  }
+  // Short approach paths from main road to each building's doorstep
+  // Plan tower (above) — door around tile (2-3, 8)
+  setPath(2, 8); setPath(3, 8);
+  // Claude town hall (above) — door around tile (9, 8)
+  setPath(9, 8); setPath(10, 8);
+  // Guide library (above) — door around tile (17, 8)
+  setPath(17, 8); setPath(18, 8);
+  // Pip café (below) — door around tile (3, 11)
+  setPath(3, 11); setPath(3, 12);
+  // Patch workshop (below) — door around tile (10, 11)
+  setPath(10, 11); setPath(11, 11); setPath(10, 12); setPath(11, 12);
+  // General inn (below) — door around tile (17, 11)
+  setPath(17, 11); setPath(18, 11); setPath(17, 12); setPath(18, 12);
+  // Explore + Statusline — leg paths from below
+  setPath(6, 13); setPath(6, 14);
+  setPath(21, 13); setPath(21, 14); setPath(22, 13); setPath(22, 14);
+
+  // Pond — middle-bottom corner
+  const pondCells = [
+    [12, 13], [13, 13], [14, 13],
+    [12, 14], [13, 14], [14, 14],
+  ];
+  pondCells.forEach(([x, y]) => setWater(x, y));
+
+  // Building placements — pixel coords (top-left)
+  // Each entry: pixel position, grid, palette, and an NPC stand point in absolute canvas px.
+  const buildings = [
+    {
+      id: 'plan', name: 'PLAN', tag: 'ARCHITECT',
+      role: 'Software architect agent for designing implementation plans.',
+      body: "Climbs the spiral stair every morning to chart the day. Returns step-by-step plans, flags the critical files, weighs trade-offs before a single stone is laid.",
+      x: 24, y: 18, grid: PLAN_BUILDING, palette: PLAN_PAL,
+      npc: { x: 38, y: 130, hair: P.hairPurple, shirt: P.pM },
+    },
+    {
+      id: 'claude', name: 'CLAUDE', tag: 'ORCHESTRATOR',
+      role: 'Catch-all agent — the default when no other is named.',
+      body: "Town hall keeper. Hears the bell, decides who to call up from the village. Holds the keys to every door and the books for every shop.",
+      x: 128, y: 24, grid: CLAUDE_BUILDING, palette: CLAUDE_PAL,
+      npc: { x: 152, y: 152, hair: P.hairBrown, shirt: P.gM },
+    },
+    {
+      id: 'guide', name: 'CLAUDE-CODE-GUIDE', tag: 'SAGE',
+      role: 'Answers questions about Claude Code, the Agent SDK, and the Claude API.',
+      body: "Sage of the library. Knows where the hooks live, which slash commands were renamed last winter, and exactly which page of the docs you actually need.",
+      x: 264, y: 28, grid: GUIDE_BUILDING, palette: GUIDE_PAL,
+      npc: { x: 282, y: 152, hair: P.hairTeal, shirt: P.teaM },
+    },
+    {
+      id: 'pip', name: 'PIP', tag: 'FIELD ANALYST',
+      role: "Folios' loyal, slightly anxious in-app analyst.",
+      body: "Pours coffee at sunrise. Reads every meeting note before the door opens. Knows which accounts have gone cold and which deliveries slipped — but worries about telling you.",
+      x: 24, y: 196, grid: PIP_BUILDING, palette: PIP_PAL,
+      npc: { x: 56, y: 226, hair: P.hairBlonde, shirt: P.cM },
+    },
+    {
+      id: 'patch', name: 'PATCH', tag: 'BUILDER',
+      role: 'Background build agent for large batch jobs.',
+      body: "Smithy at the edge of town. Sleeves rolled, sparks flying. Takes the queued list, ships one clean commit per batch, never bothers the main hall.",
+      x: 152, y: 196, grid: PATCH_BUILDING, palette: PATCH_PAL,
+      npc: { x: 176, y: 230, hair: P.hairRed, shirt: P.rM },
+      chimney: { x: 152 + 4, y: 196 + 0 },
+    },
+    {
+      id: 'general', name: 'GENERAL-PURPOSE', tag: 'GENERALIST',
+      role: 'For multi-step research, code search, and tasks that span fuzzy ground.',
+      body: "The inn on the main road. Lights stay on late. Talks to anyone, can find anything, will trek the woods three times if that's what it takes to bring back the answer.",
+      x: 264, y: 196, grid: GENERAL_BUILDING, palette: GENERAL_PAL,
+      npc: { x: 296, y: 234, hair: P.hairBlack, shirt: P.brM },
+    },
+    {
+      id: 'explore', name: 'EXPLORE', tag: 'SCOUT',
+      role: 'Read-only search agent for locating code.',
+      body: "Lives in the cabin on stilts with a brass telescope. Returns fast with a single coordinate: where the file is, which line, which folder you forgot existed.",
+      x: 88, y: 248, grid: EXPLORE_BUILDING, palette: EXPLORE_PAL,
+      npc: { x: 112, y: 272, hair: P.hairBrown, shirt: P.brL },
+    },
+    {
+      id: 'statusline', name: 'STATUSLINE-SETUP', tag: 'TAILOR',
+      role: 'Configures the Claude Code status line.',
+      body: "Pinks and ribbons in the window. Will stitch your status bar in any color you want — model name, branch, the little arrow that points home. Quiet work, but everyone notices it.",
+      x: 336, y: 250, grid: STATUSLINE_BUILDING, palette: STATUSLINE_PAL,
+      npc: { x: 354, y: 274, hair: P.hairPurple, shirt: P.piM },
+    },
+  ];
+
+  // Trees / bushes scattered (tile coords)
+  const decorations = {
+    trees: [
+      // top border
+      [0,0],[3,0],[5,0],[7,0],[12,0],[14,0],[16,0],[19,0],[22,0],[23,0],
+      [0,1],[23,1],
+      // bottom border
+      [0,17],[1,17],[4,17],[10,17],[14,17],[19,17],[22,17],[23,17],
+      // left/right walls
+      [0,5],[0,8],[0,11],[0,14],
+      [23,5],[23,8],[23,11],[23,14],
+      // accent trees nestled between buildings
+      [7,3],[14,3],[20,4],[8,12],[15,12],
+    ],
+    bushes: [
+      [4,7],[15,7],[7,12],[20,12],
+    ],
+  };
+
+  // Footpath stones to building doors — small dot trail handled in draw loop
+
+  // ---------- NPC sprites (16x16 facing down, idle 2-frame bob) ----------
+  function drawNPC(x, y, hairColor, shirtColor, frame) {
+    const offsetY = frame % 2 === 0 ? 0 : -1;
+    const x0 = x | 0, y0 = (y + offsetY) | 0;
+    // shadow on the ground (doesn't bob)
+    ctx.fillStyle = P.shadow;
+    ctx.fillRect((x | 0) + 3, (y | 0) + 15, 8, 2);
+    // head
+    const head = [
+      ".hhhhhh.",
+      "hhhhhhhh",
+      "hfffffhh",
+      "hfffffhh",
+      "hfeefefh",
+      "hfffmmff",
+      ".ffffff.",
+    ];
+    for (let r = 0; r < head.length; r++) {
+      for (let c = 0; c < head[r].length; c++) {
+        const ch = head[r][c];
+        if (ch === '.') continue;
+        let col = null;
+        if (ch === 'h') col = hairColor;
+        else if (ch === 'f') col = P.skin;
+        else if (ch === 'e') col = P.ink;
+        else if (ch === 'm') col = P.rM;
+        if (col) px(x0 + 4 + c, y0 + 1 + r, col);
+      }
+    }
+    // body / shirt
+    const body = [
+      ".sssssss.",
+      "sssssssss",
+      "sssssssss",
+      "ssfffffss",
+    ];
+    for (let r = 0; r < body.length; r++) {
+      for (let c = 0; c < body[r].length; c++) {
+        const ch = body[r][c];
+        if (ch === '.') continue;
+        const col = ch === 's' ? shirtColor : P.skin;
+        px(x0 + 3 + c, y0 + 9 + r, col);
+      }
+    }
+    // legs
+    rect(x0 + 5, y0 + 13, 2, 2, P.s3);
+    rect(x0 + 9, y0 + 13, 2, 2, P.s3);
+  }
+
+  // ---------- Drawing ----------
+  function drawTileLayer(t) {
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        const c = map[y][x];
+        if (c === 'g') drawGrass(x, y);
+        else if (c === 'p') drawPath(x, y);
+        else if (c === 'w') drawWater(x, y, t);
+      }
+    }
+  }
+
+  function drawDecorations() {
+    // bushes first (under tree shadows)
+    for (const [tx, ty] of decorations.bushes) drawBush(tx, ty);
+    // trees
+    for (const [tx, ty] of decorations.trees) drawTree(tx, ty);
+
+    // water lilies on pond
+    for (const [tx, ty] of pondCells) {
+      const r = h(tx, ty, 11);
+      if (r > 0.55 && r < 0.7) {
+        const lx = tx * TILE + 4 + ((r * 6) | 0);
+        const ly = ty * TILE + 5 + ((r * 5) | 0);
+        rect(lx, ly, 3, 2, P.wlily);
+        px(lx + 1, ly, P.flower3);
+      }
+    }
+  }
+
+  function drawBuildings(hoverId) {
+    for (const b of buildings) {
+      // soft shadow under building
+      const [bw, bh] = gridSize(b.grid);
+      ctx.fillStyle = 'rgba(20,18,28,0.35)';
+      ctx.fillRect(b.x + 2, b.y + bh - 2, bw - 2, 3);
+      paintGrid(b.x, b.y, b.grid, b.palette);
+      // hover outline
+      if (hoverId === b.id) {
+        ctx.strokeStyle = '#ffcd75';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(b.x - 0.5, b.y - 0.5, bw + 1, bh + 1);
+      }
+    }
+  }
+
+  function drawSmoke(b, t) {
+    if (!b.chimney) return;
+    for (let i = 0; i < 4; i++) {
+      const tt = (t * 0.6 + i * 0.6) % 4;
+      const yOff = -tt * 8;
+      const xOff = Math.sin(tt * 1.7 + i) * 3;
+      const size = 3 - tt * 0.5;
+      if (size <= 0) continue;
+      ctx.fillStyle = i % 2 === 0 ? P.smoke : P.smokeL;
+      const px0 = (b.chimney.x + 1 + xOff) | 0;
+      const py0 = (b.chimney.y + yOff - 2) | 0;
+      rect(px0, py0, Math.max(1, size | 0), Math.max(1, size | 0), ctx.fillStyle);
+    }
+  }
+
+  function drawNPCs(t) {
+    const frame = Math.floor(t * 2) % 2;
+    for (const b of buildings) {
+      if (!b.npc) continue;
+      // NPC anchored at npc.x/npc.y (feet center) — drawNPC takes top-left
+      drawNPC(b.npc.x - 8, b.npc.y - 16, b.npc.hair, b.npc.shirt, frame);
+    }
+  }
+
+  function drawSparkles(t) {
+    // gentle ambient sparkles over grass
+    for (let i = 0; i < 6; i++) {
+      const sx = ((Math.sin(t * 0.4 + i) + 1) * 0.5 * W) | 0;
+      const sy = ((Math.cos(t * 0.3 + i * 1.7) + 1) * 0.5 * H) | 0;
+      if (map[Math.floor(sy / TILE)] && map[Math.floor(sy / TILE)][Math.floor(sx / TILE)] === 'g') {
+        const blink = Math.floor(t * 4 + i) % 8 === 0;
+        if (blink) px(sx, sy, '#f4f4f4');
+      }
+    }
+  }
+
+  // small bitmap font (3x5) for tiny crisp pixel labels
+  const FONT = {
+    A:["010","101","111","101","101"],
+    B:["110","101","110","101","110"],
+    C:["011","100","100","100","011"],
+    D:["110","101","101","101","110"],
+    E:["111","100","110","100","111"],
+    F:["111","100","110","100","100"],
+    G:["011","100","101","101","011"],
+    H:["101","101","111","101","101"],
+    I:["111","010","010","010","111"],
+    J:["001","001","001","101","010"],
+    K:["101","101","110","101","101"],
+    L:["100","100","100","100","111"],
+    M:["101","111","111","101","101"],
+    N:["101","111","111","111","101"],
+    O:["010","101","101","101","010"],
+    P:["110","101","110","100","100"],
+    Q:["010","101","101","011","001"],
+    R:["110","101","110","101","101"],
+    S:["011","100","010","001","110"],
+    T:["111","010","010","010","010"],
+    U:["101","101","101","101","011"],
+    V:["101","101","101","010","010"],
+    W:["101","101","111","111","101"],
+    X:["101","101","010","101","101"],
+    Y:["101","101","010","010","010"],
+    Z:["111","001","010","100","111"],
+    ' ':["000","000","000","000","000"],
+    "'":["010","010","000","000","000"],
+    "-":["000","000","111","000","000"],
+    ".":["000","000","000","000","010"],
+  };
+  function drawPixelText(text, x, y, color) {
+    const t = text.toUpperCase();
+    let cx = x;
+    for (let i = 0; i < t.length; i++) {
+      const glyph = FONT[t[i]];
+      if (!glyph) { cx += 4; continue; }
+      for (let r = 0; r < 5; r++) {
+        for (let c = 0; c < 3; c++) {
+          if (glyph[r][c] === '1') px(cx + c, y + r, color);
+        }
+      }
+      cx += 4;
+    }
+  }
+
+  function drawTitleBanner() {
+    const w = 64, x = (W - w) / 2 | 0, y = 4;
+    rect(x, y, w, 12, P.woodM);
+    rect(x, y, w, 1, P.woodL);
+    rect(x, y + 11, w, 1, P.woodD);
+    rect(x, y, 1, 12, P.woodD);
+    rect(x + w - 1, y, 1, 12, P.woodD);
+    // ropes
+    rect(x + 6, 0, 1, 4, P.woodVD);
+    rect(x + w - 7, 0, 1, 4, P.woodVD);
+    drawPixelText('AGENT VILLAGE', x + 6, y + 4, P.ink);
+  }
+
+  // ---------- Hit-testing ----------
+  function buildingAtPixel(px, py) {
+    for (const b of buildings) {
+      const [bw, bh] = gridSize(b.grid);
+      if (px >= b.x && px < b.x + bw && py >= b.y && py < b.y + bh) return b;
+    }
+    return null;
+  }
+
+  // ---------- Loop ----------
+  let hoverId = null;
+  function render(t) {
+    drawTileLayer(t);
+    drawDecorations();
+    drawBuildings(hoverId);
+    // smoke for patch
+    for (const b of buildings) drawSmoke(b, t);
+    drawNPCs(t);
+    drawSparkles(t);
+    drawTitleBanner();
+  }
+
+  let start = performance.now();
+  function loop(now) {
+    const t = (now - start) / 1000;
+    render(t);
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  // ---------- Interaction ----------
+  const dialog = document.getElementById('dialog');
+  const dlgName = document.getElementById('dlg-name');
+  const dlgTag = document.getElementById('dlg-tag');
+  const dlgRole = document.getElementById('dlg-role');
+  const dlgBody = document.getElementById('dlg-body');
+
+  function openDialog(b) {
+    dlgName.textContent = b.name;
+    dlgTag.textContent = b.tag;
+    dlgRole.textContent = b.role;
+    dlgBody.textContent = b.body;
+    dialog.classList.add('is-open');
+  }
+  function closeDialog() {
+    dialog.classList.remove('is-open');
+  }
+
+  function eventToCanvas(e) {
+    const rect = canvas.getBoundingClientRect();
+    const cx = (e.clientX - rect.left) / rect.width * W;
+    const cy = (e.clientY - rect.top) / rect.height * H;
+    return [cx | 0, cy | 0];
+  }
+
+  canvas.addEventListener('mousemove', (e) => {
+    const [x, y] = eventToCanvas(e);
+    const b = buildingAtPixel(x, y);
+    hoverId = b ? b.id : null;
+    canvas.style.cursor = b ? 'pointer' : 'crosshair';
+  });
+  canvas.addEventListener('mouseleave', () => { hoverId = null; });
+
+  canvas.addEventListener('click', (e) => {
+    const [x, y] = eventToCanvas(e);
+    const b = buildingAtPixel(x, y);
+    if (b) openDialog(b);
+    else closeDialog();
+  });
+  canvas.addEventListener('touchstart', (e) => {
+    const touch = e.touches[0];
+    if (!touch) return;
+    const [x, y] = eventToCanvas(touch);
+    const b = buildingAtPixel(x, y);
+    if (b) openDialog(b);
+    else closeDialog();
+  }, { passive: true });
+
+  dialog.addEventListener('click', closeDialog);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeDialog();
+  });
+
+  // Greeting tooltip — pick Claude as first occupant
+  setTimeout(() => {
+    const claude = buildings.find(b => b.id === 'claude');
+    if (claude) openDialog(claude);
+  }, 600);
+})();
+</script>
+</body>
+</html>
