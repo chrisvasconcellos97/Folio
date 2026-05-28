@@ -27,8 +27,10 @@ create table if not exists folio_pip_usage (
 create index if not exists folio_pip_usage_user_time_idx
   on folio_pip_usage(user_id, created_at desc);
 
-create index if not exists folio_pip_usage_user_month_idx
-  on folio_pip_usage(user_id, date_trunc('month', created_at));
+-- Note: dropped the (user_id, date_trunc('month', created_at)) index — Postgres
+-- rejects it because date_trunc on timestamptz isn't IMMUTABLE (depends on the
+-- session timezone). The user_time_idx above covers the "this month" rollup
+-- query via range scan, so the second index wasn't doing real work anyway.
 
 alter table folio_pip_usage enable row level security;
 
