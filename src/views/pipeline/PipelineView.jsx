@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { C, glass } from "../../lib/colors";
 import { Glow } from "../../components/Glow";
+import { NavMark } from "../../components/NavMark";
 
 var PV_MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var PV_SERIF = "'Fraunces', Georgia, serif";
@@ -338,12 +339,17 @@ export function PipelineView({ accounts, loading, revenueHistory, shopMetrics, o
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
-        <div>
-          <div style={{ fontFamily: PV_SERIF, fontSize: 40, fontWeight: 400, color: C.text, letterSpacing: "-0.02em", lineHeight: 1 }}>
-            Pipeline
-          </div>
-          <div style={{ fontFamily: PV_MONO, fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", marginTop: 4 }}>
-            Revenue · Trends · Shop Metrics
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 40, height: 40, color: C.accent, flexShrink: 0 }}>
+            <NavMark id="pipeline" size={40} />
+          </span>
+          <div>
+            <div style={{ fontFamily: PV_SERIF, fontSize: 40, fontWeight: 400, color: C.text, letterSpacing: "-0.02em", lineHeight: 1 }}>
+              Pipeline
+            </div>
+            <div style={{ fontFamily: PV_MONO, fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", marginTop: 4 }}>
+              Revenue · Trends · Shop Metrics
+            </div>
           </div>
         </div>
         {onUpsertRevenue && (

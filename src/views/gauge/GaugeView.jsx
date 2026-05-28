@@ -9,6 +9,7 @@ import { TemplatePickerModal } from "./TemplatePickerModal";
 import { PipLoader } from "../../components/PipLoader";
 import { PipInsightCard } from "../../components/PipInsightCard";
 import { Glow } from "../../components/Glow";
+import { NavMark } from "../../components/NavMark";
 import { pickV } from "../../lib/metricsUtils";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
@@ -261,12 +262,17 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
           marginBottom: 20,
         }}
       >
-        <div>
-          <div style={{ fontFamily: SERIF, fontSize: 40, fontWeight: 400, color: C.text, letterSpacing: "-0.02em", lineHeight: 1 }}>
-            Gauge
-          </div>
-          <div style={{ fontFamily: MONO, fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", marginTop: 4 }}>
-            Project Management · {inProgressCount} Active
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 40, height: 40, color: C.accent, flexShrink: 0 }}>
+            <NavMark id="gauge" size={40} />
+          </span>
+          <div>
+            <div style={{ fontFamily: SERIF, fontSize: 40, fontWeight: 400, color: C.text, letterSpacing: "-0.02em", lineHeight: 1 }}>
+              Gauge
+            </div>
+            <div style={{ fontFamily: MONO, fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", marginTop: 4 }}>
+              Project Management · {inProgressCount} Active
+            </div>
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>

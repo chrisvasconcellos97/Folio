@@ -14,6 +14,7 @@ import { WeekView } from "./WeekView";
 import { ListView } from "./ListView";
 import { Glow } from "../../components/Glow";
 import { ErrorBanner } from "../../components/ErrorBanner";
+import { NavMark } from "../../components/NavMark";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
@@ -144,12 +145,17 @@ export function CadenceView({ cadences, cadencesError, onRetryCadences, accounts
     return (
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
-          <div>
-            <div style={{ fontFamily: SERIF, fontSize: 40, fontWeight: 400, color: C.text, letterSpacing: '-0.02em', lineHeight: 1 }}>
-              Cadence
-            </div>
-            <div style={{ fontFamily: MONO, fontSize: 11, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 4 }}>
-              Recurring Schedules · {(cadences || []).length} Active
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, color: C.accent, flexShrink: 0 }}>
+              <NavMark id="cadence" size={40} />
+            </span>
+            <div>
+              <div style={{ fontFamily: SERIF, fontSize: 40, fontWeight: 400, color: C.text, letterSpacing: '-0.02em', lineHeight: 1 }}>
+                Cadence
+              </div>
+              <div style={{ fontFamily: MONO, fontSize: 11, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 4 }}>
+                Recurring Schedules · {(cadences || []).length} Active
+              </div>
             </div>
           </div>
           <button

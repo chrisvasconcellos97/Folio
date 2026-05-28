@@ -8,6 +8,7 @@ import { FL } from "../../components/FieldLabel";
 import { Modal } from "../../components/Modal";
 import { AddToTasksButton } from "../../components/AddToTasksButton";
 import { Glow } from "../../components/Glow";
+import { NavMark } from "../../components/NavMark";
 import { pickV } from "../../lib/metricsUtils";
 
 var MV_MONO  = "'JetBrains Mono', ui-monospace, monospace";
@@ -316,12 +317,17 @@ export function MeetingsView({ meetings, loading, allItems, addItem }) {
 
   return (
     <div>
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ fontFamily: MV_SERIF, fontSize: 40, fontWeight: 400, color: C.text, letterSpacing: "-0.02em", lineHeight: 1 }}>
-          Meetings
-        </div>
-        <div style={{ fontFamily: MV_MONO, fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", marginTop: 4 }}>
-          Conversation History · {meetings.length} Total
+      <div style={{ marginBottom: 20, display: "flex", alignItems: "center", gap: 14 }}>
+        <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 40, height: 40, color: C.accent, flexShrink: 0 }}>
+          <NavMark id="meetings" size={40} />
+        </span>
+        <div>
+          <div style={{ fontFamily: MV_SERIF, fontSize: 40, fontWeight: 400, color: C.text, letterSpacing: "-0.02em", lineHeight: 1 }}>
+            Meetings
+          </div>
+          <div style={{ fontFamily: MV_MONO, fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", marginTop: 4 }}>
+            Conversation History · {meetings.length} Total
+          </div>
         </div>
       </div>
 

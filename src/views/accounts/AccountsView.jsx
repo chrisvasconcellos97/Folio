@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useDeferredValue } from "react";
 import { C } from "../../lib/colors";
 import { ownerInitials, findOwner } from "../../lib/ownerLabel";
+import { NavMark } from "../../components/NavMark";
 import { latestRecord, accountRecords, momPct, displayRevenue } from "../../lib/metricsUtils";
 import { Pill } from "../../components/Pill";
 import { InputField } from "../../components/InputField";
@@ -298,6 +299,9 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
   var workspaceSubtitle = typeFilter === "internal_team" ? "Internal Teams · " + (accounts.length) + " Total"
                         : typeFilter === "partner"       ? "Partners · " + (accounts.length) + " Total"
                         : "Customer Portfolio · " + (accounts.length) + " Total";
+  var workspaceMarkId  = typeFilter === "internal_team" ? "departments"
+                       : typeFilter === "partner"       ? "partners"
+                       : "accounts";
 
   return (
     <div>
@@ -308,12 +312,20 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
         }
       `}</style>
 
-      <div style={{ marginBottom: 18 }}>
-        <div style={{ fontFamily: SERIF, fontSize: 40, fontWeight: 400, color: C.text, letterSpacing: "-0.02em", lineHeight: 1 }}>
-          {workspaceTitle}
-        </div>
-        <div style={{ fontFamily: MONO, fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", marginTop: 4 }}>
-          {workspaceSubtitle}
+      <div style={{ marginBottom: 18, display: "flex", alignItems: "center", gap: 14 }}>
+        <span style={{
+          display: "inline-flex", alignItems: "center", justifyContent: "center",
+          width: 40, height: 40, color: C.accent, flexShrink: 0,
+        }}>
+          <NavMark id={workspaceMarkId} size={40} />
+        </span>
+        <div>
+          <div style={{ fontFamily: SERIF, fontSize: 40, fontWeight: 400, color: C.text, letterSpacing: "-0.02em", lineHeight: 1 }}>
+            {workspaceTitle}
+          </div>
+          <div style={{ fontFamily: MONO, fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", marginTop: 4 }}>
+            {workspaceSubtitle}
+          </div>
         </div>
       </div>
 
