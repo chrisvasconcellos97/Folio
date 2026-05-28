@@ -158,6 +158,7 @@ create table if not exists folio_meetings (
   attendees      text[],
   pip_summary    text,
   pip_email      text,
+  plan_applied_at timestamptz,
   created_at     timestamptz default now(),
   updated_at     timestamptz default now()
 );

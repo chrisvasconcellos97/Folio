@@ -301,6 +301,16 @@ function HistoryRow({ meeting, onEdit, onDelete, accountId, openItems, addItem, 
                 {METHOD_LABEL[meeting.method] || meeting.method}
               </span>
             )}
+            {meeting.plan_applied_at && (
+              <span style={{
+                fontSize: 9, fontWeight: 700, color: C.accent,
+                background: C.accentFaint, border: "1px solid " + C.accentLine,
+                borderRadius: 4, padding: "1px 6px",
+                fontFamily: MONO, letterSpacing: "0.07em", textTransform: "uppercase",
+              }}>
+                ✓ Tasks added
+              </span>
+            )}
           </div>
           <div style={{ fontSize: 11, color: C.textMuted, fontVariantNumeric: "tabular-nums" }}>
             {meeting.meeting_date && new Date(meeting.meeting_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
@@ -753,11 +763,10 @@ export function CadenceHub({
   }
 
   function handleApplyPlan(selected) {
+    var draftId = previewPlan && previewPlan.draftId;
     return applyPipPlan(selected, {
       addItem:        addItem,
       updateItem:     function (id, fields) {
-        // useItems exposes updateItem already — call through whatever the
-        // hub was passed. The shape we need is (id, fields).
         return updateItem(id, fields);
       },
       closeItem:      closeItem,
@@ -766,6 +775,10 @@ export function CadenceHub({
       accountId:      account.id,
       activeProjects: activeProjects,
     }).then(function (result) {
+      if (draftId) {
+        updateMeeting(draftId, { plan_applied_at: new Date().toISOString() })
+          .catch(function () { /* badge is nice-to-have; don't fail apply on it */ });
+      }
       setPreviewPlan(null);
       return result;
     });
