@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
+import { timed } from "../lib/net";
 
 export function useAccounts(userId) {
   var [accounts, setAccounts] = useState([]);
@@ -11,11 +12,13 @@ export function useAccounts(userId) {
   var fetch = useCallback(function () {
     if (!userId) return;
     setLoading(true);
-    supabase
-      .from("folio_accounts")
-      .select("*")
-      .eq("user_id", userId)
-      .order("name")
+    timed("accounts.fetch", function () {
+      return supabase
+        .from("folio_accounts")
+        .select("*")
+        .eq("user_id", userId)
+        .order("name");
+    })
       .then(function (result) {
         setLoading(false);
         if (result.error) {

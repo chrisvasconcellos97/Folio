@@ -130,6 +130,17 @@ export var MARKS = {
       size
     );
   },
+  // Exclamation in a circle (Diagnostics)
+  diagnostics: function (size) {
+    return svgWrap(
+      <>
+        <circle cx="0" cy="0" r="7" fill="none" stroke="currentColor" strokeWidth="1.4" />
+        <line x1="0" y1="-3.5" x2="0" y2="1.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        <circle cx="0" cy="4" r="0.95" fill="currentColor" />
+      </>,
+      size
+    );
+  },
   // Route path (Routes)
   routes: function (size) {
     return svgWrap(

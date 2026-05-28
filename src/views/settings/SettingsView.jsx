@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { C } from "../../lib/colors";
 import { Card } from "../../components/Card";
 import { FL } from "../../components/FieldLabel";
 import { InputField } from "../../components/InputField";
 import { AmberBtn } from "../../components/Buttons";
 import { showToast } from "../../components/Toast";
+import { Modal } from "../../components/Modal";
 import { supabase } from "../../lib/supabase";
 import { usePipFacts } from "../../hooks/usePipFacts";
 import { usePipUsage } from "../../hooks/usePipUsage";
@@ -502,8 +503,142 @@ function PipPrefsSection({ userId }) {
   );
 }
 
+function PipUsageDetails({ userId, onClose }) {
+  var [rows, setRows]       = useState([]);
+  var [loading, setLoading] = useState(true);
+  var [error, setError]     = useState(null);
+
+  useEffect(function () {
+    if (!userId) return;
+    var cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    supabase
+      .from("folio_pip_usage")
+      .select("endpoint, mode, model, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, cost_micro_cents, created_at")
+      .eq("user_id", userId)
+      .gte("created_at", cutoff)
+      .order("created_at", { ascending: false })
+      .limit(2000)
+      .then(function (r) {
+        setLoading(false);
+        if (r.error) { setError(r.error.message); return; }
+        setRows(r.data || []);
+      }, function (err) {
+        setLoading(false);
+        setError(err && err.message);
+      });
+  }, [userId]);
+
+  var stats = useMemo(function () {
+    // Calls per day (last 30) — keyed by ISO date string.
+    var perDay = {};
+    var endpointCost = {};
+    var inputSum = 0, cacheReadSum = 0;
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    var days = [];
+    for (var i = 29; i >= 0; i--) {
+      var d = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
+      var key = d.toISOString().slice(0, 10);
+      perDay[key] = 0;
+      days.push({ key: key, label: d });
+    }
+    rows.forEach(function (row) {
+      var k = (row.created_at || "").slice(0, 10);
+      if (k in perDay) perDay[k] += 1;
+      var label = (row.endpoint || "?") + (row.mode ? ":" + row.mode : "");
+      endpointCost[label] = (endpointCost[label] || 0) + (row.cost_micro_cents || 0);
+      inputSum     += row.input_tokens || 0;
+      cacheReadSum += row.cache_read_tokens || 0;
+    });
+    var dailyCounts = days.map(function (d) { return { key: d.key, count: perDay[d.key], label: d.label }; });
+    var top = Object.keys(endpointCost)
+      .map(function (k) { return { label: k, cost: endpointCost[k] }; })
+      .sort(function (a, b) { return b.cost - a.cost; })
+      .slice(0, 3);
+    var cacheRatio = (inputSum + cacheReadSum) > 0 ? cacheReadSum / (inputSum + cacheReadSum) : 0;
+    return { dailyCounts: dailyCounts, top: top, cacheRatio: cacheRatio, total: rows.length };
+  }, [rows]);
+
+  var maxDaily = stats.dailyCounts.reduce(function (m, d) { return d.count > m ? d.count : m; }, 1);
+
+  return (
+    <Modal title="Pip Usage — Last 30 Days" onClose={onClose} width={520}>
+      {loading && <div style={{ fontSize: 13, color: C.textMuted, padding: 20, textAlign: "center" }}>Loading…</div>}
+      {error && <div style={{ fontSize: 13, color: C.textSub, padding: 14, lineHeight: 1.5 }}>Couldn't load usage history — run supabase/phase3_pip_usage.sql if not yet done.</div>}
+      {!loading && !error && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          {/* Sparkline */}
+          <div>
+            <div style={{ fontFamily: SETTINGS_MONO, fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8 }}>
+              Calls per day · {stats.total} total
+            </div>
+            <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 56, paddingBottom: 4, borderBottom: "1px solid " + C.ruleSoft }}>
+              {stats.dailyCounts.map(function (d) {
+                var h = d.count === 0 ? 2 : Math.max(3, Math.round((d.count / maxDaily) * 52));
+                return (
+                  <div
+                    key={d.key}
+                    title={d.key + " · " + d.count + " call" + (d.count === 1 ? "" : "s")}
+                    style={{
+                      flex: 1, height: h,
+                      background: d.count === 0 ? C.ruleSoft : C.accent,
+                      opacity: d.count === 0 ? 0.4 : 0.85,
+                      borderRadius: 2,
+                    }}
+                  />
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Top endpoints */}
+          <div>
+            <div style={{ fontFamily: SETTINGS_MONO, fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8 }}>
+              Most expensive endpoints
+            </div>
+            {stats.top.length === 0 && <div style={{ fontSize: 12, color: C.textMuted }}>No calls yet.</div>}
+            {stats.top.map(function (t, idx) {
+              var dollars = t.cost / 1000000;
+              return (
+                <div key={t.label} style={{
+                  display: "flex", justifyContent: "space-between",
+                  padding: "7px 0",
+                  borderTop: idx === 0 ? "none" : "1px solid " + C.ruleSoft,
+                  fontFamily: "'Inter', system-ui, sans-serif",
+                  fontSize: 13,
+                }}>
+                  <span style={{ color: C.text }}>{t.label}</span>
+                  <span style={{ color: C.textSub, fontVariantNumeric: "tabular-nums", fontFamily: SETTINGS_MONO, fontSize: 12 }}>
+                    {dollars < 1 ? "$" + dollars.toFixed(3) : "$" + dollars.toFixed(2)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Cache hit ratio */}
+          <div>
+            <div style={{ fontFamily: SETTINGS_MONO, fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>
+              Cache hit ratio
+            </div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+              <div style={{ fontSize: 22, fontWeight: 600, color: C.text, fontVariantNumeric: "tabular-nums" }}>
+                {Math.round(stats.cacheRatio * 100)}%
+              </div>
+              <div style={{ fontSize: 11, color: C.textMuted }}>
+                cache reads vs. fresh inputs · higher = cheaper
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
+}
+
 function PipUsageSection({ userId }) {
   var usage = usePipUsage(userId);
+  var [showDetails, setShowDetails] = useState(false);
   var now = new Date();
   var monthLabel = now.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
@@ -550,6 +685,22 @@ function PipUsageSection({ userId }) {
           (Usage table not initialized yet — run supabase/phase3_pip_usage.sql.)
         </div>
       )}
+      {!usage.error && (
+        <div style={{ marginTop: 12 }}>
+          <button
+            onClick={function () { setShowDetails(true); }}
+            style={{
+              background: "none", border: "none", padding: 0,
+              fontFamily: "'Inter', system-ui, sans-serif",
+              fontSize: 12, color: C.accent,
+              cursor: "pointer", textDecoration: "underline",
+            }}
+          >
+            View details →
+          </button>
+        </div>
+      )}
+      {showDetails && <PipUsageDetails userId={userId} onClose={function () { setShowDetails(false); }} />}
     </Card>
   );
 }

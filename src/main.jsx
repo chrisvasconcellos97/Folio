@@ -7,6 +7,12 @@ import { createRoot } from "react-dom/client";
 import { registerSW } from "virtual:pwa-register";
 import App from "./App";
 import { showToast } from "./components/Toast";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { installGlobalErrorHandlers } from "./lib/errorLog";
+
+// Wire window.onerror + unhandledrejection handlers immediately so we catch
+// anything that explodes during initial render. Idempotent.
+installGlobalErrorHandlers();
 
 // === Update path 1: controllerchange (the "right" way, when it works) ===
 var hadControllerAtStart = "serviceWorker" in navigator ? !!navigator.serviceWorker.controller : true;
@@ -73,6 +79,8 @@ var updateSW = registerSW({
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <App />
+    <ErrorBoundary label="app">
+      <App />
+    </ErrorBoundary>
   </StrictMode>
 );

@@ -28,11 +28,14 @@ var GaugeView      = lazy(function () { return import("./views/gauge/GaugeView")
 var RouteBuilder   = lazy(function () { return import("./views/routes/RouteBuilder").then(function (m) { return { default: m.RouteBuilder }; }); });
 var SettingsView   = lazy(function () { return import("./views/settings/SettingsView").then(function (m) { return { default: m.SettingsView }; }); });
 var LeadershipView = lazy(function () { return import("./views/leadership/LeadershipView").then(function (m) { return { default: m.LeadershipView }; }); });
+var ObservabilityView = lazy(function () { return import("./views/observability/ObservabilityView").then(function (m) { return { default: m.ObservabilityView }; }); });
 import { DesktopLayout } from "./layout/DesktopLayout";
 import { MobileLayout } from "./layout/MobileLayout";
 import { PipOrb, PipMark } from "./components/PipMark";
 import { CommandPalette } from "./components/CommandPalette";
 import { Toast, showToast } from "./components/Toast";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { useErrors } from "./hooks/useErrors";
 import { C } from "./lib/colors";
 
 export default function App() {
@@ -132,6 +135,10 @@ export default function App() {
   var { tasks, addTask, updateTask, deleteTask, error: tasksError } = useQuickTasks(userId);
   var { projects: allProjects, error: projectsErrorApp, refetch: refetchProjectsApp } = useProjects(userId);
   var { revenueHistory, shopMetrics, upsertRevenue, upsertShopMetrics } = useAccountMetrics(userId);
+  // Observability — gate the Diagnostics nav entry on unresolved errors in
+  // the last 7 days. Hook fails soft if the phase6 SQL hasn't been run yet
+  // (returns unresolvedRecent=0, so the nav stays hidden).
+  var { unresolvedRecent: diagnosticsCount } = useErrors(userId, { limit: 50 });
 
   // Top-level write helpers used by Pip's native tool calls.
   // These mirror the hook-level addItem/setFollowUp paths so RLS still applies
@@ -317,15 +324,17 @@ export default function App() {
     return (
       <>
         <Toast />
-        <Suspense fallback={<PipLoader />}>
-          <LeadershipView
-            org={org}
-            orgId={orgId}
-            userId={userId}
-            userMeta={userMeta}
-            onSignOut={signOut}
-          />
-        </Suspense>
+        <ErrorBoundary label="leadership-view">
+          <Suspense fallback={<PipLoader />}>
+            <LeadershipView
+              org={org}
+              orgId={orgId}
+              userId={userId}
+              userMeta={userMeta}
+              onSignOut={signOut}
+            />
+          </Suspense>
+        </ErrorBoundary>
       </>
     );
   }
@@ -519,6 +528,10 @@ export default function App() {
     mainContent = <RouteBuilder accounts={accounts} userId={userId} />;
   }
 
+  if (view === "diagnostics") {
+    mainContent = <ObservabilityView userId={userId} />;
+  }
+
   if (view === "settings") {
     mainContent = (
       <SettingsView
@@ -609,7 +622,12 @@ export default function App() {
           onTour={replayTour}
           userMeta={userMeta}
           accountsPane={isWorkspaceView ? accountsListPane : null}
-          detailPane={<Suspense fallback={<PipLoader />}>{mainContent}</Suspense>}
+          detailPane={
+            <ErrorBoundary key={"view-" + view} label={"view:" + view} inline>
+              <Suspense fallback={<PipLoader />}>{mainContent}</Suspense>
+            </ErrorBoundary>
+          }
+          diagnosticsCount={diagnosticsCount}
         />
         {addAccountModal}
         {/* Floating Pip (desktop) */}
@@ -680,9 +698,13 @@ export default function App() {
         onSignOut={signOut}
         onTour={replayTour}
         onSettings={function () { handleSetView("settings"); }}
+        onDiagnostics={diagnosticsCount > 0 ? function () { handleSetView("diagnostics"); } : null}
+        diagnosticsCount={diagnosticsCount}
         userMeta={userMeta}
       >
-        <Suspense fallback={<PipLoader />}>{mainContent}</Suspense>
+        <ErrorBoundary key={"view-" + view} label={"view:" + view} inline>
+          <Suspense fallback={<PipLoader />}>{mainContent}</Suspense>
+        </ErrorBoundary>
       </MobileLayout>
       {addAccountModal}
       {/* Floating Pip (mobile) */}

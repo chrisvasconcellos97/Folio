@@ -505,6 +505,38 @@ create policy "Users manage their own routes"
   with check (auth.uid() = user_id);
 
 -- ──────────────────────────────────────────────────────────────────────
+-- Observability — client-side error capture (Phase 6)
+-- See phase6_observability.sql for full rationale.
+-- ──────────────────────────────────────────────────────────────────────
+create table if not exists folio_errors (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid references auth.users(id) on delete cascade,
+  org_id      uuid,
+  error_type  text not null,           -- 'react' | 'network' | 'pip' | 'unhandled' | 'rejection'
+  message     text not null,
+  stack       text,
+  source_url  text,
+  user_agent  text,
+  context     jsonb,
+  resolved    boolean default false,
+  created_at  timestamptz default now()
+);
+
+alter table folio_errors enable row level security;
+
+drop policy if exists "errors_owner_select" on folio_errors;
+create policy "errors_owner_select" on folio_errors
+  for select using (auth.uid() = user_id);
+
+drop policy if exists "errors_owner_insert" on folio_errors;
+create policy "errors_owner_insert" on folio_errors
+  for insert with check (auth.uid() = user_id);
+
+drop policy if exists "errors_owner_update" on folio_errors;
+create policy "errors_owner_update" on folio_errors
+  for update using (auth.uid() = user_id);
+
+-- ──────────────────────────────────────────────────────────────────────
 -- Indexes — hot paths (Phase 5)
 -- See phase5_indexes.sql for the canonical list with per-query
 -- justifications. Mirrored here so a from-scratch run picks them up.
@@ -544,6 +576,8 @@ create index if not exists idx_org_members_user_id             on folio_org_memb
 create index if not exists idx_org_members_org_id              on folio_org_members(org_id);
 
 create index if not exists folio_pip_usage_user_time_idx       on folio_pip_usage(user_id, created_at desc);
+create index if not exists folio_errors_user_time_idx          on folio_errors(user_id, created_at desc);
+create index if not exists folio_errors_unresolved_idx         on folio_errors(user_id, resolved) where resolved = false;
 create index if not exists folio_pip_facts_user_active         on folio_pip_facts(user_id) where active = true;
 create index if not exists folio_pip_account_state_user        on folio_pip_account_state(user_id);
 create index if not exists folio_pip_account_state_stale       on folio_pip_account_state(stale_at);

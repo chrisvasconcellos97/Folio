@@ -29,7 +29,7 @@ var NAV_ITEMS = [
   { id: "routes",     label: "Route",      icon: "⊕"     },
 ];
 
-export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, onSettings, userMeta, children }) {
+export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, onSettings, onDiagnostics, diagnosticsCount, userMeta, children }) {
   var scrollRef = useRef(null);
   var [wsOpen, setWsOpen] = useState(false);
   var isWorkspaceView = WORKSPACE_IDS.indexOf(view) !== -1;
@@ -102,7 +102,7 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
             <AmberBtn onClick={onAddAccount} style={{ fontSize: 11, padding: "6px 13px" }}>
               {view === "departments" ? "+ Dept" : view === "partners" ? "+ Partner" : "+ Account"}
             </AmberBtn>
-            <UserMenu userMeta={userMeta} onSignOut={onSignOut} onTour={onTour} onSettings={onSettings} />
+            <UserMenu userMeta={userMeta} onSignOut={onSignOut} onTour={onTour} onSettings={onSettings} onDiagnostics={onDiagnostics} diagnosticsCount={diagnosticsCount} />
           </div>
         </div>
       </div>

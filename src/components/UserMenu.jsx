@@ -79,7 +79,7 @@ var MENU_ITEMS = [
   { id: "notifications", label: "Notifications",  icon: "◎", soon: true },
 ];
 
-export function UserMenu({ userMeta, onSignOut, onTour, onSettings, dropUp }) {
+export function UserMenu({ userMeta, onSignOut, onTour, onSettings, onDiagnostics, diagnosticsCount, dropUp }) {
   var [open, setOpen]           = useState(false);
   var [showProfile, setProfile] = useState(false);
   var menuRef                   = useRef(null);
@@ -102,10 +102,11 @@ export function UserMenu({ userMeta, onSignOut, onTour, onSettings, dropUp }) {
 
   function handleItem(id) {
     setOpen(false);
-    if (id === "profile") { setProfile(true); return; }
-    if (id === "tour")    { onTour && onTour(); return; }
-    if (id === "org")     { onSettings && onSettings(); return; }
-    if (id === "signout") { onSignOut && onSignOut(); return; }
+    if (id === "profile")     { setProfile(true); return; }
+    if (id === "tour")        { onTour && onTour(); return; }
+    if (id === "org")         { onSettings && onSettings(); return; }
+    if (id === "diagnostics") { onDiagnostics && onDiagnostics(); return; }
+    if (id === "signout")     { onSignOut && onSignOut(); return; }
   }
 
   return (
@@ -164,6 +165,37 @@ export function UserMenu({ userMeta, onSignOut, onTour, onSettings, dropUp }) {
 
             {/* Items */}
             <div style={{ padding: "5px 0" }}>
+              {onDiagnostics && (
+                <button
+                  onClick={function () { handleItem("diagnostics"); }}
+                  style={{
+                    width: "100%",
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    padding: "9px 14px",
+                    background: "none", border: "none",
+                    cursor: "pointer",
+                    fontFamily: "'Inter', system-ui, sans-serif",
+                    fontSize: 13,
+                    color: C.textSub,
+                    textAlign: "left",
+                  }}
+                >
+                  <span style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                    <span style={{ fontSize: 11, opacity: 0.55, color: C.red }}>!</span>
+                    Diagnostics
+                  </span>
+                  {diagnosticsCount > 0 && (
+                    <span style={{
+                      fontSize: 9.5, fontWeight: 700,
+                      color: C.red, background: C.redFaint,
+                      border: "1px solid " + C.redLine,
+                      borderRadius: 10, padding: "1px 7px",
+                      fontVariantNumeric: "tabular-nums",
+                      fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+                    }}>{diagnosticsCount}</span>
+                  )}
+                </button>
+              )}
               {MENU_ITEMS.map(function (item) {
                 return (
                   <button

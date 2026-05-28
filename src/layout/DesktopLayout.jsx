@@ -32,7 +32,14 @@ export function DesktopLayout({
   accountsPane,
   detailPane,
   children,
+  diagnosticsCount,
 }) {
+  // Phase 6 — show Diagnostics nav only when there are unresolved errors in
+  // the last 7 days. Keeps the sidebar quiet during normal operation.
+  var navItems = NAV_ITEMS;
+  if (diagnosticsCount > 0) {
+    navItems = NAV_ITEMS.concat([{ id: "diagnostics", label: "Diagnostics", icon: "!", badge: diagnosticsCount }]);
+  }
   return (
     <div
       style={{
@@ -105,7 +112,7 @@ export function DesktopLayout({
 
         {/* Nav */}
         <nav style={{ display: "flex", flexDirection: "column", gap: 1, flex: 1 }}>
-          {NAV_ITEMS.map(function (item) {
+          {navItems.map(function (item) {
             if (item.divider) {
               return (
                 <div
@@ -163,6 +170,21 @@ export function DesktopLayout({
                     background: C.accent, display: "inline-block",
                   }} />
                 )}
+                {item.badge ? (
+                  <span style={{
+                    fontFamily: MONO,
+                    fontSize: 9.5,
+                    fontWeight: 700,
+                    color: C.red,
+                    background: C.redFaint,
+                    border: "1px solid " + C.redLine,
+                    borderRadius: 10,
+                    padding: "1px 7px",
+                    minWidth: 18,
+                    textAlign: "center",
+                    fontVariantNumeric: "tabular-nums",
+                  }}>{item.badge}</span>
+                ) : null}
               </button>
             );
           })}

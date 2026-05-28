@@ -1,6 +1,8 @@
 import { supabase } from "./supabase";
 import { streamPip } from "./pipStream";
 import { classifyIntent } from "./pipIntent";
+import { logError } from "./errorLog";
+import { timed } from "./net";
 
 var PROXY_URL    = import.meta.env.VITE_PIP_PROXY_URL || "/api/pip";
 var ASK_PIP_URL  = "/api/ask-pip";
@@ -14,16 +16,45 @@ function fetchWithTimeout(url, options) {
     .catch(function (err) { clearTimeout(timer); throw err; });
 }
 
+// Best-effort observability hook. Only fires on a *final* failure (after the
+// internal 5xx retry has already had its shot) so a transient blip doesn't
+// double-log. Caller's promise still rejects exactly as before.
+function logPipFailure(url, status, err) {
+  try {
+    var msg;
+    if (err && err.message) msg = err.message;
+    else if (typeof status === "number") msg = "Pip proxy " + status;
+    else msg = "Pip request failed";
+    logError("pip", msg, {
+      stack: err && err.stack,
+      context: { url: url, status: status || null },
+    });
+  } catch (_) {}
+}
+
 function pipFetch(url, options, retried) {
   return fetchWithTimeout(url, options).then(function (res) {
     if (res.status === 429) {
-      return Promise.reject(new Error("Pip is busy, try again in a moment"));
+      var busy = new Error("Pip is busy, try again in a moment");
+      logPipFailure(url, 429, busy);
+      return Promise.reject(busy);
     }
     if (res.status >= 500 && !retried) {
+      // Don't log yet — let the retry decide. If the retry also fails this
+      // function is called with retried=true and we'll log there.
       return pipFetch(url, options, true);
     }
-    if (!res.ok) throw new Error("Pip proxy error: " + res.status);
+    if (!res.ok) {
+      var e = new Error("Pip proxy error: " + res.status);
+      logPipFailure(url, res.status, e);
+      throw e;
+    }
     return res.json();
+  }, function (err) {
+    // Network / timeout / abort. The retry path only triggers on 5xx
+    // responses, so any rejection here is terminal — log it.
+    logPipFailure(url, null, err);
+    throw err;
   });
 }
 
@@ -89,19 +120,30 @@ export function callPipApi(messages, context, opts) {
   if (opts.facts && opts.facts.length) {
     body.facts = opts.facts;
   }
-  return authHeaders().then(function (headers) {
-    if (body.stream) {
-      return streamPip(PROXY_URL, body, headers, opts.onDelta, opts.onToolUse).then(function (r) {
-        // Normalize shape — always expose toolCalls (default []).
-        return { content: r.content || "", toolCalls: r.toolCalls || [], meta: r.meta || null };
+  return timed("pip." + (opts.mode || "chat"), function () {
+    return authHeaders().then(function (headers) {
+      if (body.stream) {
+        return streamPip(PROXY_URL, body, headers, opts.onDelta, opts.onToolUse).then(function (r) {
+          // Normalize shape — always expose toolCalls (default []).
+          return { content: r.content || "", toolCalls: r.toolCalls || [], meta: r.meta || null };
+        }, function (err) {
+          // streamPip rejections are terminal — log them like pipFetch does.
+          try {
+            logError("pip", (err && err.message) || "Pip stream failed", {
+              stack: err && err.stack,
+              context: { url: PROXY_URL, mode: opts.mode || "chat", stream: true },
+            });
+          } catch (_) {}
+          throw err;
+        });
+      }
+      return pipFetch(PROXY_URL, {
+        method: "POST",
+        headers: headers,
+        body:    JSON.stringify(body),
+      }).then(function (j) {
+        return { content: j.content || "", toolCalls: j.tool_calls || [], meta: j.meta || null };
       });
-    }
-    return pipFetch(PROXY_URL, {
-      method: "POST",
-      headers: headers,
-      body:    JSON.stringify(body),
-    }).then(function (j) {
-      return { content: j.content || "", toolCalls: j.tool_calls || [], meta: j.meta || null };
     });
   });
 }

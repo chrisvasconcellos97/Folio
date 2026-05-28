@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { logActivity } from "../lib/activity";
+import { timed } from "../lib/net";
 
 export function useMeetings(userId, accountId, orgId) {
   var [meetings, setMeetings] = useState([]);
@@ -18,7 +19,7 @@ export function useMeetings(userId, accountId, orgId) {
       .eq("user_id", userId)
       .order("meeting_date", { ascending: false });
     if (accountId) query = query.eq("account_id", accountId);
-    query.then(function (result) {
+    timed("meetings.fetch", function () { return query; }).then(function (result) {
       setLoading(false);
       if (result.error) {
         setError(result.error.message);

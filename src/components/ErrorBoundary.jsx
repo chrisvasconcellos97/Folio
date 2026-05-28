@@ -1,0 +1,177 @@
+import React from "react";
+import { C } from "../lib/colors";
+import { logError, appendErrorNote } from "../lib/errorLog";
+
+var SERIF = "'Fraunces', Georgia, serif";
+var MONO  = "'JetBrains Mono', ui-monospace, monospace";
+var SANS  = "'Inter', system-ui, sans-serif";
+
+/**
+ * Catches React render errors. Three things happen on catch:
+ *   1. Log the error to folio_errors (best-effort, rate-limited in errorLog.js).
+ *   2. Render a friendly fallback UI ("Something went sideways. Pip's noticed.")
+ *      so we never hand the user a blank page.
+ *   3. Offer a textarea so the user can describe what they were doing — that
+ *      note is upserted back onto the same error row via appendErrorNote.
+ *
+ * Used in two layers: once around <App /> (catches everything), and again
+ * around each <Suspense> boundary in App.jsx so a single broken view doesn't
+ * crash the sidebar / nav shell.
+ */
+export class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      hasError: false,
+      message:  "",
+      errorId:  null,
+      noteOpen: false,
+      noteText: "",
+      noteSent: false,
+    };
+    this.onReload = this.onReload.bind(this);
+    this.openNote = this.openNote.bind(this);
+    this.sendNote = this.sendNote.bind(this);
+    this.onChange = this.onChange.bind(this);
+  }
+
+  static getDerivedStateFromError(error) {
+    return {
+      hasError: true,
+      message: error && error.message ? error.message : "Something went wrong",
+    };
+  }
+
+  componentDidCatch(error, info) {
+    var stack = (error && error.stack) || (info && info.componentStack) || null;
+    var context = {
+      componentStack: info && info.componentStack ? String(info.componentStack).slice(0, 4000) : null,
+      boundary: this.props.label || "app",
+    };
+    var self = this;
+    logError("react", error && error.message ? error.message : "react render error", { stack: stack, context: context })
+      .then(function (row) {
+        if (row && row.id) self.setState({ errorId: row.id });
+      })
+      .catch(function () {});
+  }
+
+  onReload() {
+    try { window.location.reload(); } catch (e) { /* swallow */ }
+  }
+
+  openNote() { this.setState({ noteOpen: true }); }
+  onChange(e) { this.setState({ noteText: e.target.value }); }
+
+  sendNote() {
+    var self = this;
+    var id = this.state.errorId;
+    var note = this.state.noteText.trim();
+    if (!id || !note) { this.setState({ noteSent: true }); return; }
+    appendErrorNote(id, note).then(function () { self.setState({ noteSent: true }); });
+  }
+
+  render() {
+    if (!this.state.hasError) return this.props.children;
+
+    var inline = this.props.inline;
+    return (
+      <div
+        role="alert"
+        style={{
+          minHeight: inline ? "auto" : "60vh",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 32,
+          color: C.text,
+          background: inline ? "transparent" : C.bg,
+          fontFamily: SANS,
+          textAlign: "center",
+        }}
+      >
+        <div style={{
+          fontFamily: SERIF, fontSize: 28, fontWeight: 400, letterSpacing: "-0.01em",
+          color: C.text, marginBottom: 6,
+        }}>
+          Something went sideways.
+        </div>
+        <div style={{ fontSize: 13.5, color: C.textSub, lineHeight: 1.5, maxWidth: 460, marginBottom: 4 }}>
+          Pip's noticed. We've logged the details and you can keep going as soon as the page reloads.
+        </div>
+        <div style={{
+          fontFamily: MONO, fontSize: 10.5, color: C.textMuted,
+          textTransform: "uppercase", letterSpacing: "0.08em",
+          marginTop: 12, marginBottom: 20, maxWidth: 460,
+          wordBreak: "break-word",
+        }}>
+          {this.state.message}
+        </div>
+
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
+          <button
+            onClick={this.onReload}
+            style={{
+              background: C.accent, border: "none", borderRadius: 8,
+              padding: "9px 18px", fontSize: 13, fontWeight: 600,
+              color: "#fff", cursor: "pointer", fontFamily: SANS,
+            }}
+          >
+            Reload
+          </button>
+          {!this.state.noteOpen && !this.state.noteSent && (
+            <button
+              onClick={this.openNote}
+              style={{
+                background: "transparent", border: "1px solid " + C.rule,
+                borderRadius: 8, padding: "9px 16px", fontSize: 13,
+                color: C.textSoft, cursor: "pointer", fontFamily: SANS,
+              }}
+            >
+              Tell me what happened
+            </button>
+          )}
+        </div>
+
+        {this.state.noteOpen && !this.state.noteSent && (
+          <div style={{ marginTop: 18, width: "100%", maxWidth: 460 }}>
+            <textarea
+              value={this.state.noteText}
+              onChange={this.onChange}
+              placeholder="What were you doing when this happened?"
+              rows={4}
+              style={{
+                width: "100%", padding: 12, fontSize: 13.5, lineHeight: 1.5,
+                fontFamily: SANS, color: C.text, background: C.surface2,
+                border: "1px solid " + C.rule, borderRadius: 10, resize: "vertical",
+                outline: "none", boxSizing: "border-box",
+              }}
+            />
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+              <button
+                onClick={this.sendNote}
+                disabled={!this.state.noteText.trim()}
+                style={{
+                  background: C.accent, border: "none", borderRadius: 8,
+                  padding: "7px 14px", fontSize: 12.5, fontWeight: 600,
+                  color: "#fff", cursor: this.state.noteText.trim() ? "pointer" : "not-allowed",
+                  opacity: this.state.noteText.trim() ? 1 : 0.5,
+                  fontFamily: SANS,
+                }}
+              >
+                Send to Pip
+              </button>
+            </div>
+          </div>
+        )}
+
+        {this.state.noteSent && (
+          <div style={{ marginTop: 14, fontSize: 12, color: C.textMuted, fontFamily: SANS }}>
+            Thanks — added to the report.
+          </div>
+        )}
+      </div>
+    );
+  }
+}
