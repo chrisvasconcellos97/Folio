@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
+import { fetchWithTimeout } from "../lib/net";
 
 export function useOrg(userId, userEmail) {
   var [org, setOrg]                   = useState(null);
@@ -105,7 +106,7 @@ export function useOrg(userId, userEmail) {
         return supabase.auth.getSession().then(function(sessionResult) {
           var token = sessionResult.data && sessionResult.data.session ? sessionResult.data.session.access_token : null;
           if (!token) return { emailSent: false, reason: "no_session" };
-          return window.fetch("/api/invite", {
+          return fetchWithTimeout("/api/invite", {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
             body: JSON.stringify({
@@ -114,13 +115,15 @@ export function useOrg(userId, userEmail) {
               orgId: org.id,
               appUrl: window.location.origin,
             }),
-          }).then(function(r) {
+          }, 20000).then(function(r) {
             if (r.ok) return { emailSent: true };
             return r.json().then(
               function(j) { return { emailSent: false, reason: j.error || "send_failed" }; },
               function()  { return { emailSent: false, reason: "send_failed" }; }
             );
-          }).catch(function() { return { emailSent: false, reason: "network" }; });
+          }).catch(function(err) {
+            return { emailSent: false, reason: err && err.code === "TIMEOUT" ? "timeout" : "network" };
+          });
         });
       });
   }

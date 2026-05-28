@@ -81,6 +81,9 @@ function buildItemsInsight(items, taskCadences, accountId) {
 
 export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAdd, onUpdate, onGoToCadence }) {
   var [editingItem, setEditingItem] = useState(null);
+  // Track in-flight close requests so rapid taps on the same checkbox don't
+  // fire closeItem twice (would log two activity entries + race the refetch).
+  var [closingIds, setClosingIds] = useState({});
   var open   = items.filter(function (i) { return !i.done; });
   var closed = items.filter(function (i) { return i.done; });
   var today  = new Date(); today.setHours(0, 0, 0, 0);
@@ -100,9 +103,14 @@ export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAd
   };
 
   function handleClose(id) {
+    if (closingIds[id]) return; // already in flight — ignore extra clicks
+    setClosingIds(function (prev) { return Object.assign({}, prev, { [id]: true }); });
     onClose(id)
       .then(function () { showToast("Item closed"); })
-      .catch(function (err) { showToast(err.message || "Failed", "error"); });
+      .catch(function (err) { showToast(err.message || "Couldn't close — check your connection", "error"); })
+      .then(function () {
+        setClosingIds(function (prev) { var n = Object.assign({}, prev); delete n[id]; return n; });
+      });
   }
 
   return (
@@ -166,8 +174,9 @@ export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAd
                   <button
                     type="button"
                     onClick={function () { handleClose(item.id); }}
+                    disabled={!!closingIds[item.id]}
                     aria-label="Mark complete"
-                    style={{ padding: 8, margin: -8, display: "inline-flex", alignItems: "center", justifyContent: "center", background: "none", border: "none" }}
+                    style={{ padding: 8, margin: -8, display: "inline-flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", opacity: closingIds[item.id] ? 0.4 : 1, cursor: closingIds[item.id] ? "wait" : "pointer" }}
                   >
                     <div style={{ width: 16, height: 16, borderRadius: 4, border: "1.5px solid " + C.accentDim, flexShrink: 0, background: "transparent" }} />
                   </button>

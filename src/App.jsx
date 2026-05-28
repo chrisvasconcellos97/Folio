@@ -74,8 +74,30 @@ export default function App() {
     setShowOnboarding(true);
   }
 
-  var { accounts, loading: acctLoading, addAccount, updateAccount, deleteAccount } = useAccounts(userId);
+  var { accounts, loading: acctLoading, error: acctError, refetch: refetchAccounts, addAccount, updateAccount, deleteAccount } = useAccounts(userId);
   var { org, orgId, role, members, pendingInvites, myInvite, createOrg, inviteMember, revokeMember, acceptInvite, dismissInvite } = useOrg(userId, userEmail);
+
+  // Surface read-path errors from the top-level hooks. Show once per error
+  // transition (string identity in the ref guards against the effect retoasting
+  // when other state in App.jsx changes). Toast carries a Retry action that
+  // fires the hook's refetch — gives the user something to do besides reload.
+  var lastErrorToastRef = useRef({});
+  useEffect(function () {
+    if (!session) return;
+    function maybeToast(key, msg, refetch) {
+      if (!msg) {
+        if (lastErrorToastRef.current[key]) lastErrorToastRef.current[key] = null;
+        return;
+      }
+      if (lastErrorToastRef.current[key] === msg) return;
+      lastErrorToastRef.current[key] = msg;
+      showToast("Couldn't load " + key + " — check your connection", "error", {
+        action: { label: "Retry", run: refetch },
+      });
+    }
+    maybeToast("accounts", acctError, refetchAccounts);
+    maybeToast("meetings", meetError, refetchMeetings);
+  }, [session, acctError, meetError, refetchAccounts, refetchMeetings]);
 
   useEffect(function () {
     if (!session || welcomeShown.current) return;
@@ -103,7 +125,7 @@ export default function App() {
     return function() { window.removeEventListener("keydown", handleKeyDown); };
   }, []);
 
-  var { meetings, loading: meetLoading, addMeeting } = useMeetings(userId);
+  var { meetings, loading: meetLoading, error: meetError, refetch: refetchMeetings, addMeeting } = useMeetings(userId);
   var [allItems, setAllItems]       = useState([]);
   var [allContacts, setAllContacts] = useState([]);
   useEffect(function () {

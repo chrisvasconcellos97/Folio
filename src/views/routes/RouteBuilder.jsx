@@ -101,16 +101,19 @@ export function RouteBuilder({ accounts, userId }) {
   }
 
   function geocodeAddress(addr) {
+    // Bound the call so a slow Nominatim doesn't hang Route Builder.
+    var controller = new AbortController();
+    var timer = setTimeout(function () { controller.abort(); }, 12000);
     return fetch(
       "https://nominatim.openstreetmap.org/search?format=json&limit=1&q=" + encodeURIComponent(addr),
-      { headers: { "Accept-Language": "en", "User-Agent": "Folios/1.0" } }
+      { headers: { "Accept-Language": "en", "User-Agent": "Folios/1.0" }, signal: controller.signal }
     )
-      .then(function(r) { return r.json(); })
+      .then(function(r) { clearTimeout(timer); return r.json(); })
       .then(function(results) {
         if (results && results.length > 0) return { lat: parseFloat(results[0].lat), lng: parseFloat(results[0].lon) };
         return null;
       })
-      .catch(function() { return null; });
+      .catch(function() { clearTimeout(timer); return null; });
   }
 
   function handleBuildRoute() {

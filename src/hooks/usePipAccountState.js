@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
+import { fetchWithTimeout } from "../lib/net";
 
 // usePipAccountState — rolling cache of Pip's per-account state prose.
 // One row per (user, account). Refreshed via /api/pip-state-refresh.
@@ -65,12 +66,13 @@ export function usePipAccountState(userId) {
   // Separate so it can be reused with custom headers — kept inside the hook
   // closure so the network call lives next to its hook caller.
   function fetch_refresh(ids, headers) {
-    return window.fetch("/api/pip-state-refresh", {
+    // Refresh is best-effort, but bound it to 30s so a hung connection
+    // doesn't leak fetch promises forever.
+    return fetchWithTimeout("/api/pip-state-refresh", {
       method: "POST",
       headers: headers,
       body: JSON.stringify({ accountIds: ids }),
-    }).then(function (r) {
-      // Don't throw — refresh is best-effort.
+    }, 30000).then(function (r) {
       if (!r.ok) {
         console.warn("pip-state-refresh failed:", r.status);
       }
