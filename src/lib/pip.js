@@ -339,7 +339,8 @@ export function callCadenceBriefPip(payload) {
     var bits = [];
     bits.push((p.status || "").replace("_", " "));
     if (p.due_date) bits.push("due " + p.due_date);
-    return "- " + (p.title || "Untitled") + " (" + bits.join(" · ") + ")";
+    var owner = p._childAccountName ? " — for " + p._childAccountName : "";
+    return "- " + (p.title || "Untitled") + " (" + bits.join(" · ") + ")" + owner;
   }).join("\n");
 
   var prompt =

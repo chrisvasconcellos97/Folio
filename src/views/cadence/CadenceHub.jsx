@@ -242,7 +242,7 @@ function SectionHeader({ children, count, action }) {
 }
 
 /* ---- Pip brief panel ---- */
-function PipBriefPanel({ brief, briefAt, loading, error, onRefresh, mobileCollapsed, onExpand }) {
+export function PipBriefPanel({ brief, briefAt, loading, error, onRefresh, mobileCollapsed, onExpand }) {
   if (mobileCollapsed) {
     var oneLiner = brief
       ? brief.split(/\n+/)[0].slice(0, 110) + (brief.length > 110 ? "…" : "")
@@ -395,7 +395,7 @@ function HistoryRow({ meeting, onEdit, onDelete, accountId, openItems, addItem, 
 }
 
 /* ---- Open items row ---- */
-function OpenItemRow({ item, onClose }) {
+export function OpenItemRow({ item, onClose }) {
   return (
     <div style={Object.assign({}, glass, { display: "flex", alignItems: "flex-start", gap: 10, borderRadius: 10, padding: "10px 12px" })}>
       <button
@@ -420,7 +420,7 @@ function OpenItemRow({ item, onClose }) {
 }
 
 /* ---- Inline-expandable Gauge project card ---- */
-function HubProjectCard({ project, accounts, members, userEmail, onUpdateProject }) {
+export function HubProjectCard({ project, accounts, members, userEmail, onUpdateProject }) {
   var [open, setOpen] = useState(false);
   var isPlanning   = project.status === "planned" || project.status === "on_hold";
   var statusColor  = isPlanning ? C.yellow : C.accent;
@@ -477,6 +477,14 @@ function HubProjectCard({ project, accounts, members, userEmail, onUpdateProject
                 letterSpacing: "0.08em", textTransform: "uppercase",
               }}>
                 Standing
+              </span>
+            )}
+            {project._childAccountName && (
+              <span style={{
+                fontFamily: MONO, fontSize: 9, color: C.textMuted,
+                letterSpacing: "0.06em",
+              }}>
+                ↳ {project._childAccountName}
               </span>
             )}
           </div>
@@ -591,11 +599,22 @@ export function CadenceHub({
     return (items || []).filter(function (i) { return !i.done; });
   }, [items]);
 
+  var accountNameById = useMemo(function () {
+    var map = {};
+    (accounts || []).forEach(function (a) { map[a.id] = a.name; });
+    return map;
+  }, [accounts]);
+
   var activeProjects = useMemo(function () {
-    return (projects || []).filter(function (p) {
-      return p.status !== "complete";
-    });
-  }, [projects]);
+    return (projects || [])
+      .filter(function (p) { return p.status !== "complete"; })
+      .map(function (p) {
+        var ownerName = p.account_id && p.account_id !== account.id
+          ? (accountNameById[p.account_id] || null)
+          : null;
+        return Object.assign({}, p, { _childAccountName: ownerName });
+      });
+  }, [projects, accountNameById, account.id]);
 
   var scheduledFollowUps = useMemo(function () {
     var today = todayISO();
@@ -903,11 +922,17 @@ export function CadenceHub({
       account={account}
       cadenceLabel={cadenceLabel}
       brief={cadence.pip_brief}
+      briefAt={cadence.pip_brief_at}
       projects={activeProjects}
       openItems={openItems}
       contacts={contacts || []}
+      accounts={accounts}
+      members={members}
+      userEmail={userEmail}
       onUpdate={updateMeeting}
       onAddItem={addItem}
+      onCloseItem={closeItem}
+      onUpdateProject={updateProject}
       onClose={function () { setMeetingMode(null); }}
       onSummarized={function () { setMeetingMode(null); }}
     />

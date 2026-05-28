@@ -3,11 +3,15 @@ import { supabase } from "../lib/supabase";
 import { logActivity } from "../lib/activity";
 import { useRealtimeSync } from "./useRealtimeSync";
 
-export function useProjects(userId, accountId, orgId) {
+export function useProjects(userId, accountId, orgId, extraAccountIds) {
   var [projects, setProjects]   = useState([]);
   var [loading, setLoading]     = useState(false);
   var [error, setError]         = useState(null);
   var [templates, setTemplates] = useState([]);
+
+  // Stable key for the extras array so the useCallback dep doesn't change
+  // every render when the parent recomputes a fresh array each time.
+  var extrasKey = (extraAccountIds || []).slice().sort().join(",");
 
   var fetch = useCallback(function () {
     if (!userId) return;
@@ -16,7 +20,12 @@ export function useProjects(userId, accountId, orgId) {
       .from("gauge_projects")
       .select("*")
       .order("created_at", { ascending: false });
-    if (accountId) query = query.eq("account_id", accountId);
+    var extras = extrasKey ? extrasKey.split(",") : [];
+    if (accountId && extras.length > 0) {
+      query = query.in("account_id", [accountId].concat(extras));
+    } else if (accountId) {
+      query = query.eq("account_id", accountId);
+    }
     query.then(function (result) {
       setLoading(false);
       if (result.error) {
@@ -26,7 +35,7 @@ export function useProjects(userId, accountId, orgId) {
         setProjects(result.data || []);
       }
     });
-  }, [userId, accountId]);
+  }, [userId, accountId, extrasKey]);
 
   var fetchTemplates = useCallback(function () {
     if (!userId) return Promise.resolve([]);

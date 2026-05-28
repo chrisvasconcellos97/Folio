@@ -2,18 +2,13 @@ import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { C, glass } from "../../lib/colors";
 import { PipMark } from "../../components/PipMark";
-import { MarkdownText } from "../../components/MarkdownText";
 import { showToast } from "../../components/Toast";
 import { summarizeDraftPip } from "../../lib/pip";
+import { PipBriefPanel, HubProjectCard, OpenItemRow } from "./CadenceHub";
 
 var INTER = "'Inter', system-ui, sans-serif";
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
-
-function fmtDate(d) {
-  if (!d) return "";
-  return new Date(d + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
 
 /* ---- Sidebar sections ---- */
 function SidebarSection({ title, count, children, collapsed }) {
@@ -32,59 +27,14 @@ function SidebarSection({ title, count, children, collapsed }) {
   );
 }
 
-function CompactProjectCard({ project }) {
-  var isPlanning = project.status === "planned" || project.status === "on_hold";
-  var statusColor = isPlanning ? C.yellow : C.accent;
+function ContactCard({ contact }) {
   return (
     <div style={Object.assign({}, glass, {
       borderRadius: 8, padding: "8px 10px", marginBottom: 6,
     })}>
-      <div style={{ fontSize: 12, color: C.text, fontWeight: 600, lineHeight: 1.3 }}>
-        {project.title || "Untitled project"}
-      </div>
-      <div style={{ display: "flex", gap: 8, marginTop: 4, fontVariantNumeric: "tabular-nums" }}>
-        <span style={{
-          fontFamily: MONO, fontSize: 9, color: statusColor, fontWeight: 700,
-          textTransform: "uppercase", letterSpacing: "0.07em",
-        }}>
-          {(project.status || "").replace("_", " ")}
-        </span>
-        {project.due_date && (
-          <span style={{ fontSize: 10, color: C.textMuted }}>
-            due {fmtDate(project.due_date)}
-          </span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function CompactItemRow({ item }) {
-  return (
-    <div style={{
-      padding: "6px 0",
-      borderBottom: "1px solid " + C.ruleSoft,
-      fontSize: 12, color: C.textSoft, lineHeight: 1.4,
-    }}>
-      <div>{item.text}</div>
-      {item.due_date && (
-        <div style={{ fontSize: 10, color: C.yellow, marginTop: 2, fontVariantNumeric: "tabular-nums" }}>
-          Due {fmtDate(item.due_date)}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function CompactContactRow({ contact }) {
-  return (
-    <div style={{
-      padding: "6px 0",
-      borderBottom: "1px solid " + C.ruleSoft,
-      fontSize: 12, color: C.textSoft, lineHeight: 1.4,
-    }}>
-      <div style={{ color: C.text, fontWeight: 500 }}>{contact.name}</div>
-      {contact.title && <div style={{ fontSize: 10, color: C.textMuted }}>{contact.title}</div>}
+      <div style={{ fontSize: 12, color: C.text, fontWeight: 500 }}>{contact.name}</div>
+      {contact.title && <div style={{ fontSize: 10.5, color: C.textMuted, marginTop: 2 }}>{contact.title}</div>}
+      {contact.email && <div style={{ fontSize: 10, color: C.accent, marginTop: 2 }}>{contact.email}</div>}
     </div>
   );
 }
@@ -94,11 +44,17 @@ export function CadenceMeetingMode({
   account,
   cadenceLabel,
   brief,
+  briefAt,
   projects,
   openItems,
   contacts,
+  accounts,
+  members,
+  userEmail,
   onUpdate,
   onAddItem,
+  onCloseItem,
+  onUpdateProject,
   onClose,
   onSummarized,
 }) {
@@ -107,14 +63,13 @@ export function CadenceMeetingMode({
   var [summarizing, setSummarizing]     = useState(false);
   var [summarizeErr, setSummarizeErr]   = useState(null);
   var [quickItem, setQuickItem]         = useState("");
-  var [briefExpanded, setBriefExpanded] = useState(false);
   var saveTimer = useRef(null);
   var notesRef  = useRef(null);
 
   // Auto-collapse sidebar on narrow viewports
   useEffect(function () {
     if (typeof window === "undefined") return;
-    if (window.innerWidth < 900) setCollapsed(true);
+    if (window.innerWidth < 1100) setCollapsed(true);
   }, []);
 
   // Focus the textarea on mount
@@ -215,7 +170,7 @@ export function CadenceMeetingMode({
       });
   }
 
-  var sidebarWidth = sidebarCollapsed ? 44 : 300;
+  var sidebarWidth = sidebarCollapsed ? 44 : 420;
 
   var overlay = (
     <div
@@ -314,53 +269,46 @@ export function CadenceMeetingMode({
             <div style={{ flex: 1, overflowY: "auto", padding: "14px 14px 24px 14px" }}>
               {brief && (
                 <SidebarSection title="Pip Brief">
-                  <div style={{
-                    background: C.accentGlow, border: "1px solid " + C.accentLine,
-                    borderRadius: 8, padding: "8px 10px",
-                  }}>
-                    <button
-                      onClick={function () { setBriefExpanded(function (v) { return !v; }); }}
-                      style={{
-                        background: "none", border: "none", padding: 0,
-                        cursor: "pointer", textAlign: "left", width: "100%",
-                        color: C.textSoft, fontSize: 12, lineHeight: 1.5,
-                        fontFamily: INTER,
-                      }}
-                    >
-                      {briefExpanded ? (
-                        <MarkdownText text={brief} style={{ fontSize: 12, color: C.textSoft, lineHeight: 1.55 }} />
-                      ) : (
-                        <div style={{
-                          display: "-webkit-box",
-                          WebkitLineClamp: 3, WebkitBoxOrient: "vertical",
-                          overflow: "hidden",
-                        }}>
-                          {brief.split(/\n+/)[0]}
-                        </div>
-                      )}
-                      <span style={{ fontSize: 10, color: C.accent, marginTop: 4, display: "block" }}>
-                        {briefExpanded ? "Collapse" : "Expand"}
-                      </span>
-                    </button>
-                  </div>
+                  <PipBriefPanel
+                    brief={brief}
+                    briefAt={briefAt}
+                    loading={false}
+                    error={null}
+                    onRefresh={null}
+                    mobileCollapsed={false}
+                    onExpand={null}
+                  />
                 </SidebarSection>
               )}
               <SidebarSection title="Gauge Projects" count={(projects || []).length}>
                 {(projects || []).length === 0 ? (
                   <div style={{ fontSize: 11, color: C.textMuted }}>No active projects.</div>
                 ) : (
-                  (projects || []).map(function (p) {
-                    return <CompactProjectCard key={p.id} project={p} />;
-                  })
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {(projects || []).map(function (p) {
+                      return (
+                        <HubProjectCard
+                          key={p.id}
+                          project={p}
+                          accounts={accounts}
+                          members={members}
+                          userEmail={userEmail}
+                          onUpdateProject={onUpdateProject}
+                        />
+                      );
+                    })}
+                  </div>
                 )}
               </SidebarSection>
               <SidebarSection title="Open Items" count={(openItems || []).length}>
                 {(openItems || []).length === 0 ? (
-                  <div style={{ fontSize: 11, color: C.textMuted }}>All clear.</div>
+                  <div style={{ fontSize: 11, color: C.green }}>All clear.</div>
                 ) : (
-                  (openItems || []).map(function (i) {
-                    return <CompactItemRow key={i.id} item={i} />;
-                  })
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {(openItems || []).map(function (i) {
+                      return <OpenItemRow key={i.id} item={i} onClose={onCloseItem} />;
+                    })}
+                  </div>
                 )}
               </SidebarSection>
               <SidebarSection title="Contacts" count={(contacts || []).length}>
@@ -368,7 +316,7 @@ export function CadenceMeetingMode({
                   <div style={{ fontSize: 11, color: C.textMuted }}>No contacts.</div>
                 ) : (
                   (contacts || []).map(function (c) {
-                    return <CompactContactRow key={c.id} contact={c} />;
+                    return <ContactCard key={c.id} contact={c} />;
                   })
                 )}
               </SidebarSection>
