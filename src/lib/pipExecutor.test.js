@@ -7,13 +7,15 @@ var sampleAccounts = [
 ];
 
 describe("isFrictionless", function () {
-  it("flags navigate / open_* / complete_task as frictionless", function () {
+  it("flags navigate / open_* as frictionless", function () {
     expect(isFrictionless("navigate")).toBe(true);
     expect(isFrictionless("open_meeting")).toBe(true);
     expect(isFrictionless("open_item")).toBe(true);
     expect(isFrictionless("open_contact")).toBe(true);
     expect(isFrictionless("open_cadence")).toBe(true);
-    expect(isFrictionless("complete_task")).toBe(true);
+    // complete_task was moved to `confirm` in Phase 1 — a poisoned meeting
+    // note shouldn't be able to silently close the user's tasks.
+    expect(isFrictionless("complete_task")).toBe(false);
   });
 
   it("does NOT flag confirm-required tools", function () {

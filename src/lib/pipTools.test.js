@@ -122,8 +122,11 @@ describe("planToolCalls (Phase 2.5)", function () {
       { name: "create_open_item",input: { account_id: "a2", text: "y" } },
       { name: "create_open_item",input: { account_id: "a3", text: "z" } },
     ]);
-    expect(p.immediate.length).toBe(3);  // nav + complete + open
-    expect(p.confirm.length).toBe(3);    // three open-items
+    // complete_task moved to `confirm` in Phase 1, so it lands with the
+    // create_open_item calls in the confirm bucket. Immediate is now just
+    // navigate + open_meeting.
+    expect(p.immediate.length).toBe(2);
+    expect(p.confirm.length).toBe(4);
     expect(p.mode).toBe("batch");
     expect(p.dominantType).toBe("create_open_item");
   });
@@ -153,7 +156,8 @@ describe("TOOL_META + helpers", function () {
     expect(needsConfirm("create_open_item")).toBe(true);
     expect(needsConfirm("log_meeting")).toBe(true);
     expect(needsConfirm("remember_fact")).toBe(true);
-    expect(needsConfirm("complete_task")).toBe(false);
+    // complete_task moved to `confirm` in Phase 1 (meeting-note injection guard).
+    expect(needsConfirm("complete_task")).toBe(true);
     expect(needsConfirm("navigate")).toBe(false);
     expect(needsConfirm("open_meeting")).toBe(false);
     expect(needsConfirm("not_a_tool")).toBe(false);
