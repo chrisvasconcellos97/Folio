@@ -129,6 +129,7 @@ export function CadenceMeetingMode({
   // whole viewport.
   var [sidebarCollapsed, setCollapsed]  = useState(isMobile);
   var [briefExpanded, setBriefExpanded] = useState(false);
+  var [mobileTab, setMobileTab]         = useState("projects");
   var [quickItem, setQuickItem]         = useState("");
   var [attendees, setAttendees]         = useState(Array.isArray(draft.attendees) ? draft.attendees.slice() : []);
   var saveTimer = useRef(null);
@@ -338,14 +339,15 @@ export function CadenceMeetingMode({
         </div>
       )}
 
-      {/* Pip brief strip — collapsed-by-default one-liner on mobile so the
-          notepad gets the screen. Tap to expand. Desktop renders full. */}
+      {/* Pip brief strip — collapsed one-liner on mobile until tapped; expanded
+          form gets its own collapse pair so we don't trap the user. */}
       {hasBrief && (
         <div style={{
           flexShrink: 0,
           padding: isMobile ? "8px 12px" : "12px 18px 14px 18px",
           background: C.surface2,
           borderBottom: "1px solid " + C.rule,
+          position: "relative",
         }}>
           <PipBriefPanel
             brief={brief}
@@ -356,6 +358,22 @@ export function CadenceMeetingMode({
             mobileCollapsed={isMobile && !briefExpanded}
             onExpand={function () { setBriefExpanded(true); }}
           />
+          {isMobile && briefExpanded && (
+            <div style={{ display: "flex", justifyContent: "center", marginTop: 4 }}>
+              <button
+                onClick={function () { setBriefExpanded(false); }}
+                aria-label="Collapse brief"
+                style={{
+                  background: "transparent", border: "none",
+                  color: C.textMuted, fontSize: 11, fontFamily: MONO,
+                  cursor: "pointer", padding: "4px 12px",
+                  letterSpacing: "0.06em", textTransform: "uppercase",
+                }}
+              >
+                ▴ Hide brief
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -407,9 +425,12 @@ export function CadenceMeetingMode({
         </div>
       )}
 
-      {/* Body */}
-      <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
-        {/* Sidebar */}
+      {/* Body — desktop: sidebar + notes side-by-side. Mobile: stacked
+          vertical with a tabbed context section so neither column gets
+          squeezed. */}
+      <div style={{ display: "flex", flex: 1, minHeight: 0, flexDirection: isMobile ? "column" : "row" }}>
+        {/* Sidebar — desktop only */}
+        {!isMobile && (
         <div style={{
           width: sidebarWidth,
           background: C.surface2,
@@ -501,6 +522,7 @@ export function CadenceMeetingMode({
             </div>
           )}
         </div>
+        )}
 
         {/* Notes area */}
         <div style={{
@@ -508,35 +530,40 @@ export function CadenceMeetingMode({
           background: C.bg,
         }}>
           <div style={{
-            flex: 1, overflowY: "auto",
+            flex: isMobile ? "0 0 auto" : 1,
+            overflowY: "auto",
             display: "flex", justifyContent: "center",
-            padding: isMobile ? "14px 14px 6px 14px" : "32px 32px 8px 32px",
+            padding: isMobile ? "10px 10px 6px 10px" : "32px 32px 8px 32px",
           }}>
             <div style={{
               width: "100%", maxWidth: 920,
               display: "flex", flexDirection: "column",
             }}>
-              <div style={{
-                fontFamily: MONO, fontSize: 9.5, color: C.textMuted,
-                textTransform: "uppercase", letterSpacing: "0.1em",
-                marginBottom: 10,
-              }}>
-                {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
-              </div>
+              {!isMobile && (
+                <div style={{
+                  fontFamily: MONO, fontSize: 9.5, color: C.textMuted,
+                  textTransform: "uppercase", letterSpacing: "0.1em",
+                  marginBottom: 10,
+                }}>
+                  {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+                </div>
+              )}
               <textarea
                 ref={notesRef}
                 value={notes}
                 onChange={function (e) { setNotes(e.target.value); }}
                 placeholder="Start typing — Pip will summarize when you end the meeting…"
                 style={{
-                  flex: 1, width: "100%", minHeight: isMobile ? 300 : 440,
+                  flex: 1, width: "100%",
+                  height: isMobile ? 220 : undefined,
+                  minHeight: isMobile ? 220 : 440,
                   background: C.surface,
                   color: C.text,
                   border: "1px solid " + C.rule,
                   borderRadius: 12,
                   outline: "none",
-                  padding: isMobile ? "14px 16px" : "22px 26px",
-                  fontFamily: INTER, fontSize: 15.5, lineHeight: 1.7,
+                  padding: isMobile ? "12px 14px" : "22px 26px",
+                  fontFamily: INTER, fontSize: isMobile ? 14.5 : 15.5, lineHeight: 1.65,
                   resize: "none",
                   boxSizing: "border-box",
                   boxShadow: "0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.06)",
@@ -544,6 +571,104 @@ export function CadenceMeetingMode({
               />
             </div>
           </div>
+
+          {/* Mobile context tabs + content. Stacks below the notes so all
+              three sections (projects / items / contacts) are reachable
+              without a sidebar drawer. */}
+          {isMobile && (
+            <>
+              <div style={{
+                display: "flex", gap: 4,
+                padding: "6px 10px 0 10px",
+                background: C.bg,
+                flexShrink: 0,
+              }}>
+                {[
+                  { id: "projects", label: "Projects", count: (projects || []).length },
+                  { id: "items",    label: "Items",    count: (openItems || []).length },
+                  { id: "contacts", label: "Contacts", count: (contacts || []).length },
+                ].map(function (t) {
+                  var active = mobileTab === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={function () { setMobileTab(t.id); }}
+                      style={{
+                        flex: 1,
+                        background: active ? C.surface : "transparent",
+                        border: "1px solid " + (active ? C.rule : "transparent"),
+                        borderBottom: "none",
+                        borderRadius: "8px 8px 0 0",
+                        padding: "8px 8px",
+                        fontSize: 11.5, fontWeight: active ? 600 : 400,
+                        color: active ? C.accent : C.textMuted,
+                        fontFamily: INTER, cursor: "pointer",
+                        display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
+                      }}
+                    >
+                      {t.label}
+                      <span style={{
+                        fontFamily: MONO, fontSize: 10, color: active ? C.accent : C.textMuted,
+                        background: active ? C.accentFaint : "transparent",
+                        border: "1px solid " + (active ? C.accentLine : C.rule),
+                        borderRadius: 999, padding: "0 6px",
+                      }}>{t.count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div style={{
+                flex: 1, overflowY: "auto",
+                padding: "12px 10px 10px",
+                background: C.surface,
+                borderTop: "1px solid " + C.rule,
+              }}>
+                {mobileTab === "projects" && ((projects || []).length === 0 ? (
+                  <div style={{ fontSize: 12, color: C.textMuted, padding: "4px 0" }}>No active projects.</div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {(projects || []).map(function (p) {
+                      return (
+                        <HubProjectCard
+                          key={p.id}
+                          project={p}
+                          accounts={accounts}
+                          members={members}
+                          userEmail={userEmail}
+                          onUpdateProject={onUpdateProject}
+                        />
+                      );
+                    })}
+                  </div>
+                ))}
+                {mobileTab === "items" && ((openItems || []).length === 0 ? (
+                  <div style={{ fontSize: 12, color: C.green, padding: "4px 0" }}>All clear.</div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {(openItems || []).map(function (i) {
+                      return <OpenItemRow key={i.id} item={i} onClose={onCloseItem} />;
+                    })}
+                  </div>
+                ))}
+                {mobileTab === "contacts" && ((contacts || []).length === 0 ? (
+                  <div style={{ fontSize: 12, color: C.textMuted, padding: "4px 0" }}>No contacts.</div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {(contacts || []).map(function (c) {
+                      return (
+                        <ContactCard
+                          key={c.id}
+                          contact={c}
+                          selected={attendees.indexOf(c.name) >= 0}
+                          onToggle={toggleAttendee}
+                        />
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
           <div style={{
             display: "flex", gap: 8, alignItems: "center",
             padding: "10px 16px",

@@ -376,16 +376,23 @@ function HistoryRow({ meeting, onEdit, onDelete, accountId, openItems, addItem, 
 /* ---- Open items row ---- */
 export function OpenItemRow({ item, onClose }) {
   return (
-    <div style={Object.assign({}, glass, { display: "flex", alignItems: "flex-start", gap: 10, borderRadius: 10, padding: "10px 12px" })}>
+    <div style={Object.assign({}, glass, { display: "flex", alignItems: "flex-start", gap: 6, borderRadius: 10, padding: "10px 12px" })}>
       <button
         onClick={function () { onClose(item.id); }}
         aria-label="Mark complete"
         style={{
+          width: 24, height: 24,
+          display: "inline-flex", alignItems: "center", justifyContent: "center",
+          background: "none", border: "none", padding: 0,
+          cursor: "pointer", flexShrink: 0, marginTop: -2,
+        }}
+      >
+        <span style={{
           width: 16, height: 16, borderRadius: 4,
           border: "1.5px solid " + C.accentDim, background: "transparent",
-          cursor: "pointer", flexShrink: 0, marginTop: 2,
-        }}
-      />
+          display: "inline-block",
+        }} />
+      </button>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 12, color: C.text, lineHeight: 1.45 }}>{item.text}</div>
         {item.due_date && (
