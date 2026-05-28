@@ -135,6 +135,23 @@
 </style>
 </head>
 <body>
+  <div id="errbox" style="display:none;position:fixed;top:0;left:0;right:0;background:#b13e53;color:#f4f0d8;padding:8px 12px;font:12px ui-monospace,Menlo,monospace;z-index:9999;white-space:pre-wrap;word-break:break-word;"></div>
+  <script>
+    window.addEventListener('error', (e) => {
+      const box = document.getElementById('errbox');
+      if (!box) return;
+      box.style.display = 'block';
+      box.textContent = 'JS ERROR: ' + (e.message || e.error || 'unknown') +
+        (e.filename ? ('\n@ ' + e.filename + ':' + e.lineno + ':' + e.colno) : '') +
+        (e.error && e.error.stack ? ('\n' + e.error.stack) : '');
+    });
+    window.addEventListener('unhandledrejection', (e) => {
+      const box = document.getElementById('errbox');
+      if (!box) return;
+      box.style.display = 'block';
+      box.textContent = 'PROMISE REJECTION: ' + (e.reason && e.reason.message ? e.reason.message : e.reason);
+    });
+  </script>
   <header>
     <h1>Agent Village</h1>
     <small>click a building to meet its agent &middot; esc to close</small>
@@ -153,10 +170,12 @@
   <footer id="footer">a quiet hamlet where the agents live</footer>
 
 <script>
-(() => {
+try { (() => {
   // ---------- Setup ----------
   const canvas = document.getElementById('world');
+  if (!canvas) throw new Error('canvas#world not found in DOM');
   const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('canvas 2d context unavailable');
   ctx.imageSmoothingEnabled = false;
 
   const W = canvas.width;   // 384
@@ -1058,7 +1077,14 @@
     const claude = buildings.find(b => b.id === 'claude');
     if (claude) openDialog(claude);
   }, 600);
-})();
+})(); } catch (e) {
+  const box = document.getElementById('errbox');
+  if (box) {
+    box.style.display = 'block';
+    box.textContent = 'INIT ERROR: ' + e.message + '\n' + (e.stack || '');
+  }
+  throw e;
+}
 </script>
 </body>
 </html>
