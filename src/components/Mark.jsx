@@ -158,6 +158,13 @@ var ANIMATORS = {
       r.knobs[k].setAttribute("cx", sx.toFixed(2));
     }
   },
+  updates: function (t, r) {
+    // "Something happened" pulse — the event flag disc breathes 0.4 → 1.0
+    // → 0.4 over 6.2s. Slow enough to read as a heartbeat, not strobe.
+    var u = (t / 6200) % 1;
+    var o = 0.4 + 0.6 * (0.5 - 0.5 * Math.cos(u * TAU));
+    if (r.flag) r.flag.setAttribute("opacity", o.toFixed(3));
+  },
 };
 
 // ── Per-tab glyph renderers + ref binders ─────────────────────────────────
@@ -259,6 +266,8 @@ function MarkImpl({ tab, size, active }) {
       bag.tracer = tracer;
     } else if (t === "settings") {
       bag.knobs = svg.querySelectorAll("circle");
+    } else if (t === "updates") {
+      bag.flag = svg.querySelector("circle");
     }
     refBag.current = bag;
 
@@ -358,6 +367,18 @@ function MarkImpl({ tab, size, active }) {
         <circle cx="-2" cy="-5" r="1.7" fill="currentColor" />
         <circle cx="3"  cy="0"  r="1.7" fill="currentColor" />
         <circle cx="-1" cy="5"  r="1.7" fill="currentColor" />
+      </>
+    );
+  } else if (t === "updates") {
+    // Timeline of three ticks with an event flag on the middle one.
+    // The flag (filled disc) is the first <circle> so the animator's
+    // querySelector finds it.
+    glyph = (
+      <>
+        <circle cx="2.5" cy="0" r="1.9" fill="currentColor" />
+        <line x1="-6"   y1="-5" x2="2"   y2="-5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity="0.55" />
+        <line x1="-6"   y1="0"  x2="-0.5" y2="0"  stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+        <line x1="-6"   y1="5"  x2="4"   y2="5"  stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity="0.55" />
       </>
     );
   } else {

@@ -51,6 +51,7 @@ export function PipView(props) {
   var shopMetrics     = props.shopMetrics;
   var cadences        = props.cadences;
   var projects        = props.projects;
+  var updates         = props.updates || [];
   // Optional Phase 2 wiring — caller may pass these from App.jsx. If absent
   // the corresponding tools simply turn into no-ops.
   var userId          = props.userId;
@@ -160,6 +161,7 @@ export function PipView(props) {
     var allItems    = items    || [];
     var allContacts = contacts || [];
     var allMeetings = meetings || [];
+    var allUpdates  = updates  || [];
     var cachedStateMap = {};
     (pipAcctState.states || []).forEach(function (s) {
       if (s.stale_at && new Date(s.stale_at).getTime() > Date.now()) {
@@ -191,6 +193,19 @@ export function PipView(props) {
         var acctProjects = (projects || [])
           .filter(function (p) { return p.account_id === a.id && p.status !== "complete" && p.status !== "on_hold"; })
           .map(function (p) { return { title: p.title, status: p.status, due_date: p.due_date }; });
+        var acctUpdates = allUpdates
+          .filter(function (u) { return u.account_id === a.id; })
+          .slice(0, 6)
+          .map(function (u) {
+            return {
+              update_date:     u.update_date,
+              update_type:     u.update_type,
+              title:           u.title,
+              description:     u.description,
+              owner:           u.owner,
+              observed_impact: u.observed_impact,
+            };
+          });
         return {
           id:      a.id,
           name:    a.name,
@@ -211,6 +226,7 @@ export function PipView(props) {
           openItems:      openItems,
           contacts:       acctContacts,
           activeProjects: acctProjects,
+          recentUpdates:  acctUpdates,
           cachedState:    cachedStateMap[a.id] || null,
           revenueTrend: latest ? {
             amount:    fmtRevenue(latest.revenue),

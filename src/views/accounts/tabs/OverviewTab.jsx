@@ -14,6 +14,7 @@ import {
   MONTH_NAMES,
 } from "../../../lib/metricsUtils";
 import { buildPipInsight } from "../../../lib/accountInsights.jsx";
+import { UPDATE_TYPE_LABELS, UPDATE_TYPE_COLORS } from "../../../lib/accountUpdateTypes";
 
 var RANGES = [
   { label: "30 Days",  days: 30 },
@@ -27,25 +28,74 @@ function pctColor(pct) {
   return pct >= 0 ? C.green : C.red;
 }
 
-function MiniSparkline({ records }) {
+function MiniSparkline({ records, updates }) {
   if (!records || records.length === 0) return null;
   var last12  = records.slice(-12);
   var maxRev  = Math.max.apply(null, last12.map(function (r) { return r.revenue; }));
   if (maxRev === 0) return null;
+
+  // Map any update_date that falls inside the last12 window onto a 0..1
+  // x-position so we can drop a tick at the right column.
+  var rangeStart = null;
+  var rangeEnd   = null;
+  if (last12.length > 0) {
+    var first = last12[0];
+    var last  = last12[last12.length - 1];
+    rangeStart = new Date(first.year, first.month - 1, 1);
+    rangeEnd   = new Date(last.year,  last.month,      0); // last day of last bucket
+  }
+  var ticks = (updates || []).map(function (u) {
+    if (!u.update_date || !rangeStart || !rangeEnd) return null;
+    var d = new Date(u.update_date + "T12:00:00");
+    if (d < rangeStart || d > rangeEnd) return null;
+    var span = rangeEnd - rangeStart;
+    var x = span > 0 ? (d - rangeStart) / span : 0;
+    return {
+      id:    u.id,
+      x:     x,
+      color: UPDATE_TYPE_COLORS[u.update_type] || C.textMuted,
+      title: u.title,
+      owner: u.owner,
+      date:  d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+    };
+  }).filter(Boolean);
+
   return (
-    <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 18, marginTop: 8 }}>
-      {last12.map(function (r, i) {
-        var h      = Math.max(2, Math.round((r.revenue / maxRev) * 18));
-        var isLast = i === last12.length - 1;
+    <div style={{ position: "relative", height: 22, marginTop: 8 }}>
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 18, position: "absolute", inset: 0 }}>
+        {last12.map(function (r, i) {
+          var h      = Math.max(2, Math.round((r.revenue / maxRev) * 18));
+          var isLast = i === last12.length - 1;
+          return (
+            <div
+              key={i}
+              title={MONTH_NAMES[r.month - 1] + " " + r.year + ": " + fmtRevenue(r.revenue)}
+              style={{
+                flex: 1, height: h,
+                background: isLast ? C.accent : C.accentDim,
+                borderRadius: 1,
+                opacity: isLast ? 0.9 : 0.4,
+              }}
+            />
+          );
+        })}
+      </div>
+      {/* Update-event ticks overlaid on top of the bars. */}
+      {ticks.map(function (t) {
         return (
           <div
-            key={i}
-            title={MONTH_NAMES[r.month - 1] + " " + r.year + ": " + fmtRevenue(r.revenue)}
+            key={t.id}
+            title={t.title + (t.owner ? " · " + t.owner : "") + " · " + t.date}
             style={{
-              flex: 1, height: h,
-              background: isLast ? C.accent : C.accentDim,
+              position: "absolute",
+              top: 0,
+              bottom: 4,
+              left: "calc(" + (t.x * 100).toFixed(2) + "% - 0.75px)",
+              width: 1.5,
+              background: t.color,
+              opacity: 0.85,
               borderRadius: 1,
-              opacity: isLast ? 0.9 : 0.4,
+              pointerEvents: "auto",
             }}
           />
         );
@@ -54,7 +104,7 @@ function MiniSparkline({ records }) {
   );
 }
 
-export function OverviewTab({ account, userId, orgId, openItems, meetings, onQuickMeeting, onLogMeeting, onAddItem, onSaveSummary, subAccounts, onSelectAccount, revenueHistory, shopMetrics, onUpdateAccount, projects, onSwitchTab }) {
+export function OverviewTab({ account, userId, orgId, openItems, meetings, onQuickMeeting, onLogMeeting, onAddItem, onSaveSummary, subAccounts, onSelectAccount, revenueHistory, shopMetrics, onUpdateAccount, projects, updates, onSwitchTab }) {
   var isInternalTeam = account.account_type === "internal_team";
   var isPartner      = account.account_type === "partner";
   var isCustomerType = !isInternalTeam && !isPartner;
@@ -303,6 +353,80 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
         />
       </Card>
 
+      {/* Recent updates — last 5, links into the full Updates tab. */}
+      {(function () {
+        var recent = (updates || []).slice(0, 5);
+        if (recent.length === 0) {
+          return (
+            <Card onClick={onSwitchTab ? function () { onSwitchTab("updates"); } : undefined}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                <FL>Recent Updates</FL>
+                <span style={{ fontSize: 10, color: C.textMuted }}>0 logged</span>
+              </div>
+              <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.5, marginBottom: 8 }}>
+                No revenue-impact updates logged yet.
+              </div>
+              <SecBtn onClick={onSwitchTab ? function () { onSwitchTab("updates"); } : undefined} style={{ fontSize: 11 }}>
+                + Log update
+              </SecBtn>
+            </Card>
+          );
+        }
+        return (
+          <Card>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <FL>Recent Updates</FL>
+              <button
+                onClick={onSwitchTab ? function () { onSwitchTab("updates"); } : undefined}
+                style={{
+                  background: "none", border: "none", cursor: "pointer",
+                  fontSize: 10, color: C.textMuted, fontFamily: "'Inter', system-ui, sans-serif",
+                }}
+              >
+                View all →
+              </button>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+              {recent.map(function (u) {
+                var color = UPDATE_TYPE_COLORS[u.update_type] || C.textMuted;
+                var label = UPDATE_TYPE_LABELS[u.update_type] || u.update_type;
+                return (
+                  <div
+                    key={u.id}
+                    onClick={onSwitchTab ? function () { onSwitchTab("updates"); } : undefined}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 8,
+                      cursor: onSwitchTab ? "pointer" : "default",
+                    }}
+                  >
+                    <span style={{
+                      fontSize: 10, color: C.textMuted, fontVariantNumeric: "tabular-nums",
+                      minWidth: 52, flexShrink: 0,
+                    }}>
+                      {u.update_date
+                        ? new Date(u.update_date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                        : "—"}
+                    </span>
+                    <span style={{ fontSize: 12, color: C.text, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {u.title}
+                    </span>
+                    <span style={{
+                      fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+                      fontSize: 9, color: color, fontWeight: 600,
+                      letterSpacing: "0.06em", textTransform: "uppercase",
+                      padding: "1px 6px", borderRadius: 10, border: "1px solid " + color,
+                      whiteSpace: "nowrap", flexShrink: 0,
+                    }}>
+                      {label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        );
+      })()}
+
       {/* Stats grid */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
         <Card onClick={account.last_meeting && onSwitchTab ? function () { onSwitchTab("meetings"); } : undefined}>
@@ -440,7 +564,7 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
                     )}
                   </div>
                 </div>
-                <MiniSparkline records={records} />
+                <MiniSparkline records={records} updates={updates} />
               </Card>
             )}
 

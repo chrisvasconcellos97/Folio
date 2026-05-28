@@ -126,6 +126,7 @@ export default function App() {
   var { meetings, loading: meetLoading, error: meetError, refetch: refetchMeetings, addMeeting } = useMeetings(userId);
   var [allItems, setAllItems]       = useState([]);
   var [allContacts, setAllContacts] = useState([]);
+  var [allUpdates, setAllUpdates]   = useState([]);
   useEffect(function () {
     if (!userId) return;
     supabase.from("folio_items").select("*").eq("user_id", userId).then(function (r) {
@@ -133,6 +134,9 @@ export default function App() {
     });
     supabase.from("folio_contacts").select("*").eq("user_id", userId).then(function (r) {
       if (!r.error) setAllContacts(r.data || []);
+    });
+    supabase.from("folio_account_updates").select("*").eq("user_id", userId).order("update_date", { ascending: false }).then(function (r) {
+      if (!r.error) setAllUpdates(r.data || []);
     });
   }, [userId, accounts.length, meetings.length]);
   var { cadences, loading: cadenceLoading, addCadence, error: cadenceError, refetch: refetchCadencesApp } = useCadences(userId);
@@ -496,6 +500,7 @@ export default function App() {
       shopMetrics={shopMetrics}
       cadences={cadences}
       projects={allProjects}
+      updates={allUpdates}
       userId={userId}
       addItem={pipAddItem}
       addMeeting={addMeeting}

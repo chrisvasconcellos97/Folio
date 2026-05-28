@@ -10,6 +10,7 @@ import { useItems } from "../../hooks/useItems";
 import { useContacts } from "../../hooks/useContacts";
 import { useCadences } from "../../hooks/useCadences";
 import { useProjects } from "../../hooks/useProjects";
+import { useAccountUpdates } from "../../hooks/useAccountUpdates";
 import { callBriefMePip } from "../../lib/pip";
 import { usePipAccountState } from "../../hooks/usePipAccountState";
 import { AccountDetailHeader } from "./AccountDetailHeader";
@@ -21,6 +22,7 @@ import { ContactsTab } from "./tabs/ContactsTab";
 import { CadenceTab } from "./tabs/CadenceTab";
 import { ProjectsTab } from "./tabs/ProjectsTab";
 import { ShopsTab } from "./tabs/ShopsTab";
+import { UpdatesTab } from "./tabs/UpdatesTab";
 import { AddAccountModal } from "./AddAccountModal";
 import { AccountMergeModal } from "./AccountMergeModal";
 import { LogConversationModal } from "./LogConversationModal";
@@ -47,8 +49,8 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
   var isCustomerType = !isInternalTeam && !isPartner;
 
   var TABS = account.account_type === 'mso'
-    ? ["overview", "shops", "meetings", "tasks", "contacts", "cadence", "projects"]
-    : ["overview", "meetings", "tasks", "contacts", "cadence", "projects"];
+    ? ["overview", "shops", "meetings", "tasks", "contacts", "cadence", "projects", "updates"]
+    : ["overview", "meetings", "tasks", "contacts", "cadence", "projects", "updates"];
 
   var workspaceLabel = isInternalTeam ? "Departments" : isPartner ? "Partners" : "Accounts";
 
@@ -140,6 +142,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
   var { contacts, addContact, updateContact, deleteContact, error: contactsError, refetch: refetchContacts } = useContacts(userId, account.id, orgId);
   var { cadences, addCadence, updateCadence, deleteCadence, error: cadencesError, refetch: refetchCadences } = useCadences(userId, account.id);
   var { projects, addProject, updateProject, deleteProject, error: projectsError, refetch: refetchProjects } = useProjects(userId, account.id, orgId, childAccountIds);
+  var { updates, addUpdate, updateUpdate, deleteUpdate, error: updatesError, refetch: refetchUpdates } = useAccountUpdates(userId, account.id, orgId);
 
   useEffect(function () {
     if (!initialHubCadenceId || !cadences || cadences.length === 0) return;
@@ -296,6 +299,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
           revenueHistory={revenueHistory || []}
           shopMetrics={shopMetrics || []}
           projects={projects}
+          updates={updates}
           onSwitchTab={setTab}
         />
       )}
@@ -395,6 +399,20 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
           updateProject={updateProject}
           deleteProject={deleteProject}
         />
+        </>
+      )}
+
+      {tab === "updates" && (
+        <>
+          <ErrorBanner message={updatesError ? "Couldn't load updates — check your connection" : null} onRetry={refetchUpdates} />
+          <UpdatesTab
+            account={account}
+            updates={updates}
+            orgMembers={members}
+            addUpdate={addUpdate}
+            updateUpdate={updateUpdate}
+            deleteUpdate={deleteUpdate}
+          />
         </>
       )}
       </div>

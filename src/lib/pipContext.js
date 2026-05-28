@@ -251,6 +251,23 @@ function renderAccountFull(a) {
     });
   }
 
+  // Revenue-impact updates — recent log of things that could have moved the
+  // revenue line. When a MoM dip shows up, Pip can cross-reference these.
+  var recentUpdates = take(a.recentUpdates, 6);
+  if (recentUpdates.length) {
+    lines.push("");
+    lines.push("Recent updates (" + recentUpdates.length + "):");
+    recentUpdates.forEach(function (u) {
+      var parts = ["- " + (u.update_date || "?")];
+      if (u.update_type) parts.push(u.update_type);
+      if (u.owner)       parts.push(u.owner);
+      var head = parts.join(" · ") + " · " + (u.title || "—");
+      if (u.observed_impact) head += " [impact: " + u.observed_impact + "]";
+      lines.push(head);
+      if (u.description) lines.push("  " + trunc(u.description, 200));
+    });
+  }
+
   return lines.join("\n");
 }
 
