@@ -169,7 +169,11 @@ export function MeetingsTab({ meetings, accountName, accountId, userId, openItem
         onUpdateMeeting(m.id, patch)
           .then(function () {
             var n = data.action_items ? data.action_items.split(/\r?\n/).filter(function (l) { return l.trim(); }).length : 0;
-            showToast(n > 0 ? "Pip summary saved · " + n + " action item" + (n !== 1 ? "s" : "") : "Pip summary saved");
+            if (n > 0) {
+              showToast("Pip summary saved · " + n + " action item" + (n !== 1 ? "s" : ""));
+            } else {
+              showToast("Pip summary saved · no action items found", "warning");
+            }
           })
           .catch(function (err) { console.error("Pip save failed:", err); });
       }

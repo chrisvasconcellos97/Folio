@@ -197,7 +197,7 @@ export function callAskPip(payload) {
 
   var m = payload.meeting || {};
   var prompt =
-    "Summarize this meeting, extract action items, and draft a follow-up email. " +
+    "Summarize this meeting, extract action items aggressively, and draft a follow-up email. " +
     "Return ONLY valid JSON: {\"summary\":\"...\",\"action_items\":[\"...\"],\"email\":\"...\"}.\n\n" +
     "Account: " + (payload.accountName || "—") + "\n" +
     "Meeting: " + (m.title || "Untitled") + " (" + (m.meeting_date || "") + ")\n" +
@@ -205,10 +205,17 @@ export function callAskPip(payload) {
     (m.talking_points ? "Talking points: " + m.talking_points + "\n" : "") +
     (m.action_items   ? "Existing action items: " + m.action_items + "\n" : "") +
     (m.commitments    ? "Commitments: " + m.commitments + "\n" : "") +
-    "\nSummary: 2-3 sentences. " +
-    "action_items: array of concrete next steps as plain strings (one item per string, no numbering, no bullets). " +
-    "If existing action items are listed, merge with anything new from the notes — don't lose them. " +
-    "Email body only (no subject, plain prose).";
+    "\nSummary: 2-3 sentences capturing what was discussed.\n" +
+    "action_items: Be GENEROUS, not strict. Include ANY of the following you can find or reasonably infer from the notes:\n" +
+    "  - tasks Chris committed to (send, follow up, draft, prepare, call, schedule, etc.)\n" +
+    "  - commitments the other party made (they will send X, get back on Y)\n" +
+    "  - open questions or unresolved items mentioned\n" +
+    "  - 'next time' / 'next meeting' references\n" +
+    "  - things to verify, confirm, or check on\n" +
+    "Each item is one short plain string (no bullets, no numbering, no 'TODO:' prefix). " +
+    "If existing action items are listed above, include all of them in your output plus anything new — don't lose them. " +
+    "If after a careful read you truly find zero, return an empty array — but try hard first.\n" +
+    "email: Body only (no subject, plain prose, friendly professional tone).";
 
   return callPipApi(
     [{ role: "user", content: prompt }],
