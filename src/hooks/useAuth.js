@@ -13,6 +13,7 @@ var SENSITIVE_LOCALSTORAGE_PREFIXES = [
   "folio_accts_",         // useAccounts cache
   "folio_meetings_",      // useMeetings cache
   "folio_pip_messages_",  // PipView chat transcript (per-user)
+  "folio_search_history", // Account-name fragments from prior searches
 ];
 
 function wipeSensitiveLocalStorage() {

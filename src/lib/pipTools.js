@@ -205,7 +205,7 @@ export var TOOL_META = {
   open_contact:          { category: "open",         displayTitle: "open the Add Contact modal" },
   open_cadence:          { category: "open",         displayTitle: "open the Set Cadence modal" },
   navigate:              { category: "navigate",     displayTitle: "navigate" },
-  complete_task:         { category: "frictionless", displayTitle: "complete a task" },
+  complete_task:         { category: "confirm",      displayTitle: "complete a task" },
   add_quick_task:        { category: "confirm",      displayTitle: "add a quick task" },
   create_open_item:      { category: "confirm",      displayTitle: "create an open item" },
   log_meeting:           { category: "confirm",      displayTitle: "log a meeting" },
