@@ -526,7 +526,8 @@ export function CadenceMeetingMode({
 
         {/* Notes area */}
         <div style={{
-          flex: 1, display: "flex", flexDirection: "column", minWidth: 0,
+          flex: 1, display: "flex", flexDirection: "column",
+          minWidth: 0, minHeight: 0,
           background: C.bg,
         }}>
           <div style={{
