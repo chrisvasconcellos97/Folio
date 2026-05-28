@@ -350,6 +350,14 @@
           min-width: 44px;
           min-height: 44px;
         }
+        /* Safari iOS auto-zooms when a focused input has font-size < 16px.
+           Force every text-y input at touch devices to 16px so it never
+           triggers, regardless of what an inline style says. */
+        input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+        textarea,
+        select {
+          font-size: 16px !important;
+        }
       }
 
       /* Light-only effects (spec §The Depth System + §Animation):
