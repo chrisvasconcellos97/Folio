@@ -102,7 +102,7 @@ function buildGaugeInsight(projects, accountsById, handlers) {
   var seed = String(new Date().getDate()) + ":" + prjs.length;
   var h    = handlers || {};
 
-  // Hot phrases — only the urgent stuff gets glow.
+  // Hot phrases — only the count/state glows. Named project stays plain text.
   var overdueGlow = (
     <Glow onClick={h.onClickOverdue}>
       {overdue.length + " project" + (overdue.length !== 1 ? "s" : "") + (overdue.length === 1 ? " is" : " are") + " past due"}
@@ -113,32 +113,27 @@ function buildGaugeInsight(projects, accountsById, handlers) {
       {blocked.length + " project" + (blocked.length !== 1 ? "s" : "") + " blocked"}
     </Glow>
   );
-  function projectGlow(p) {
-    var name = p.title;
+  function projectLabel(p) {
     var acct = p.account_id ? accountsById[p.account_id] : null;
-    return (
-      <Glow onClick={function () { h.onClickProject && h.onClickProject(p.id); }}>
-        {name}{acct ? " (" + acct.name + ")" : ""}
-      </Glow>
-    );
+    return p.title + (acct ? " (" + acct.name + ")" : "");
   }
 
   if (overdue.length > 0) {
     return pickV(seed + "a", [
-      <>{overdueGlow}. {projectGlow(overdue[0])} needs eyes first.</>,
-      <>Past due: {overdueGlow}. Top of the pile is {projectGlow(overdue[0])}.</>,
+      <>{overdueGlow}. {projectLabel(overdue[0])} needs eyes first.</>,
+      <>Past due: {overdueGlow}. Top of the pile is {projectLabel(overdue[0])}.</>,
     ]);
   }
   if (blocked.length > 0) {
     return pickV(seed + "a", [
-      <>{blockedGlow}. {projectGlow(blocked[0])} is waiting on something — unstick it.</>,
-      <>Blocked work: {blockedGlow}. Start with {projectGlow(blocked[0])}.</>,
+      <>{blockedGlow}. {projectLabel(blocked[0])} is waiting on something — unstick it.</>,
+      <>Blocked work: {blockedGlow}. Start with {projectLabel(blocked[0])}.</>,
     ]);
   }
   if (highPri.length > 0) {
     return pickV(seed + "a", [
-      <>{highPri.length} high-priority project{highPri.length !== 1 ? "s" : ""} in flight. Keep momentum on {projectGlow(highPri[0])}.</>,
-      <>Top of mind: {highPri.length} high-priority. Stay on {projectGlow(highPri[0])}.</>,
+      <>{highPri.length} high-priority project{highPri.length !== 1 ? "s" : ""} in flight. Keep momentum on {projectLabel(highPri[0])}.</>,
+      <>Top of mind: {highPri.length} high-priority. Stay on {projectLabel(highPri[0])}.</>,
     ]);
   }
   if (active.length > 0) {

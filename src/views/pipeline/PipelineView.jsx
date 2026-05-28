@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { C, glass } from "../../lib/colors";
+import { Glow } from "../../components/Glow";
 
 var PV_MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var PV_SERIF = "'Fraunces', Georgia, serif";
@@ -80,9 +81,10 @@ function Sparkline({ records }) {
   );
 }
 
-function buildPipelineInsight(accounts, revenueHistory) {
+function buildPipelineInsight(accounts, revenueHistory, handlers) {
   var seed     = "pipeline" + new Date().getDate().toString();
   var withData = accounts.filter(function (a) { return latestRecord(revenueHistory, a.id) !== null; });
+  var h        = handlers || {};
 
   if (withData.length === 0) {
     return pickV(seed + "p0", [
@@ -94,53 +96,52 @@ function buildPipelineInsight(accounts, revenueHistory) {
   var momValues = withData
     .map(function (a) { return momPct(revenueHistory, a.id, "revenue"); })
     .filter(function (p) { return p !== null; });
-  var avgMoM  = momValues.length > 0
+  var avgMoM   = momValues.length > 0
     ? Math.round(momValues.reduce(function (s, p) { return s + p; }, 0) / momValues.length)
     : null;
-  var down    = momValues.filter(function (p) { return p < 0; }).length;
-  var up      = momValues.filter(function (p) { return p > 0; }).length;
-  var atRisk  = accounts.filter(function (a) { return a.status === "red"; }).length;
+  var down     = momValues.filter(function (p) { return p < 0; }).length;
+  var up       = momValues.filter(function (p) { return p > 0; }).length;
+  var atRisk   = accounts.filter(function (a) { return a.status === "red"; }).length;
   var watching = accounts.filter(function (a) { return a.status === "yellow"; }).length;
 
-  var parts = [];
+  // Hot phrases — only urgent stuff (declines, at-risk) glows.
+  var downGlow   = <Glow onClick={h.onClickDown}>{down + " account" + (down !== 1 ? "s" : "") + " trending down"}</Glow>;
+  var atRiskGlow = <Glow onClick={h.onClickAtRisk}>{atRisk + " account" + (atRisk !== 1 ? "s" : "") + " at risk"}</Glow>;
 
+  var lead;
   if (avgMoM !== null) {
-    parts.push(pickV(seed + "pl", [
-      withData.length + " of " + accounts.length + " accounts reporting. Book is " + (avgMoM >= 0 ? "up" : "down") + " " + Math.abs(avgMoM) + "% MoM on average.",
-      "Tracking " + withData.length + " account" + (withData.length !== 1 ? "s" : "") + ". Average MoM: " + (avgMoM >= 0 ? "+" : "") + avgMoM + "%.",
-    ]));
+    lead = pickV(seed + "pl", [
+      <>{withData.length} of {accounts.length} accounts reporting. Book is {avgMoM >= 0 ? "up" : "down"} {Math.abs(avgMoM)}% MoM on average.</>,
+      <>Tracking {withData.length} account{withData.length !== 1 ? "s" : ""}. Average MoM: {avgMoM >= 0 ? "+" : ""}{avgMoM}%.</>,
+    ]);
   } else {
-    parts.push(pickV(seed + "pl", [
-      withData.length + " of " + accounts.length + " accounts have revenue history logged.",
-      withData.length + " reporting, " + (accounts.length - withData.length) + " without data yet.",
-    ]));
+    lead = <>{withData.length} of {accounts.length} accounts have revenue history logged.</>;
   }
 
+  var middle = null;
   if (down > 0) {
-    parts.push(pickV(seed + "ps", [
-      down + " account" + (down !== 1 ? "s are" : " is") + " trending down — worth a look.",
-      down + " down, " + up + " up. Address the declines before they compound.",
-    ]));
+    middle = pickV(seed + "ps", [
+      <>{downGlow} — worth a look.</>,
+      <>{downGlow}, {up} up. Address the declines before they compound.</>,
+    ]);
   } else if (momValues.length > 0) {
-    parts.push(pickV(seed + "ps", [
+    middle = pickV(seed + "ps", [
       "Everything with data is trending up. Don't jinx it.",
       up + " account" + (up !== 1 ? "s" : "") + " moving in the right direction.",
-    ]));
+    ]);
   }
 
+  var tail = null;
   if (atRisk > 0) {
-    parts.push(pickV(seed + "pc", [
-      atRisk + " account" + (atRisk !== 1 ? "s" : "") + " marked at risk. Those need priority attention.",
-      atRisk + " at-risk — make sure they're getting face time before the number gets worse.",
-    ]));
+    tail = pickV(seed + "pc", [
+      <>{atRiskGlow}. Those need priority attention.</>,
+      <>{atRiskGlow} — make sure they're getting face time before the number gets worse.</>,
+    ]);
   } else if (watching > 0) {
-    parts.push(pickV(seed + "pc", [
-      watching + " on watch status. Keep tabs.",
-      watching + " account" + (watching !== 1 ? "s" : "") + " on yellow. Don't let those slip to red.",
-    ]));
+    tail = watching + " account" + (watching !== 1 ? "s" : "") + " on watch. Keep tabs.";
   }
 
-  return parts.join(" ");
+  return <>{lead}{middle ? <> {middle}</> : null}{tail ? <> {tail}</> : null}</>;
 }
 
 function getCurrentMonthYear() {
@@ -312,9 +313,11 @@ export function PipelineView({ accounts, loading, revenueHistory, shopMetrics, o
     });
   }, [accounts, tierFilter, statusFilter, revFilter]);
 
-  var pipelineInsight = useMemo(function () {
-    return buildPipelineInsight(accounts, rev);
-  }, [accounts, rev]);
+  var [sortByDecline, setSortByDecline] = useState(false);
+  var pipelineInsight = buildPipelineInsight(accounts, rev, {
+    onClickDown:   function () { setStatusFilter("All"); setTierFilter("All"); setRevFilter("any"); setSortByDecline(true); },
+    onClickAtRisk: function () { setStatusFilter("red"); setSortByDecline(false); },
+  });
 
   if (loading) {
     return <PipLoader />;
@@ -324,6 +327,11 @@ export function PipelineView({ accounts, loading, revenueHistory, shopMetrics, o
   var withoutData = filteredAccounts.filter(function (a) { return latestRecord(rev, a.id) === null; });
 
   withData.sort(function (a, b) {
+    if (sortByDecline) {
+      var pa = momPct(rev, a.id, "revenue");
+      var pb = momPct(rev, b.id, "revenue");
+      return (pa === null ? 999 : pa) - (pb === null ? 999 : pb);
+    }
     return latestRecord(rev, b.id).revenue - latestRecord(rev, a.id).revenue;
   });
 
@@ -353,8 +361,25 @@ export function PipelineView({ accounts, loading, revenueHistory, shopMetrics, o
       </div>
 
       <div style={{ marginBottom: 12 }}>
-        <PipInsightCard text={pipelineInsight} />
+        <PipInsightCard segments={[pipelineInsight]} />
       </div>
+      {sortByDecline && (
+        <div style={{ marginBottom: 8 }}>
+          <button
+            onClick={function () { setSortByDecline(false); }}
+            style={{
+              background: C.accentFaint, border: "1px solid " + C.accentLine,
+              borderRadius: 999, padding: "4px 12px",
+              fontFamily: PV_MONO, fontSize: 10.5, color: C.accent, fontWeight: 600,
+              cursor: "pointer", letterSpacing: "0.06em", textTransform: "uppercase",
+              display: "inline-flex", alignItems: "center", gap: 8,
+            }}
+          >
+            Sorted by biggest declines
+            <span style={{ fontSize: 13, lineHeight: 1, opacity: 0.7 }}>×</span>
+          </button>
+        </div>
+      )}
 
       {/* Filter chips */}
       <div style={{ display: "flex", gap: 5, marginBottom: 6, overflowX: "auto", paddingBottom: 2, alignItems: "center" }}>

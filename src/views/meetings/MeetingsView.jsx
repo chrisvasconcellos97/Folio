@@ -7,6 +7,7 @@ import { Card } from "../../components/Card";
 import { FL } from "../../components/FieldLabel";
 import { Modal } from "../../components/Modal";
 import { AddToTasksButton } from "../../components/AddToTasksButton";
+import { Glow } from "../../components/Glow";
 import { pickV } from "../../lib/metricsUtils";
 
 var MV_MONO  = "'JetBrains Mono', ui-monospace, monospace";
@@ -24,9 +25,10 @@ function groupByMonth(meetings) {
   return groups;
 }
 
-function buildMeetingsInsight(meetings) {
+function buildMeetingsInsight(meetings, handlers) {
   var seed  = "meetings" + new Date().getDate().toString();
   var today = new Date(); today.setHours(0, 0, 0, 0);
+  var h     = handlers || {};
 
   if (meetings.length === 0) {
     return pickV(seed + "m0", [
@@ -48,38 +50,42 @@ function buildMeetingsInsight(meetings) {
 
   var uniqueAccounts = new Set(meetings.map(function (m) { return m.account_id; })).size;
 
-  var parts = [];
+  // Hot phrases — meetings today and upcoming meetings glow.
+  var todayGlow    = <Glow onClick={h.onClickToday}>{todayCount + " meeting" + (todayCount !== 1 ? "s" : "") + " today"}</Glow>;
+  var upcomingGlow = <Glow onClick={h.onClickUpcoming}>{upcoming.length + " upcoming meeting" + (upcoming.length !== 1 ? "s" : "")}</Glow>;
 
+  var lead;
   if (todayCount > 0) {
-    parts.push(pickV(seed + "ml", [
-      todayCount === 1 ? "One meeting today. Make it count." : todayCount + " meetings on the board today.",
-      todayCount + " today. Be prepared.",
-    ]));
+    lead = pickV(seed + "ml", [
+      <>{todayGlow}. Make them count.</>,
+      <>{todayGlow}. Be prepared.</>,
+    ]);
   } else if (upcoming.length > 0) {
-    parts.push(pickV(seed + "ml", [
-      upcoming.length + " upcoming meeting" + (upcoming.length !== 1 ? "s" : "") + " logged.",
-      upcoming.length + " in the pipeline. Good to have the calendar filled.",
-    ]));
+    lead = pickV(seed + "ml", [
+      <>{upcomingGlow} logged.</>,
+      <>{upcomingGlow} in the pipeline. Good to have the calendar filled.</>,
+    ]);
   } else {
-    parts.push(pickV(seed + "ml", [
-      past.length + " meetings logged across " + uniqueAccounts + " account" + (uniqueAccounts !== 1 ? "s" : "") + ".",
-      "Meeting history spans " + uniqueAccounts + " account" + (uniqueAccounts !== 1 ? "s" : "") + ". " + past.length + " total.",
-    ]));
+    lead = pickV(seed + "ml", [
+      <>{past.length} meetings logged across {uniqueAccounts} account{uniqueAccounts !== 1 ? "s" : ""}.</>,
+      <>Meeting history spans {uniqueAccounts} account{uniqueAccounts !== 1 ? "s" : ""}. {past.length} total.</>,
+    ]);
   }
 
+  var tail = null;
   if (daysSinceLast !== null && daysSinceLast > 14 && upcoming.length === 0) {
-    parts.push(pickV(seed + "ms", [
-      "Last one was " + daysSinceLast + " days ago with nothing upcoming. Time to fill the calendar.",
-      daysSinceLast + " days since the last meeting and nothing ahead. Schedule something.",
-    ]));
+    tail = pickV(seed + "ms", [
+      <>Last one was {daysSinceLast} days ago with nothing upcoming. Time to fill the calendar.</>,
+      <>{daysSinceLast} days since the last meeting and nothing ahead. Schedule something.</>,
+    ]);
   } else if (upcoming.length > 0 && past.length > 0) {
-    parts.push(pickV(seed + "ms", [
-      past.length + " in the log, " + upcoming.length + " coming up.",
-      "Good momentum — " + past.length + " logged, " + upcoming.length + " ahead.",
-    ]));
+    tail = pickV(seed + "ms", [
+      <>{past.length} in the log, {upcoming.length} coming up.</>,
+      <>Good momentum — {past.length} logged, {upcoming.length} ahead.</>,
+    ]);
   }
 
-  return parts.join(" ");
+  return <>{lead}{tail ? <> {tail}</> : null}</>;
 }
 
 function formatDetailDate(dateStr) {
@@ -291,7 +297,10 @@ export function MeetingsView({ meetings, loading, allItems, addItem }) {
   var [selectedMeeting, setSelectedMeeting] = useState(null);
   var [hoveredId, setHoveredId] = useState(null);
 
-  var meetingsInsight = useMemo(function () { return buildMeetingsInsight(meetings); }, [meetings]);
+  var meetingsInsight = buildMeetingsInsight(meetings, {
+    onClickToday:    function () { var el = document.querySelector('[data-meetings-section="upcoming"]'); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); },
+    onClickUpcoming: function () { var el = document.querySelector('[data-meetings-section="upcoming"]'); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); },
+  });
   var today      = new Date();
   var upcoming   = meetings.filter(function (m) { return m.meeting_date && new Date(m.meeting_date) >= today; });
   var past       = meetings.filter(function (m) { return !m.meeting_date || new Date(m.meeting_date) < today; });
@@ -316,11 +325,11 @@ export function MeetingsView({ meetings, loading, allItems, addItem }) {
         </div>
       </div>
 
-      <PipInsightCard text={meetingsInsight} />
+      <PipInsightCard segments={[meetingsInsight]} />
 
       {/* Upcoming */}
       {upcoming.length > 0 && (
-        <div style={{ marginBottom: 24 }}>
+        <div data-meetings-section="upcoming" style={{ marginBottom: 24 }}>
           <div
             style={{
               fontSize: 10,

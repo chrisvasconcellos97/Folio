@@ -13,6 +13,7 @@ import {
   fmtRevenue, fmtPct, fmtDelta,
   MONTH_NAMES, pickV,
 } from "../../../lib/metricsUtils";
+import { Glow } from "../../../components/Glow";
 
 var RANGES = [
   { label: "30 Days",  days: 30 },
@@ -20,7 +21,7 @@ var RANGES = [
   { label: "All Time", days: null },
 ];
 
-function buildInternalTeamInsight(account, openItems, projects) {
+function buildInternalTeamInsight(account, openItems, projects, handlers) {
   var openCount    = (openItems || []).filter(function (i) { return !i.done; }).length;
   var today        = new Date().toISOString().split("T")[0];
   var overdueCount = (openItems || []).filter(function (i) { return !i.done && i.due_date && i.due_date < today; }).length;
@@ -28,50 +29,49 @@ function buildInternalTeamInsight(account, openItems, projects) {
     ? Math.floor((Date.now() - new Date(account.last_interaction_at).getTime()) / 86400000)
     : null;
   var seed = (account.id || account.name) + new Date().getDate().toString();
-  var parts = [];
+  var h    = handlers || {};
 
+  var overdueGlow = <Glow onClick={h.onClickOverdue}>{overdueCount + " overdue deliverable" + (overdueCount !== 1 ? "s" : "")}</Glow>;
+
+  var lead;
   if (overdueCount > 0) {
-    parts.push(pickV(seed + "a", [
-      account.name + " has " + overdueCount + " overdue deliverable" + (overdueCount !== 1 ? "s" : "") + ". Loop back with the team.",
-      overdueCount + " thing" + (overdueCount !== 1 ? "s" : "") + " past due on " + account.name + ". Worth nudging.",
-      account.name + " is sitting on " + overdueCount + " overdue commitment" + (overdueCount !== 1 ? "s" : "") + ". Get those clear.",
-    ]));
+    lead = pickV(seed + "a", [
+      <>{account.name} has {overdueGlow}. Loop back with the team.</>,
+      <>{overdueGlow} on {account.name}. Worth nudging.</>,
+    ]);
   } else if (daysSince !== null && daysSince >= 21) {
-    parts.push(pickV(seed + "a", [
-      "It's been " + daysSince + " days since you synced with " + account.name + ". Quick check-in?",
-      account.name + " has gone quiet — " + daysSince + " days since last touch. Worth a sync.",
-      "Haven't connected with " + account.name + " in " + daysSince + " days. Keep the cross-team rhythm.",
-    ]));
+    lead = pickV(seed + "a", [
+      <>It's been {daysSince} days since you synced with {account.name}. Quick check-in?</>,
+      <>{account.name} has gone quiet — {daysSince} days since last touch.</>,
+    ]);
   } else if (openCount > 0) {
-    parts.push(pickV(seed + "a", [
-      openCount + " open task" + (openCount !== 1 ? "s" : "") + " with " + account.name + " — track to close.",
-      account.name + " has " + openCount + " open thread" + (openCount !== 1 ? "s" : "") + " on your side. Keep moving them.",
-      "Active work with " + account.name + ": " + openCount + " thing" + (openCount !== 1 ? "s" : "") + " in flight.",
-    ]));
+    lead = pickV(seed + "a", [
+      <>{openCount} open task{openCount !== 1 ? "s" : ""} with {account.name} — track to close.</>,
+      <>Active work with {account.name}: {openCount} thing{openCount !== 1 ? "s" : ""} in flight.</>,
+    ]);
   } else {
-    parts.push(pickV(seed + "a", [
-      "Things are quiet with " + account.name + ". Clean state.",
-      account.name + " has no open items right now — good cadence.",
-      "No outstanding work with " + account.name + ". You're square.",
-    ]));
+    lead = pickV(seed + "a", [
+      "Things are quiet here. Clean state.",
+      "No outstanding work — you're square.",
+    ]);
   }
 
   var prjs    = projects || [];
   var blocked = prjs.filter(function (p) { return p.status === "blocked"; });
   var active  = prjs.filter(function (p) { return p.status === "in_progress"; });
+  var blockedGlow = <Glow onClick={h.onClickBlocked}>{blocked.length + " project" + (blocked.length !== 1 ? "s" : "") + " blocked"}</Glow>;
+
+  var tail = null;
   if (blocked.length > 0) {
-    parts.push(pickV(seed + "b", [
-      blocked.length + " project" + (blocked.length !== 1 ? "s" : "") + " blocked in Gauge — they're stuck on the team.",
-      "Gauge shows " + blocked.length + " block" + (blocked.length !== 1 ? "s" : "") + " on this team. Time to unstick.",
-    ]));
+    tail = pickV(seed + "b", [
+      <>{blockedGlow} in Gauge — time to unstick.</>,
+      <>Gauge shows {blockedGlow} on this team.</>,
+    ]);
   } else if (active.length > 0) {
-    parts.push(pickV(seed + "b", [
-      active.length + " project" + (active.length !== 1 ? "s" : "") + " in flight with this team.",
-      "Active work in Gauge: " + active.length + " on the go.",
-    ]));
+    tail = <>{active.length} project{active.length !== 1 ? "s" : ""} in flight with this team.</>;
   }
 
-  return parts.join(" ");
+  return <>{lead}{tail ? <> {tail}</> : null}</>;
 }
 
 function buildPartnerInsight(account, openItems, projects) {
@@ -79,57 +79,55 @@ function buildPartnerInsight(account, openItems, projects) {
   var daysSince = account.last_interaction_at
     ? Math.floor((Date.now() - new Date(account.last_interaction_at).getTime()) / 86400000)
     : null;
-  var seed  = (account.id || account.name) + new Date().getDate().toString();
-  var parts = [];
+  var seed = (account.id || account.name) + new Date().getDate().toString();
 
-  // Renewal check
+  // Renewal check — the agreement date itself glows (cold = expired, warning = soon)
+  var renewalLead = null;
   if (account.agreement_end_date) {
     var daysToRenew = Math.floor((new Date(account.agreement_end_date + "T00:00:00").getTime() - Date.now()) / 86400000);
     if (daysToRenew < 0) {
-      parts.push(pickV(seed + "r", [
-        "Agreement with " + account.name + " expired " + Math.abs(daysToRenew) + " day" + (Math.abs(daysToRenew) !== 1 ? "s" : "") + " ago. Renew or close out.",
-        account.name + "'s agreement is past expiry. Address it.",
-      ]));
+      var expiredGlow = <Glow>{"expired " + Math.abs(daysToRenew) + " day" + (Math.abs(daysToRenew) !== 1 ? "s" : "") + " ago"}</Glow>;
+      renewalLead = pickV(seed + "r", [
+        <>Agreement {expiredGlow}. Renew or close out.</>,
+        <>{account.name}'s agreement is {expiredGlow}. Address it.</>,
+      ]);
     } else if (daysToRenew <= 30) {
-      parts.push(pickV(seed + "r", [
-        "Renewal with " + account.name + " in " + daysToRenew + " day" + (daysToRenew !== 1 ? "s" : "") + " — start the conversation.",
-        account.name + "'s agreement ends in " + daysToRenew + " day" + (daysToRenew !== 1 ? "s" : "") + ". Time to revisit scope.",
-      ]));
+      var soonGlow = <Glow>{"renewal in " + daysToRenew + " day" + (daysToRenew !== 1 ? "s" : "")}</Glow>;
+      renewalLead = pickV(seed + "r", [
+        <>{soonGlow} — start the conversation.</>,
+        <>Agreement ends soon — {soonGlow}. Time to revisit scope.</>,
+      ]);
     } else if (daysToRenew <= 90) {
-      parts.push(pickV(seed + "r", [
-        "Renewal with " + account.name + " in ~" + Math.round(daysToRenew / 7) + " weeks. Worth a check-in.",
-      ]));
+      renewalLead = <>Renewal with {account.name} in ~{Math.round(daysToRenew / 7)} weeks. Worth a check-in.</>;
     }
   }
 
-  if (parts.length === 0 && daysSince !== null && daysSince >= 60) {
-    parts.push(pickV(seed + "a", [
-      "Haven't touched base with " + account.name + " in " + daysSince + " days. Worth a quick check.",
-      account.name + " has gone quiet — " + daysSince + " days. Stay close to the relationship.",
-    ]));
-  } else if (parts.length === 0 && openCount > 0) {
-    parts.push(pickV(seed + "a", [
-      openCount + " open item" + (openCount !== 1 ? "s" : "") + " with " + account.name + ".",
-    ]));
-  } else if (parts.length === 0) {
-    parts.push(pickV(seed + "a", [
+  var fallbackLead = null;
+  if (!renewalLead && daysSince !== null && daysSince >= 60) {
+    fallbackLead = pickV(seed + "a", [
+      <>Haven't touched base with {account.name} in {daysSince} days. Worth a quick check.</>,
+      <>{account.name} has gone quiet — {daysSince} days. Stay close to the relationship.</>,
+    ]);
+  } else if (!renewalLead && openCount > 0) {
+    fallbackLead = <>{openCount} open item{openCount !== 1 ? "s" : ""} with {account.name}.</>;
+  } else if (!renewalLead) {
+    fallbackLead = pickV(seed + "a", [
       "Things are steady with " + account.name + ". No action needed right now.",
       account.name + " is in good standing.",
-    ]));
+    ]);
   }
 
-  if (account.scope_summary) {
-    parts.push(pickV(seed + "s", [
-      "Scope: " + account.scope_summary.split(/[.!?]/)[0] + ".",
-    ]));
-  }
+  var lead = renewalLead || fallbackLead;
+  var tail = account.scope_summary
+    ? <> Scope: {account.scope_summary.split(/[.!?]/)[0]}.</>
+    : null;
 
-  return parts.join(" ");
+  return <>{lead}{tail}</>;
 }
 
-function buildPipInsight(account, openItems, revenueHistory, shopMetrics, projects) {
-  if (account.account_type === "internal_team") return buildInternalTeamInsight(account, openItems, projects);
-  if (account.account_type === "partner")       return buildPartnerInsight(account, openItems, projects);
+function buildPipInsight(account, openItems, revenueHistory, shopMetrics, projects, handlers) {
+  if (account.account_type === "internal_team") return buildInternalTeamInsight(account, openItems, projects, handlers);
+  if (account.account_type === "partner")       return buildPartnerInsight(account, openItems, projects, handlers);
 
   var rh = revenueHistory || [];
   var sm = shopMetrics    || [];
@@ -230,11 +228,14 @@ function buildPipInsight(account, openItems, revenueHistory, shopMetrics, projec
     ]));
   }
 
+  var h = handlers || {};
+  var overdueGlow = <Glow onClick={h.onClickOverdue}>{overdueCount + " item" + (overdueCount !== 1 ? "s" : "") + " overdue"}</Glow>;
+
   // Closing — overdue, next meeting, or nudge
   if (overdueCount > 0) {
     parts.push(pickV(seed + "d", [
-      overdueCount + " item" + (overdueCount !== 1 ? "s are" : " is") + " overdue — clear those before your next call.",
-      "You've got " + overdueCount + " overdue item" + (overdueCount !== 1 ? "s" : "") + " here. Get those cleared.",
+      <>{overdueGlow} — clear those before your next call.</>,
+      <>You've got {overdueGlow}. Get them cleared.</>,
     ]));
   } else if (hasNextMeeting) {
     parts.push(pickV(seed + "d", [
@@ -252,10 +253,11 @@ function buildPipInsight(account, openItems, revenueHistory, shopMetrics, projec
   var prjs = projects || [];
   var blocked = prjs.filter(function(p) { return p.status === "blocked"; });
   var active  = prjs.filter(function(p) { return p.status === "in_progress"; });
+  var blockedGlow = <Glow onClick={h.onClickBlocked}>{blocked.length + " project" + (blocked.length !== 1 ? "s" : "") + " blocked"}</Glow>;
   if (blocked.length > 0 && parts.length < 3) {
     parts.push(pickV(seed + "gp", [
-      blocked.length + " Gauge project" + (blocked.length !== 1 ? "s are" : " is") + " blocked — flag it on your next call.",
-      blocked.length + " project" + (blocked.length !== 1 ? "s" : "") + " blocked in Gauge. Worth addressing.",
+      <>{blockedGlow} in Gauge — flag it on your next call.</>,
+      <>{blockedGlow}. Worth addressing.</>,
     ]));
   } else if (active.length > 0 && parts.length < 3) {
     parts.push(pickV(seed + "gp", [
@@ -264,7 +266,7 @@ function buildPipInsight(account, openItems, revenueHistory, shopMetrics, projec
     ]));
   }
 
-  return parts.join(" ");
+  return <>{parts.map(function (p, i) { return <span key={i}>{i > 0 ? " " : ""}{p}</span>; })}</>;
 }
 
 function pctColor(pct) {
@@ -303,9 +305,10 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
   var isInternalTeam = account.account_type === "internal_team";
   var isPartner      = account.account_type === "partner";
   var isCustomerType = !isInternalTeam && !isPartner;
-  var pipInsight = useMemo(function () {
-    return buildPipInsight(account, openItems, revenueHistory, shopMetrics, projects);
-  }, [account, openItems, revenueHistory, shopMetrics, projects]);
+  var pipInsight = buildPipInsight(account, openItems, revenueHistory, shopMetrics, projects, {
+    onClickOverdue: function () { onSwitchTab && onSwitchTab("tasks"); },
+    onClickBlocked: function () { onSwitchTab && onSwitchTab("projects"); },
+  });
   var [range, setRange]       = useState(RANGES[0]);
   var [generating, setGen]    = useState(false);
   var [pipError, setPipError] = useState(null);
