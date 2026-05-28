@@ -1,10 +1,28 @@
 import React from "react";
 import { C } from "../lib/colors";
 import { logError, appendErrorNote } from "../lib/errorLog";
+import { PipOrb } from "./PipMark";
 
 var SERIF = "'Fraunces', Georgia, serif";
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var SANS  = "'Inter', system-ui, sans-serif";
+
+// Pip's voice on the fallback — varied so it doesn't feel canned. Pip is
+// loyal, slightly anxious, observant. Picks one per mount based on the
+// error message hash so the same error reads the same way each time.
+var PIP_LINES = [
+  { heading: "Hm. Something tripped.",     body: "I caught it before it spread. Reload and we'll keep going — I'll remember where you were." },
+  { heading: "Okay, that's on me.",        body: "Pip noticed. I've logged the details so we can chase it down later. Reload to keep going." },
+  { heading: "Something went sideways.",   body: "Already wrote it down. Reload and we should be back where you were — nothing autosaved is lost." },
+  { heading: "Got a hiccup.",              body: "Don't worry about it — I have everything. Reload and we'll pick up clean." },
+  { heading: "Wait, that wasn't right.",   body: "Logged it. Reload should sort us out. If you remember what you were doing, tell me below." },
+];
+
+function pickPipLine(msg) {
+  var seed = 0;
+  for (var i = 0; i < (msg || "").length; i++) seed = (seed * 31 + msg.charCodeAt(i)) | 0;
+  return PIP_LINES[Math.abs(seed) % PIP_LINES.length];
+}
 
 /**
  * Catches React render errors. Three things happen on catch:
@@ -75,6 +93,7 @@ export class ErrorBoundary extends React.Component {
     if (!this.state.hasError) return this.props.children;
 
     var inline = this.props.inline;
+    var pipLine = pickPipLine(this.state.message);
     return (
       <div
         role="alert"
@@ -91,14 +110,24 @@ export class ErrorBoundary extends React.Component {
           textAlign: "center",
         }}
       >
+        <div style={{ marginBottom: 18 }}>
+          <PipOrb size="xl" sonar />
+        </div>
+        <div style={{
+          fontFamily: MONO, fontSize: 9.5, color: C.accent,
+          textTransform: "uppercase", letterSpacing: "0.12em",
+          marginBottom: 10,
+        }}>
+          Pip caught it
+        </div>
         <div style={{
           fontFamily: SERIF, fontSize: 28, fontWeight: 400, letterSpacing: "-0.01em",
-          color: C.text, marginBottom: 6,
+          color: C.text, marginBottom: 8,
         }}>
-          Something went sideways.
+          {pipLine.heading}
         </div>
-        <div style={{ fontSize: 13.5, color: C.textSub, lineHeight: 1.5, maxWidth: 460, marginBottom: 4 }}>
-          Pip's noticed. We've logged the details and you can keep going as soon as the page reloads.
+        <div style={{ fontSize: 13.5, color: C.textSub, lineHeight: 1.55, maxWidth: 460, marginBottom: 4 }}>
+          {pipLine.body}
         </div>
         <div style={{
           fontFamily: MONO, fontSize: 10.5, color: C.textMuted,
