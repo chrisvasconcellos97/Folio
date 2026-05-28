@@ -10,7 +10,8 @@ import { Card } from "../../components/Card";
 import { PipOrb } from "../../components/PipMark";
 import { PipLoader } from "../../components/PipLoader";
 import { QuickTaskModal } from "../quicktasks/QuickTaskModal";
-import { AmberBtn } from "../../components/Buttons";
+import { Modal } from "../../components/Modal";
+import { AmberBtn, SecBtn } from "../../components/Buttons";
 import { QuickActionBar } from "../../components/QuickActionBar";
 import { StatusBanner } from "../../components/StatusBanner";
 
@@ -122,6 +123,23 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
   var [density, setDensity]         = useState(function() {
     try { return localStorage.getItem(DENSITY_KEY) || "comfortable"; } catch(e) { return "comfortable"; }
   });
+  var [filterOpen, setFilterOpen]   = useState(false);
+
+  var activeFilterCount =
+    (filter !== "All" ? 1 : 0) +
+    (mineOnly ? 1 : 0) +
+    (hideInactive ? 1 : 0) +
+    (tagFilter ? 1 : 0) +
+    (regionFilter ? 1 : 0);
+
+  function clearAllFilters() {
+    setFilter("All");
+    setMineOnly(false);
+    setHideInactive(false);
+    setTagFilter(null);
+    setRegionFilter(null);
+    setSortMode("tier");
+  }
 
   useEffect(function() { savePrefs(Object.assign(loadPrefs(), { filter: filter })); }, [filter]);
   useEffect(function() { savePrefs(Object.assign(loadPrefs(), { sort: sortMode })); }, [sortMode]);
@@ -556,10 +574,15 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
         </div>
       )}
 
-      {/* Search + density toggle */}
+      {/* Big search + single Filter button. Density stays inline. */}
       <div style={{ marginBottom: 10 }}>
-        <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: 8, alignItems: isMobile ? "stretch" : "center" }}>
-          <div style={{ flex: 1 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <div style={{ flex: 1, position: "relative" }}>
+            <span aria-hidden="true" style={{
+              position: "absolute",
+              left: 14, top: "50%", transform: "translateY(-50%)",
+              color: C.textMuted, fontSize: 16, lineHeight: 1, pointerEvents: "none",
+            }}>⌕</span>
             <InputField
               value={search}
               onChange={function (e) { setSearch(e.target.value); }}
@@ -570,59 +593,39 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                 setTimeout(function() { setSearchFocused(false); }, 150);
                 saveSearchHistory(search);
               }}
+              style={{
+                paddingLeft: 38,
+                paddingTop: 13, paddingBottom: 13,
+              }}
             />
           </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: isMobile ? "wrap" : "nowrap" }}>
-          {members && members.length > 1 && (
-            <button
-              onClick={function () { setMineOnly(function (v) { return !v; }); }}
-              title="Show only accounts you own"
-              aria-label="Show only accounts you own"
-              aria-pressed={mineOnly}
-              style={{
-                background: mineOnly ? C.accentFaint : "transparent",
-                border: "1px solid " + (mineOnly ? C.accentBorder : C.rule),
-                borderRadius: 6,
-                padding: "5px 10px", color: mineOnly ? C.accent : C.textMuted, fontSize: 11,
-                fontFamily: MONO, cursor: "pointer", flexShrink: 0,
-                letterSpacing: "0.05em",
-              }}
-            >
-              {mineOnly ? "Mine ✓" : "Mine"}
-            </button>
-          )}
           <button
-            onClick={function () { setHideInactive(function (v) { return !v; }); }}
-            title={hideInactive ? "Currently hiding inactive — click to show" : "Currently showing inactive — click to hide"}
-            aria-label="Hide inactive accounts"
-            aria-pressed={hideInactive}
+            onClick={function () { setFilterOpen(true); }}
+            aria-label="Open filters"
             style={{
-              background: hideInactive ? C.accentFaint : "transparent",
-              border: "1px solid " + (hideInactive ? C.accentBorder : C.rule),
-              borderRadius: 6,
-              padding: "5px 10px", color: hideInactive ? C.accent : C.textMuted, fontSize: 11,
-              fontFamily: MONO, cursor: "pointer", flexShrink: 0,
-              letterSpacing: "0.05em",
+              display: "inline-flex", alignItems: "center", gap: 8,
+              background: activeFilterCount > 0 ? C.accentFaint : "transparent",
+              border: "1px solid " + (activeFilterCount > 0 ? C.accentBorder : C.rule),
+              borderRadius: 8,
+              padding: "10px 14px",
+              color: activeFilterCount > 0 ? C.accent : C.textSoft,
+              fontFamily: "'Inter', system-ui, sans-serif",
+              fontSize: 13, fontWeight: 600,
+              cursor: "pointer", flexShrink: 0,
+              minHeight: 44,
             }}
           >
-            {hideInactive ? "Hide inactive ✓" : "Hide inactive"}
+            <span aria-hidden="true" style={{ fontSize: 14, lineHeight: 1 }}>⇅</span>
+            Filter
+            {activeFilterCount > 0 && (
+              <span style={{
+                fontFamily: MONO, fontSize: 10, fontWeight: 700,
+                background: C.accent, color: C.bg,
+                borderRadius: 999, padding: "1px 7px",
+                fontVariantNumeric: "tabular-nums",
+              }}>{activeFilterCount}</span>
+            )}
           </button>
-          <select
-            value={sortMode}
-            onChange={function(e) { setSortMode(e.target.value); }}
-            title="Sort by"
-            aria-label="Sort accounts by"
-            style={{
-              background: "transparent", border: "1px solid " + C.rule, borderRadius: 6,
-              padding: "5px 8px", color: C.textMuted, fontSize: 11,
-              fontFamily: MONO, cursor: "pointer", flexShrink: 0,
-            }}
-          >
-            <option value="tier">Tier</option>
-            <option value="name">Name</option>
-            <option value="revenue">Revenue</option>
-            <option value="recent">Recent</option>
-          </select>
           <button
             onClick={function() { setDensity(function(d) { return d === "comfortable" ? "compact" : "comfortable"; }); }}
             title={density === "comfortable" ? "Switch to compact view" : "Switch to comfortable view"}
@@ -631,21 +634,19 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
             style={{
               background: "transparent",
               border: "1px solid " + C.rule,
-              borderRadius: 6,
-              padding: "5px 9px",
+              borderRadius: 8,
+              padding: "10px 12px",
               cursor: "pointer",
               color: C.textMuted,
-              fontSize: 14,
+              fontSize: 16,
               fontFamily: "'Inter', system-ui, sans-serif",
               lineHeight: 1,
               flexShrink: 0,
-              minWidth: 32,
-              minHeight: 32,
+              minWidth: 44, minHeight: 44,
             }}
           >
             {density === "comfortable" ? "⊟" : "⊞"}
           </button>
-          </div>
         </div>
         {searchFocused && !search && loadSearchHistory().length > 0 && (
           <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 6 }}>
@@ -687,109 +688,90 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
         </div>
       )}
 
-      {/* Filter pills — tier / status */}
-      <div style={{ display: "flex", gap: 5, marginBottom: 6, overflowX: "auto", paddingBottom: 2 }}>
-        {FILTERS.map(function (f) {
-          var active = filter === f;
-          var tint   = TIER_COLORS[f] || (f === "Watching" ? C.yellow : f === "At Risk" ? C.red : null);
-          var bg     = active ? (tint || C.accent) : "transparent";
-          var border = active ? (tint || C.accent) : (tint ? "rgba(255,255,255,0.18)" : C.rule);
-          var color  = active ? C.bg : (tint || C.textMuted);
-          return (
+      {/* Active filter chips — render only when filters are set. Each chip
+          clears its filter on click. Tier/status, mine, hide inactive, tag,
+          region all share one row. */}
+      {activeFilterCount > 0 && (
+        <div style={{ display: "flex", gap: 5, marginBottom: 10, overflowX: "auto", paddingBottom: 2, alignItems: "center" }}>
+          {filter !== "All" && (
             <button
-              key={f}
-              onClick={function () { setFilter(f); }}
+              onClick={function () { setFilter("All"); }}
               style={{
-                background: bg,
-                color: color,
-                border: "1px solid " + border,
-                borderRadius: 999,
-                padding: "4px 12px",
-                fontFamily: MONO,
-                fontSize: 10.5,
-                fontWeight: 400,
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
+                background: C.accentFaint, color: C.accent,
+                border: "1px solid " + C.accentLine, borderRadius: 999,
+                padding: "3px 10px", fontFamily: MONO, fontSize: 10.5,
+                cursor: "pointer", whiteSpace: "nowrap",
               }}
             >
-              {tint && (
-                <span style={{
-                  width: 7, height: 7, borderRadius: "50%",
-                  background: tint, display: "inline-block",
-                  boxShadow: active ? "0 0 0 1px " + C.bg : "none",
-                }} />
-              )}
-              {f}
+              {filter} ×
             </button>
-          );
-        })}
-      </div>
-
-      {/* Filter pills — supplier type tags */}
-      {availableTags.length > 0 && (
-        <div style={{ display: "flex", gap: 5, marginBottom: 6, overflowX: "auto", paddingBottom: 2, alignItems: "center" }}>
-          <span style={{ fontFamily: MONO, fontSize: 9.5, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap", flexShrink: 0 }}>Type</span>
-          {availableTags.map(function (t) {
-            var active = tagFilter === t;
-            return (
-              <button
-                key={t}
-                onClick={function () { setTagFilter(active ? null : t); }}
-                style={{
-                  background: active ? "rgba(91,143,212,0.15)" : "transparent",
-                  color: active ? C.blue : C.textMuted,
-                  border: "1px solid " + (active ? "rgba(91,143,212,0.35)" : C.rule),
-                  borderRadius: 999,
-                  padding: "4px 11px",
-                  fontFamily: MONO,
-                  fontSize: 10.5,
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {t}
-              </button>
-            );
-          })}
+          )}
+          {mineOnly && (
+            <button
+              onClick={function () { setMineOnly(false); }}
+              style={{
+                background: C.accentFaint, color: C.accent,
+                border: "1px solid " + C.accentLine, borderRadius: 999,
+                padding: "3px 10px", fontFamily: MONO, fontSize: 10.5,
+                cursor: "pointer", whiteSpace: "nowrap",
+              }}
+            >
+              Mine ×
+            </button>
+          )}
+          {hideInactive && (
+            <button
+              onClick={function () { setHideInactive(false); }}
+              style={{
+                background: C.accentFaint, color: C.accent,
+                border: "1px solid " + C.accentLine, borderRadius: 999,
+                padding: "3px 10px", fontFamily: MONO, fontSize: 10.5,
+                cursor: "pointer", whiteSpace: "nowrap",
+              }}
+            >
+              Hide inactive ×
+            </button>
+          )}
+          {tagFilter && (
+            <button
+              onClick={function () { setTagFilter(null); }}
+              style={{
+                background: C.accentFaint, color: C.accent,
+                border: "1px solid " + C.accentLine, borderRadius: 999,
+                padding: "3px 10px", fontFamily: MONO, fontSize: 10.5,
+                cursor: "pointer", whiteSpace: "nowrap",
+              }}
+            >
+              {tagFilter} ×
+            </button>
+          )}
+          {regionFilter && (
+            <button
+              onClick={function () { setRegionFilter(null); }}
+              style={{
+                background: C.accentFaint, color: C.accent,
+                border: "1px solid " + C.accentLine, borderRadius: 999,
+                padding: "3px 10px", fontFamily: MONO, fontSize: 10.5,
+                cursor: "pointer", whiteSpace: "nowrap",
+              }}
+            >
+              {regionFilter} ×
+            </button>
+          )}
+          <button
+            onClick={clearAllFilters}
+            style={{
+              background: "transparent", color: C.textMuted,
+              border: "none", padding: "3px 8px",
+              fontFamily: MONO, fontSize: 10, cursor: "pointer",
+              letterSpacing: "0.06em", textTransform: "uppercase",
+            }}
+          >
+            Clear all
+          </button>
         </div>
       )}
-
-      {/* Filter pills — region */}
-      {availableRegions.length > 0 && (
-        <div style={{ display: "flex", gap: 5, marginBottom: 12, overflowX: "auto", paddingBottom: 2, alignItems: "center" }}>
-          <span style={{ fontFamily: MONO, fontSize: 9.5, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap", flexShrink: 0 }}>Region</span>
-          {availableRegions.map(function (r) {
-            var active = regionFilter === r;
-            return (
-              <button
-                key={r}
-                onClick={function () { setRegionFilter(active ? null : r); }}
-                style={{
-                  background: active ? C.accent : "transparent",
-                  color: active ? C.bg : C.textMuted,
-                  border: "1px solid " + (active ? C.accent : C.rule),
-                  borderRadius: 999,
-                  padding: "4px 11px",
-                  fontFamily: MONO,
-                  fontSize: 10.5,
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {r}
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Spacer when no tag/region rows */}
-      {availableTags.length === 0 && availableRegions.length === 0 && (
-        <div style={{ marginBottom: 8 }} />
-      )}
+      {activeFilterCount === 0 && <div style={{ marginBottom: 8 }} />}
 
       {/* New user checklist */}
       {showChecklist && (
@@ -1092,6 +1074,161 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
           onDelete={deleteTask}
           onClose={function () { setEditingTask(null); }}
         />
+      )}
+
+      {filterOpen && (
+        <Modal title="Filter" onClose={function () { setFilterOpen(false); }} width={420}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+            {/* Tier / status */}
+            <div>
+              <div style={{ fontFamily: MONO, fontSize: 9.5, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
+                Tier / Status
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {FILTERS.map(function (f) {
+                  var active = filter === f;
+                  var tint   = TIER_COLORS[f] || (f === "Watching" ? C.yellow : f === "At Risk" ? C.red : null);
+                  return (
+                    <button
+                      key={f}
+                      onClick={function () { setFilter(f); }}
+                      style={{
+                        background: active ? (tint || C.accent) : "transparent",
+                        color: active ? C.bg : (tint || C.textMuted),
+                        border: "1px solid " + (active ? (tint || C.accent) : (tint || C.rule)),
+                        borderRadius: 999,
+                        padding: "6px 14px",
+                        fontFamily: MONO, fontSize: 11,
+                        cursor: "pointer", whiteSpace: "nowrap",
+                        display: "inline-flex", alignItems: "center", gap: 6,
+                      }}
+                    >
+                      {tint && (
+                        <span style={{ width: 7, height: 7, borderRadius: "50%", background: tint, display: "inline-block" }} />
+                      )}
+                      {f}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Mine / hide inactive */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {members && members.length > 1 && (
+                <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontSize: 13, color: C.text }}>
+                  <input
+                    type="checkbox"
+                    checked={mineOnly}
+                    onChange={function (e) { setMineOnly(e.target.checked); }}
+                    style={{ width: 16, height: 16, accentColor: C.accent }}
+                  />
+                  Show only accounts I own
+                </label>
+              )}
+              <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontSize: 13, color: C.text }}>
+                <input
+                  type="checkbox"
+                  checked={hideInactive}
+                  onChange={function (e) { setHideInactive(e.target.checked); }}
+                  style={{ width: 16, height: 16, accentColor: C.accent }}
+                />
+                Hide inactive accounts
+              </label>
+            </div>
+
+            {/* Sort */}
+            <div>
+              <div style={{ fontFamily: MONO, fontSize: 9.5, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
+                Sort by
+              </div>
+              <select
+                value={sortMode}
+                onChange={function (e) { setSortMode(e.target.value); }}
+                aria-label="Sort accounts by"
+                style={{
+                  width: "100%", background: C.bgDropdown,
+                  border: "1px solid " + C.rule, borderRadius: 8,
+                  padding: "10px 12px", color: C.text,
+                  fontFamily: "'Inter', system-ui, sans-serif",
+                  outline: "none", cursor: "pointer",
+                }}
+              >
+                <option value="tier">Tier</option>
+                <option value="name">Name</option>
+                <option value="revenue">Revenue</option>
+                <option value="recent">Most recent</option>
+              </select>
+            </div>
+
+            {/* Tags */}
+            {availableTags.length > 0 && (
+              <div>
+                <div style={{ fontFamily: MONO, fontSize: 9.5, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
+                  Type
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {availableTags.map(function (t) {
+                    var active = tagFilter === t;
+                    return (
+                      <button
+                        key={t}
+                        onClick={function () { setTagFilter(active ? null : t); }}
+                        style={{
+                          background: active ? "rgba(91,143,212,0.15)" : "transparent",
+                          color: active ? C.blue : C.textMuted,
+                          border: "1px solid " + (active ? "rgba(91,143,212,0.35)" : C.rule),
+                          borderRadius: 999,
+                          padding: "5px 12px",
+                          fontFamily: MONO, fontSize: 11,
+                          cursor: "pointer", whiteSpace: "nowrap",
+                        }}
+                      >
+                        {t}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Regions */}
+            {availableRegions.length > 0 && (
+              <div>
+                <div style={{ fontFamily: MONO, fontSize: 9.5, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
+                  Region
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {availableRegions.map(function (r) {
+                    var active = regionFilter === r;
+                    return (
+                      <button
+                        key={r}
+                        onClick={function () { setRegionFilter(active ? null : r); }}
+                        style={{
+                          background: active ? C.accent : "transparent",
+                          color: active ? C.bg : C.textMuted,
+                          border: "1px solid " + (active ? C.accent : C.rule),
+                          borderRadius: 999,
+                          padding: "5px 12px",
+                          fontFamily: MONO, fontSize: 11,
+                          cursor: "pointer", whiteSpace: "nowrap",
+                        }}
+                      >
+                        {r}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
+              <SecBtn onClick={clearAllFilters} style={{ fontSize: 12 }}>Clear all</SecBtn>
+              <AmberBtn onClick={function () { setFilterOpen(false); }} style={{ fontSize: 12 }}>Done</AmberBtn>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );
