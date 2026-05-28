@@ -261,6 +261,14 @@ This app is currently single-user but should be built with multi-tenancy in mind
      - **Permissions:** Same org RLS as accounts (everyone in org sees all). Scoped visibility (HR-only sees HR) deferred.
      - **Add modal:** AddAccountModal type dropdown includes `internal_team` and `partner` with friendly labels. The Add CTA copy adapts to context (`+ Department` on /departments, `+ Partner` on /partners, `+ Account` on /accounts).
      - **Org chart view for contacts:** queued as follow-up (not v1).
+   - **Inactive / archive + account merge (locked spec):** No hard deletes for accounts or users — always reversible. Acquisitions get a merge path.
+     - **Schema (accounts):** add `is_inactive boolean default false`, `inactivated_at timestamptz`, `merged_into_account_id uuid references folio_accounts(id)` to `folio_accounts`.
+     - **Schema (users):** add `is_inactive boolean default false`, `inactivated_at timestamptz` to `folio_org_members`. Inactive users can't be assigned new work; historical records stay.
+     - **Inactive list behavior:** inactive cards stay visible in the workspace list (greyed out, lower opacity, `INACTIVE` mono pill). Filter toggle in the list header — "Hide inactive" — flips the default. State persisted in localStorage per workspace.
+     - **Detail page:** inactive accounts are still **editable** (you might log a check-in or update notes about why they left). Header shows a yellow `Inactive` pill and the "Delete" action is replaced by a "Reactivate" button. Merged-into accounts also show "Merged into [Acme Corp]" with a link back to the survivor.
+     - **Global search / Pip / command palette:** still finds inactive accounts but tags them visually so they don't get confused with active ones. Pip insight cards exclude inactive accounts from "needs attention" counts.
+     - **Merge flow:** From the *source* account (the one being absorbed), tap "Merge into…" in the row actions → pick target from a dropdown → confirm. After merge: all child rows (meetings, items, contacts, cadences, projects, account_notes, activity, pip_account_state) re-parent from source → target. Source is marked inactive with `merged_into_account_id = target.id`. No dedupe attempt — both accounts' duplicates carry over; user cleans up manually.
+     - **Auth user deletion path:** moot once inactive flag ships. Inactive users keep their auth row but `is_inactive=true` blocks sign-in (enforced in `useAuth.js`).
 
 4. **Native feel:** *(no open items)*
 
