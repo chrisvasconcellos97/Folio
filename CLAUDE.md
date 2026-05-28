@@ -72,6 +72,27 @@ All shipped — see "Folios design system refresh" in Already shipped.
 ## Font Rule
 **Never use Google Fonts CDN.** All fonts must be self-hosted via `@fontsource-variable` packages installed through npm and imported in `src/main.jsx`. Google Fonts calls get blocked by corporate network proxies. Current fonts: `@fontsource-variable/inter`, `@fontsource-variable/fraunces`, `@fontsource-variable/jetbrains-mono`.
 
+## Mobile Input Rule (never make Chris fight Safari auto-zoom)
+**On mobile / touch devices, every `<input>`, `<textarea>`, and `<select>` must render at >= 16px.** Below 16px, iOS Safari auto-zooms the viewport when the field gets focus — disorienting and slow to recover from. Chris has hit this twice. The permanent guarantee in `index.html`:
+
+```css
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+```
+
+Rules for new code:
+1. **Don't write `fontSize: 14` (or anything < 16) on an input/textarea/select inline style and assume the global rule will save you** — it does, but reviewers shouldn't have to remember that. Use 16 baseline; let typography sing elsewhere (labels, helper text).
+2. **Don't remove the `pointer: coarse` block** in `index.html`. If you need to scope it tighter, scope it tighter — don't delete it.
+3. **`InputField` / `TextArea` / `SelectField`** in `src/components/InputField.jsx` already default to 16px — prefer them over raw `<input>` whenever practical so the baseline is built in.
+4. **Before claiming a mobile UI fix shipped, focus a real input on an iOS device or simulator** and confirm no zoom.
+
+Symptoms of regression: tap an input → viewport visibly zooms in → input loses focus or shifts under the keyboard.
+
 ## Patch — Background Build Agent
 
 **Patch** is the name for the background agent used to execute large batch builds. When a batch of queued items is ready to ship, spawn Patch via the Agent tool with `isolation: "worktree"` so it works in a clean copy of the repo without disrupting the main conversation.
