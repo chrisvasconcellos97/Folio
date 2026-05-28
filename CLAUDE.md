@@ -65,6 +65,35 @@ no remount. Pre-mount theme application is done by an inline `<script>` in
 `index.html` (no flash-of-wrong-theme). `useTheme()` reads/writes the
 choice, persisting to `localStorage.folio_theme`.
 
+### Light Theme — Open Polish Items (deferred from initial light-theme batch)
+
+Punted by Patch during the initial light-theme ship, queued for a follow-up
+batch when ready. Each requires touching layout chrome or a render path
+that wasn't trivial to thread through without scope creep:
+
+1. **Sidebar "Mist" background in light mode.** The light spec calls for the
+   sidebar to use the `--rail` token (faint teal wash, `oklch(0.94 0.015 178)`)
+   as its background. Currently both layouts (`DesktopLayout.jsx`,
+   `MobileLayout.jsx`) inherit whatever surface color was hardcoded — in
+   light mode that's paper-white, which is fine but loses the spec's
+   visual separation between chrome and workspace.
+2. **Active-tab mark pulse animation.** Spec describes the active sidebar
+   nav item's mark pulsing via a 2.8s sonar keyframe. The `--accent-shadow`
+   token is wired, but the layout components don't currently expose an
+   `is-active` hook on the per-tab mark for the animation to target.
+3. **Stat-tile tier-colored halos (Accounts page).** Spec §6 says the
+   "Watching" (ochre) and "At Risk" (terracotta) stat tiles get a
+   tier-tinted shadow halo matching their numeral color — same trick as
+   the account cards but smaller. Token plumbing didn't have a clean
+   render hook.
+4. **Audit of `rgba(255,255,255,0.0X)` overlays** scattered across the
+   modals (SetCadenceModal, QuickMeetingModal, etc.). They're faint
+   washes that mostly disappear on cream, but worth a once-over to confirm
+   nothing reads off.
+5. **Hardcoded drop shadows** in Toast / Modal / CommandPalette / UserMenu
+   use `rgba(0,0,0,0.5)` directly. They render fine on both themes (just
+   darker overlays) but tokenizing them would make future tuning easier.
+
 ## Font Rule
 **Never use Google Fonts CDN.** All fonts must be self-hosted via `@fontsource-variable` packages installed through npm and imported in `src/main.jsx`. Google Fonts calls get blocked by corporate network proxies. Current fonts: `@fontsource-variable/inter`, `@fontsource-variable/fraunces`, `@fontsource-variable/jetbrains-mono`.
 

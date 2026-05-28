@@ -5,6 +5,7 @@ import { GaugeIcon } from "../components/GaugeIcon";
 import { PipOrb } from "../components/PipMark";
 import { AmberBtn } from "../components/Buttons";
 import { UserMenu } from "../components/UserMenu";
+import { NavMark } from "../components/NavMark";
 import { FirstRunTooltip } from "../components/Tooltip";
 
 var MONO = "'JetBrains Mono', ui-monospace, monospace";
@@ -246,13 +247,14 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
                 aria-expanded={isWorkspaces ? wsOpen : undefined}
                 aria-haspopup={isWorkspaces ? "menu" : undefined}
               >
-                {isGauge ? (
-                  <GaugeIcon size={14} color={active ? C.blue : C.textMuted} />
-                ) : item.icon ? (
-                  <span style={{ fontSize: 13 }}>{item.icon}</span>
-                ) : (
-                  <PipOrb size="xs" />
-                )}
+                <span style={{
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  width: 18, height: 18,
+                  color: active ? (isGauge ? C.blue : C.accent) : C.textMuted,
+                  opacity: active ? 1 : 0.78,
+                }}>
+                  <NavMark id={item.id} size={17} />
+                </span>
                 {displayLabel}
                 {isWorkspaces && (
                   <span style={{ fontSize: 7, marginTop: -1, opacity: 0.7 }}>{wsOpen ? "▾" : "▴"}</span>

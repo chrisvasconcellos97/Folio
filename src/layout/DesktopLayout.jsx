@@ -1,7 +1,7 @@
 import { C } from "../lib/colors";
 import { FolioIcon } from "../components/FolioIcon";
-import { GaugeIcon } from "../components/GaugeIcon";
 import { PipOrb } from "../components/PipMark";
+import { NavMark } from "../components/NavMark";
 import { AmberBtn } from "../components/Buttons";
 import { UserMenu } from "../components/UserMenu";
 
@@ -123,9 +123,9 @@ export function DesktopLayout({
                 onClick={function () { setView(item.id); }}
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "16px 1fr auto",
+                  gridTemplateColumns: "20px 1fr auto",
                   alignItems: "center",
-                  gap: 8,
+                  gap: 10,
                   padding: "9px 10px",
                   borderRadius: 6,
                   cursor: "pointer",
@@ -144,14 +144,14 @@ export function DesktopLayout({
                   textAlign: "left",
                 }}
               >
-                {/* Icon column */}
-                {isGauge ? (
-                  <GaugeIcon size={14} color={active ? C.blue : C.textMuted} />
-                ) : isPip ? (
-                  <PipOrb size="xs" style={{ justifySelf: "center" }} />
-                ) : (
-                  <span style={{ fontSize: 12, opacity: active ? 0.9 : 0.55, textAlign: "center" }}>{item.icon}</span>
-                )}
+                <span style={{
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  width: 20, height: 20,
+                  color: active ? (isGauge ? C.blue : C.accent) : C.textMuted,
+                  opacity: active ? 1 : 0.78,
+                }}>
+                  <NavMark id={item.id} size={18} />
+                </span>
 
                 {/* Label */}
                 <span>{item.label}</span>
