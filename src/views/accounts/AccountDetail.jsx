@@ -30,6 +30,8 @@ import { PrintAccountSheet } from "../../components/PrintAccountSheet";
 import { CadenceHub } from "../cadence/CadenceHub";
 import { CadenceBackfillBanner } from "../cadence/CadenceBackfillBanner";
 import { ErrorBanner } from "../../components/ErrorBanner";
+import { supabase } from "../../lib/supabase";
+import { buildAccountExport, downloadAccountExport } from "../../lib/accountExport";
 
 function getDefaultTab(accountId) {
   try { return localStorage.getItem("folio_default_tab_" + accountId) || null; } catch(e) { return null; }
@@ -71,6 +73,37 @@ export function AccountDetail({ account, userId, orgId, accounts, members, onBac
 
   var pipAcctState = usePipAccountState(userId);
   var [refreshingState, setRefreshingState] = useState(false);
+
+  function handleExport() {
+    // Fetch the user's account-notes row inline so we don't drag an
+    // extra hook subscription into AccountDetail just for export. Other
+    // collections are already in memory via their existing hooks.
+    if (!account || !account.id) return;
+    var notesPromise = userId
+      ? supabase
+          .from("folio_account_notes")
+          .select("*")
+          .eq("user_id", userId)
+          .eq("account_id", account.id)
+          .maybeSingle()
+          .then(function (r) { return r && r.data ? r.data : null; })
+          .catch(function () { return null; })
+      : Promise.resolve(null);
+
+    notesPromise.then(function (notes) {
+      var payload = buildAccountExport({
+        account: account,
+        meetings: meetings,
+        items: items,
+        contacts: contacts,
+        cadences: cadences,
+        projects: projects,
+        notes: notes,
+      });
+      var filename = downloadAccountExport(payload, account);
+      if (filename) showToast("Exported " + filename);
+    });
+  }
 
   function handleRefreshPipMemory() {
     if (!account || !account.id || refreshingState) return;
@@ -191,6 +224,7 @@ export function AccountDetail({ account, userId, orgId, accounts, members, onBac
         resyncingPip={refreshingState}
         onEdit={onEdit}
         onPrint={function () { window.print(); }}
+        onExport={handleExport}
         onDelete={onDelete}
         confirmDelete={confirmDelete}
         onConfirmDelete={function () { setConfirmDelete(true); }}

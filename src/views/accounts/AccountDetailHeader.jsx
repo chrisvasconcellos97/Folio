@@ -42,6 +42,7 @@ export function AccountDetailHeader({
   resyncingPip,
   onEdit,
   onPrint,
+  onExport,
   onDelete,
   confirmDelete,
   onConfirmDelete,
@@ -317,6 +318,14 @@ export function AccountDetailHeader({
             >
               Print
             </SecBtn>
+            {onExport && (
+              <SecBtn
+                onClick={onExport}
+                style={{ fontSize: 11, padding: "5px 12px" }}
+              >
+                Export
+              </SecBtn>
+            )}
             <SecBtn
               onClick={onEdit}
               style={{ fontSize: 11, padding: "5px 12px" }}

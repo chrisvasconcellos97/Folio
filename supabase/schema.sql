@@ -1,7 +1,32 @@
--- Folio schema — run in Supabase SQL editor
--- Includes all columns from incremental migrations; safe to re-run (IF NOT EXISTS throughout)
+-- Folios schema — canonical reference. Run in Supabase SQL editor.
+-- Includes columns from every incremental migration; safe to re-run
+-- (IF NOT EXISTS / DROP-IF-EXISTS throughout).
+--
+-- This file is the source of truth for the production schema. The
+-- per-feature migration files (cadence_hub.sql, workspaces.sql,
+-- account_owners.sql, phase1_security.sql, phase3_pip_usage.sql,
+-- phase5_indexes.sql, phase5_cascades.sql, etc.) are kept around for
+-- historical reference and to apply incremental changes to an already-
+-- live DB. A fresh project can run JUST this file plus the optional
+-- audit_log.sql, route_builder.sql, pip_facts.sql, pip_account_state.sql,
+-- team_org_layer.sql add-ons (those tables are defined here too, but
+-- their incremental migrations contain RLS + helper functions worth
+-- referencing).
 
+-- ──────────────────────────────────────────────────────────────────────
+-- Shared trigger
+-- ──────────────────────────────────────────────────────────────────────
+create or replace function update_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
+-- ──────────────────────────────────────────────────────────────────────
 -- Accounts
+-- ──────────────────────────────────────────────────────────────────────
 create table if not exists folio_accounts (
   id                      uuid primary key default gen_random_uuid(),
   user_id                 uuid references auth.users not null,
@@ -31,16 +56,27 @@ create table if not exists folio_accounts (
   billing_terms           text,
   spend_ytd               numeric,
   owner_user_id           uuid references auth.users(id),
+  org_id                  uuid,                                -- FK added after folio_orgs exists
   created_at              timestamptz default now(),
   updated_at              timestamptz default now()
 );
 
 alter table folio_accounts enable row level security;
+
+drop policy if exists "Users manage own accounts" on folio_accounts;
 create policy "Users manage own accounts"
   on folio_accounts for all
-  using (auth.uid() = user_id);
+  using      (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
 
+drop trigger if exists folio_accounts_updated_at on folio_accounts;
+create trigger folio_accounts_updated_at
+  before update on folio_accounts
+  for each row execute function update_updated_at();
+
+-- ──────────────────────────────────────────────────────────────────────
 -- Contacts
+-- ──────────────────────────────────────────────────────────────────────
 create table if not exists folio_contacts (
   id         uuid primary key default gen_random_uuid(),
   account_id uuid references folio_accounts on delete cascade not null,
@@ -58,11 +94,49 @@ create table if not exists folio_contacts (
 );
 
 alter table folio_contacts enable row level security;
+
+drop policy if exists "Users manage own contacts" on folio_contacts;
 create policy "Users manage own contacts"
   on folio_contacts for all
-  using (auth.uid() = user_id);
+  using      (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
 
+-- ──────────────────────────────────────────────────────────────────────
+-- Cadences (declared before folio_meetings so the cadence_id FK resolves)
+-- ──────────────────────────────────────────────────────────────────────
+create table if not exists folio_cadences (
+  id            uuid default gen_random_uuid() primary key,
+  user_id       uuid references auth.users(id) on delete cascade not null,
+  account_id    uuid references folio_accounts(id) on delete cascade not null,
+  type          text not null default 'meeting' check (type in ('meeting', 'task')),
+  frequency     text not null check (frequency in ('weekly', 'biweekly', 'monthly', 'quarterly')),
+  day_of_week   int check (day_of_week >= 0 and day_of_week <= 6),
+  day_of_month  int check (day_of_month >= 1 and day_of_month <= 31),
+  meeting_time  text,
+  task_title    text,
+  notes         text,
+  pip_brief     text,
+  pip_brief_at  timestamptz,
+  created_at    timestamptz default now(),
+  updated_at    timestamptz default now()
+);
+
+alter table folio_cadences enable row level security;
+
+drop policy if exists "Users manage their own cadences" on folio_cadences;
+create policy "Users manage their own cadences"
+  on folio_cadences for all
+  using      (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop trigger if exists folio_cadences_updated_at on folio_cadences;
+create trigger folio_cadences_updated_at
+  before update on folio_cadences
+  for each row execute function update_updated_at();
+
+-- ──────────────────────────────────────────────────────────────────────
 -- Meetings
+-- ──────────────────────────────────────────────────────────────────────
 create table if not exists folio_meetings (
   id             uuid primary key default gen_random_uuid(),
   account_id     uuid references folio_accounts on delete cascade not null,
@@ -85,15 +159,22 @@ create table if not exists folio_meetings (
   updated_at     timestamptz default now()
 );
 
-create index if not exists folio_meetings_cadence_id_idx on folio_meetings(cadence_id);
-create index if not exists folio_meetings_status_idx     on folio_meetings(status);
-
 alter table folio_meetings enable row level security;
+
+drop policy if exists "Users manage own meetings" on folio_meetings;
 create policy "Users manage own meetings"
   on folio_meetings for all
-  using (auth.uid() = user_id);
+  using      (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
 
+drop trigger if exists folio_meetings_updated_at on folio_meetings;
+create trigger folio_meetings_updated_at
+  before update on folio_meetings
+  for each row execute function update_updated_at();
+
+-- ──────────────────────────────────────────────────────────────────────
 -- Open Items
+-- ──────────────────────────────────────────────────────────────────────
 create table if not exists folio_items (
   id         uuid primary key default gen_random_uuid(),
   account_id uuid references folio_accounts on delete cascade not null,
@@ -107,34 +188,16 @@ create table if not exists folio_items (
 );
 
 alter table folio_items enable row level security;
+
+drop policy if exists "Users manage own items" on folio_items;
 create policy "Users manage own items"
   on folio_items for all
-  using (auth.uid() = user_id);
+  using      (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
 
--- Cadences
-create table if not exists folio_cadences (
-  id            uuid default gen_random_uuid() primary key,
-  user_id       uuid references auth.users(id) on delete cascade not null,
-  account_id    uuid references folio_accounts(id) on delete cascade not null,
-  type          text not null default 'meeting' check (type in ('meeting', 'task')),
-  frequency     text not null check (frequency in ('weekly', 'biweekly', 'monthly', 'quarterly')),
-  day_of_week   int check (day_of_week >= 0 and day_of_week <= 6),
-  day_of_month  int check (day_of_month >= 1 and day_of_month <= 31),
-  meeting_time  text,
-  task_title    text,
-  notes         text,
-  pip_brief     text,
-  pip_brief_at  timestamptz,
-  created_at    timestamptz default now(),
-  updated_at    timestamptz default now()
-);
-
-alter table folio_cadences enable row level security;
-create policy "Users manage their own cadences"
-  on folio_cadences for all
-  using (auth.uid() = user_id);
-
+-- ──────────────────────────────────────────────────────────────────────
 -- Quick Tasks
+-- ──────────────────────────────────────────────────────────────────────
 create table if not exists folio_quick_tasks (
   id          uuid primary key default gen_random_uuid(),
   user_id     uuid references auth.users not null,
@@ -147,15 +210,114 @@ create table if not exists folio_quick_tasks (
 );
 
 alter table folio_quick_tasks enable row level security;
+
+drop policy if exists "Users manage own quick tasks" on folio_quick_tasks;
 create policy "Users manage own quick tasks"
   on folio_quick_tasks for all
-  using (auth.uid() = user_id);
+  using      (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
 
--- Gauge Projects
+-- ──────────────────────────────────────────────────────────────────────
+-- Team / Org layer
+-- ──────────────────────────────────────────────────────────────────────
+create table if not exists folio_orgs (
+  id         uuid primary key default gen_random_uuid(),
+  name       text not null,
+  owner_id   uuid references auth.users not null,
+  created_at timestamptz default now()
+);
+alter table folio_orgs enable row level security;
+
+drop policy if exists "orgs_owner_all" on folio_orgs;
+create policy "orgs_owner_all" on folio_orgs
+  for all
+  using      (auth.uid() = owner_id)
+  with check (auth.uid() = owner_id);
+
+-- Helper functions for org membership lookups (break RLS recursion)
+create or replace function folio_user_org_ids()
+returns setof uuid
+language sql security definer stable set search_path = public
+as $$
+  select org_id from folio_org_members
+  where user_id = auth.uid() and accepted = true
+$$;
+grant execute on function folio_user_org_ids() to authenticated;
+
+create or replace function folio_user_writable_org_ids()
+returns setof uuid
+language sql security definer stable set search_path = public
+as $$
+  select org_id from folio_org_members
+  where user_id = auth.uid() and accepted = true and role in ('owner','member')
+$$;
+grant execute on function folio_user_writable_org_ids() to authenticated;
+
+create table if not exists folio_org_members (
+  id            uuid primary key default gen_random_uuid(),
+  org_id        uuid references folio_orgs on delete cascade not null,
+  user_id       uuid references auth.users on delete cascade,
+  role          text check (role in ('owner','member','leadership')) not null,
+  invited_email text,
+  accepted      boolean default false,
+  created_at    timestamptz default now()
+);
+alter table folio_org_members enable row level security;
+
+create table if not exists folio_account_notes (
+  id         uuid primary key default gen_random_uuid(),
+  org_id     uuid references folio_orgs on delete cascade,
+  account_id uuid references folio_accounts on delete cascade not null,
+  user_id    uuid references auth.users not null,
+  notes      text,
+  updated_at timestamptz default now(),
+  unique (account_id, user_id)
+);
+alter table folio_account_notes enable row level security;
+
+drop policy if exists "notes_owner" on folio_account_notes;
+create policy "notes_owner"
+  on folio_account_notes for all
+  using      (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create table if not exists folio_activity (
+  id         uuid primary key default gen_random_uuid(),
+  org_id     uuid references folio_orgs on delete cascade,
+  user_id    uuid references auth.users not null,
+  account_id uuid references folio_accounts on delete cascade,
+  event_type text not null,
+  payload    jsonb default '{}',
+  created_at timestamptz default now()
+);
+alter table folio_activity enable row level security;
+
+-- Wire folio_accounts.org_id once folio_orgs exists. ALTER is idempotent
+-- (constraint name guarded).
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'folio_accounts_org_id_fkey'
+  ) then
+    alter table folio_accounts
+      add constraint folio_accounts_org_id_fkey
+      foreign key (org_id) references folio_orgs;
+  end if;
+end $$;
+
+-- See team_org_layer.sql + phase1_security.sql for the full set of
+-- member / org-write policies (members_owner_all, members_self_read,
+-- members_self_accept, accounts_org_read, accounts_org_write, etc.).
+
+-- ──────────────────────────────────────────────────────────────────────
+-- Gauge — Projects + Templates
+-- ──────────────────────────────────────────────────────────────────────
 create table if not exists gauge_projects (
   id             uuid primary key default gen_random_uuid(),
   user_id        uuid references auth.users not null,
-  account_id     uuid references folio_accounts on delete cascade,
+  -- Phase 5: set null (was cascade) so completed project history
+  -- survives an account delete.
+  account_id     uuid references folio_accounts on delete set null,
   account_ids    uuid[] default '{}',
   meeting_id     uuid references folio_meetings on delete set null,
   title          text not null,
@@ -176,7 +338,27 @@ create table if not exists gauge_projects (
   updated_at     timestamptz default now()
 );
 
--- Gauge Templates
+alter table gauge_projects enable row level security;
+
+drop policy if exists "Gauge owner access" on gauge_projects;
+create policy "Gauge owner access"
+  on gauge_projects for all
+  using      (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "Gauge assignee select" on gauge_projects;
+create policy "Gauge assignee select"
+  on gauge_projects for select
+  using (assignee = auth.email());
+
+-- The full assignee-update policy (with gauge_owner_unchanged guard) lives
+-- in phase1_security.sql. Re-running that file installs it on top.
+
+drop trigger if exists gauge_projects_updated_at on gauge_projects;
+create trigger gauge_projects_updated_at
+  before update on gauge_projects
+  for each row execute function update_updated_at();
+
 create table if not exists gauge_templates (
   id          uuid primary key default gen_random_uuid(),
   user_id     uuid references auth.users not null,
@@ -188,51 +370,15 @@ create table if not exists gauge_templates (
 );
 
 alter table gauge_templates enable row level security;
+drop policy if exists "Template owner access" on gauge_templates;
 create policy "Template owner access"
   on gauge_templates for all
-  using (auth.uid() = user_id);
+  using      (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
 
-alter table gauge_projects enable row level security;
--- Owner: full access to own projects
-create policy "Gauge owner access"
-  on gauge_projects for all
-  using (auth.uid() = user_id);
--- Assignee: can select/update projects assigned to their email
-create policy "Gauge assignee select"
-  on gauge_projects for select
-  using (assignee = auth.email());
-create policy "Gauge assignee update"
-  on gauge_projects for update
-  using (assignee = auth.email())
-  with check (assignee = auth.email());
-
--- Auto-update updated_at trigger (shared)
-create or replace function update_updated_at()
-returns trigger as $$
-begin
-  new.updated_at = now();
-  return new;
-end;
-$$ language plpgsql;
-
-create trigger folio_accounts_updated_at
-  before update on folio_accounts
-  for each row execute function update_updated_at();
-
-create trigger folio_cadences_updated_at
-  before update on folio_cadences
-  for each row execute function update_updated_at();
-
-create trigger folio_meetings_updated_at
-  before update on folio_meetings
-  for each row execute function update_updated_at();
-
-create trigger gauge_projects_updated_at
-  before update on gauge_projects
-  for each row execute function update_updated_at();
-
--- Pip usage tracking (Phase 3). One row per Anthropic call, written by the
--- /api/pip*, /api/ask-pip routes. Append-only; owner-scoped RLS.
+-- ──────────────────────────────────────────────────────────────────────
+-- Pip usage tracking (Phase 3) — append-only per-call cost log
+-- ──────────────────────────────────────────────────────────────────────
 create table if not exists folio_pip_usage (
   id                      uuid primary key default gen_random_uuid(),
   user_id                 uuid not null references auth.users(id) on delete cascade,
@@ -247,11 +393,6 @@ create table if not exists folio_pip_usage (
   created_at              timestamptz not null default now()
 );
 
-create index if not exists folio_pip_usage_user_time_idx
-  on folio_pip_usage(user_id, created_at desc);
--- (No monthly-bucket index — date_trunc on timestamptz isn't IMMUTABLE so
--- Postgres rejects it. Range scan via the user_time_idx covers monthly rollups.)
-
 alter table folio_pip_usage enable row level security;
 
 drop policy if exists "pip_usage_owner_select" on folio_pip_usage;
@@ -261,3 +402,134 @@ create policy "pip_usage_owner_select" on folio_pip_usage
 drop policy if exists "pip_usage_owner_insert" on folio_pip_usage;
 create policy "pip_usage_owner_insert" on folio_pip_usage
   for insert with check (auth.uid() = user_id);
+
+-- ──────────────────────────────────────────────────────────────────────
+-- Pip memory — facts + account-state cache
+-- ──────────────────────────────────────────────────────────────────────
+create table if not exists folio_pip_facts (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null references auth.users(id) on delete cascade,
+  fact        text not null,
+  source      text not null default 'user_explicit',
+  active      boolean not null default true,
+  created_at  timestamptz default now(),
+  updated_at  timestamptz default now()
+);
+alter table folio_pip_facts enable row level security;
+
+drop policy if exists "facts_owner_select" on folio_pip_facts;
+create policy "facts_owner_select" on folio_pip_facts
+  for select using (auth.uid() = user_id);
+
+drop policy if exists "facts_owner_write" on folio_pip_facts;
+create policy "facts_owner_write" on folio_pip_facts
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create table if not exists folio_pip_account_state (
+  account_id    uuid primary key references folio_accounts(id) on delete cascade,
+  user_id       uuid not null references auth.users(id) on delete cascade,
+  state_prose   text not null,
+  health_signal text,
+  momentum      text,
+  risk_flags    text[],
+  generated_at  timestamptz not null default now(),
+  stale_at      timestamptz
+);
+alter table folio_pip_account_state enable row level security;
+
+drop policy if exists "state_owner_select" on folio_pip_account_state;
+create policy "state_owner_select" on folio_pip_account_state
+  for select using (auth.uid() = user_id);
+
+drop policy if exists "state_owner_write" on folio_pip_account_state;
+create policy "state_owner_write" on folio_pip_account_state
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ──────────────────────────────────────────────────────────────────────
+-- Audit log (optional security feature)
+-- ──────────────────────────────────────────────────────────────────────
+create table if not exists folio_audit_log (
+  id         uuid    default gen_random_uuid() primary key,
+  user_id    uuid    references auth.users(id) on delete cascade,
+  event_type text    not null,
+  table_name text,
+  record_id  uuid,
+  metadata   jsonb,
+  created_at timestamp with time zone default now()
+);
+alter table folio_audit_log enable row level security;
+
+drop policy if exists "Users can read own audit log" on folio_audit_log;
+create policy "Users can read own audit log"
+  on folio_audit_log for select using (auth.uid() = user_id);
+
+drop policy if exists "Users can insert own audit log" on folio_audit_log;
+create policy "Users can insert own audit log"
+  on folio_audit_log for insert with check (auth.uid() = user_id);
+
+-- ──────────────────────────────────────────────────────────────────────
+-- Route builder
+-- ──────────────────────────────────────────────────────────────────────
+create table if not exists folio_routes (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid references auth.users not null,
+  name        text not null,
+  date        date,
+  stops       jsonb not null default '[]',
+  created_at  timestamptz not null default now()
+);
+alter table folio_routes enable row level security;
+
+drop policy if exists "Users manage their own routes" on folio_routes;
+create policy "Users manage their own routes"
+  on folio_routes for all
+  using      (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+-- ──────────────────────────────────────────────────────────────────────
+-- Indexes — hot paths (Phase 5)
+-- See phase5_indexes.sql for the canonical list with per-query
+-- justifications. Mirrored here so a from-scratch run picks them up.
+-- ──────────────────────────────────────────────────────────────────────
+create index if not exists folio_accounts_user_id_idx          on folio_accounts(user_id);
+create index if not exists folio_accounts_parent_id_idx        on folio_accounts(parent_account_id);
+create index if not exists idx_accounts_org_id                 on folio_accounts(org_id);
+
+create index if not exists folio_contacts_account_id_idx       on folio_contacts(account_id);
+create index if not exists folio_contacts_user_id_idx          on folio_contacts(user_id);
+
+create index if not exists folio_cadences_account_id_idx       on folio_cadences(account_id);
+create index if not exists folio_cadences_user_id_idx          on folio_cadences(user_id);
+
+create index if not exists folio_meetings_cadence_id_idx       on folio_meetings(cadence_id);
+create index if not exists folio_meetings_status_idx           on folio_meetings(status);
+create index if not exists folio_meetings_account_date_idx     on folio_meetings(account_id, meeting_date desc);
+create index if not exists folio_meetings_user_date_idx        on folio_meetings(user_id, meeting_date desc);
+
+create index if not exists folio_items_account_done_idx        on folio_items(account_id, done);
+create index if not exists folio_items_user_done_idx           on folio_items(user_id, done);
+
+create index if not exists folio_quick_tasks_user_done_idx     on folio_quick_tasks(user_id, done);
+create index if not exists folio_quick_tasks_account_id_idx    on folio_quick_tasks(account_id);
+
+create index if not exists gauge_projects_user_id_idx          on gauge_projects(user_id);
+create index if not exists gauge_projects_account_id_idx       on gauge_projects(account_id);
+create index if not exists gauge_projects_assignee_idx         on gauge_projects(assignee);
+
+create index if not exists folio_account_notes_user_id_idx     on folio_account_notes(user_id);
+create index if not exists idx_account_notes_key               on folio_account_notes(account_id, user_id);
+
+create index if not exists folio_activity_account_id_idx       on folio_activity(account_id, created_at desc);
+create index if not exists idx_activity_org_id                 on folio_activity(org_id, created_at desc);
+
+create index if not exists idx_org_members_user_id             on folio_org_members(user_id);
+create index if not exists idx_org_members_org_id              on folio_org_members(org_id);
+
+create index if not exists folio_pip_usage_user_time_idx       on folio_pip_usage(user_id, created_at desc);
+create index if not exists folio_pip_facts_user_active         on folio_pip_facts(user_id) where active = true;
+create index if not exists folio_pip_account_state_user        on folio_pip_account_state(user_id);
+create index if not exists folio_pip_account_state_stale       on folio_pip_account_state(stale_at);
+
+create index if not exists folio_audit_log_user_time_idx       on folio_audit_log(user_id, created_at desc);
+create index if not exists folio_audit_log_created_at_idx      on folio_audit_log(created_at desc);
+create index if not exists folio_routes_user_id_idx            on folio_routes(user_id);
