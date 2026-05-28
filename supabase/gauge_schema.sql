@@ -7,6 +7,7 @@ create table if not exists gauge_projects (
   meeting_id  uuid references folio_meetings on delete set null,
   title       text not null,
   description text,
+  notes       text,
   status      text default 'active'
               check (status in ('active', 'on_hold', 'completed', 'cancelled')),
   priority    text default 'medium'

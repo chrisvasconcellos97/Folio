@@ -6,6 +6,7 @@ import { ErrorBanner } from "../../components/ErrorBanner";
 import { ProjectModal } from "./ProjectModal";
 import { ProjectStageEditor } from "./ProjectStageEditor";
 import { StandingBoardView } from "./StandingBoardView";
+import { ProjectNotesEditor } from "./ProjectNotesEditor";
 import { MyQueueView } from "./MyQueueView";
 import { TemplatePickerModal } from "./TemplatePickerModal";
 import { PipLoader } from "../../components/PipLoader";
@@ -741,6 +742,7 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
                   </>)}
                 </div>
 
+                <ProjectNotesEditor project={p} onUpdate={updateProject} />
                 <div style={{
                   fontFamily: MONO, fontSize: 9.5, color: C.textMuted,
                   textTransform: "uppercase", letterSpacing: "0.08em",

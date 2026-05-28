@@ -11,6 +11,7 @@ import { AddToTasksButton } from "../../components/AddToTasksButton";
 import { CadenceMeetingMode } from "./CadenceMeetingMode";
 import { ProjectStageEditor } from "../gauge/ProjectStageEditor";
 import { StandingBoardView } from "../gauge/StandingBoardView";
+import { ProjectNotesEditor } from "../gauge/ProjectNotesEditor";
 
 var INTER = "'Inter', system-ui, sans-serif";
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
@@ -506,6 +507,7 @@ function HubProjectCard({ project, accounts, members, userEmail, onUpdateProject
               {project.description}
             </div>
           )}
+          <ProjectNotesEditor project={project} onUpdate={onUpdateProject} compact />
           <div style={{
             fontFamily: MONO, fontSize: 9.5, color: C.textMuted,
             textTransform: "uppercase", letterSpacing: "0.08em",
