@@ -173,8 +173,8 @@
         --rule:      #e3ddcd;
         --text:      #18201d;
         --text-soft: #545d59;
-        --text-mute: #8b918d;
-        --text-faint:#b3b6ad;
+        --text-mute: #6b716d;
+        --text-faint:#9da39a;
         --serif: 'Fraunces', Georgia, serif;
         --sans:  'Inter', system-ui, sans-serif;
         --mono:  'JetBrains Mono', ui-monospace, monospace;
@@ -236,8 +236,8 @@
 
         --c-text:        #18201d;
         --c-text-soft:   #545d59;
-        --c-text-muted:  #8b918d;
-        --c-text-faint:  #b3b6ad;
+        --c-text-muted:  #6b716d;
+        --c-text-faint:  #9da39a;
 
         /* Glass — light analog: warm paper translucency */
         --c-glass-bg:     rgba(255,255,255,0.85);
@@ -444,6 +444,58 @@
 
       /* Skeleton pulse */
       @keyframes skeleton-pulse { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+      /* Skip-to-content — hidden until keyboard focus. Themed so it reads
+         on both palettes. Critical for keyboard-only users. */
+      .skip-to-content {
+        position: absolute;
+        left: 8px;
+        top: -40px;
+        z-index: 1000;
+        background: var(--c-accent);
+        color: var(--c-bg);
+        padding: 8px 14px;
+        border-radius: 6px;
+        font-family: 'Inter', system-ui, sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: top 0.15s ease;
+      }
+      .skip-to-content:focus {
+        top: 8px;
+        outline: 2px solid var(--c-accent);
+        outline-offset: 2px;
+      }
+
+      /* Visually hidden — for screen-reader-only text */
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      /* Reduced motion — disable list/view fade-in & transforms for users
+         who prefer it. The hover-lift block already opts in via
+         (prefers-reduced-motion: no-preference). */
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.001ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.001ms !important;
+        }
+        .pip > svg, .pip.sonar::before, .pip.sonar::after,
+        .folio-mark .fm-orb-glow, .folio-mark .fm-orb-ring,
+        .folio-mark .fm-orb-head, .folio-mark .fm-orb-tail {
+          animation: none !important;
+        }
+      }
     </style>
   </head>
   <body>

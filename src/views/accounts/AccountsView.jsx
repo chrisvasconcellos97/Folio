@@ -572,6 +572,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
               value={search}
               onChange={function (e) { setSearch(e.target.value); }}
               placeholder={copy.searchPlaceholder}
+              ariaLabel={copy.searchPlaceholder || "Search accounts"}
               onFocus={function() { setSearchFocused(true); }}
               onBlur={function() {
                 setTimeout(function() { setSearchFocused(false); }, 150);
@@ -583,6 +584,8 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
             <button
               onClick={function () { setMineOnly(function (v) { return !v; }); }}
               title="Show only accounts you own"
+              aria-label="Show only accounts you own"
+              aria-pressed={mineOnly}
               style={{
                 background: mineOnly ? C.accentFaint : "transparent",
                 border: "1px solid " + (mineOnly ? C.accentBorder : C.rule),
@@ -598,6 +601,8 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
           <button
             onClick={function () { setHideInactive(function (v) { return !v; }); }}
             title={hideInactive ? "Currently hiding inactive — click to show" : "Currently showing inactive — click to hide"}
+            aria-label="Hide inactive accounts"
+            aria-pressed={hideInactive}
             style={{
               background: hideInactive ? C.accentFaint : "transparent",
               border: "1px solid " + (hideInactive ? C.accentBorder : C.rule),
@@ -613,6 +618,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
             value={sortMode}
             onChange={function(e) { setSortMode(e.target.value); }}
             title="Sort by"
+            aria-label="Sort accounts by"
             style={{
               background: "transparent", border: "1px solid " + C.rule, borderRadius: 6,
               padding: "5px 8px", color: C.textMuted, fontSize: 11,
@@ -627,6 +633,8 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
           <button
             onClick={function() { setDensity(function(d) { return d === "comfortable" ? "compact" : "comfortable"; }); }}
             title={density === "comfortable" ? "Switch to compact view" : "Switch to comfortable view"}
+            aria-label={density === "comfortable" ? "Switch to compact view" : "Switch to comfortable view"}
+            aria-pressed={density === "compact"}
             style={{
               background: "transparent",
               border: "1px solid " + C.rule,
@@ -638,6 +646,8 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
               fontFamily: "'Inter', system-ui, sans-serif",
               lineHeight: 1,
               flexShrink: 0,
+              minWidth: 32,
+              minHeight: 32,
             }}
           >
             {density === "comfortable" ? "⊟" : "⊞"}
@@ -871,12 +881,17 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
           // lieu of a tinted background (spec §Depth System). In dark mode
           // TIER_SHADOW resolves to `transparent` via CSS vars.
           var tierShadow = isInactive ? undefined : TIER_SHADOW[a.tier];
+          var ariaLabel = a.name
+            + (a.tier ? ", " + a.tier + " tier" : "")
+            + (a.status ? ", " + (STATUS_LABELS[a.status] || a.status) : "")
+            + (isInactive ? ", inactive" : "");
           var card = (
             <div
               onClick={function () { onSelect(a); }}
               className="acct-card"
               role="button"
               tabIndex={0}
+              aria-label={ariaLabel}
               onKeyDown={function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(a); } }}
               style={{
                 flex: isChild ? 1 : undefined,

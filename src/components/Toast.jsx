@@ -36,18 +36,22 @@ export function Toast() {
   if (!toasts.length) return null;
 
   return (
-    <div style={{
-      position: "fixed",
-      top: 70,
-      left: "50%",
-      transform: "translateX(-50%)",
-      zIndex: 9999,
-      display: "flex",
-      flexDirection: "column",
-      gap: 8,
-      alignItems: "center",
-      pointerEvents: "none",
-    }}>
+    <div
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      style={{
+        position: "fixed",
+        top: 70,
+        left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: 9999,
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+        alignItems: "center",
+        pointerEvents: "none",
+      }}>
       {toasts.map(function(t) {
         var borderColor = t.type === "error" ? "rgba(224,92,92,0.5)" : t.type === "warning" ? "rgba(232,168,56,0.5)" : "rgba(74,155,130,0.5)";
         var textColor   = t.type === "error" ? "#e05c5c" : t.type === "warning" ? "#e8a838" : C.accent;

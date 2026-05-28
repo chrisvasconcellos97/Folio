@@ -50,6 +50,18 @@ export function DesktopLayout({
         background: C.bg,
       }}
     >
+      {/* Skip to content — visible only when focused via keyboard */}
+      <a
+        href="#main-content"
+        className="skip-to-content"
+        onClick={function (e) {
+          e.preventDefault();
+          var el = document.getElementById("main-content");
+          if (el) { el.focus(); el.scrollIntoView(); }
+        }}
+      >
+        Skip to content
+      </a>
       {/* Rail — 232px */}
       <div
         style={{
@@ -233,17 +245,20 @@ export function DesktopLayout({
       )}
 
       {/* Main content */}
-      <div
+      <main
+        id="main-content"
+        tabIndex={-1}
         style={{
           flex: 1,
           overflowY: "auto",
           padding: "24px 32px",
+          outline: "none",
         }}
       >
         <div key={view} className="view-fade-in">
           {detailPane || children}
         </div>
-      </div>
+      </main>
       <ConnectionStatus />
     </div>
   );

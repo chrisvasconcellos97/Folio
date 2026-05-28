@@ -14,7 +14,7 @@ var baseStyle = {
   colorScheme: "dark",
 };
 
-export function InputField({ id, value, onChange, placeholder, type, style, onKeyDown, autoFocus }) {
+export function InputField({ id, value, onChange, placeholder, type, style, onKeyDown, autoFocus, onFocus, onBlur, ariaLabel }) {
   return (
     <input
       id={id}
@@ -22,14 +22,17 @@ export function InputField({ id, value, onChange, placeholder, type, style, onKe
       value={value}
       onChange={onChange}
       onKeyDown={onKeyDown}
+      onFocus={onFocus}
+      onBlur={onBlur}
       autoFocus={autoFocus}
       placeholder={placeholder}
+      aria-label={ariaLabel || (id ? undefined : placeholder)}
       style={Object.assign({}, baseStyle, style || {})}
     />
   );
 }
 
-export function TextArea({ id, value, onChange, placeholder, rows, style, autoFocus }) {
+export function TextArea({ id, value, onChange, placeholder, rows, style, autoFocus, ariaLabel }) {
   return (
     <textarea
       id={id}
@@ -38,6 +41,7 @@ export function TextArea({ id, value, onChange, placeholder, rows, style, autoFo
       placeholder={placeholder}
       rows={rows || 4}
       autoFocus={autoFocus}
+      aria-label={ariaLabel || (id ? undefined : placeholder)}
       style={Object.assign({}, baseStyle, {
         resize: "vertical",
         lineHeight: 1.6,
@@ -46,12 +50,13 @@ export function TextArea({ id, value, onChange, placeholder, rows, style, autoFo
   );
 }
 
-export function SelectField({ id, value, onChange, children, style }) {
+export function SelectField({ id, value, onChange, children, style, ariaLabel }) {
   return (
     <select
       id={id}
       value={value}
       onChange={onChange}
+      aria-label={ariaLabel}
       style={Object.assign({}, baseStyle, {
         appearance: "none",
         cursor: "pointer",

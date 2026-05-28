@@ -115,6 +115,9 @@ export function UserMenu({ userMeta, onSignOut, onTour, onSettings, onDiagnostic
         {/* Avatar */}
         <button
           onClick={function () { setOpen(function (v) { return !v; }); }}
+          aria-label={"User menu" + (userMeta && userMeta.full_name ? " — " + userMeta.full_name : "")}
+          aria-haspopup="menu"
+          aria-expanded={open}
           style={{
             width: 32, height: 32, borderRadius: "50%",
             background: open ? C.accent : C.accentGlow,

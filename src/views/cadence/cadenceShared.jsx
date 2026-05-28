@@ -38,7 +38,9 @@ export var navBtnStyle = {
   fontSize: 18,
   lineHeight: 1,
   cursor: 'pointer',
-  padding: '3px 10px',
+  padding: '6px 12px',
+  minWidth: 36,
+  minHeight: 32,
   fontFamily: "'Inter', system-ui, sans-serif",
 };
 

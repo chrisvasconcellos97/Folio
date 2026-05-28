@@ -289,7 +289,7 @@ export function CadenceTab({ account, cadences, items, meetings, contacts, onAdd
                       <div style={{ fontSize: 11, color: C.textMuted, marginTop: 6, fontStyle: 'italic', lineHeight: 1.4 }}>{m.pip_summary}</div>
                     )}
                   </div>
-                  <button onClick={function () { onDeleteMeeting(m.id); }} style={{ background: 'none', border: 'none', color: C.textMuted, cursor: 'pointer', fontSize: 16, padding: '0 0 0 10px', flexShrink: 0 }}>×</button>
+                  <button onClick={function () { onDeleteMeeting(m.id); }} aria-label="Delete meeting" title="Delete meeting" style={{ background: 'none', border: 'none', color: C.textMuted, cursor: 'pointer', fontSize: 16, padding: '0 0 0 10px', flexShrink: 0, minWidth: 32, minHeight: 32 }}>×</button>
                 </div>
               </div>
             );

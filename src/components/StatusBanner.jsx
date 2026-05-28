@@ -105,15 +105,19 @@ export function StatusBanner({ accounts, items, meetings, onColdClick, onOverdue
   }
 
   return (
-    <div style={{
-      // Theme-aware Pip-card surface (see PipInsightCard for full notes).
-      background: "var(--c-pip-card-bg)",
-      border: "1px solid " + C.accentBorder,
-      borderRadius: 8,
-      padding: "14px 16px",
-      marginBottom: 12,
-      boxShadow: "var(--c-pip-card-shadow)",
-    }}>
+    <div
+      role="status"
+      aria-live="polite"
+      aria-label="Pip noticed"
+      style={{
+        // Theme-aware Pip-card surface (see PipInsightCard for full notes).
+        background: "var(--c-pip-card-bg)",
+        border: "1px solid " + C.accentBorder,
+        borderRadius: 8,
+        padding: "14px 16px",
+        marginBottom: 12,
+        boxShadow: "var(--c-pip-card-shadow)",
+      }}>
       <div style={{ display: "grid", gridTemplateColumns: "32px 1fr", gap: 10, alignItems: "start" }}>
         <PipOrb size="md" />
         <div>

@@ -60,6 +60,9 @@ export function CommandPalette({ accounts, contacts, onSelectAccount, onSelectCo
   return (
     <div
       onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Command palette"
       style={{
         position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000,
         display: "flex", alignItems: "flex-start", justifyContent: "center", paddingTop: 120,
@@ -79,13 +82,19 @@ export function CommandPalette({ accounts, contacts, onSelectAccount, onSelectCo
             onChange={function(e) { setQuery(e.target.value); }}
             onKeyDown={handleKey}
             placeholder="Jump to account or view…"
+            role="combobox"
+            aria-label="Search accounts, contacts, or navigate"
+            aria-expanded="true"
+            aria-controls="command-palette-results"
+            aria-activedescendant={results[idx] ? "command-palette-item-" + idx : undefined}
+            aria-autocomplete="list"
             style={{
               width: "100%", background: "transparent", border: "none", outline: "none",
               fontSize: 16, color: C.text, fontFamily: "'Inter', system-ui, sans-serif",
             }}
           />
         </div>
-        <div style={{ maxHeight: 320, overflowY: "auto" }}>
+        <div id="command-palette-results" role="listbox" aria-label="Search results" style={{ maxHeight: 320, overflowY: "auto" }}>
           {results.length === 0 && (
             <div style={{ padding: "20px 16px", color: C.textMuted, fontSize: 13, textAlign: "center" }}>No results</div>
           )}
@@ -105,6 +114,9 @@ export function CommandPalette({ accounts, contacts, onSelectAccount, onSelectCo
                   </div>
                 )}
                 <div
+                  id={"command-palette-item-" + i}
+                  role="option"
+                  aria-selected={active}
                   onClick={function() { r.action(); onClose(); }}
                   style={{
                     padding: "10px 16px", cursor: "pointer", display: "flex", alignItems: "center",
