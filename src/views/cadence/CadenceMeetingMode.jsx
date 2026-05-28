@@ -128,6 +128,7 @@ export function CadenceMeetingMode({
   // effectively hidden (44px icon-strip toggle) so the notepad gets the
   // whole viewport.
   var [sidebarCollapsed, setCollapsed]  = useState(isMobile);
+  var [briefExpanded, setBriefExpanded] = useState(false);
   var [quickItem, setQuickItem]         = useState("");
   var [attendees, setAttendees]         = useState(Array.isArray(draft.attendees) ? draft.attendees.slice() : []);
   var saveTimer = useRef(null);
@@ -293,11 +294,20 @@ export function CadenceMeetingMode({
           ×
         </button>
         <div style={{ flex: 1, minWidth: 0, textAlign: "center" }}>
-          <div style={{ fontFamily: SERIF, fontSize: 16, color: C.text, lineHeight: 1.2 }}>
+          <div style={{
+            fontFamily: SERIF, fontSize: isMobile ? 14 : 16, color: C.text, lineHeight: 1.2,
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          }}>
             {account.name}
           </div>
-          <div style={{ fontFamily: MONO, fontSize: 10, color: C.accent, letterSpacing: "0.07em", textTransform: "uppercase", marginTop: 2 }}>
-            {topLabel} · {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+          <div style={{
+            fontFamily: MONO, fontSize: isMobile ? 9 : 10, color: C.accent,
+            letterSpacing: "0.06em", textTransform: "uppercase", marginTop: 2,
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          }}>
+            {isMobile
+              ? topLabel + " · " + new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })
+              : topLabel + " · " + new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
           </div>
         </div>
         <button
@@ -328,11 +338,12 @@ export function CadenceMeetingMode({
         </div>
       )}
 
-      {/* Pip brief strip — full-width across the top of the body */}
+      {/* Pip brief strip — collapsed-by-default one-liner on mobile so the
+          notepad gets the screen. Tap to expand. Desktop renders full. */}
       {hasBrief && (
         <div style={{
           flexShrink: 0,
-          padding: "12px 18px 14px 18px",
+          padding: isMobile ? "8px 12px" : "12px 18px 14px 18px",
           background: C.surface2,
           borderBottom: "1px solid " + C.rule,
         }}>
@@ -342,8 +353,8 @@ export function CadenceMeetingMode({
             loading={false}
             error={null}
             onRefresh={null}
-            mobileCollapsed={false}
-            onExpand={null}
+            mobileCollapsed={isMobile && !briefExpanded}
+            onExpand={function () { setBriefExpanded(true); }}
           />
         </div>
       )}
