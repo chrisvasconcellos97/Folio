@@ -282,6 +282,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
      - **Notifications:** in-app only for v1. When a task is assigned, the assignee's Diagnostics-style "My Queue" badge ticks up. No email — that's a separate surface.
      - **Tie to revenue-impact update calendar (future):** standing-project tasks completing are the natural source for Update Calendar entries. Same `revenue_impact` flag pattern from that spec applies. Not v1 — captured for the eventual link.
      - **Status semantics:** keep the existing `completed_at` flag for done/not-done. For standing projects, also add a `task_status text` field (intake / in_progress / done — configurable per project as kanban columns). Discrete projects keep the linear stage flow as today.
+     - **Project status bubbles into task display:** if the parent project's status is `planned` (or `on_hold`), every task within it surfaces in the admin's queue with a `PLANNING` (or `ON HOLD`) chip overriding the task's own status. Tells the admin "I can't start this yet — manager's still gathering details." When the project flips to `in_progress`, tasks revert to showing their own `task_status` (intake / in_progress / done). Admin can sort/filter their queue: "Live" (project = in_progress) vs "Planning" (project = planned/on_hold) vs "All".
 
 4. **Native feel:** *(no open items)*
 
