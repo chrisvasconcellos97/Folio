@@ -352,6 +352,9 @@ create table if not exists gauge_projects (
   blocked_reason text,
   requested_at   timestamptz default now(),
   requested_by   text,
+  is_standing    boolean default false,
+  custom_field_schema  jsonb default '[]',
+  task_status_columns  jsonb default '["intake","in_progress","done"]',
   created_at     timestamptz default now(),
   updated_at     timestamptz default now()
 );

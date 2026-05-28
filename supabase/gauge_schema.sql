@@ -12,6 +12,9 @@ create table if not exists gauge_projects (
   priority    text default 'medium'
               check (priority in ('high', 'medium', 'low')),
   due_date    date,
+  is_standing boolean default false,
+  custom_field_schema  jsonb default '[]',
+  task_status_columns  jsonb default '["intake","in_progress","done"]',
   created_at  timestamptz default now(),
   updated_at  timestamptz default now()
 );

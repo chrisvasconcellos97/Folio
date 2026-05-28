@@ -5,6 +5,8 @@ import { useProjects } from "../../hooks/useProjects";
 import { ErrorBanner } from "../../components/ErrorBanner";
 import { ProjectModal } from "./ProjectModal";
 import { ProjectStageEditor } from "./ProjectStageEditor";
+import { StandingBoardView } from "./StandingBoardView";
+import { MyQueueView } from "./MyQueueView";
 import { TemplatePickerModal } from "./TemplatePickerModal";
 import { PipLoader } from "../../components/PipLoader";
 import { PipInsightCard } from "../../components/PipInsightCard";
@@ -416,10 +418,31 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
         </div>
       )}
 
+      {/* My Queue — task-level rollup, replaces the project list while active */}
+      {!loading && scopeFilter === "my_queue" && (
+        <MyQueueView
+          projects={projects}
+          accounts={accounts}
+          members={members}
+          userEmail={userEmail}
+          onUpdate={updateProject}
+          onOpenProject={function (id) {
+            setScopeFilter("all");
+            setStatusFilter("all");
+            setOverdueOnly(false);
+            setExpandedRows(function (prev) { return Object.assign({}, prev, { [id]: true }); });
+            setTimeout(function () {
+              var el = document.querySelector('[data-project-id="' + id + '"]');
+              if (el && el.scrollIntoView) el.scrollIntoView({ behavior: "smooth", block: "center" });
+            }, 50);
+          }}
+        />
+      )}
+
       {/* Project list */}
       {loading && <PipLoader />}
 
-      {!loading && sortedFiltered.length === 0 && (
+      {!loading && scopeFilter !== "my_queue" && sortedFiltered.length === 0 && (
         <div
           style={{
             textAlign: "center",
@@ -447,7 +470,7 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
         </div>
       )}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div style={{ display: scopeFilter === "my_queue" ? "none" : "flex", flexDirection: "column", gap: 6 }}>
         {sortedFiltered.map(function (p) {
           var isComplete  = p.status === "complete";
           var overdue     = p.status === "in_progress" && isOverdue(p.due_date);
@@ -723,9 +746,19 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
                   textTransform: "uppercase", letterSpacing: "0.08em",
                   marginBottom: 8,
                 }}>
-                  Stages
+                  Tasks
                 </div>
-                <ProjectStageEditor project={p} onUpdate={updateProject} />
+                {p.is_standing ? (
+                  <StandingBoardView
+                    project={p}
+                    accounts={accounts}
+                    members={members}
+                    userEmail={userEmail}
+                    onUpdate={updateProject}
+                  />
+                ) : (
+                  <ProjectStageEditor project={p} onUpdate={updateProject} />
+                )}
               </div>
             )}
             </div>

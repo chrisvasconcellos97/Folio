@@ -176,7 +176,7 @@ export function ProjectStageEditor({ project, onUpdate }) {
                     background: "none", border: "none", color: C.textMuted, cursor: "pointer",
                     fontSize: 12, padding: "2px 4px",
                   }}
-                  aria-label={isExpanded ? "Collapse sub-stages" : "Expand sub-stages"}
+                  aria-label={isExpanded ? "Collapse sub-tasks" : "Expand sub-tasks"}
                 >
                   {isExpanded ? "▾" : "▸"}
                 </button>
@@ -281,7 +281,7 @@ export function ProjectStageEditor({ project, onUpdate }) {
           value={newStageTitle}
           onChange={function (e) { setNewStageTitle(e.target.value); }}
           onKeyDown={function (e) { if (e.key === "Enter") { e.preventDefault(); addStage(); } }}
-          placeholder="+ Add stage"
+          placeholder="+ Add task"
           style={{
             flex: 1, background: C.surface, border: "1px solid " + C.rule,
             borderRadius: 6, padding: "6px 10px",
@@ -297,7 +297,7 @@ export function ProjectStageEditor({ project, onUpdate }) {
               fontFamily: MONO, fontSize: 11, cursor: "pointer",
             }}
           >
-            Add stage
+            Add task
           </button>
         )}
       </div>

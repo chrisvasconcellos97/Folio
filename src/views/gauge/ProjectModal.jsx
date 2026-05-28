@@ -6,6 +6,8 @@ import { FL } from "../../components/FieldLabel";
 import { DangerBtn } from "../../components/Buttons";
 import { supabase } from "../../lib/supabase";
 import { showToast } from "../../components/Toast";
+import { defaultCustomFieldSchema, DEFAULT_TASK_STATUS_COLUMNS } from "../../lib/gaugeFields";
+import { CustomFieldSchemaEditor } from "./CustomFieldSchemaEditor";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 
@@ -83,6 +85,18 @@ export function ProjectModal({
       ? normalizeStages(prefillTemplate.stages)
       : normalizeStages(existing ? existing.stages : [])
   );
+  var [isStanding, setIsStanding]   = useState(existing ? !!existing.is_standing : false);
+  var [customFieldSchema, setCustomFieldSchema] = useState(
+    existing && existing.custom_field_schema && existing.custom_field_schema.length > 0
+      ? existing.custom_field_schema
+      : defaultCustomFieldSchema()
+  );
+  var [taskStatusColumns, setTaskStatusColumns] = useState(
+    existing && existing.task_status_columns && existing.task_status_columns.length > 0
+      ? existing.task_status_columns
+      : DEFAULT_TASK_STATUS_COLUMNS.slice()
+  );
+  var [showSchemaEditor, setShowSchemaEditor] = useState(false);
   var [newStageTitle, setNewStageTitle] = useState("");
   var [saving, setSaving]           = useState(false);
   var [confirmDel, setConfirmDel]   = useState(false);
@@ -262,6 +276,9 @@ export function ProjectModal({
       requested_by:  requestedBy || null,
       blocked_reason: status === "blocked" ? blockedReason.trim() : null,
       stages,
+      is_standing:   isStanding,
+      custom_field_schema: customFieldSchema,
+      task_status_columns: taskStatusColumns,
     }).then(function () {
       setSaving(false);
       onClose();
@@ -315,6 +332,42 @@ export function ProjectModal({
             placeholder="What are we building?"
             autoFocus
           />
+        </div>
+
+        {/* Project mode — discrete vs standing */}
+        <div>
+          <FL>Project Mode</FL>
+          <div style={{ display: "flex", gap: 6 }}>
+            {[
+              { id: false, label: "Discrete", hint: "Start, finish, done." },
+              { id: true,  label: "Standing", hint: "Ongoing request queue." },
+            ].map(function (opt) {
+              var active = isStanding === opt.id;
+              return (
+                <button
+                  key={String(opt.id)}
+                  onClick={function () { setIsStanding(opt.id); }}
+                  style={{
+                    flex: 1,
+                    background: active ? C.accentFaint : "transparent",
+                    border: "1px solid " + (active ? C.accentLine : C.rule),
+                    borderRadius: 6,
+                    padding: "8px 10px",
+                    cursor: "pointer",
+                    textAlign: "left",
+                    fontFamily: "'Inter', system-ui, sans-serif",
+                  }}
+                >
+                  <div style={{ fontSize: 12, fontWeight: 600, color: active ? C.accent : C.text, marginBottom: 2 }}>
+                    {opt.label}
+                  </div>
+                  <div style={{ fontSize: 10.5, color: C.textMuted, lineHeight: 1.4 }}>
+                    {opt.hint}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Multi-account selector */}
@@ -529,9 +582,47 @@ export function ProjectModal({
           )}
         </div>
 
-        {/* Stages */}
+        {/* Custom columns schema — drives the task detail panel + standing board */}
         <div>
-          <FL>Stages</FL>
+          <FL>Task Columns</FL>
+          <div style={{
+            fontSize: 11, color: C.textMuted, marginBottom: 8, lineHeight: 1.5,
+            fontFamily: "'Inter', system-ui, sans-serif",
+          }}>
+            Each task carries these fields. Bones defaults are pre-filled — add or remove to fit how your team intakes work.
+          </div>
+          {showSchemaEditor ? (
+            <>
+              <CustomFieldSchemaEditor schema={customFieldSchema} onChange={setCustomFieldSchema} />
+              <button
+                onClick={function () { setShowSchemaEditor(false); }}
+                style={{
+                  background: "transparent", border: "1px solid " + C.rule,
+                  borderRadius: 6, padding: "4px 10px",
+                  color: C.textMuted, fontSize: 11, marginTop: 6, cursor: "pointer",
+                  fontFamily: MONO,
+                }}
+              >Done</button>
+            </>
+          ) : (
+            <button
+              onClick={function () { setShowSchemaEditor(true); }}
+              style={{
+                background: "transparent", border: "1px solid " + C.rule,
+                borderRadius: 6, padding: "6px 12px",
+                color: C.textSoft, fontSize: 11, cursor: "pointer",
+                fontFamily: "'Inter', system-ui, sans-serif",
+              }}
+            >
+              Edit columns ({customFieldSchema.length})
+            </button>
+          )}
+        </div>
+
+        {/* Tasks (discrete only — standing manages via the board) */}
+        {!isStanding && (
+        <div>
+          <FL>Tasks</FL>
           <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 8 }}>
             {stages.map(function (s, i) {
               var done     = !!s.completed_at;
@@ -755,7 +846,7 @@ export function ProjectModal({
               value={newStageTitle}
               onChange={function (e) { setNewStageTitle(e.target.value); }}
               onKeyDown={function (e) { if (e.key === "Enter") { e.preventDefault(); addStage(); } }}
-              placeholder="Add a stage…"
+              placeholder="Add a task…"
               style={{
                 flex: 1,
                 background: C.bgDark,
@@ -786,6 +877,19 @@ export function ProjectModal({
             </button>
           </div>
         </div>
+        )}
+
+        {isStanding && (
+          <div style={{
+            background: C.surface2, border: "1px solid " + C.rule, borderRadius: 8,
+            padding: "10px 12px", fontSize: 12, color: C.textSoft, lineHeight: 1.5,
+            fontFamily: "'Inter', system-ui, sans-serif",
+          }}>
+            This is a standing project — tasks are added on the board below as
+            requests come in. Tasks landing here also surface in the assignee's
+            queue.
+          </div>
+        )}
 
         {/* Footer */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4, flexWrap: "wrap", gap: 8 }}>
