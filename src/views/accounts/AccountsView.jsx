@@ -577,10 +577,10 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
       {/* Big search + single Filter button. Density stays inline. */}
       <div style={{ marginBottom: 10 }}>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <div style={{ flex: 1, position: "relative" }}>
+          <div className="folio-search-wrap" style={{ flex: 1, position: "relative", padding: 4, margin: -4 }}>
             <span aria-hidden="true" style={{
               position: "absolute",
-              left: 14, top: "50%", transform: "translateY(-50%)",
+              left: 18, top: "50%", transform: "translateY(-50%)",
               color: C.accent, fontSize: 16, lineHeight: 1, pointerEvents: "none",
               zIndex: 1,
             }}>⌕</span>
@@ -597,11 +597,11 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
               style={{
                 paddingLeft: 38,
                 paddingTop: 13, paddingBottom: 13,
-                border: "1px solid " + C.accentLine,
+                border: "1px solid " + C.accent,
                 boxShadow: searchFocused
-                  ? "0 0 0 1px " + C.accent + ", 0 0 18px " + C.folioShadow + ", 0 0 4px " + C.folioShadow
-                  : "0 0 14px " + C.folioShadow + ", 0 0 3px " + C.folioShadow,
-                transition: "box-shadow 0.2s ease, border-color 0.2s ease",
+                  ? "0 0 0 1px " + C.accent + ", 0 0 28px " + C.folioShadow + ", 0 0 10px " + C.folioShadow
+                  : "0 0 18px " + C.folioShadow + ", 0 0 6px " + C.folioShadow,
+                transition: "box-shadow 0.2s ease",
               }}
             />
           </div>
