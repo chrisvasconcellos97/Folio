@@ -552,6 +552,8 @@ export function CadenceHub({
   onBack,
   onOpenAccount,
   isMobile,
+  autoOpenMeetingMode,
+  onAutoOpenMeetingModeConsumed,
 }) {
   var [briefLoading, setBriefLoading] = useState(false);
   var [briefError, setBriefError]     = useState(null);
@@ -692,6 +694,19 @@ export function CadenceHub({
   function handleResumeDraft(draft) {
     setMeetingMode({ draft: draft });
   }
+
+  // When AutoOpenMeetingMode is requested (from a "just started" reminder),
+  // programmatically click Start Meeting once on mount. The flag is then
+  // consumed so re-renders don't refire.
+  var autoOpenedRef = useRef(false);
+  useEffect(function () {
+    if (!autoOpenMeetingMode || autoOpenedRef.current) return;
+    if (meetingMode || startingMeeting) return;
+    autoOpenedRef.current = true;
+    handleStartMeeting();
+    if (onAutoOpenMeetingModeConsumed) onAutoOpenMeetingModeConsumed();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpenMeetingMode]);
 
   function handleSummarizeRequest(draftPayload) {
     var draftId = draftPayload.id;

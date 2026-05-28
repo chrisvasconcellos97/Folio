@@ -6,6 +6,7 @@ import { useAccounts } from "./hooks/useAccounts";
 import { useMeetings } from "./hooks/useMeetings";
 import { useCadences } from "./hooks/useCadences";
 import { useCadenceSync } from "./hooks/useCadenceSync";
+import { useCadenceReminders } from "./hooks/useCadenceReminders";
 import { useQuickTasks } from "./hooks/useQuickTasks";
 import { useAccountMetrics } from "./hooks/useAccountMetrics";
 import { useProjects } from "./hooks/useProjects";
@@ -33,6 +34,7 @@ import { DesktopLayout } from "./layout/DesktopLayout";
 import { MobileLayout } from "./layout/MobileLayout";
 import { PipOrb, PipMark } from "./components/PipMark";
 import { CommandPalette } from "./components/CommandPalette";
+import { MeetingReminderBanner } from "./components/MeetingReminderBanner";
 import { Toast, showToast } from "./components/Toast";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useErrors } from "./hooks/useErrors";
@@ -48,6 +50,7 @@ export default function App() {
   var [view, setView]                   = useState("accounts");
   var [selectedAccount, setSelected]    = useState(null);
   var [pendingHubCadenceId, setPendingHubCadenceId] = useState(null);
+  var [pendingAutoOpenMeetingMode, setPendingAutoOpenMeetingMode] = useState(false);
   var [bannerFilter, setBannerFilter]   = useState(null); // 'cold' | 'overdue' | null
   var [showAddAccount, setShowAddAccount] = useState(false);
   var [addAccountDefaultType, setAddAccountDefaultType] = useState(null);
@@ -132,6 +135,17 @@ export default function App() {
   }, [userId, accounts.length, meetings.length]);
   var { cadences, loading: cadenceLoading, addCadence, error: cadenceError, refetch: refetchCadencesApp } = useCadences(userId);
   useCadenceSync(userId, cadences, cadenceLoading);
+  var reminderApi = useCadenceReminders(userId, cadences, accounts);
+
+  function handleOpenReminder(reminder) {
+    var acct = (accounts || []).find(function (a) { return a.id === reminder.accountId; });
+    if (!acct) return;
+    setSelected(acct);
+    setPendingHubCadenceId(reminder.cadenceId);
+    setPendingAutoOpenMeetingMode(reminder.threshold === "start");
+    setView("accounts");
+    reminderApi.dismissReminder(reminder.id);
+  }
   var { tasks, addTask, updateTask, deleteTask, error: tasksError } = useQuickTasks(userId);
   var { projects: allProjects, error: projectsErrorApp, refetch: refetchProjectsApp } = useProjects(userId);
   var { revenueHistory, shopMetrics, upsertRevenue, upsertShopMetrics } = useAccountMetrics(userId);
@@ -415,6 +429,8 @@ export default function App() {
             onPipPrefillHandled={function () { setPipPrefill(null); }}
             initialHubCadenceId={pendingHubCadenceId}
             onHubConsumed={function () { setPendingHubCadenceId(null); }}
+            autoOpenMeetingMode={pendingAutoOpenMeetingMode}
+            onAutoOpenMeetingModeConsumed={function () { setPendingAutoOpenMeetingMode(false); }}
             revenueHistory={revenueHistory}
             shopMetrics={shopMetrics}
             onAddAccount={addAccount}
@@ -606,10 +622,74 @@ export default function App() {
     </div>
   );
 
+  var reminderBanner = (
+    <MeetingReminderBanner
+      reminders={reminderApi.reminders}
+      onDismiss={reminderApi.dismissReminder}
+      onOpen={handleOpenReminder}
+    />
+  );
+
+  // Discreet one-time permission prompt — surfaces the first time a cadence
+  // with a meeting_time exists, the user hasn't been asked yet, and the
+  // browser supports Notifications. Persist "asked" so the prompt never
+  // re-appears regardless of grant/deny outcome.
+  var [showNotifPrompt, setShowNotifPrompt] = useState(false);
+  useEffect(function () {
+    if (!session || !cadences || cadences.length === 0) return;
+    if (typeof Notification === "undefined") return;
+    if (Notification.permission !== "default") return;
+    var prompted = false;
+    try { prompted = localStorage.getItem("folio_meeting_notif_prompted") === "1"; } catch (e) {}
+    if (prompted) return;
+    var hasTimedCadence = cadences.some(function (c) { return c && c.meeting_time; });
+    if (hasTimedCadence) setShowNotifPrompt(true);
+  }, [session, cadences]);
+
+  function handleAllowNotifs() {
+    reminderApi.requestPermission().finally(function () {
+      setShowNotifPrompt(false);
+    });
+  }
+  function handleDismissNotifPrompt() {
+    try { localStorage.setItem("folio_meeting_notif_prompted", "1"); } catch (e) {}
+    setShowNotifPrompt(false);
+  }
+
+  var notifPrompt = showNotifPrompt && (
+    <div style={{
+      position: "fixed", bottom: 16, left: "50%", transform: "translateX(-50%)",
+      zIndex: 170,
+      background: C.bgCard, border: "1px solid " + C.accentBorder,
+      borderRadius: 12, padding: "12px 16px",
+      display: "flex", alignItems: "center", gap: 12,
+      fontFamily: "'Inter', system-ui, sans-serif",
+      boxShadow: "0 6px 20px rgba(0,0,0,0.25)",
+      maxWidth: "min(560px, calc(100vw - 32px))",
+    }}>
+      <div style={{ fontSize: 13, color: C.text, lineHeight: 1.4 }}>
+        Want Pip to ping you before cadence meetings?
+      </div>
+      <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+        <button onClick={handleAllowNotifs} style={{
+          background: C.accent, border: "none", borderRadius: 8, padding: "6px 12px",
+          fontSize: 12, fontWeight: 700, color: "#fff", cursor: "pointer",
+          fontFamily: "'Inter', system-ui, sans-serif",
+        }}>Yes</button>
+        <button onClick={handleDismissNotifPrompt} style={{
+          background: "none", border: "1px solid " + C.border, borderRadius: 8,
+          padding: "6px 12px", fontSize: 12, color: C.textSub, cursor: "pointer",
+          fontFamily: "'Inter', system-ui, sans-serif",
+        }}>Not now</button>
+      </div>
+    </div>
+  );
+
   if (isDesktop) {
     return (
       <>
         <Toast />
+        {reminderBanner}
         {inviteBanner}
         <DesktopLayout
           view={view}
@@ -666,6 +746,7 @@ export default function App() {
             onDismiss={function () { setShowReturning(false); }}
           />
         )}
+        {notifPrompt}
         {isDesktop && showPalette && (
           <CommandPalette
             accounts={accounts}
@@ -687,6 +768,7 @@ export default function App() {
   return (
     <>
       <Toast />
+      {reminderBanner}
       {inviteBanner}
       <MobileLayout
         view={view}
@@ -743,6 +825,7 @@ export default function App() {
           onDismiss={function () { setShowReturning(false); }}
         />
       )}
+      {notifPrompt}
     </>
   );
 }

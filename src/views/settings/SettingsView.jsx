@@ -966,6 +966,119 @@ function ActivitySection({ userId, orgId, role, members, accounts }) {
   );
 }
 
+function NotificationsSection() {
+  var initialPerm = typeof Notification !== "undefined" ? Notification.permission : "unsupported";
+  var [perm, setPerm] = useState(initialPerm);
+  var initialBanners = (function () {
+    try { return localStorage.getItem("folio_meeting_banners_enabled") !== "0"; }
+    catch (e) { return true; }
+  })();
+  var [banners, setBanners] = useState(initialBanners);
+
+  function requestPerm() {
+    if (typeof Notification === "undefined") return;
+    if (Notification.permission !== "default") {
+      setPerm(Notification.permission);
+      return;
+    }
+    Notification.requestPermission().then(function (p) {
+      try { localStorage.setItem("folio_meeting_notifications", p); } catch (e) {}
+      try { localStorage.setItem("folio_meeting_notif_prompted", "1"); } catch (e) {}
+      setPerm(p);
+    });
+  }
+
+  function toggleBanners() {
+    var next = !banners;
+    setBanners(next);
+    try { localStorage.setItem("folio_meeting_banners_enabled", next ? "1" : "0"); } catch (e) {}
+  }
+
+  var permLabel = perm === "granted" ? "Allowed"
+    : perm === "denied" ? "Blocked"
+    : perm === "unsupported" ? "Unsupported"
+    : "Not asked";
+  var permColor = perm === "granted" ? C.accent
+    : perm === "denied" ? C.red
+    : C.textSub;
+
+  return (
+    <Card>
+      <div style={{ fontFamily: SETTINGS_SERIF, fontSize: 20, fontWeight: 400, color: C.text, marginBottom: 4 }}>
+        Cadence Reminders
+      </div>
+      <div style={{ fontSize: 13, color: C.textSub, lineHeight: 1.6, marginBottom: 14 }}>
+        I'll nudge you 30 min, 5 min, and at the start of your scheduled cadences.
+      </div>
+
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "12px 0", borderTop: "1px solid " + C.rule, gap: 12,
+      }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>Browser notifications</div>
+          <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
+            System pop-ups when the tab is in the background.{" "}
+            <span style={{ color: permColor, fontWeight: 600, fontFamily: SETTINGS_MONO, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.07em" }}>
+              {permLabel}
+            </span>
+          </div>
+        </div>
+        {perm === "default" && (
+          <button
+            onClick={requestPerm}
+            style={{
+              background: C.accentSubtle, color: C.accent, border: "1px solid " + C.accentBorder,
+              borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700,
+              cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif", flexShrink: 0,
+            }}
+          >
+            Allow
+          </button>
+        )}
+        {perm === "denied" && (
+          <span style={{ fontSize: 11, color: C.textMuted, maxWidth: 180, textAlign: "right" }}>
+            Allow in your browser's site settings.
+          </span>
+        )}
+      </div>
+
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "12px 0", borderTop: "1px solid " + C.rule, gap: 12,
+      }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>In-app banners</div>
+          <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
+            Show reminder bars at the top of Folios.
+          </div>
+        </div>
+        <button
+          role="switch"
+          aria-checked={banners}
+          onClick={toggleBanners}
+          style={{
+            width: 44, height: 24, borderRadius: 999,
+            background: banners ? C.accent : C.surface3,
+            border: "1px solid " + (banners ? C.accent : C.rule),
+            cursor: "pointer", position: "relative", flexShrink: 0,
+            transition: "background 0.18s ease, border-color 0.18s ease",
+          }}
+        >
+          <span style={{
+            position: "absolute",
+            top: 1, left: banners ? 21 : 1,
+            width: 20, height: 20, borderRadius: "50%",
+            background: "#fff",
+            transition: "left 0.18s ease",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+          }} />
+        </button>
+      </div>
+    </Card>
+  );
+}
+
 function AppearanceSection() {
   var t = useTheme();
   var options = [
@@ -1037,6 +1150,8 @@ export function SettingsView({ userId, userMeta, org, orgId, role, members, pend
 
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <AppearanceSection />
+
+        <NotificationsSection />
 
         <ProfileSection userMeta={userMeta} />
 
