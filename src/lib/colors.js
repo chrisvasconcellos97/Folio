@@ -37,6 +37,7 @@ export const C = {
   accentRing:   "var(--c-accent-ring)",
   accentBorder: "var(--c-accent-border)",
   accentShadow: "var(--c-accent-shadow)",
+  folioShadow:  "var(--c-folio-shadow)",
 
   // ── Borders / rules ───────────────────────────────────────────────────────
   rule:         "var(--c-rule)",

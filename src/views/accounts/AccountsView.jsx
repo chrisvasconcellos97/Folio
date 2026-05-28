@@ -581,7 +581,8 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
             <span aria-hidden="true" style={{
               position: "absolute",
               left: 14, top: "50%", transform: "translateY(-50%)",
-              color: C.textMuted, fontSize: 16, lineHeight: 1, pointerEvents: "none",
+              color: C.accent, fontSize: 16, lineHeight: 1, pointerEvents: "none",
+              zIndex: 1,
             }}>⌕</span>
             <InputField
               value={search}
@@ -596,6 +597,11 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
               style={{
                 paddingLeft: 38,
                 paddingTop: 13, paddingBottom: 13,
+                border: "1px solid " + C.accentLine,
+                boxShadow: searchFocused
+                  ? "0 0 0 1px " + C.accent + ", 0 0 18px " + C.folioShadow + ", 0 0 4px " + C.folioShadow
+                  : "0 0 14px " + C.folioShadow + ", 0 0 3px " + C.folioShadow,
+                transition: "box-shadow 0.2s ease, border-color 0.2s ease",
               }}
             />
           </div>
