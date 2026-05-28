@@ -418,6 +418,7 @@ High and medium priority items are now in the **Pending Updates** queue above.
 - [ ] **Power BI integration** — connect Supabase directly to Power BI via Postgres connection string for full dashboard reporting. No special integration needed, just expose the DB connection. Hold until data volume justifies it.
 
 ### Future / bigger features
+- [ ] **Render thrash detector** — Phase 6 observability catches React errors and uncaught exceptions, but it doesn't catch infinite render/refetch loops (the app isn't crashing, just spinning). Example bite: the Activity dropdown strobing because `fromDate` recomputed `Date.now()` every render → filters identity changed → useActivity refetched in a loop. The error boundary never fired. Idea: lightweight render-rate detector at the App level — if a hook's effect fires > N times in M seconds, log a `error_type='render_thrash'` row to `folio_errors` with the suspicious hook name + stack. Surfaces silent perf disasters before users notice the fans spinning. Not v1.
 - [ ] **Lanyard real auth** — connect Lanyard users to Folios users via Supabase Auth
 - [ ] **Lanyard → Folios live sync** — post-conference notes flow into Folios automatically once auth is shared
 - [ ] **CRM integrations** — Salesforce / HubSpot sync
