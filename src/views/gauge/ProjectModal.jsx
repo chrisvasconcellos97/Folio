@@ -85,16 +85,24 @@ export function ProjectModal({
       ? normalizeStages(prefillTemplate.stages)
       : normalizeStages(existing ? existing.stages : [])
   );
-  var [isStanding, setIsStanding]   = useState(existing ? !!existing.is_standing : false);
+  var [isStanding, setIsStanding]   = useState(
+    existing ? !!existing.is_standing
+    : prefillTemplate ? !!prefillTemplate.is_standing
+    : false
+  );
   var [customFieldSchema, setCustomFieldSchema] = useState(
     existing && existing.custom_field_schema && existing.custom_field_schema.length > 0
       ? existing.custom_field_schema
-      : defaultCustomFieldSchema()
+      : (prefillTemplate && prefillTemplate.custom_field_schema && prefillTemplate.custom_field_schema.length > 0
+        ? prefillTemplate.custom_field_schema
+        : defaultCustomFieldSchema())
   );
   var [taskStatusColumns, setTaskStatusColumns] = useState(
     existing && existing.task_status_columns && existing.task_status_columns.length > 0
       ? existing.task_status_columns
-      : DEFAULT_TASK_STATUS_COLUMNS.slice()
+      : (prefillTemplate && prefillTemplate.task_status_columns && prefillTemplate.task_status_columns.length > 0
+        ? prefillTemplate.task_status_columns
+        : DEFAULT_TASK_STATUS_COLUMNS.slice())
   );
   var [showSchemaEditor, setShowSchemaEditor] = useState(false);
   var [newStageTitle, setNewStageTitle] = useState("");
@@ -300,6 +308,9 @@ export function ProjectModal({
       title: tplTitle,
       description: description.trim() || null,
       stages: tplStages,
+      is_standing: isStanding,
+      custom_field_schema: customFieldSchema,
+      task_status_columns: taskStatusColumns,
     }).then(function () {
       showToast("Template saved");
     }).catch(function () {

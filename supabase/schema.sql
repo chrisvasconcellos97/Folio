@@ -382,13 +382,16 @@ create trigger gauge_projects_updated_at
   for each row execute function update_updated_at();
 
 create table if not exists gauge_templates (
-  id          uuid primary key default gen_random_uuid(),
-  user_id     uuid references auth.users not null,
-  org_id      uuid,
-  title       text not null,
-  description text,
-  stages      jsonb default '[]',
-  created_at  timestamptz default now()
+  id                  uuid primary key default gen_random_uuid(),
+  user_id             uuid references auth.users not null,
+  org_id              uuid,
+  title               text not null,
+  description         text,
+  stages              jsonb default '[]',
+  is_standing         boolean default false,
+  custom_field_schema jsonb default '[]',
+  task_status_columns jsonb default '["intake","in_progress","done"]',
+  created_at          timestamptz default now()
 );
 
 alter table gauge_templates enable row level security;
