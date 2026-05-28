@@ -30,8 +30,16 @@ function saveSearchHistory(query) {
 
 var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red };
 var STATUS_LABELS = { green: "Healthy", yellow: "Watch",  red: "At Risk" };
-var TIER_COLORS   = { Major: C.blue, Mid: C.yellow, Growth: C.purple };
+var TIER_COLORS   = { Major: C.blue, Mid: C.yellow, Growth: "#e879a8" };
 var TIER_ORDER    = { Major: 1, Mid: 2, Growth: 3 };
+
+// Whole-card surface tint per tier — same darkness as C.surface (L≈0.18),
+// just a subtle hue shift so the card reads as "barely that color".
+var TIER_SURFACE = {
+  Major:  "oklch(0.18 0.025 252)",
+  Mid:    "oklch(0.18 0.025 80)",
+  Growth: "oklch(0.18 0.030 10)",
+};
 
 var FILTERS = ["All", "Major", "Mid", "Growth", "Watching", "At Risk"];
 
@@ -796,7 +804,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
               onKeyDown={function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(a); } }}
               style={{
                 flex: isChild ? 1 : undefined,
-                background: C.surface,
+                background: TIER_SURFACE[a.tier] || C.surface,
                 border: "1px solid " + C.rule,
                 borderLeft: TIER_COLORS[a.tier] ? "3px solid " + TIER_COLORS[a.tier] : "1px solid " + C.rule,
                 borderRadius: 6,
