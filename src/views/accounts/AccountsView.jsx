@@ -36,15 +36,8 @@ var STATUS_LABELS = { green: "Healthy", yellow: "Watch",  red: "At Risk" };
 var TIER_COLORS   = { Major: "var(--c-tier-major)", Mid: "var(--c-tier-mid)", Growth: "var(--c-tier-growth)" };
 var TIER_ORDER    = { Major: 1, Mid: 2, Growth: 3 };
 
-// Whole-card surface tint per tier — dark theme uses a subtle hue-shifted
-// background (L≈0.18). Light theme keeps the card on PAPER and projects a
-// tier-colored halo glow from the left edge instead (spec §Depth System).
-// Both paths resolve through CSS vars defined in index.html.
-var TIER_SURFACE = {
-  Major:  "var(--c-tier-surface-major)",
-  Mid:    "var(--c-tier-surface-mid)",
-  Growth: "var(--c-tier-surface-growth)",
-};
+// Tier-colored glow projecting off the card's left edge. Always shows in
+// both themes now (used to be light-only). Tokens live in index.html.
 var TIER_SHADOW = {
   Major:  "var(--c-tier-shadow-major)",
   Mid:    "var(--c-tier-shadow-mid)",
@@ -873,9 +866,6 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
 
           var isCompact = density === "compact";
           var isInactive = !!a.is_inactive;
-          // Light theme: project a tier-colored halo from the left edge in
-          // lieu of a tinted background (spec §Depth System). In dark mode
-          // TIER_SHADOW resolves to `transparent` via CSS vars.
           var tierShadow = isInactive ? undefined : TIER_SHADOW[a.tier];
           var ariaLabel = a.name
             + (a.tier ? ", " + a.tier + " tier" : "")
@@ -891,7 +881,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
               onKeyDown={function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(a); } }}
               style={{
                 flex: isChild ? 1 : undefined,
-                background: TIER_SURFACE[a.tier] || C.surface,
+                background: C.surface,
                 border: "1px solid " + C.rule,
                 borderLeft: TIER_COLORS[a.tier] && !isInactive ? "3px solid " + TIER_COLORS[a.tier] : "1px solid " + C.rule,
                 borderRadius: 6,
@@ -1062,12 +1052,18 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
           );
 
           if (isChild) {
-            // L-connector: separate sibling card, 32px left indent, glowing
-            // teal CSS pseudo-element draws the L (rule defined in index.html
-            // .acct-child::before).
             return (
-              <div key={a.id} className="list-item acct-child" style={{ animationDelay: index * 0.04 + "s" }}>
-                {card}
+              <div key={a.id} className="list-item acct-child" style={{
+                animationDelay: index * 0.04 + "s",
+                display: "flex", alignItems: "center", gap: 8,
+              }}>
+                <span style={{
+                  color: C.textMuted, fontFamily: MONO, fontSize: 14,
+                  flexShrink: 0, paddingLeft: 4, opacity: 0.55,
+                }}>
+                  ↳
+                </span>
+                <div style={{ flex: 1 }}>{card}</div>
               </div>
             );
           }

@@ -131,9 +131,9 @@
         --c-tier-surface-major:  oklch(0.18 0.025 252);
         --c-tier-surface-mid:    oklch(0.18 0.025 80);
         --c-tier-surface-growth: oklch(0.18 0.030 10);
-        --c-tier-shadow-major:   transparent;
-        --c-tier-shadow-mid:     transparent;
-        --c-tier-shadow-growth:  transparent;
+        --c-tier-shadow-major:   -3px 0 14px -2px var(--c-tier-major), inset 8px 0 18px -10px var(--c-tier-major);
+        --c-tier-shadow-mid:     -3px 0 14px -2px var(--c-tier-mid),   inset 8px 0 18px -10px var(--c-tier-mid);
+        --c-tier-shadow-growth:  -3px 0 14px -2px var(--c-tier-growth),inset 8px 0 18px -10px var(--c-tier-growth);
 
         /* Cadence event tints — keyed parallel to TINT_BY_HEX entries */
         --c-cadence-tint-accent: oklch(0.18 0.025 162);
@@ -275,9 +275,9 @@
         --c-tier-surface-major:  #ffffff;
         --c-tier-surface-mid:    #ffffff;
         --c-tier-surface-growth: #ffffff;
-        --c-tier-shadow-major:   -6px 0 18px -4px oklch(0.46 0.10 260 / 0.45);
-        --c-tier-shadow-mid:     -6px 0 18px -4px oklch(0.58 0.10 72 / 0.45);
-        --c-tier-shadow-growth:  -6px 0 18px -4px oklch(0.52 0.11 355 / 0.45);
+        --c-tier-shadow-major:   -4px 0 16px -2px oklch(0.46 0.10 260 / 0.55);
+        --c-tier-shadow-mid:     -4px 0 16px -2px oklch(0.58 0.10 72  / 0.55);
+        --c-tier-shadow-growth:  -4px 0 16px -2px oklch(0.52 0.11 355 / 0.55);
 
         /* Cadence event tints — light uses gentle paper-tones with hue hint */
         --c-cadence-tint-accent: oklch(0.97 0.015 162);
@@ -585,22 +585,7 @@
          Replaces the old faded `↳` arrow. The child card is the sibling
          element; the L is drawn by this pseudo-element off the child's
          left edge with a double drop-shadow glow. */
-      .acct-child { position: relative; margin-left: 32px; }
-      .acct-child::before {
-        content: "";
-        position: absolute;
-        left: -20px;
-        top: -10px;
-        width: 16px;
-        height: calc(50% + 10px);
-        border-left: 1px solid var(--c-folio);
-        border-bottom: 1px solid var(--c-folio);
-        border-bottom-left-radius: 8px;
-        filter:
-          drop-shadow(0 0 4px var(--c-folio-shadow))
-          drop-shadow(0 0 8px var(--c-folio-shadow));
-        pointer-events: none;
-      }
+      .acct-child { margin-left: 22px; }
 
       /* ── Stat-tile tier-tinted halos (Accounts page) ──────────────────
          Light spec §6: Watching + At Risk tiles get a small tinted halo
