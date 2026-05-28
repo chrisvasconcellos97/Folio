@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { C } from "../lib/colors";
+import { PipOrb } from "./PipMark";
 
-var MONO = "'JetBrains Mono', ui-monospace, monospace";
+var MONO  = "'JetBrains Mono', ui-monospace, monospace";
+var SERIF = "'Fraunces', Georgia, serif";
 
 function todayKey() {
   return "folio_banner_dismissed_" + new Date().toISOString().split("T")[0];
@@ -14,7 +16,7 @@ export function StatusBanner({ accounts, items, meetings, onColdClick, onOverdue
 
   useEffect(function () {
     function handleStorage() {
-      try { setDismissed(!!localStorage.getItem(todayKey())); } catch (e) { /* localStorage may be unavailable */ }
+      try { setDismissed(!!localStorage.getItem(todayKey())); } catch (e) {}
     }
     window.addEventListener("storage", handleStorage);
     return function () { window.removeEventListener("storage", handleStorage); };
@@ -48,60 +50,67 @@ export function StatusBanner({ accounts, items, meetings, onColdClick, onOverdue
   if (stats.cold === 0 && stats.overdue === 0 && stats.followUps === 0) return null;
 
   function dismiss() {
-    try { localStorage.setItem(todayKey(), "1"); } catch (e) { /* localStorage may be unavailable */ }
+    try { localStorage.setItem(todayKey(), "1"); } catch (e) {}
     setDismissed(true);
   }
 
   var segments = [];
-  if (stats.cold > 0)      segments.push({ key: "cold",   label: stats.cold + " account" + (stats.cold !== 1 ? "s" : "") + " going cold", onClick: onColdClick });
-  if (stats.overdue > 0)   segments.push({ key: "ov",     label: stats.overdue + " item" + (stats.overdue !== 1 ? "s" : "") + " overdue", onClick: onOverdueClick });
-  if (stats.followUps > 0) segments.push({ key: "fu",     label: stats.followUps + " follow-up" + (stats.followUps !== 1 ? "s" : "") + " this week", onClick: onFollowUpClick });
+  if (stats.cold > 0)      segments.push({ key: "cold", label: stats.cold + " account" + (stats.cold !== 1 ? "s" : "") + " going cold", onClick: onColdClick });
+  if (stats.overdue > 0)   segments.push({ key: "ov",   label: stats.overdue + " item"   + (stats.overdue !== 1 ? "s" : "") + " overdue",      onClick: onOverdueClick });
+  if (stats.followUps > 0) segments.push({ key: "fu",   label: stats.followUps + " follow-up" + (stats.followUps !== 1 ? "s" : "") + " this week", onClick: onFollowUpClick });
 
   return (
     <div style={{
-      background: C.accentFaint,
-      border: "1px solid " + C.accentLine,
-      borderLeft: "3px solid " + C.accent,
+      background: "oklch(0.18 0.025 178 / 0.5)",
+      border: "1px solid " + C.accentBorder,
       borderRadius: 8,
-      padding: "9px 14px",
+      padding: "14px 16px",
       marginBottom: 12,
-      display: "flex",
-      alignItems: "center",
-      gap: 8,
-      flexWrap: "wrap",
     }}>
-      <div style={{ flex: 1, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6, fontSize: 12, fontFamily: MONO, color: C.textSub }}>
-        {segments.map(function (s, i) {
-          return (
-            <span key={s.key} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              {i > 0 && <span style={{ color: C.textMuted }}>·</span>}
-              <button
-                onClick={s.onClick}
-                disabled={!s.onClick}
-                style={{
-                  background: "none", border: "none", color: C.accent,
-                  fontFamily: MONO, fontSize: 12, fontWeight: 600,
-                  cursor: s.onClick ? "pointer" : "default", padding: 0,
-                  textDecoration: s.onClick ? "underline" : "none",
-                  textUnderlineOffset: 2,
-                }}
-              >
-                {s.label}
-              </button>
-            </span>
-          );
-        })}
+      <div style={{ display: "grid", gridTemplateColumns: "32px 1fr auto", gap: 10, alignItems: "start" }}>
+        <PipOrb size="md" />
+        <div>
+          <div style={{ fontFamily: MONO, fontSize: 9.5, color: C.accent, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>
+            Pip Noticed
+          </div>
+          <div style={{ fontFamily: SERIF, fontSize: 15, color: C.textSoft, lineHeight: 1.5, display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: 6 }}>
+            {segments.map(function (s, i) {
+              return (
+                <span key={s.key} style={{ display: "inline-flex", alignItems: "baseline", gap: 6 }}>
+                  {i > 0 && <span style={{ color: C.textMuted, fontSize: 13 }}>·</span>}
+                  <button
+                    onClick={s.onClick}
+                    disabled={!s.onClick}
+                    style={{
+                      background: "none", border: "none", color: C.accent,
+                      fontFamily: SERIF, fontSize: 15, fontWeight: 400,
+                      cursor: s.onClick ? "pointer" : "default", padding: 0,
+                      textDecoration: s.onClick ? "underline" : "none",
+                      textUnderlineOffset: 3,
+                      textDecorationColor: C.accentLine,
+                      letterSpacing: "-0.005em",
+                    }}
+                  >
+                    {s.label}
+                  </button>
+                </span>
+              );
+            })}
+          </div>
+        </div>
+        <button
+          onClick={dismiss}
+          aria-label="Dismiss"
+          title="Dismiss for today"
+          style={{
+            background: "none", border: "none", color: C.textMuted,
+            cursor: "pointer", fontSize: 16, lineHeight: 1, padding: "0 4px",
+            alignSelf: "flex-start",
+          }}
+        >
+          ×
+        </button>
       </div>
-      <button
-        onClick={dismiss}
-        aria-label="Dismiss banner"
-        style={{
-          background: "none", border: "none", color: C.textMuted,
-          cursor: "pointer", fontSize: 16, lineHeight: 1, padding: "0 4px",
-        }}
-      >
-        ×
-      </button>
     </div>
   );
 }
