@@ -136,7 +136,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
     .map(function (a) { return a.id; });
 
   var { meetings, addMeeting, updateMeeting, deleteMeeting, error: meetingsError, refetch: refetchMeetings } = useMeetings(userId, account.id, orgId);
-  var { items, addItem, closeItem, updateItem, error: itemsError, refetch: refetchItems }                   = useItems(userId, account.id, orgId);
+  var { items, addItem, closeItem, updateItem, deleteItem, error: itemsError, refetch: refetchItems }      = useItems(userId, account.id, orgId);
   var { contacts, addContact, updateContact, deleteContact, error: contactsError, refetch: refetchContacts } = useContacts(userId, account.id, orgId);
   var { cadences, addCadence, updateCadence, deleteCadence, error: cadencesError, refetch: refetchCadences } = useCadences(userId, account.id);
   var { projects, addProject, updateProject, deleteProject, error: projectsError, refetch: refetchProjects } = useProjects(userId, account.id, orgId, childAccountIds);
@@ -337,6 +337,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
           onClose={closeItem}
           onAdd={function () { setItemModal(true); }}
           onUpdate={updateItem}
+          onDelete={deleteItem}
           onGoToCadence={function () { setTab("cadence"); }}
         />
         </>

@@ -3,7 +3,7 @@ import { C, glass } from "../../../lib/colors";
 
 var IT_SERIF = "'Fraunces', Georgia, serif";
 var IT_MONO  = "'JetBrains Mono', ui-monospace, monospace";
-import { AmberBtn, SecBtn } from "../../../components/Buttons";
+import { AmberBtn, SecBtn, DangerBtn } from "../../../components/Buttons";
 import { PipInsightCard } from "../../../components/PipInsightCard";
 import { pickV } from "../../../lib/metricsUtils";
 import { getNextOccurrence, getFrequencyLabel, daysUntil, formatDateFull } from "../../../lib/cadenceUtils";
@@ -79,11 +79,19 @@ function buildItemsInsight(items, taskCadences, accountId) {
   return parts.join(" ");
 }
 
-export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAdd, onUpdate, onGoToCadence }) {
+export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAdd, onUpdate, onDelete, onGoToCadence }) {
   var [editingItem, setEditingItem] = useState(null);
   // Track in-flight close requests so rapid taps on the same checkbox don't
   // fire closeItem twice (would log two activity entries + race the refetch).
   var [closingIds, setClosingIds] = useState({});
+  var [confirmDelete, setConfirmDelete] = useState(null); // item id mid-confirm
+
+  function handleDelete(id) {
+    if (!onDelete) return;
+    onDelete(id)
+      .then(function () { setConfirmDelete(null); showToast("Item deleted"); })
+      .catch(function (err) { showToast(err.message || "Couldn't delete — check your connection", "error"); });
+  }
   var open   = items.filter(function (i) { return !i.done; });
   var closed = items.filter(function (i) { return i.done; });
   var today  = new Date(); today.setHours(0, 0, 0, 0);
@@ -201,6 +209,25 @@ export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAd
                   >
                     Edit
                   </SecBtn>
+                )}
+                {onDelete && confirmDelete !== item.id && (
+                  <button
+                    onClick={function () { setConfirmDelete(item.id); }}
+                    aria-label="Delete item"
+                    style={{
+                      background: "none", border: "none", color: C.textMuted,
+                      fontSize: 16, cursor: "pointer", padding: "2px 6px",
+                      flexShrink: 0, lineHeight: 1,
+                    }}
+                  >
+                    ×
+                  </button>
+                )}
+                {onDelete && confirmDelete === item.id && (
+                  <div style={{ display: "flex", gap: 4, alignItems: "center", flexShrink: 0 }}>
+                    <DangerBtn onClick={function () { handleDelete(item.id); }} style={{ fontSize: 10, padding: "3px 8px" }}>Sure?</DangerBtn>
+                    <SecBtn onClick={function () { setConfirmDelete(null); }} style={{ fontSize: 10, padding: "3px 8px" }}>No</SecBtn>
+                  </div>
                 )}
               </div>
             );
