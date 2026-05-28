@@ -26,10 +26,15 @@ function groupByMonth(meetings) {
   return groups;
 }
 
-function buildMeetingsInsight(meetings, handlers) {
+function buildMeetingsInsight(allMeetings, handlers, activeAccountIds) {
   var seed  = "meetings" + new Date().getDate().toString();
   var today = new Date(); today.setHours(0, 0, 0, 0);
   var h     = handlers || {};
+  // Drop meetings on archived accounts so the "5 upcoming" count isn't
+  // padded with conversations on dead accounts.
+  var meetings = activeAccountIds
+    ? (allMeetings || []).filter(function (m) { return !m.account_id || activeAccountIds[m.account_id]; })
+    : (allMeetings || []);
 
   if (meetings.length === 0) {
     return pickV(seed + "m0", [
@@ -294,14 +299,21 @@ function MeetingDetailModal({ meeting, onClose, allItems, addItem }) {
   );
 }
 
-export function MeetingsView({ meetings, loading, allItems, addItem }) {
+export function MeetingsView({ meetings, loading, allItems, addItem, accounts }) {
   var [selectedMeeting, setSelectedMeeting] = useState(null);
   var [hoveredId, setHoveredId] = useState(null);
+
+  var activeAccountIds = (function () {
+    if (!accounts) return null;
+    var ids = {};
+    accounts.forEach(function (a) { if (!a.is_inactive) ids[a.id] = true; });
+    return ids;
+  })();
 
   var meetingsInsight = buildMeetingsInsight(meetings, {
     onClickToday:    function () { var el = document.querySelector('[data-meetings-section="upcoming"]'); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); },
     onClickUpcoming: function () { var el = document.querySelector('[data-meetings-section="upcoming"]'); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); },
-  });
+  }, activeAccountIds);
   var today      = new Date();
   var upcoming   = meetings.filter(function (m) { return m.meeting_date && new Date(m.meeting_date) >= today; });
   var past       = meetings.filter(function (m) { return !m.meeting_date || new Date(m.meeting_date) < today; });

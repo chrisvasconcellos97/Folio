@@ -115,6 +115,11 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
   var mineKey = "folio_mine_only_" + (typeFilter || "customer");
   var [mineOnly, setMineOnly]       = useState(function () { try { return localStorage.getItem(mineKey) === "1"; } catch (e) { return false; } });
   useEffect(function () { try { localStorage.setItem(mineKey, mineOnly ? "1" : "0"); } catch (e) {} }, [mineOnly, mineKey]);
+  var hideInactiveKey = "folio_hide_inactive_" + (typeFilter || "customer");
+  var [hideInactive, setHideInactive] = useState(function () { try { return localStorage.getItem(hideInactiveKey) === "1"; } catch (e) { return false; } });
+  useEffect(function () {
+    try { localStorage.setItem(hideInactiveKey, hideInactive ? "1" : "0"); } catch (e) { /* localStorage may be unavailable */ }
+  }, [hideInactive, hideInactiveKey]);
   var [tagFilter, setTagFilter]     = useState(null);
   var [regionFilter, setRegionFilter] = useState(null);
   var [showAddTask, setShowAddTask] = useState(false);
@@ -228,6 +233,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
         var matchMine   = !mineOnly
           || a.owner_user_id === userId
           || (!a.owner_user_id && a.user_id === userId);
+        var matchInactive = !hideInactive || !a.is_inactive;
         var matchBanner = true;
         if (bannerFilter === "cold") {
           var last = a.last_interaction_at ? new Date(a.last_interaction_at).getTime()
@@ -236,7 +242,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
         } else if (bannerFilter === "overdue") {
           matchBanner = (items || []).some(function (i) { return i.account_id === a.id && !i.done && i.due_date && i.due_date < todayStr; });
         }
-        return matchSearch && matchFilter && matchTag && matchRegion && matchMine && matchBanner;
+        return matchSearch && matchFilter && matchTag && matchRegion && matchMine && matchInactive && matchBanner;
       })
       .sort(function (a, b) {
         if (sortMode === "revenue") {
@@ -258,7 +264,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
         if (tierDiff !== 0) return tierDiff;
         return a.name.localeCompare(b.name);
       });
-  }, [accounts, deferredSearch, filter, tagFilter, regionFilter, sortMode, accountIdsWithContactMatch, mineOnly, userId, bannerFilter, items, todayStr]);
+  }, [accounts, deferredSearch, filter, tagFilter, regionFilter, sortMode, accountIdsWithContactMatch, mineOnly, hideInactive, userId, bannerFilter, items, todayStr]);
 
   // Build display list: parents in sort order, children nested immediately below
   var displayList = useMemo(function () {
@@ -589,6 +595,20 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
               {mineOnly ? "Mine ✓" : "Mine"}
             </button>
           )}
+          <button
+            onClick={function () { setHideInactive(function (v) { return !v; }); }}
+            title={hideInactive ? "Currently hiding inactive — click to show" : "Currently showing inactive — click to hide"}
+            style={{
+              background: hideInactive ? C.accentFaint : "transparent",
+              border: "1px solid " + (hideInactive ? C.accentBorder : C.rule),
+              borderRadius: 6,
+              padding: "5px 10px", color: hideInactive ? C.accent : C.textMuted, fontSize: 11,
+              fontFamily: MONO, cursor: "pointer", flexShrink: 0,
+              letterSpacing: "0.05em",
+            }}
+          >
+            {hideInactive ? "Hide inactive ✓" : "Hide inactive"}
+          </button>
           <select
             value={sortMode}
             onChange={function(e) { setSortMode(e.target.value); }}
@@ -846,10 +866,11 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
           }
 
           var isCompact = density === "compact";
+          var isInactive = !!a.is_inactive;
           // Light theme: project a tier-colored halo from the left edge in
           // lieu of a tinted background (spec §Depth System). In dark mode
           // TIER_SHADOW resolves to `transparent` via CSS vars.
-          var tierShadow = TIER_SHADOW[a.tier];
+          var tierShadow = isInactive ? undefined : TIER_SHADOW[a.tier];
           var card = (
             <div
               onClick={function () { onSelect(a); }}
@@ -861,13 +882,14 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                 flex: isChild ? 1 : undefined,
                 background: TIER_SURFACE[a.tier] || C.surface,
                 border: "1px solid " + C.rule,
-                borderLeft: TIER_COLORS[a.tier] ? "3px solid " + TIER_COLORS[a.tier] : "1px solid " + C.rule,
+                borderLeft: TIER_COLORS[a.tier] && !isInactive ? "3px solid " + TIER_COLORS[a.tier] : "1px solid " + C.rule,
                 borderRadius: 6,
                 padding: isChild ? (isCompact ? "6px 10px" : "10px 12px") : (isCompact ? "8px 12px" : "11px 12px"),
                 cursor: "pointer",
                 userSelect: "none",
                 transition: "opacity 0.12s",
                 boxShadow: tierShadow || undefined,
+                opacity: isInactive ? 0.55 : 1,
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
@@ -880,8 +902,22 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                     lineHeight: 1.2,
                     color: isChild ? C.textSoft : C.text,
                     marginBottom: 4,
+                    display: "flex", alignItems: "center", gap: 8,
                   }}>
-                    {a.name}
+                    <span>{a.name}</span>
+                    {isInactive && (
+                      <span style={{
+                        fontFamily: MONO, fontSize: 9, fontWeight: 700,
+                        textTransform: "uppercase", letterSpacing: "0.1em",
+                        color: C.yellow,
+                        background: "transparent",
+                        border: "1px solid " + C.yellow,
+                        borderRadius: 999, padding: "1px 6px",
+                        lineHeight: 1.2,
+                      }}>
+                        {a.merged_into_account_id ? "Merged" : "Inactive"}
+                      </span>
+                    )}
                   </div>
 
                   {!isCompact && (function () {

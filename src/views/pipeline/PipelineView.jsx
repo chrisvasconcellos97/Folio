@@ -82,8 +82,10 @@ function Sparkline({ records }) {
   );
 }
 
-function buildPipelineInsight(accounts, revenueHistory, handlers) {
+function buildPipelineInsight(accountsAll, revenueHistory, handlers) {
   var seed     = "pipeline" + new Date().getDate().toString();
+  // Archived accounts shouldn't pad the trending / at-risk counts.
+  var accounts = (accountsAll || []).filter(function (a) { return !a.is_inactive; });
   var withData = accounts.filter(function (a) { return latestRecord(revenueHistory, a.id) !== null; });
   var h        = handlers || {};
 

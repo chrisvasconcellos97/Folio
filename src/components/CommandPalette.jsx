@@ -24,7 +24,9 @@ export function CommandPalette({ accounts, contacts, onSelectAccount, onSelectCo
           || (a.tags && a.tags.some(function(t) { return t.toLowerCase().includes(q); }))
           || (a.region && a.region.toLowerCase().includes(q));
       }).slice(0, 6).map(function(a) {
-        return { label: a.name, sub: a.tier || a.region || "", group: "Accounts", action: function() { onSelectAccount(a); } };
+        var sub = a.tier || a.region || "";
+        if (a.is_inactive) sub = (sub ? sub + " · " : "") + (a.merged_into_account_id ? "Merged" : "Inactive");
+        return { label: a.name, sub: sub, group: "Accounts", action: function() { onSelectAccount(a); } };
       })
     : [];
   var contactResults = q && contacts && onSelectContact

@@ -99,12 +99,41 @@ function CreateOrgSection({ onCreateOrg }) {
   );
 }
 
-function TeamSection({ org, role, members, pendingInvites, onInvite, onRevoke }) {
+function TeamSection({ org, role, members, pendingInvites, onInvite, onRevoke, onArchiveMember, onReactivateMember }) {
   var [email, setEmail]         = useState("");
   var [inviteRole, setInviteRole] = useState("member");
   var [inviting, setInviting]   = useState(false);
   var [revoking, setRevoking]   = useState(null);
+  var [confirmArchive, setConfirmArchive] = useState(null); // member id mid-confirm
+  var [busyMember, setBusyMember] = useState(null);
   var canManage = role === "owner";
+
+  var activeMembers   = (members || []).filter(function (m) { return !m.is_inactive; });
+  var inactiveMembers = (members || []).filter(function (m) { return m.is_inactive; });
+
+  function handleArchive(memberId, memberEmail) {
+    if (!onArchiveMember) return;
+    setBusyMember(memberId);
+    onArchiveMember(memberId).then(function () {
+      setBusyMember(null); setConfirmArchive(null);
+      showToast("Archived " + (memberEmail || "member"));
+    }).catch(function (err) {
+      setBusyMember(null);
+      showToast(err.message || "Couldn't archive — check your connection", "error");
+    });
+  }
+
+  function handleReactivate(memberId, memberEmail) {
+    if (!onReactivateMember) return;
+    setBusyMember(memberId);
+    onReactivateMember(memberId).then(function () {
+      setBusyMember(null);
+      showToast("Reactivated " + (memberEmail || "member"));
+    }).catch(function (err) {
+      setBusyMember(null);
+      showToast(err.message || "Couldn't reactivate — check your connection", "error");
+    });
+  }
 
   function handleInvite() {
     if (!email.trim() || inviting) return;
@@ -164,7 +193,8 @@ function TeamSection({ org, role, members, pendingInvites, onInvite, onRevoke })
 
       {/* Member list */}
       <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }}>
-        {members.map(function (m) {
+        {activeMembers.map(function (m) {
+          var isConfirming = confirmArchive === m.id;
           return (
             <div
               key={m.id}
@@ -183,22 +213,92 @@ function TeamSection({ org, role, members, pendingInvites, onInvite, onRevoke })
                 </div>
               </div>
               {canManage && m.role !== "owner" && (
-                <button
-                  onClick={function () { handleRevoke(m.id, m.invited_email); }}
-                  disabled={revoking === m.id}
-                  style={{
-                    background: "none", border: "1px solid " + C.border, borderRadius: 6,
-                    padding: "4px 10px", fontSize: 11, color: C.red, cursor: "pointer",
-                    fontFamily: "'Inter', system-ui, sans-serif", opacity: revoking === m.id ? 0.5 : 1,
-                  }}
-                >
-                  {revoking === m.id ? "…" : "Remove"}
-                </button>
+                isConfirming ? (
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <span style={{ fontSize: 11, color: C.red }}>Sure?</span>
+                    <button
+                      onClick={function () { handleArchive(m.id, m.invited_email); }}
+                      disabled={busyMember === m.id}
+                      style={{
+                        background: "none", border: "1px solid " + C.redLine, borderRadius: 6,
+                        padding: "4px 10px", fontSize: 11, color: C.red, cursor: "pointer",
+                        fontFamily: "'Inter', system-ui, sans-serif", opacity: busyMember === m.id ? 0.5 : 1,
+                      }}
+                    >
+                      {busyMember === m.id ? "…" : "Archive"}
+                    </button>
+                    <button
+                      onClick={function () { setConfirmArchive(null); }}
+                      style={{
+                        background: "none", border: "1px solid " + C.border, borderRadius: 6,
+                        padding: "4px 10px", fontSize: 11, color: C.textSub, cursor: "pointer",
+                        fontFamily: "'Inter', system-ui, sans-serif",
+                      }}
+                    >
+                      No
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={function () { setConfirmArchive(m.id); }}
+                    style={{
+                      background: "none", border: "1px solid " + C.border, borderRadius: 6,
+                      padding: "4px 10px", fontSize: 11, color: C.red, cursor: "pointer",
+                      fontFamily: "'Inter', system-ui, sans-serif",
+                    }}
+                  >
+                    Archive
+                  </button>
+                )
               )}
             </div>
           );
         })}
       </div>
+
+      {/* Former team — inactive members, with reactivate */}
+      {inactiveMembers.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>
+            Former Team
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {inactiveMembers.map(function (m) {
+              return (
+                <div
+                  key={m.id}
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    padding: "8px 12px", background: C.bgCard, borderRadius: 7,
+                    border: "1px solid " + C.border, opacity: 0.75,
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: 12, color: C.textSub }}>{m.invited_email || "Team member"}</div>
+                    <div style={{ fontSize: 10, color: C.textMuted }}>
+                      Archived{m.inactivated_at ? " · " + new Date(m.inactivated_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : ""} · {ROLE_LABELS[m.role] || m.role}
+                    </div>
+                  </div>
+                  {canManage && (
+                    <button
+                      onClick={function () { handleReactivate(m.id, m.invited_email); }}
+                      disabled={busyMember === m.id}
+                      style={{
+                        background: "none", border: "1px solid " + C.accentBorder, borderRadius: 6,
+                        padding: "4px 10px", fontSize: 11, color: C.accent, cursor: "pointer",
+                        fontFamily: "'Inter', system-ui, sans-serif", fontWeight: 600,
+                        opacity: busyMember === m.id ? 0.5 : 1,
+                      }}
+                    >
+                      {busyMember === m.id ? "…" : "Reactivate"}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Pending invites */}
       {pendingInvites.length > 0 && (
@@ -509,7 +609,7 @@ function AppearanceSection() {
   );
 }
 
-export function SettingsView({ userId, userMeta, org, role, members, pendingInvites, onCreateOrg, onInvite, onRevoke }) {
+export function SettingsView({ userId, userMeta, org, role, members, pendingInvites, onCreateOrg, onInvite, onRevoke, onArchiveMember, onReactivateMember }) {
   return (
     <div style={{ maxWidth: 600, margin: "0 auto", padding: "8px 0 40px" }}>
       <div style={{ marginBottom: 24, display: "flex", alignItems: "center", gap: 14 }}>
@@ -543,6 +643,8 @@ export function SettingsView({ userId, userMeta, org, role, members, pendingInvi
             pendingInvites={pendingInvites}
             onInvite={onInvite}
             onRevoke={onRevoke}
+            onArchiveMember={onArchiveMember}
+            onReactivateMember={onReactivateMember}
           />
         ) : (
           <CreateOrgSection onCreateOrg={onCreateOrg} />

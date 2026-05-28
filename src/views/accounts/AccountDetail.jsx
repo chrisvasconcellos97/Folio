@@ -22,6 +22,7 @@ import { CadenceTab } from "./tabs/CadenceTab";
 import { ProjectsTab } from "./tabs/ProjectsTab";
 import { ShopsTab } from "./tabs/ShopsTab";
 import { AddAccountModal } from "./AddAccountModal";
+import { AccountMergeModal } from "./AccountMergeModal";
 import { LogConversationModal } from "./LogConversationModal";
 import { QuickMeetingModal } from "./QuickMeetingModal";
 import { AddItemModal } from "./AddItemModal";
@@ -40,7 +41,7 @@ function setDefaultTab(accountId, tab) {
   try { localStorage.setItem("folio_default_tab_" + accountId, tab); } catch(e) {}
 }
 
-export function AccountDetail({ account, userId, orgId, accounts, members, onBack, onEdit, onDelete, onUpdate, onSelectAccount, pipPrefill, onPipPrefillHandled, initialHubCadenceId, onHubConsumed, revenueHistory, shopMetrics, onAddAccount }) {
+export function AccountDetail({ account, userId, orgId, accounts, members, onBack, onEdit, onDelete, onReactivate, onMerge, onUpdate, onSelectAccount, pipPrefill, onPipPrefillHandled, initialHubCadenceId, onHubConsumed, revenueHistory, shopMetrics, onAddAccount }) {
   var isInternalTeam = account.account_type === 'internal_team';
   var isPartner      = account.account_type === 'partner';
   var isCustomerType = !isInternalTeam && !isPartner;
@@ -61,6 +62,7 @@ export function AccountDetail({ account, userId, orgId, accounts, members, onBac
   var [showContactModal, setContactModal] = useState(false);
   var [showAddShopModal, setAddShopModal] = useState(false);
   var [confirmDelete, setConfirmDelete]   = useState(false);
+  var [showMergeModal, setShowMergeModal] = useState(false);
 
   var [cadencePrefill, setCadencePrefill] = useState(null);
   var [hubCadence, setHubCadence]         = useState(null);
@@ -147,6 +149,9 @@ export function AccountDetail({ account, userId, orgId, accounts, members, onBac
   var allAccounts   = accounts || [];
   var subAccounts   = allAccounts.filter(function (a) { return a.parent_account_id === account.id; });
   var parentAccount = account.parent_account_id ? allAccounts.find(function (a) { return a.id === account.parent_account_id; }) : null;
+  var mergedIntoAccount = account.merged_into_account_id
+    ? allAccounts.find(function (a) { return a.id === account.merged_into_account_id; })
+    : null;
 
   var openCount = items.filter(function (i) { return !i.done; }).length;
 
@@ -212,6 +217,7 @@ export function AccountDetail({ account, userId, orgId, accounts, members, onBac
         meetings={meetings}
         openCount={openCount}
         parentAccount={parentAccount}
+        mergedIntoAccount={mergedIntoAccount}
         workspaceLabel={workspaceLabel}
         isCustomerType={isCustomerType}
         isPartner={isPartner}
@@ -226,6 +232,8 @@ export function AccountDetail({ account, userId, orgId, accounts, members, onBac
         onPrint={function () { window.print(); }}
         onExport={handleExport}
         onDelete={onDelete}
+        onReactivate={onReactivate}
+        onOpenMerge={function () { setShowMergeModal(true); }}
         confirmDelete={confirmDelete}
         onConfirmDelete={function () { setConfirmDelete(true); }}
         onCancelDelete={function () { setConfirmDelete(false); }}
@@ -450,6 +458,19 @@ export function AccountDetail({ account, userId, orgId, accounts, members, onBac
             });
           }}
           onClose={function () { setAddShopModal(false); }}
+        />
+      )}
+
+      {showMergeModal && (
+        <AccountMergeModal
+          source={account}
+          accounts={allAccounts}
+          onConfirm={function (targetId) {
+            return Promise.resolve(onMerge && onMerge(targetId)).finally(function () {
+              setShowMergeModal(false);
+            });
+          }}
+          onClose={function () { setShowMergeModal(false); }}
         />
       )}
 

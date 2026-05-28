@@ -66,5 +66,45 @@ export function useAccounts(userId) {
       });
   }
 
-  return { accounts, loading, error, refetch: fetch, addAccount, updateAccount, deleteAccount };
+  // Soft-archive: stash a timestamp but keep the row + every child record.
+  // Replaces the hard-delete path Chris previously had on the detail header.
+  function archiveAccount(id) {
+    return supabase
+      .from("folio_accounts")
+      .update({ is_inactive: true, inactivated_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .then(function (result) {
+        if (result.error) throw result.error;
+        fetch();
+      });
+  }
+
+  function reactivateAccount(id) {
+    return supabase
+      .from("folio_accounts")
+      .update({ is_inactive: false, inactivated_at: null, merged_into_account_id: null, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .then(function (result) {
+        if (result.error) throw result.error;
+        fetch();
+      });
+  }
+
+  // Server-side atomic merge. Returns the row count moved so callers can
+  // surface "47 records moved" in the success toast.
+  function mergeAccounts(sourceId, targetId) {
+    return supabase
+      .rpc("folio_merge_accounts", { source_id: sourceId, target_id: targetId })
+      .then(function (result) {
+        if (result.error) throw result.error;
+        fetch();
+        return typeof result.data === "number" ? result.data : 0;
+      });
+  }
+
+  return {
+    accounts, loading, error, refetch: fetch,
+    addAccount, updateAccount, deleteAccount,
+    archiveAccount, reactivateAccount, mergeAccounts,
+  };
 }

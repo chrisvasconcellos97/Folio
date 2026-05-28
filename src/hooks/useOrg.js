@@ -43,6 +43,8 @@ export function useOrg(userId, userEmail) {
             .then(function (r) {
               setLoading(false);
               if (r.error) return;
+              // Note: members includes both active and inactive; consumers split
+              // by .is_inactive. Pending invites stay separate.
               setMembers(r.data.filter(function (m) { return m.accepted; }));
               setPending(r.data.filter(function (m) { return !m.accepted; }));
             });
@@ -139,6 +141,31 @@ export function useOrg(userId, userEmail) {
       });
   }
 
+  // Soft-archive a member — they keep their auth row but `is_inactive=true`
+  // blocks sign-in via useAuth's shouldBlockSignIn probe. Historical
+  // assignments stay intact.
+  function archiveMember(memberId) {
+    return supabase
+      .from("folio_org_members")
+      .update({ is_inactive: true, inactivated_at: new Date().toISOString() })
+      .eq("id", memberId)
+      .then(function (result) {
+        if (result.error) throw result.error;
+        fetch();
+      });
+  }
+
+  function reactivateMember(memberId) {
+    return supabase
+      .from("folio_org_members")
+      .update({ is_inactive: false, inactivated_at: null })
+      .eq("id", memberId)
+      .then(function (result) {
+        if (result.error) throw result.error;
+        fetch();
+      });
+  }
+
   function acceptInvite(inviteId) {
     return supabase
       .from("folio_org_members")
@@ -168,6 +195,8 @@ export function useOrg(userId, userEmail) {
     createOrg,
     inviteMember,
     revokeMember,
+    archiveMember,
+    reactivateMember,
     acceptInvite,
     dismissInvite,
   };

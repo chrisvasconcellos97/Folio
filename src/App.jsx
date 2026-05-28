@@ -36,7 +36,7 @@ import { Toast, showToast } from "./components/Toast";
 import { C } from "./lib/colors";
 
 export default function App() {
-  var { session, loading: authLoading, signIn, signUp, signOut } = useAuth();
+  var { session, loading: authLoading, signIn, signUp, signOut, inactiveBlock, dismissInactiveBlock } = useAuth();
   var userId    = session ? session.user.id : null;
   var userEmail = session ? session.user.email : null;
   var userMeta  = session ? session.user.user_metadata : null;
@@ -61,8 +61,8 @@ export default function App() {
     setShowOnboarding(true);
   }
 
-  var { accounts, loading: acctLoading, error: acctError, refetch: refetchAccounts, addAccount, updateAccount, deleteAccount } = useAccounts(userId);
-  var { org, orgId, role, members, pendingInvites, myInvite, createOrg, inviteMember, revokeMember, acceptInvite, dismissInvite } = useOrg(userId, userEmail);
+  var { accounts, loading: acctLoading, error: acctError, refetch: refetchAccounts, addAccount, updateAccount, deleteAccount, archiveAccount, reactivateAccount, mergeAccounts } = useAccounts(userId);
+  var { org, orgId, role, members, pendingInvites, myInvite, createOrg, inviteMember, revokeMember, archiveMember, reactivateMember, acceptInvite, dismissInvite } = useOrg(userId, userEmail);
 
   // Surface read-path errors from the top-level hooks. Show once per error
   // transition (string identity in the ref guards against the effect retoasting
@@ -239,12 +239,34 @@ export default function App() {
     });
   }
 
-  function handleDeleteAccount() {
+  // "Delete" on the account header now soft-archives. Hard delete is no
+  // longer exposed in the UI — inactive accounts stay editable and can
+  // be reactivated.
+  function handleArchiveAccount() {
     if (!selectedAccount) return;
-    deleteAccount(selectedAccount.id).then(function () {
-      setSelected(null);
-      showToast("Account deleted", "warning");
-    });
+    archiveAccount(selectedAccount.id).then(function () {
+      setSelected(function (prev) { return prev ? Object.assign({}, prev, { is_inactive: true, inactivated_at: new Date().toISOString() }) : prev; });
+      showToast("Account archived");
+    }).catch(function (e) { showToast(e.message || "Couldn't archive — check your connection", "error"); });
+  }
+
+  function handleReactivateAccount() {
+    if (!selectedAccount) return;
+    reactivateAccount(selectedAccount.id).then(function () {
+      setSelected(function (prev) { return prev ? Object.assign({}, prev, { is_inactive: false, inactivated_at: null, merged_into_account_id: null }) : prev; });
+      showToast("Account reactivated");
+    }).catch(function (e) { showToast(e.message || "Couldn't reactivate — check your connection", "error"); });
+  }
+
+  function handleMergeAccounts(targetId) {
+    if (!selectedAccount) return Promise.resolve();
+    var sourceId   = selectedAccount.id;
+    var sourceName = selectedAccount.name;
+    var target = accounts.find(function (a) { return a.id === targetId; });
+    return mergeAccounts(sourceId, targetId).then(function (moved) {
+      showToast("Merged " + sourceName + (target ? " into " + target.name : "") + " — " + moved + " record" + (moved === 1 ? "" : "s") + " moved");
+      if (target) setSelected(target);
+    }).catch(function (e) { showToast(e.message || "Couldn't merge — check your connection", "error"); });
   }
 
   if (authLoading) {
@@ -257,10 +279,37 @@ export default function App() {
 
   if (!session) {
     return (
-      <AuthView
-        onSignIn={signIn}
-        onSignUp={signUp}
-      />
+      <>
+        <Toast />
+        {inactiveBlock && (
+          <div style={{
+            position: "fixed", top: 0, left: 0, right: 0, zIndex: 300,
+            background: C.bgCard, borderBottom: "1px solid " + C.redLine,
+            padding: "12px 20px",
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            gap: 12, fontFamily: "'Inter', system-ui, sans-serif",
+          }}>
+            <div style={{ fontSize: 13, color: C.text }}>
+              <span style={{ color: C.red, fontWeight: 700 }}>Account deactivated.</span>{" "}
+              <span style={{ color: C.textSub }}>Your access has been turned off by an admin. Reach out to your team owner to restore it.</span>
+            </div>
+            <button
+              onClick={dismissInactiveBlock}
+              style={{
+                background: "none", border: "1px solid " + C.border, borderRadius: 8,
+                padding: "6px 12px", fontSize: 12, color: C.textSub, cursor: "pointer",
+                fontFamily: "'Inter', system-ui, sans-serif", flexShrink: 0,
+              }}
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+        <AuthView
+          onSignIn={signIn}
+          onSignUp={signUp}
+        />
+      </>
     );
   }
 
@@ -346,7 +395,9 @@ export default function App() {
             members={members}
             onBack={handleBack}
             onEdit={function () { setEditingAccount(selectedAccount); }}
-            onDelete={handleDeleteAccount}
+            onDelete={handleArchiveAccount}
+            onReactivate={handleReactivateAccount}
+            onMerge={handleMergeAccounts}
             onUpdate={handleUpdateSelectedAccount}
             onSelectAccount={function (acct) { setSelected(acct); }}
             pipPrefill={pipPrefill}
@@ -382,7 +433,7 @@ export default function App() {
   }
 
   if (view === "meetings") {
-    mainContent = <MeetingsView meetings={meetings} loading={meetLoading} allItems={allItems} addItem={pipAddItem} />;
+    mainContent = <MeetingsView meetings={meetings} loading={meetLoading} allItems={allItems} addItem={pipAddItem} accounts={accounts} />;
   }
 
   if (view === "pipeline") {
@@ -482,6 +533,8 @@ export default function App() {
         onCreateOrg={createOrg}
         onInvite={inviteMember}
         onRevoke={revokeMember}
+        onArchiveMember={archiveMember}
+        onReactivateMember={reactivateMember}
       />
     );
   }

@@ -57,6 +57,9 @@ create table if not exists folio_accounts (
   spend_ytd               numeric,
   owner_user_id           uuid references auth.users(id),
   org_id                  uuid,                                -- FK added after folio_orgs exists
+  is_inactive             boolean default false,
+  inactivated_at          timestamptz,
+  merged_into_account_id  uuid,                                -- self-FK added below
   created_at              timestamptz default now(),
   updated_at              timestamptz default now()
 );
@@ -254,13 +257,15 @@ $$;
 grant execute on function folio_user_writable_org_ids() to authenticated;
 
 create table if not exists folio_org_members (
-  id            uuid primary key default gen_random_uuid(),
-  org_id        uuid references folio_orgs on delete cascade not null,
-  user_id       uuid references auth.users on delete cascade,
-  role          text check (role in ('owner','member','leadership')) not null,
-  invited_email text,
-  accepted      boolean default false,
-  created_at    timestamptz default now()
+  id             uuid primary key default gen_random_uuid(),
+  org_id         uuid references folio_orgs on delete cascade not null,
+  user_id        uuid references auth.users on delete cascade,
+  role           text check (role in ('owner','member','leadership')) not null,
+  invited_email  text,
+  accepted       boolean default false,
+  is_inactive    boolean default false,
+  inactivated_at timestamptz,
+  created_at     timestamptz default now()
 );
 alter table folio_org_members enable row level security;
 
@@ -302,6 +307,19 @@ begin
     alter table folio_accounts
       add constraint folio_accounts_org_id_fkey
       foreign key (org_id) references folio_orgs;
+  end if;
+end $$;
+
+-- Self-FK for the merge pointer. Set-null on delete so a target wipe
+-- leaves the absorbed account orphaned-but-listable rather than gone.
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'folio_accounts_merged_into_fkey'
+  ) then
+    alter table folio_accounts
+      add constraint folio_accounts_merged_into_fkey
+      foreign key (merged_into_account_id) references folio_accounts(id) on delete set null;
   end if;
 end $$;
 
@@ -533,3 +551,77 @@ create index if not exists folio_pip_account_state_stale       on folio_pip_acco
 create index if not exists folio_audit_log_user_time_idx       on folio_audit_log(user_id, created_at desc);
 create index if not exists folio_audit_log_created_at_idx      on folio_audit_log(created_at desc);
 create index if not exists folio_routes_user_id_idx            on folio_routes(user_id);
+
+create index if not exists folio_accounts_is_inactive_idx      on folio_accounts(is_inactive);
+create index if not exists folio_org_members_is_inactive_idx   on folio_org_members(is_inactive);
+
+-- ──────────────────────────────────────────────────────────────────────
+-- Account merge — atomic re-parent + soft-archive of source. See
+-- supabase/inactive_and_merge.sql for the canonical migration + a
+-- manual-test plan.
+-- ──────────────────────────────────────────────────────────────────────
+create or replace function folio_merge_accounts(source_id uuid, target_id uuid)
+returns integer
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  source_row folio_accounts%rowtype;
+  target_row folio_accounts%rowtype;
+  moved      integer := 0;
+  bumped     integer;
+begin
+  if source_id is null or target_id is null then
+    raise exception 'source and target are required';
+  end if;
+  if source_id = target_id then
+    raise exception 'cannot merge an account into itself';
+  end if;
+
+  select * into source_row from folio_accounts where id = source_id;
+  if not found then raise exception 'source account not found or not visible'; end if;
+  select * into target_row from folio_accounts where id = target_id;
+  if not found then raise exception 'target account not found or not visible'; end if;
+
+  if (source_row.account_type in ('internal_team','partner')
+      or target_row.account_type in ('internal_team','partner'))
+     and coalesce(source_row.account_type, 'standard') <> coalesce(target_row.account_type, 'standard') then
+    raise exception 'cannot merge across workspace types';
+  end if;
+
+  update folio_meetings      set account_id = target_id where account_id = source_id;
+  get diagnostics bumped = row_count; moved := moved + bumped;
+  update folio_items         set account_id = target_id where account_id = source_id;
+  get diagnostics bumped = row_count; moved := moved + bumped;
+  update folio_contacts      set account_id = target_id where account_id = source_id;
+  get diagnostics bumped = row_count; moved := moved + bumped;
+  update folio_cadences      set account_id = target_id where account_id = source_id;
+  get diagnostics bumped = row_count; moved := moved + bumped;
+  update folio_account_notes set account_id = target_id where account_id = source_id;
+  get diagnostics bumped = row_count; moved := moved + bumped;
+  update folio_activity      set account_id = target_id where account_id = source_id;
+  get diagnostics bumped = row_count; moved := moved + bumped;
+  delete from folio_pip_account_state where account_id = source_id;
+  get diagnostics bumped = row_count; moved := moved + bumped;
+  update folio_quick_tasks   set account_id = target_id where account_id = source_id;
+  get diagnostics bumped = row_count; moved := moved + bumped;
+  update gauge_projects      set account_id = target_id where account_id = source_id;
+  get diagnostics bumped = row_count; moved := moved + bumped;
+  update gauge_projects
+     set account_ids = array_replace(account_ids, source_id, target_id)
+   where source_id = any (account_ids);
+  get diagnostics bumped = row_count; moved := moved + bumped;
+
+  update folio_accounts
+     set is_inactive            = true,
+         inactivated_at         = now(),
+         merged_into_account_id = target_id,
+         updated_at             = now()
+   where id = source_id;
+
+  return moved;
+end;
+$$;
+
+grant execute on function folio_merge_accounts(uuid, uuid) to authenticated;

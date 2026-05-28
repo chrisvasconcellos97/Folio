@@ -33,6 +33,7 @@ export function AccountDetailHeader({
   workspaceLabel,
   isCustomerType,
   isPartner,
+  mergedIntoAccount,
   onBack,
   onSelectAccount,
   onUpdate,
@@ -44,10 +45,13 @@ export function AccountDetailHeader({
   onPrint,
   onExport,
   onDelete,
+  onReactivate,
+  onOpenMerge,
   confirmDelete,
   onConfirmDelete,
   onCancelDelete,
 }) {
+  var isInactive = !!account.is_inactive;
   var statusColor = STATUS_COLORS[account.status] || C.textSub;
 
   var meetingBars = (function () {
@@ -131,6 +135,25 @@ export function AccountDetailHeader({
             </div>
           )}
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+            {isInactive && (
+              <Pill color={C.yellow}>
+                <span style={{ display: "inline-block", width: 5, height: 5, borderRadius: "50%", background: C.yellow, marginRight: 4, verticalAlign: "middle" }} />
+                Inactive
+              </Pill>
+            )}
+            {mergedIntoAccount && (
+              <button
+                onClick={function () { onSelectAccount && onSelectAccount(mergedIntoAccount); }}
+                style={{
+                  background: C.accentFaint, border: '1px solid ' + C.accentLine,
+                  borderRadius: 999, padding: '3px 10px',
+                  fontFamily: MONO, fontSize: 10,
+                  color: C.accent, cursor: 'pointer',
+                }}
+              >
+                Merged into {mergedIntoAccount.name} →
+              </button>
+            )}
             {account.tier && isCustomerType && (
               <Pill color={TIER_COLORS[account.tier] || C.textSoft}>
                 {account.tier}
@@ -311,7 +334,7 @@ export function AccountDetailHeader({
               </div>
             </div>
           )}
-          <div style={{ display: "flex", gap: 6, marginTop: 8, justifyContent: "flex-end" }}>
+          <div style={{ display: "flex", gap: 6, marginTop: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
             <SecBtn
               onClick={onPrint}
               style={{ fontSize: 11, padding: "5px 12px" }}
@@ -332,22 +355,37 @@ export function AccountDetailHeader({
             >
               Edit
             </SecBtn>
-            {!confirmDelete && (
+            {!isInactive && onOpenMerge && (
+              <SecBtn
+                onClick={onOpenMerge}
+                style={{ fontSize: 11, padding: "5px 12px" }}
+                title="Merge this account into another"
+              >
+                Merge into…
+              </SecBtn>
+            )}
+            {isInactive ? (
+              <SecBtn
+                onClick={onReactivate}
+                style={{ fontSize: 11, padding: "5px 12px", color: C.accent, borderColor: C.accentBorder }}
+              >
+                Reactivate
+              </SecBtn>
+            ) : !confirmDelete ? (
               <DangerBtn
                 onClick={onConfirmDelete}
                 style={{ fontSize: 11, padding: "5px 12px" }}
               >
-                Delete
+                Archive
               </DangerBtn>
-            )}
-            {confirmDelete && (
+            ) : (
               <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                 <span style={{ fontSize: 11, color: C.red }}>Sure?</span>
                 <DangerBtn
                   onClick={onDelete}
                   style={{ fontSize: 11, padding: "5px 12px" }}
                 >
-                  Delete it
+                  Archive it
                 </DangerBtn>
                 <SecBtn
                   onClick={onCancelDelete}

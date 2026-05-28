@@ -25,10 +25,15 @@ function scrollToCadenceGroup(groupKey) {
   if (el && el.scrollIntoView) el.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-function buildGlobalCadenceInsight(cadences, handlers) {
+function buildGlobalCadenceInsight(allCadences, handlers, activeAccountIds) {
   var seed  = "global" + new Date().getDate().toString();
   var today = new Date(); today.setHours(0, 0, 0, 0);
   var h     = handlers || {};
+  // Skip cadences tied to archived accounts so "5 cadences this week"
+  // isn't padded by recurring meetings on dead accounts.
+  var cadences = activeAccountIds
+    ? (allCadences || []).filter(function (c) { return !c.account_id || activeAccountIds[c.account_id]; })
+    : (allCadences || []);
 
   if (!cadences || cadences.length === 0) {
     return pickV(seed + "g0", [
@@ -90,7 +95,13 @@ export function CadenceView({ cadences, cadencesError, onRetryCadences, accounts
     onClickToday:    function () { setViewMode('list'); setTimeout(function () { scrollToCadenceGroup('today'); }, 50); },
     onClickThisWeek: function () { setViewMode('week'); },
   };
-  var cadenceInsight = buildGlobalCadenceInsight(cadences, insightHandlers);
+  var activeAccountIds = (function () {
+    if (!accounts) return null;
+    var ids = {};
+    accounts.forEach(function (a) { if (!a.is_inactive) ids[a.id] = true; });
+    return ids;
+  })();
+  var cadenceInsight = buildGlobalCadenceInsight(cadences, insightHandlers, activeAccountIds);
   var [showAddModal, setShowAddModal] = useState(false);
   var [calDate,  setCalDate]  = useState(function () {
     var d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0); return d;

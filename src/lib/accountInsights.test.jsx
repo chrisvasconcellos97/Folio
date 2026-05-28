@@ -6,6 +6,7 @@ import {
   buildPartnerInsight,
   buildCustomerInsight,
 } from "./accountInsights.jsx";
+import { computeBannerStats } from "../components/StatusBanner";
 
 // Helper — render the React node to a flat string so we can assert on copy.
 function r(node) {
@@ -88,6 +89,45 @@ describe("buildCustomerInsight", function () {
     var items = [{ done: false, due_date: "2020-01-01" }];
     var html = r(buildCustomerInsight(account, items, [], [], [], {}));
     expect(html).toMatch(/overdue/);
+  });
+});
+
+describe("StatusBanner — inactive exclusion", function () {
+  it("does not count inactive accounts as cold", function () {
+    var oldDate = new Date(Date.now() - 60 * 86400000).toISOString();
+    var stats = computeBannerStats(
+      [
+        { id: "a1", name: "Active",   last_interaction_at: oldDate, is_inactive: false },
+        { id: "a2", name: "Archived", last_interaction_at: oldDate, is_inactive: true  },
+      ],
+      [],
+      []
+    );
+    // Only the active account should pad the cold count.
+    expect(stats.cold).toBe(1);
+  });
+
+  it("ignores overdue items + weekly follow-ups on inactive accounts", function () {
+    var todayStr = new Date().toISOString().split("T")[0];
+    var inThreeDays = new Date(Date.now() + 3 * 86400000).toISOString().split("T")[0];
+    var stats = computeBannerStats(
+      [
+        { id: "active",   name: "Active",   is_inactive: false, last_interaction_at: new Date().toISOString() },
+        { id: "archived", name: "Archived", is_inactive: true,  last_interaction_at: new Date().toISOString() },
+      ],
+      [
+        { account_id: "active",   done: false, due_date: "2020-01-01" },  // counts
+        { account_id: "archived", done: false, due_date: "2020-01-01" },  // skipped
+      ],
+      [
+        { account_id: "active",   follow_up_date: inThreeDays },          // counts
+        { account_id: "archived", follow_up_date: inThreeDays },          // skipped
+      ]
+    );
+    expect(stats.overdue).toBe(1);
+    expect(stats.followUps).toBe(1);
+    // sanity — todayStr is in use in computeBannerStats (we're not testing it here, but reference it so lint stays quiet)
+    expect(typeof todayStr).toBe("string");
   });
 });
 

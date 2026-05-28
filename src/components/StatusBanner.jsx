@@ -9,6 +9,38 @@ var SERIF = "'Fraunces', Georgia, serif";
 
 function plural(n, s) { return n + " " + s + (n !== 1 ? "s" : ""); }
 
+// Pure stats reducer — extracted so the inactive-exclusion behavior is
+// unit-testable without rendering the whole banner.
+export function computeBannerStats(accounts, items, meetings, nowMs) {
+  var now      = typeof nowMs === "number" ? nowMs : Date.now();
+  var todayStr = new Date(now).toISOString().split("T")[0];
+  var weekOut  = (function () { var d = new Date(now); d.setDate(d.getDate() + 7); return d.toISOString().split("T")[0]; })();
+  var thirtyDaysMs = 30 * 86400000;
+
+  var activeAccounts = (accounts || []).filter(function (a) { return !a.is_inactive; });
+  var activeIds      = {};
+  activeAccounts.forEach(function (a) { activeIds[a.id] = true; });
+
+  var cold = activeAccounts.filter(function (a) {
+    var last = a.last_interaction_at ? new Date(a.last_interaction_at).getTime()
+      : a.last_meeting ? new Date(a.last_meeting + "T00:00:00").getTime() : null;
+    if (last === null) return true;
+    return (now - last) > thirtyDaysMs;
+  }).length;
+
+  var overdue = (items || []).filter(function (i) {
+    if (i.account_id && !activeIds[i.account_id]) return false;
+    return !i.done && i.due_date && i.due_date < todayStr;
+  }).length;
+
+  var followUps = (meetings || []).filter(function (m) {
+    if (m.account_id && !activeIds[m.account_id]) return false;
+    return m.follow_up_date && m.follow_up_date >= todayStr && m.follow_up_date <= weekOut;
+  }).length;
+
+  return { cold: cold, overdue: overdue, followUps: followUps };
+}
+
 export function StatusBanner({ accounts, items, meetings, onColdClick, onOverdueClick, onFollowUpClick }) {
   // One-time purge of leftover per-day dismiss flags from the prior behavior.
   try {
@@ -18,27 +50,7 @@ export function StatusBanner({ accounts, items, meetings, onColdClick, onOverdue
   } catch (e) {}
 
   var stats = useMemo(function () {
-    var now      = Date.now();
-    var todayStr = new Date().toISOString().split("T")[0];
-    var weekOut  = (function () { var d = new Date(); d.setDate(d.getDate() + 7); return d.toISOString().split("T")[0]; })();
-    var thirtyDaysMs = 30 * 86400000;
-
-    var cold = (accounts || []).filter(function (a) {
-      var last = a.last_interaction_at ? new Date(a.last_interaction_at).getTime()
-        : a.last_meeting ? new Date(a.last_meeting + "T00:00:00").getTime() : null;
-      if (last === null) return true;
-      return (now - last) > thirtyDaysMs;
-    }).length;
-
-    var overdue = (items || []).filter(function (i) {
-      return !i.done && i.due_date && i.due_date < todayStr;
-    }).length;
-
-    var followUps = (meetings || []).filter(function (m) {
-      return m.follow_up_date && m.follow_up_date >= todayStr && m.follow_up_date <= weekOut;
-    }).length;
-
-    return { cold: cold, overdue: overdue, followUps: followUps };
+    return computeBannerStats(accounts, items, meetings);
   }, [accounts, items, meetings]);
 
   if (stats.cold === 0 && stats.overdue === 0 && stats.followUps === 0) return null;
