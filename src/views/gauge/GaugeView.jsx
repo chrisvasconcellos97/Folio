@@ -40,11 +40,6 @@ var PRIORITY_COLORS = {
   low:    C.green,
 };
 
-var PRIORITY_SURFACE = {
-  high:   C.redFaint,
-  medium: C.yellowFaint,
-  low:    C.greenFaint,
-};
 
 // Scope filter (the row of pills below the status boxes)
 var SCOPE_FILTERS = [
@@ -478,18 +473,20 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
           var isOpen = !!expandedRows[p.id];
           function toggleRow() { setExpandedRows(function (prev) { return Object.assign({}, prev, { [p.id]: !prev[p.id] }); }); }
 
-          var rowBg     = PRIORITY_SURFACE[p.priority] || C.surface;
-          var leftEdge  = PRIORITY_COLORS[p.priority];
+          var leftEdge = PRIORITY_COLORS[p.priority];
+          var glow     = leftEdge ? "-2px 0 8px -3px " + leftEdge : undefined;
 
           return (
             <div
               key={p.id}
               data-project-id={p.id}
+              className="hover-lift"
               style={{
-                background: rowBg,
+                background: C.surface,
                 border: "1px solid " + (p.status === "blocked" ? C.statusBlocked.border : C.rule),
                 borderLeft: leftEdge ? "3px solid " + leftEdge : "1px solid " + C.rule,
                 borderRadius: 8,
+                boxShadow: glow,
                 opacity: isComplete ? 0.45 : 1,
               }}
             >

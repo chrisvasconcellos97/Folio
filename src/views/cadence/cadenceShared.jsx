@@ -54,12 +54,12 @@ export function CadenceEventCard({ event, onSelectAccount, onCreateItem, onOpenH
     ? '✓ ' + (cadence.task_title || '?')
     : (account && account.name ? account.name : 'Unknown');
 
-  var tint = eventTint(event);
   return (
     <div
+      className="hover-lift"
       style={Object.assign({}, glass, {
-        background: tint,
         borderLeft: '3px solid ' + col,
+        boxShadow: '-2px 0 8px -3px ' + col,
         borderRadius: 8,
         padding: '11px 14px',
         display: 'flex',

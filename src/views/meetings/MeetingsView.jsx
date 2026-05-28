@@ -367,12 +367,14 @@ export function MeetingsView({ meetings, loading, allItems, addItem, accounts })
               return (
                 <div
                   key={m.id}
+                  className="hover-lift"
                   onMouseEnter={function () { setHoveredId(m.id); }}
                   onMouseLeave={function () { setHoveredId(null); }}
                 >
                 <Card
                   style={{
                     borderLeft: "3px solid " + C.accent,
+                    boxShadow: "-2px 0 8px -3px " + C.accent,
                     cursor: "pointer",
                     position: "relative",
                     background: isHovered ? C.accentFaint : undefined,
@@ -456,8 +458,11 @@ export function MeetingsView({ meetings, loading, allItems, addItem, accounts })
                 return (
                   <Card
                     key={m.id}
+                    className="hover-lift"
                     style={{
                       cursor: "pointer",
+                      borderLeft: "3px solid " + C.accent,
+                      boxShadow: "-2px 0 8px -3px " + C.accent,
                       background: isHovered ? C.accentFaint : undefined,
                       transition: "background 0.12s",
                     }}

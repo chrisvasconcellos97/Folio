@@ -447,10 +447,18 @@ export function PipelineView({ accounts, loading, revenueHistory, shopMetrics, o
           var monthLabel = latest ? MONTH_NAMES[latest.month - 1] + " " + latest.year : "";
           var shopLatest = latestRecord(sm, a.id);
 
+          var pTierEdge = TIER_COLORS[a.tier];
+          var pTierGlow = pTierEdge ? "-2px 0 8px -3px " + pTierEdge : undefined;
           return (
             <div
               key={a.id}
-              style={Object.assign({}, glass, { borderRadius: 12, padding: "12px 14px" })}
+              className="hover-lift"
+              style={Object.assign({}, glass, {
+                borderRadius: 12,
+                padding: "12px 14px",
+                borderLeft: pTierEdge ? "3px solid " + pTierEdge : undefined,
+                boxShadow: pTierGlow,
+              })}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div style={{ flex: 1 }}>
@@ -511,10 +519,19 @@ export function PipelineView({ accounts, loading, revenueHistory, shopMetrics, o
 
         {/* Accounts without revenue history */}
         {withoutData.map(function (a) {
+          var wTierEdge = TIER_COLORS[a.tier];
+          var wTierGlow = wTierEdge ? "-2px 0 8px -3px " + wTierEdge : undefined;
           return (
             <div
               key={a.id}
-              style={Object.assign({}, glass, { borderRadius: 12, padding: "12px 14px", opacity: 0.55 })}
+              className="hover-lift"
+              style={Object.assign({}, glass, {
+                borderRadius: 12,
+                padding: "12px 14px",
+                opacity: 0.55,
+                borderLeft: wTierEdge ? "3px solid " + wTierEdge : undefined,
+                boxShadow: wTierGlow,
+              })}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
