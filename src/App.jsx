@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { supabase } from "./lib/supabase";
 import { useAuth } from "./hooks/useAuth";
+import { useBreakpoint } from "./hooks/useBreakpoint";
 import { useAccounts } from "./hooks/useAccounts";
 import { useMeetings } from "./hooks/useMeetings";
 import { useCadences } from "./hooks/useCadences";
@@ -33,20 +34,6 @@ import { PipOrb, PipMark } from "./components/PipMark";
 import { CommandPalette } from "./components/CommandPalette";
 import { Toast, showToast } from "./components/Toast";
 import { C } from "./lib/colors";
-
-function useBreakpoint() {
-  var [isDesktop, setIsDesktop] = useState(
-    typeof window !== "undefined" ? window.innerWidth >= 900 : true
-  );
-  useEffect(function () {
-    function handleResize() {
-      setIsDesktop(window.innerWidth >= 900);
-    }
-    window.addEventListener("resize", handleResize);
-    return function () { window.removeEventListener("resize", handleResize); };
-  }, []);
-  return isDesktop;
-}
 
 export default function App() {
   var { session, loading: authLoading, signIn, signUp, signOut } = useAuth();

@@ -1,14 +1,10 @@
 import { useState, useEffect } from "react";
 import { C } from "../../lib/colors";
 import { showToast } from "../../components/Toast";
-import { Pill } from "../../components/Pill";
-import { AmberBtn, SecBtn, DangerBtn } from "../../components/Buttons";
 import { MarkdownText } from "../../components/MarkdownText";
 import { Modal } from "../../components/Modal";
-import { PipOrb, PipMark } from "../../components/PipMark";
+import { PipMark } from "../../components/PipMark";
 
-var MONO = "'JetBrains Mono', ui-monospace, monospace";
-var SERIF = "'Fraunces', Georgia, serif";
 import { useMeetings } from "../../hooks/useMeetings";
 import { useItems } from "../../hooks/useItems";
 import { useContacts } from "../../hooks/useContacts";
@@ -16,8 +12,8 @@ import { useCadences } from "../../hooks/useCadences";
 import { useProjects } from "../../hooks/useProjects";
 import { callBriefMePip } from "../../lib/pip";
 import { usePipAccountState } from "../../hooks/usePipAccountState";
-import { ownerLabel, ownerInitials, findOwner } from "../../lib/ownerLabel";
-import { displayRevenue } from "../../lib/metricsUtils";
+import { AccountDetailHeader } from "./AccountDetailHeader";
+import { AccountDetailTabs } from "./AccountDetailTabs";
 import { OverviewTab } from "./tabs/OverviewTab";
 import { MeetingsTab } from "./tabs/MeetingsTab";
 import { ItemsTab } from "./tabs/ItemsTab";
@@ -34,10 +30,6 @@ import { PrintAccountSheet } from "../../components/PrintAccountSheet";
 import { CadenceHub } from "../cadence/CadenceHub";
 import { CadenceBackfillBanner } from "../cadence/CadenceBackfillBanner";
 import { ErrorBanner } from "../../components/ErrorBanner";
-
-var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red };
-var STATUS_LABELS = { green: "Healthy", yellow: "Watch", red: "At Risk" };
-var TIER_COLORS   = { Major: C.blue, Mid: C.purple, Growth: C.green };
 
 function getDefaultTab(accountId) {
   try { return localStorage.getItem("folio_default_tab_" + accountId) || null; } catch(e) { return null; }
@@ -123,8 +115,35 @@ export function AccountDetail({ account, userId, orgId, accounts, members, onBac
   var subAccounts   = allAccounts.filter(function (a) { return a.parent_account_id === account.id; });
   var parentAccount = account.parent_account_id ? allAccounts.find(function (a) { return a.id === account.parent_account_id; }) : null;
 
-  var statusColor = STATUS_COLORS[account.status] || C.textSub;
-  var openCount   = items.filter(function (i) { return !i.done; }).length;
+  var openCount = items.filter(function (i) { return !i.done; }).length;
+
+  function handleBriefMe() {
+    setBriefModal(true);
+    if (briefText) return;
+    setBriefLoading(true);
+    setBriefError(null);
+    callBriefMePip({
+      mode: "brief",
+      account: account,
+      meetings: meetings.slice(0, 5),
+      openItems: items.filter(function (i) { return !i.done; }),
+      contacts: contacts,
+      recentDeliveries: items
+        .filter(function(i) { return i.done && i.text && i.text.indexOf("✓ Delivered:") === 0; })
+        .sort(function(a, b) { return (b.closed_at || "") > (a.closed_at || "") ? 1 : -1; })
+        .slice(0, 5)
+        .map(function(i) { return { title: i.text.replace("✓ Delivered: ", ""), date: i.closed_at ? new Date(i.closed_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null }; }),
+      activeProjects: (projects || [])
+        .filter(function(p) { return p.status === "in_progress" || p.status === "blocked"; })
+        .map(function(p) { return { title: p.title, status: p.status, due_date: p.due_date }; }),
+    }).then(function (data) {
+      setBriefLoading(false);
+      setBriefText(data.brief || "Pip couldn't generate a brief right now.");
+    }).catch(function () {
+      setBriefLoading(false);
+      setBriefError("Pip is unavailable right now.");
+    });
+  }
 
   if (hubCadence) {
     return (
@@ -153,331 +172,30 @@ export function AccountDetail({ account, userId, orgId, accounts, members, onBac
 
   return (
     <div>
-      {/* Header */}
-      <div style={{ marginBottom: 18 }}>
-        <button
-          onClick={onBack}
-          style={{
-            background: "none",
-            border: "none",
-            color: C.textMuted,
-            cursor: "pointer",
-            fontFamily: MONO,
-            fontSize: 10,
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
-            padding: 0,
-            marginBottom: 14,
-            display: "flex",
-            alignItems: "center",
-            gap: 4,
-          }}
-        >
-          ← {workspaceLabel} › {account.name}
-        </button>
-
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            gap: 12,
-          }}
-        >
-          <div style={{ flex: 1 }}>
-            <div
-              style={{
-                fontFamily: SERIF,
-                fontSize: 36,
-                fontWeight: 400,
-                letterSpacing: "-0.022em",
-                lineHeight: 1,
-                color: C.text,
-                marginBottom: 10,
-              }}
-            >
-              {(function() {
-                var words = account.name.split(" ");
-                if (words.length > 1) {
-                  return (
-                    <>
-                      {words.slice(0, -1).join(" ") + " "}
-                      <em>{words[words.length - 1]}</em>
-                    </>
-                  );
-                }
-                return account.name;
-              })()}
-            </div>
-            {account.account_number && isCustomerType && (
-              <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, fontFeatureSettings: '"tnum"', marginBottom: 8 }}>
-                #{account.account_number}
-              </div>
-            )}
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-              {account.tier && isCustomerType && (
-                <Pill color={TIER_COLORS[account.tier] || C.textSoft}>
-                  {account.tier}
-                </Pill>
-              )}
-              {isCustomerType && (
-                <Pill color={statusColor}>
-                  <span style={{ display: "inline-block", width: 5, height: 5, borderRadius: "50%", background: statusColor, marginRight: 4, verticalAlign: "middle" }} />
-                  {STATUS_LABELS[account.status] || account.status}
-                </Pill>
-              )}
-              {openCount > 0 && (
-                <Pill
-                  color={C.yellow}
-                  onClick={function () { setTab("tasks"); }}
-                  style={{ fontFeatureSettings: '"tnum"', cursor: "pointer" }}
-                >
-                  {openCount + " open"}
-                </Pill>
-              )}
-              {account.region && isCustomerType && (
-                <Pill color={C.accent}>{account.region}</Pill>
-              )}
-              {parentAccount && isCustomerType && (
-                <button
-                  onClick={function () { onSelectAccount && onSelectAccount(parentAccount); }}
-                  style={{
-                    background: C.accentFaint, border: '1px solid ' + C.accentLine,
-                    borderRadius: 999, padding: '3px 10px',
-                    fontFamily: MONO, fontSize: 10,
-                    color: C.accent, cursor: 'pointer',
-                  }}
-                >
-                  ↑ {parentAccount.name}
-                </button>
-              )}
-              {members && members.length > 1 && (function () {
-                var owner = findOwner(members, account.owner_user_id) || findOwner(members, userId);
-                return (
-                  <select
-                    value={account.owner_user_id || userId}
-                    onChange={function (e) { onUpdate && onUpdate({ owner_user_id: e.target.value }); }}
-                    title="Account owner"
-                    style={{
-                      background: C.surface, border: "1px solid " + C.rule,
-                      borderRadius: 999, padding: "3px 10px",
-                      fontFamily: MONO, fontSize: 10, color: C.textSoft,
-                      cursor: "pointer", appearance: "none",
-                    }}
-                  >
-                    {members.map(function (m) {
-                      return <option key={m.user_id || m.id} value={m.user_id || ""}>Owner: {ownerInitials(m)}</option>;
-                    })}
-                  </select>
-                );
-              })()}
-            </div>
-            {account.tags && account.tags.length > 0 && isCustomerType && (
-              <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 8 }}>
-                {account.tags.map(function (t) {
-                  return (
-                    <span key={t} style={{
-                      fontFamily: MONO, fontSize: 9.5, letterSpacing: "0.08em",
-                      textTransform: "uppercase", color: C.textSoft,
-                      background: C.surface2, borderRadius: 4,
-                      padding: "2px 7px",
-                    }}>{t}</span>
-                  );
-                })}
-              </div>
-            )}
-            {account.address && isCustomerType && (
-              <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, marginTop: 6 }}>
-                {account.address}
-              </div>
-            )}
-            <button
-              onClick={function () {
-                setBriefModal(true);
-                if (briefText) return;
-                setBriefLoading(true);
-                setBriefError(null);
-                callBriefMePip({
-                  mode: "brief",
-                  account: account,
-                  meetings: meetings.slice(0, 5),
-                  openItems: items.filter(function (i) { return !i.done; }),
-                  contacts: contacts,
-                  recentDeliveries: items
-                    .filter(function(i) { return i.done && i.text && i.text.indexOf("✓ Delivered:") === 0; })
-                    .sort(function(a, b) { return (b.closed_at || "") > (a.closed_at || "") ? 1 : -1; })
-                    .slice(0, 5)
-                    .map(function(i) { return { title: i.text.replace("✓ Delivered: ", ""), date: i.closed_at ? new Date(i.closed_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null }; }),
-                  activeProjects: (projects || [])
-                    .filter(function(p) { return p.status === "in_progress" || p.status === "blocked"; })
-                    .map(function(p) { return { title: p.title, status: p.status, due_date: p.due_date }; }),
-                }).then(function (data) {
-                  setBriefLoading(false);
-                  setBriefText(data.brief || "Pip couldn't generate a brief right now.");
-                }).catch(function () {
-                  setBriefLoading(false);
-                  setBriefError("Pip is unavailable right now.");
-                });
-              }}
-              style={{
-                background: "oklch(0.32 0.05 178 / 0.5)",
-                border: "1px solid " + C.accentBorder,
-                borderRadius: 6, padding: "6px 14px",
-                fontFamily: "'Inter', system-ui, sans-serif",
-                fontSize: 12, fontWeight: 500,
-                color: C.accent, cursor: "pointer",
-                marginTop: 12, display: "flex", alignItems: "center", gap: 5,
-              }}
-            >
-              <span style={{ fontSize: 13 }}>✦</span> Brief Me
-            </button>
-            <button
-              onClick={handleRefreshPipMemory}
-              disabled={refreshingState}
-              title="Tells Pip to re-read this account from scratch — every meeting, item, contact, and project — and rebuild its cached understanding of where things stand. Use after a big update if Pip's next response should reflect the latest state. Otherwise it auto-refreshes in the background when stale."
-              style={{
-                background: "transparent",
-                border: "1px solid " + C.border,
-                borderRadius: 6, padding: "6px 12px",
-                fontFamily: "'Inter', system-ui, sans-serif",
-                fontSize: 11, fontWeight: 500,
-                color: C.textMuted, cursor: refreshingState ? "default" : "pointer",
-                marginTop: 8, marginLeft: 6, display: "inline-flex", alignItems: "center", gap: 5,
-                opacity: refreshingState ? 0.5 : 1,
-              }}
-            >
-              {refreshingState ? "Resyncing…" : "Resync Pip memory"}
-            </button>
-          </div>
-
-          <div style={{ textAlign: "right", flexShrink: 0 }}>
-            {isCustomerType && (
-              <>
-                <div
-                  style={{
-                    fontFamily: SERIF,
-                    fontSize: 28,
-                    fontWeight: 400,
-                    color: C.accent,
-                    fontFeatureSettings: '"tnum"',
-                  }}
-                >
-                  {displayRevenue(account)}
-                </div>
-                <div
-                  style={{
-                    fontFamily: MONO,
-                    fontSize: 9.5,
-                    color: C.textMuted,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                    marginTop: 2,
-                  }}
-                >
-                  Revenue YTD
-                </div>
-              </>
-            )}
-            {isPartner && account.spend_ytd != null && (
-              <>
-                <div
-                  style={{
-                    fontFamily: SERIF,
-                    fontSize: 28,
-                    fontWeight: 400,
-                    color: C.accent,
-                    fontFeatureSettings: '"tnum"',
-                  }}
-                >
-                  ${Number(account.spend_ytd).toLocaleString()}
-                </div>
-                <div
-                  style={{
-                    fontFamily: MONO,
-                    fontSize: 9.5,
-                    color: C.textMuted,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                    marginTop: 2,
-                  }}
-                >
-                  Spend YTD
-                </div>
-              </>
-            )}
-            {(function() {
-              if (meetings.length === 0) return null;
-              var now = new Date();
-              var bars = [];
-              for (var i = 5; i >= 0; i--) {
-                var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-                var m = d.getMonth(); var y = d.getFullYear();
-                var count = meetings.filter(function(mt) {
-                  if (!mt.meeting_date) return false;
-                  var md = new Date(mt.meeting_date);
-                  return md.getFullYear() === y && md.getMonth() === m;
-                }).length;
-                bars.push({ count: count, label: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][m] });
-              }
-              var maxCount = Math.max.apply(null, bars.map(function(b) { return b.count; }));
-              if (maxCount === 0) return null;
-              return (
-                <div style={{ marginTop: 10, marginBottom: 4 }}>
-                  <div style={{ fontFamily: MONO, fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Meeting Cadence</div>
-                  <div style={{ display: "flex", gap: 2, alignItems: "flex-end", height: 20, justifyContent: "flex-end" }}>
-                    {bars.map(function(b, i) {
-                      var h = b.count === 0 ? 2 : Math.max(3, Math.round((b.count / maxCount) * 20));
-                      var isLast = i === bars.length - 1;
-                      return (
-                        <div key={i} title={b.label + ": " + b.count} style={{ width: 8, height: h, background: isLast ? C.accent : C.accentDim, borderRadius: 1, opacity: isLast ? 0.9 : (b.count > 0 ? 0.5 : 0.15) }} />
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })()}
-            <div style={{ display: "flex", gap: 6, marginTop: 8, justifyContent: "flex-end" }}>
-              <SecBtn
-                onClick={function () { window.print(); }}
-                style={{ fontSize: 11, padding: "5px 12px" }}
-              >
-                Print
-              </SecBtn>
-              <SecBtn
-                onClick={onEdit}
-                style={{ fontSize: 11, padding: "5px 12px" }}
-              >
-                Edit
-              </SecBtn>
-              {!confirmDelete && (
-                <DangerBtn
-                  onClick={function () { setConfirmDelete(true); }}
-                  style={{ fontSize: 11, padding: "5px 12px" }}
-                >
-                  Delete
-                </DangerBtn>
-              )}
-              {confirmDelete && (
-                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                  <span style={{ fontSize: 11, color: C.red }}>Sure?</span>
-                  <DangerBtn
-                    onClick={onDelete}
-                    style={{ fontSize: 11, padding: "5px 12px" }}
-                  >
-                    Delete it
-                  </DangerBtn>
-                  <SecBtn
-                    onClick={function () { setConfirmDelete(false); }}
-                    style={{ fontSize: 11, padding: "5px 12px" }}
-                  >
-                    No
-                  </SecBtn>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+      <AccountDetailHeader
+        account={account}
+        userId={userId}
+        members={members}
+        meetings={meetings}
+        openCount={openCount}
+        parentAccount={parentAccount}
+        workspaceLabel={workspaceLabel}
+        isCustomerType={isCustomerType}
+        isPartner={isPartner}
+        onBack={onBack}
+        onSelectAccount={onSelectAccount}
+        onUpdate={onUpdate}
+        onOpenTasksTab={function () { setTab("tasks"); }}
+        onBriefMe={handleBriefMe}
+        onResyncPipMemory={handleRefreshPipMemory}
+        resyncingPip={refreshingState}
+        onEdit={onEdit}
+        onPrint={function () { window.print(); }}
+        onDelete={onDelete}
+        confirmDelete={confirmDelete}
+        onConfirmDelete={function () { setConfirmDelete(true); }}
+        onCancelDelete={function () { setConfirmDelete(false); }}
+      />
 
       {/* Backfill prompt — surfaces once per account when cadences exist with un-tagged meetings */}
       <CadenceBackfillBanner
@@ -487,63 +205,16 @@ export function AccountDetail({ account, userId, orgId, accounts, members, onBac
         onUpdateMeeting={updateMeeting}
       />
 
-      {/* Tabs */}
-      <div
-        style={{
-          display: "flex",
-          gap: 0,
-          marginBottom: 16,
-          borderBottom: "1px solid " + C.rule,
-          paddingBottom: 0,
+      <AccountDetailTabs
+        tabs={TABS}
+        activeTab={tab}
+        shopCount={subAccounts.length}
+        onChange={function (next, dir) {
+          setTabSlideDir(dir);
+          setTab(next);
+          setDefaultTab(account.id, next);
         }}
-      >
-        {TABS.map(function (t) {
-          var isGauge  = t === "projects";
-          var active   = tab === t;
-          return (
-            <button
-              key={t}
-              onClick={function () {
-                var oldIdx = TABS.indexOf(tab);
-                var newIdx = TABS.indexOf(t);
-                setTabSlideDir(newIdx >= oldIdx ? "right" : "left");
-                setTab(t);
-                setDefaultTab(account.id, t);
-              }}
-              style={{
-                padding: "8px 0",
-                marginRight: 26,
-                cursor: "pointer",
-                fontFamily: MONO,
-                fontSize: 10.5,
-                fontWeight: 400,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                background: "transparent",
-                color: active ? (isGauge ? C.blue : C.accent) : C.textMuted,
-                border: "none",
-                borderBottom: active ? "1.5px solid " + (isGauge ? C.blue : C.accent) : "1.5px solid transparent",
-                marginBottom: -1,
-              }}
-            >
-              {isGauge ? "Gauge" : t === "shops" ? (
-                <span>
-                  Shops
-                  {subAccounts.length > 0 && (
-                    <span style={{
-                      marginLeft: 5,
-                      fontFamily: MONO, fontSize: 9.5,
-                      color: active ? C.accent : C.textMuted,
-                    }}>
-                      ({subAccounts.length})
-                    </span>
-                  )}
-                </span>
-              ) : t.charAt(0).toUpperCase() + t.slice(1)}
-            </button>
-          );
-        })}
-      </div>
+      />
 
       {/* Tab content */}
       <div key={tab} className={tabSlideDir === "left" ? "tab-slide-left" : "tab-slide-right"}>
