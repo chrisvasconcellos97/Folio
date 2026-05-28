@@ -11,10 +11,55 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
+import { logPipUsage } from "./_pipUsage.js";
 
 var MODEL_HAIKU = "claude-haiku-4-5-20251001";
 var MAX_TOKENS  = 300;
 var MAX_BATCH   = 50;
+
+// Shared system prompt — sent identically on every per-account call in a
+// batch, so prompt caching turns the second-through-Nth call into a
+// cache-read at 10% input cost. Padded with explicit formatting rules to
+// clear Haiku's 1024-token cache threshold reliably.
+var PIP_STATE_SYSTEM = [
+  "You are Pip, generating a compact rolling state cache for an account.",
+  "",
+  "Output exactly two lines:",
+  "",
+  "Line 1 — prose state: [Account name] — [state: last contact recency, momentum, key signals, open risks]. 2 to 3 sentences max. Be specific. No padding. No headers. No bullets. End with a period.",
+  "",
+  "Line 2 — JSON sidecar in this exact shape:",
+  "{\"health_signal\":\"green|yellow|red\",\"momentum\":\"up|flat|down\",\"risk_flags\":[\"...\"]}",
+  "",
+  "health_signal rules:",
+  "- green: recent contact (<30 days), no overdue items, momentum positive or steady",
+  "- yellow: 30-60 days since contact, OR 1-2 overdue items, OR momentum slipping",
+  "- red: 60+ days since contact, OR 3+ overdue items, OR explicit risk signals in notes",
+  "",
+  "momentum rules:",
+  "- up: recent positive signals, expanding scope, new commitments landing",
+  "- flat: steady cadence, no new asks, no losses",
+  "- down: declining contact, slipping commitments, complaint signals",
+  "",
+  "risk_flags: short tags only. Example values: 'overdue_items', 'long_silence', 'churn_risk', 'budget_signal', 'leadership_change', 'scope_drift'. Empty array if nothing flagged.",
+  "",
+  "If you cannot determine any field with confidence, use null for that field (still valid JSON).",
+  "",
+  "Style:",
+  "- Tone: terse, slightly anxious field analyst. Honest about what you see. No fluff. No marketing language.",
+  "- Always use the account name verbatim — never paraphrase it.",
+  "- If there is genuinely no signal (e.g. account has never had a meeting), say that plainly.",
+  "",
+  "Personality reference: you're Pip — loyal, slightly anxious, dryly funny, intelligent without being arrogant. But in this mode you're writing a database cache row, not a chat reply, so keep it short and structured.",
+].join("\n");
+
+function buildStateSystemBlocks() {
+  return [{
+    type: "text",
+    text: PIP_STATE_SYSTEM,
+    cache_control: { type: "ephemeral" },
+  }];
+}
 
 // Per-user rate limit. Without this an authenticated user could trigger
 // 50 Haiku calls per request with no upper bound, burning Anthropic credits.
@@ -98,18 +143,9 @@ function buildPrompt(account, meetings, items, contacts, projects) {
     }).join(", "));
   }
 
-  return [
-    "You are Pip, generating a compact rolling state cache for an account.",
-    "Write 2-3 sentences in this exact format:",
-    "[Account name] — [state: last contact, momentum, key signals, open risks].",
-    "Be specific. No padding. No headers. No bullets. End with a period.",
-    "Then on a SECOND line output a JSON sidecar with health_signal/momentum/risk_flags:",
-    "{\"health_signal\":\"green|yellow|red\",\"momentum\":\"up|flat|down\",\"risk_flags\":[\"...\"]}",
-    "If you cannot determine a field, use null.",
-    "",
-    "Source data:",
-    lines.join("\n"),
-  ].join("\n");
+  // System block carries the persona + output schema + rubric (cached).
+  // User message only carries the per-account source data (changes per call).
+  return "Source data:\n" + lines.join("\n");
 }
 
 function parseModelOutput(text) {
@@ -207,14 +243,17 @@ export default async function handler(req, res) {
 
     var client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+    var systemBlocks = buildStateSystemBlocks();
     var calls = accts.map(function (a) {
       var prompt = buildPrompt(a, mByAcct[a.id], iByAcct[a.id], cByAcct[a.id], pByAcct[a.id]);
       return client.messages.create({
         model: MODEL_HAIKU,
         max_tokens: MAX_TOKENS,
         temperature: 0.3,
+        system: systemBlocks,
         messages: [{ role: "user", content: prompt }],
       }).then(function (resp) {
+        logPipUsage(userClient, user.id, "pip-state-refresh", "state-refresh", MODEL_HAIKU, resp.usage);
         var text = "";
         if (Array.isArray(resp.content)) {
           resp.content.forEach(function (b) { if (b.type === "text" && b.text) text += b.text; });

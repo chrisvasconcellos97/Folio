@@ -153,6 +153,14 @@ export function MeetingsTab({ meetings, accountName, accountId, userId, openItem
 
   function handleAskPip(m) {
     if (loadingPip[m.id]) return;
+    // Cost-floor short-circuit: if Pip already summarized this meeting, don't
+    // pay the Anthropic call again. The saved summary lives in m.pip_summary
+    // (set the first time around). Per CLAUDE.md "Pip cost strategy": never
+    // regenerate what's already saved.
+    if (m.pip_summary && m.pip_summary.trim()) {
+      showToast("Pip summary already saved — using cached version");
+      return;
+    }
     setLoadingPip(function (prev) { return Object.assign({}, prev, { [m.id]: true }); });
     setPipErrors(function (prev) { return Object.assign({}, prev, { [m.id]: null }); });
     callAskPip({

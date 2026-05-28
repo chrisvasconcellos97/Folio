@@ -7,6 +7,7 @@ import { AmberBtn } from "../../components/Buttons";
 import { showToast } from "../../components/Toast";
 import { supabase } from "../../lib/supabase";
 import { usePipFacts } from "../../hooks/usePipFacts";
+import { usePipUsage } from "../../hooks/usePipUsage";
 
 var PIP_FACT_PLACEHOLDERS = [
   "Prefer concise replies",
@@ -399,6 +400,58 @@ function PipPrefsSection({ userId }) {
   );
 }
 
+function PipUsageSection({ userId }) {
+  var usage = usePipUsage(userId);
+  var now = new Date();
+  var monthLabel = now.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+
+  // Format dollar amount with sensible precision: < $1 → 3 decimals,
+  // ≥ $1 → 2 decimals. Keeps cheap usage from rendering as "$0.00".
+  var spendText;
+  if (usage.error) {
+    spendText = "—";
+  } else if (usage.spendUsd < 1) {
+    spendText = "$" + usage.spendUsd.toFixed(3);
+  } else {
+    spendText = "$" + usage.spendUsd.toFixed(2);
+  }
+
+  return (
+    <Card>
+      <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 6 }}>Pip usage</div>
+      <div style={{ fontSize: 13, color: C.textSub, lineHeight: 1.6, marginBottom: 14 }}>
+        Estimated spend on Pip API calls this calendar month. Tracks every brief, summary, chat, and background state refresh.
+      </div>
+      <div style={{ display: "flex", gap: 24, alignItems: "baseline" }}>
+        <div>
+          <div style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 10, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 4 }}>
+            Calls
+          </div>
+          <div style={{ fontSize: 24, fontWeight: 600, color: C.text, fontVariantNumeric: "tabular-nums" }}>
+            {usage.loading ? "…" : usage.error ? "—" : usage.callCount}
+          </div>
+        </div>
+        <div>
+          <div style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 10, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 4 }}>
+            Estimated spend
+          </div>
+          <div style={{ fontSize: 24, fontWeight: 600, color: C.text, fontVariantNumeric: "tabular-nums" }}>
+            {usage.loading ? "…" : spendText}
+          </div>
+        </div>
+      </div>
+      <div style={{ fontSize: 11, color: C.textMuted, marginTop: 12, fontFamily: "'JetBrains Mono', ui-monospace, monospace", textTransform: "uppercase", letterSpacing: "0.07em" }}>
+        {monthLabel}
+      </div>
+      {usage.error && (
+        <div style={{ fontSize: 11, color: C.textMuted, marginTop: 8, lineHeight: 1.5 }}>
+          (Usage table not initialized yet — run supabase/phase3_pip_usage.sql.)
+        </div>
+      )}
+    </Card>
+  );
+}
+
 var SETTINGS_MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var SETTINGS_SERIF = "'Fraunces', Georgia, serif";
 
@@ -418,6 +471,8 @@ export function SettingsView({ userId, userMeta, org, role, members, pendingInvi
         <ProfileSection userMeta={userMeta} />
 
         {userId && <PipPrefsSection userId={userId} />}
+
+        {userId && <PipUsageSection userId={userId} />}
 
         {org ? (
           <TeamSection

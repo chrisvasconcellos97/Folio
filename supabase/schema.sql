@@ -230,3 +230,34 @@ create trigger folio_meetings_updated_at
 create trigger gauge_projects_updated_at
   before update on gauge_projects
   for each row execute function update_updated_at();
+
+-- Pip usage tracking (Phase 3). One row per Anthropic call, written by the
+-- /api/pip*, /api/ask-pip routes. Append-only; owner-scoped RLS.
+create table if not exists folio_pip_usage (
+  id                      uuid primary key default gen_random_uuid(),
+  user_id                 uuid not null references auth.users(id) on delete cascade,
+  endpoint                text not null,
+  mode                    text,
+  model                   text not null,
+  input_tokens            integer not null default 0,
+  output_tokens           integer not null default 0,
+  cache_read_tokens       integer not null default 0,
+  cache_creation_tokens   integer not null default 0,
+  cost_micro_cents        bigint  not null default 0,
+  created_at              timestamptz not null default now()
+);
+
+create index if not exists folio_pip_usage_user_time_idx
+  on folio_pip_usage(user_id, created_at desc);
+create index if not exists folio_pip_usage_user_month_idx
+  on folio_pip_usage(user_id, date_trunc('month', created_at));
+
+alter table folio_pip_usage enable row level security;
+
+drop policy if exists "pip_usage_owner_select" on folio_pip_usage;
+create policy "pip_usage_owner_select" on folio_pip_usage
+  for select using (auth.uid() = user_id);
+
+drop policy if exists "pip_usage_owner_insert" on folio_pip_usage;
+create policy "pip_usage_owner_insert" on folio_pip_usage
+  for insert with check (auth.uid() = user_id);

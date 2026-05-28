@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
 import { curateContext, renderContextProse } from "../src/lib/pipContext.js";
 import { PIP_TOOLS } from "../src/lib/pipTools.js";
+import { logPipUsage } from "./_pipUsage.js";
 
 // ----- Static (cached) system prompt blocks -----------------------------
 //
@@ -148,12 +149,17 @@ var PIP_STATIC_SYSTEM = [
 var MODEL_HAIKU  = "claude-haiku-4-5-20251001";
 var MODEL_SONNET = "claude-sonnet-4-6";
 
+// Phase 3 — every mode runs on Haiku 4.5 by default. Brief/summary/email used
+// to route to Sonnet "for quality", but Haiku 4.5 produces equivalent
+// formatting/synthesis on these structured tasks at ~3× lower cost. Override
+// per-call by passing `model: "sonnet"` in the request body if a future
+// caller actually needs the bigger model.
 var MODE_CONFIG = {
-  chat:    { model: MODEL_HAIKU,  max_tokens: 512 },
-  action:  { model: MODEL_HAIKU,  max_tokens: 384 },
-  brief:   { model: MODEL_SONNET, max_tokens: 1024 },
-  summary: { model: MODEL_SONNET, max_tokens: 1024 },
-  email:   { model: MODEL_SONNET, max_tokens: 768 },
+  chat:    { model: MODEL_HAIKU, max_tokens: 512 },
+  action:  { model: MODEL_HAIKU, max_tokens: 384 },
+  brief:   { model: MODEL_HAIKU, max_tokens: 1024 },
+  summary: { model: MODEL_HAIKU, max_tokens: 1024 },
+  email:   { model: MODEL_HAIKU, max_tokens: 768 },
 };
 
 function pickMode(m) {
@@ -161,48 +167,8 @@ function pickMode(m) {
   return "chat";
 }
 
-// ----- Cost estimate -----------------------------------------------------
-// Cents per 1k tokens (matches latest Anthropic public pricing as of build).
-var COST_PER_K_TOK = {
-  "claude-haiku-4-5-20251001":  { in: 0.0001, out: 0.0005 },
-  "claude-sonnet-4-6":          { in: 0.0003, out: 0.0015 },
-};
-var CACHE_READ_DISCOUNT  = 0.1;
-var CACHE_WRITE_PREMIUM  = 1.25;
-
-function estimateCostCents(model, usage) {
-  if (!usage) return 0;
-  var p = COST_PER_K_TOK[model];
-  if (!p) return 0;
-  var inputTokens         = (usage.input_tokens || 0);
-  var outputTokens        = (usage.output_tokens || 0);
-  var cacheRead           = (usage.cache_read_input_tokens || 0);
-  var cacheCreate         = (usage.cache_creation_input_tokens || 0);
-  var billedInput  = inputTokens
-                   + cacheRead * CACHE_READ_DISCOUNT
-                   + cacheCreate * CACHE_WRITE_PREMIUM;
-  return (billedInput / 1000) * p.in + (outputTokens / 1000) * p.out;
-}
-
-function logUsage(userId, mode, model, usage) {
-  if (!usage) return;
-  try {
-    var hash = (userId || "").slice(0, 8);
-    var cost = estimateCostCents(model, usage);
-    console.log("[pip-usage]", JSON.stringify({
-      user_id_hash: hash,
-      mode: mode,
-      model: model,
-      input_tokens: usage.input_tokens || 0,
-      output_tokens: usage.output_tokens || 0,
-      cache_read_tokens: usage.cache_read_input_tokens || 0,
-      cache_creation_tokens: usage.cache_creation_input_tokens || 0,
-      total_cost_cents: Number(cost.toFixed(6)),
-    }));
-  } catch (e) {
-    // swallow — logging must never break the request
-  }
-}
+// Cost estimation + logging live in ./_pipUsage.js (shared with ask-pip and
+// pip-state-refresh).
 
 // ----- Rate limit --------------------------------------------------------
 
@@ -292,6 +258,13 @@ export default async function handler(req, res) {
     return res.status(429).json({ error: "Too many requests. Give Pip a moment." });
   }
 
+  // User-scoped client for the usage-log insert — RLS uses auth.uid().
+  var userClient = createClient(
+    process.env.VITE_SUPABASE_URL,
+    process.env.VITE_SUPABASE_ANON_KEY,
+    { global: { headers: { Authorization: "Bearer " + token } } }
+  );
+
   var body = req.body || {};
   var rawMessages = Array.isArray(body.messages) ? body.messages : null;
   if (!rawMessages) return res.status(400).json({ error: "messages array required" });
@@ -374,7 +347,7 @@ export default async function handler(req, res) {
           }
         });
       }
-      logUsage(user.id, mode, cfg.model, finalMsg && finalMsg.usage);
+      logPipUsage(userClient, user.id, "pip", mode, cfg.model, finalMsg && finalMsg.usage);
       sseWrite(res, "done", {
         content: fullText,
         tool_calls: toolCalls,
@@ -398,7 +371,7 @@ export default async function handler(req, res) {
         if (b.type === "tool_use") bufferedToolCalls.push({ id: b.id, name: b.name, input: b.input || {} });
       });
     }
-    logUsage(user.id, mode, cfg.model, response.usage);
+    logPipUsage(userClient, user.id, "pip", mode, cfg.model, response.usage);
 
     return res.status(200).json({
       content: text,

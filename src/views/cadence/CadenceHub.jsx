@@ -554,7 +554,21 @@ export function CadenceHub({
     });
   }
 
+  // Cost-floor: if Pip already wrote a brief within the freshness window,
+  // skip the Anthropic call entirely and reuse the cached one. The
+  // PipBriefPanel reads cadence.pip_brief / pip_brief_at directly, so a no-op
+  // here just lets the existing brief stand. Force re-run is still possible
+  // by clearing the brief from the DB first.
+  var BRIEF_FRESH_MS = 6 * 60 * 60 * 1000; // 6 hours
+
   function handleRefreshBrief() {
+    if (cadence.pip_brief && cadence.pip_brief_at) {
+      var generatedMs = new Date(cadence.pip_brief_at).getTime();
+      if (!isNaN(generatedMs) && Date.now() - generatedMs < BRIEF_FRESH_MS) {
+        showToast("Brief is fresh — using cached version");
+        return;
+      }
+    }
     setBriefLoading(true);
     setBriefError(null);
     callCadenceBriefPip({
