@@ -120,6 +120,16 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
   }, [allDone]);
   var showChecklist = !checklistDone && !allDone;
 
+  // Open items per account (uncompleted only)
+  var openItemsByAccount = useMemo(function () {
+    var map = {};
+    (items || []).forEach(function (it) {
+      if (it.done || !it.account_id) return;
+      map[it.account_id] = (map[it.account_id] || 0) + 1;
+    });
+    return map;
+  }, [items]);
+
   // Scope quick tasks to the current workspace. Unassigned tasks (no account_id)
   // live on /accounts only — they were created from the customer-facing tray.
   var accountTypeById = {};
@@ -796,33 +806,70 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                 transition: "opacity 0.12s",
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: (a.revenue_amount != null || a.revenue) || a.next_meeting ? 4 : 0 }}>
-                    <div style={{
-                      fontFamily: SERIF,
-                      fontSize: isChild ? 13.5 : 15.5,
-                      fontWeight: 400,
-                      letterSpacing: "-0.005em",
-                      color: isChild ? C.textSoft : C.text,
-                    }}>
-                      {a.name}
-                    </div>
+                  <div style={{
+                    fontFamily: SERIF,
+                    fontSize: isChild ? 13.5 : 15.5,
+                    fontWeight: 400,
+                    letterSpacing: "-0.005em",
+                    lineHeight: 1.2,
+                    color: isChild ? C.textSoft : C.text,
+                    marginBottom: 4,
+                  }}>
+                    {a.name}
                   </div>
-                  {((a.revenue_amount != null || a.revenue) || a.next_meeting) && !isCompact && (
-                    <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                      {(a.revenue_amount != null || a.revenue) && (
-                        <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, fontFeatureSettings: '"tnum"' }}>
-                          {displayRevenue(a)}
-                        </div>
-                      )}
-                      {a.next_meeting && (
-                        <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, fontFeatureSettings: '"tnum"' }}>
-                          {"Next · " + new Date(a.next_meeting + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                        </div>
-                      )}
-                    </div>
-                  )}
+
+                  {!isCompact && (function () {
+                    var bits = [];
+                    if (a.tier)    bits.push({ text: a.tier, color: TIER_COLORS[a.tier] || C.textSoft });
+                    if (a.region)  bits.push({ text: a.region, color: C.textMuted });
+                    if (a.account_type === 'mso')  bits.push({ text: "MSO", color: C.accent });
+                    if (a.account_type === 'mso' && shopCounts[a.id] > 0) bits.push({ text: shopCounts[a.id] + " " + (shopCounts[a.id] === 1 ? "shop" : "shops"), color: C.accentDim });
+                    (a.tags || []).forEach(function (t) { bits.push({ text: t, color: C.textMuted }); });
+                    if (bits.length === 0) return null;
+                    return (
+                      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 0, marginBottom: 3, fontFamily: MONO, fontSize: 10, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                        {bits.map(function (b, i) {
+                          return (
+                            <span key={i} style={{ color: b.color }}>
+                              {i > 0 && <span style={{ color: C.textMuted, opacity: 0.6, margin: "0 6px" }}>·</span>}
+                              {b.text}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+
+                  {!isCompact && (function () {
+                    var hasRevenue = a.revenue_amount != null || a.revenue;
+                    var openCount  = openItemsByAccount[a.id] || 0;
+                    if (!hasRevenue && !a.next_meeting && openCount === 0) return null;
+                    return (
+                      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 0, fontFamily: MONO, fontSize: 10, letterSpacing: "0.04em", fontFeatureSettings: '"tnum"' }}>
+                        {hasRevenue && (
+                          <span style={{ color: C.textMuted }}>{displayRevenue(a)}</span>
+                        )}
+                        {a.next_meeting && (
+                          <>
+                            {hasRevenue && <span style={{ color: C.textMuted, opacity: 0.6, margin: "0 6px" }}>·</span>}
+                            <span style={{ color: a.next_meeting < todayStr ? C.red : C.textMuted }}>
+                              {(a.next_meeting < todayStr ? "Overdue · " : "Next · ") + new Date(a.next_meeting + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                            </span>
+                          </>
+                        )}
+                        {openCount > 0 && (
+                          <>
+                            {(hasRevenue || a.next_meeting) && <span style={{ color: C.textMuted, opacity: 0.6, margin: "0 6px" }}>·</span>}
+                            <span style={{ color: C.yellow }}>
+                              {openCount + " open"}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
                 <div style={{
                   fontFamily: MONO,
@@ -854,22 +901,6 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                   );
                 })()}
               </div>
-              {a.next_meeting && a.next_meeting < todayStr && (
-                <div style={{ marginTop: 4 }}>
-                  <Pill color={C.red}>Follow-up due</Pill>
-                </div>
-              )}
-              {a.account_type === 'mso' && shopCounts[a.id] > 0 && !isCompact && (
-                <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <div style={{
-                    fontFamily: MONO, fontSize: 9.5, color: C.accent,
-                    background: C.accentFaint, border: '1px solid ' + C.accentLine,
-                    borderRadius: 999, padding: '2px 8px', letterSpacing: '0.06em',
-                  }}>
-                    {shopCounts[a.id]} {shopCounts[a.id] === 1 ? 'shop' : 'shops'}
-                  </div>
-                </div>
-              )}
               {!isCompact && (function() {
                 var recs = accountRecords(revenueHistory || [], a.id).slice(-8);
                 if (recs.length === 0) return null;
