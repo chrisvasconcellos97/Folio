@@ -5,6 +5,32 @@ var rateLimitMap = new Map();
 var WINDOW_MS    = 60 * 1000;
 var MAX_REQUESTS = 20;
 
+// Per-field caps so a single call can't blow up Anthropic spend.
+var MAX_FIELD_CHARS    = 8000;   // any single user-supplied string
+var MAX_MEETINGS       = 20;     // account-mode array cap
+var MAX_TOTAL_CHARS    = 60000;  // hard ceiling across the whole request body
+
+function clampString(s, max) {
+  if (typeof s !== "string") return s;
+  if (s.length <= max) return s;
+  return s.slice(0, max);
+}
+
+function clampMeeting(m) {
+  if (!m || typeof m !== "object") return m;
+  return Object.assign({}, m, {
+    title:          clampString(m.title || "", 300),
+    notes:          clampString(m.notes || "", MAX_FIELD_CHARS),
+    talking_points: clampString(m.talking_points || "", MAX_FIELD_CHARS),
+    action_items:   clampString(m.action_items || "", MAX_FIELD_CHARS),
+    commitments:    clampString(m.commitments || "", MAX_FIELD_CHARS),
+  });
+}
+
+function approxBodyChars(body) {
+  try { return JSON.stringify(body || {}).length; } catch (e) { return 0; }
+}
+
 function isRateLimited(userId) {
   var now        = Date.now();
   var timestamps = (rateLimitMap.get(userId) || []).filter(function (t) { return now - t < WINDOW_MS; });
@@ -26,7 +52,19 @@ export default async function handler(req, res) {
   if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
   if (isRateLimited(user.id)) return res.status(429).json({ error: "Too many requests." });
 
+  if (approxBodyChars(req.body) > MAX_TOTAL_CHARS) {
+    return res.status(413).json({ error: "Payload too large." });
+  }
+
   var { mode, meeting, accountName, meetings, rangeLabel, account: acct, openItems: bItems, contacts: bContacts, recentDeliveries: bDeliveries, activeProjects: bProjects } = req.body || {};
+
+  // Clamp every user-controlled string so a single call can't be turned into
+  // a giant Anthropic spend by sending massive `notes` payloads.
+  if (meeting)  meeting  = clampMeeting(meeting);
+  if (Array.isArray(meetings)) meetings = meetings.slice(0, MAX_MEETINGS).map(clampMeeting);
+  if (acct && acct.name) acct = Object.assign({}, acct, { name: clampString(acct.name, 200) });
+  if (accountName) accountName = clampString(accountName, 200);
+  if (rangeLabel)  rangeLabel  = clampString(rangeLabel, 80);
   var client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
   try {

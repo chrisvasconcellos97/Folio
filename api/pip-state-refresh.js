@@ -16,6 +16,22 @@ var MODEL_HAIKU = "claude-haiku-4-5-20251001";
 var MAX_TOKENS  = 300;
 var MAX_BATCH   = 50;
 
+// Per-user rate limit. Without this an authenticated user could trigger
+// 50 Haiku calls per request with no upper bound, burning Anthropic credits.
+// Cap at 10 refresh batches per minute per user (≈500 calls/min ceiling).
+var rateLimitMap   = new Map();
+var RL_WINDOW_MS   = 60 * 1000;
+var RL_MAX_BATCHES = 10;
+
+function isRateLimited(userId) {
+  var now = Date.now();
+  var timestamps = (rateLimitMap.get(userId) || []).filter(function (t) { return now - t < RL_WINDOW_MS; });
+  if (timestamps.length >= RL_MAX_BATCHES) return true;
+  timestamps.push(now);
+  rateLimitMap.set(userId, timestamps);
+  return false;
+}
+
 function trunc(s, n) {
   if (!s) return "";
   s = String(s).replace(/\s+/g, " ").trim();
@@ -120,6 +136,10 @@ export default async function handler(req, res) {
   var supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
   var { data: { user }, error: authError } = await supabase.auth.getUser(token);
   if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
+
+  if (isRateLimited(user.id)) {
+    return res.status(429).json({ error: "Too many refresh requests. Try again in a minute." });
+  }
 
   // User-scoped client for the rest of the work — RLS takes care of access.
   var userClient = createClient(

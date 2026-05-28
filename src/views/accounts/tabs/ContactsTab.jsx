@@ -75,12 +75,24 @@ function buildContactsInsight(contacts, accountId) {
   return parts.join(" ");
 }
 
+// Safe-URL allow-list: only emit http(s)/mailto/tel hrefs. Anything else
+// (javascript:, data:, etc.) gets replaced with `#` so a tampered contact
+// row can't be turned into a script-execution surface.
+function safeHref(href) {
+  if (typeof href !== "string" || !href) return "#";
+  var trimmed = href.trim();
+  // Reject any non-allowed scheme; "://" check catches relative-looking but
+  // protocol-bearing strings.
+  if (/^(https?:|mailto:|tel:)/i.test(trimmed)) return trimmed;
+  return "#";
+}
+
 function ContactLink({ href, label, color }) {
   return (
     <a
-      href={href}
+      href={safeHref(href)}
       target="_blank"
-      rel="noreferrer"
+      rel="noopener noreferrer"
       style={{ fontSize: 11, color: color || C.accent, textDecoration: "none", background: C.accentFaint, padding: "2px 8px", borderRadius: 6, border: "1px solid " + C.accentMid, whiteSpace: "nowrap" }}
     >
       {label}
