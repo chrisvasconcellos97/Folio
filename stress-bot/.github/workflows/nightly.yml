@@ -1,0 +1,56 @@
+# Nightly stress-test run.
+#
+# IMPORTANT: This workflow lives at stress-bot/.github/workflows/nightly.yml
+# while stress-bot is a subdirectory of the Folio repo. GitHub only reads
+# workflows from .github/workflows/ at the REPO ROOT, so this won't fire here.
+#
+# When you extract stress-bot to its own repo:
+#   cp -r stress-bot/ ../folios-stress-bot/
+#   cd ../folios-stress-bot && git init && git add -A && git commit -m "init"
+#   # GitHub will now find this file at .github/workflows/nightly.yml and run it.
+#
+# Configure these GitHub secrets in the new repo:
+#   TARGET_URL, TEST_USER_EMAIL, TEST_USER_PASSWORD
+#   SUPABASE_URL, SUPABASE_ANON_KEY (optional, for RLS scenario)
+#   TEST_USER_B_EMAIL, TEST_USER_B_PASSWORD (optional, RLS cross-user check)
+
+name: stress-bot nightly
+
+on:
+  schedule:
+    - cron: "0 7 * * *"   # 07:00 UTC daily
+  workflow_dispatch: {}
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - run: npm ci || npm install
+      - run: npx playwright install --with-deps chromium
+
+      - name: Run stress-bot
+        env:
+          TARGET_URL: ${{ secrets.TARGET_URL }}
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          TEST_USER_B_EMAIL: ${{ secrets.TEST_USER_B_EMAIL }}
+          TEST_USER_B_PASSWORD: ${{ secrets.TEST_USER_B_PASSWORD }}
+        run: npm run stress
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stress-report
+          path: reports/
+          retention-days: 14

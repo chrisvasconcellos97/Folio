@@ -1,0 +1,21 @@
+{
+  "name": "stress-bot",
+  "version": "0.1.0",
+  "description": "App-agnostic stress / fuzz testing bot. Currently targets Folios.",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "stress-bot": "src/cli.js"
+  },
+  "scripts": {
+    "stress": "node src/cli.js",
+    "stress:scripted": "node src/cli.js --scripted-only",
+    "stress:fuzz": "node src/cli.js --fuzz-only",
+    "stress:headed": "node src/cli.js --headed",
+    "install:browsers": "playwright install chromium"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "playwright": "^1.48.0"
+  }
+}
