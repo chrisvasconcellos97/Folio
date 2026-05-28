@@ -238,7 +238,29 @@ This app is currently single-user but should be built with multi-tenancy in mind
    - Pip context improvement — pass full account history (all meetings, open items, contacts) into Pip system prompt
    - Auto-create open items from meeting action items — checkbox in Add Meeting modal to promote each action item to an open item
    - In-app notification banner — shows on login: accounts gone cold, items overdue, follow-ups due this week
-   - **Smarter auto-task generation + assignment (placeholder — Chris will spec after Hub V2):** when Pip summarizes a draft, action items currently auto-create as `folio_items` on the account. Chris wants the system to be smarter about (a) which action items become Gauge tasks vs simple items, (b) who each task auto-assigns to (instead of always defaulting to the meeting author). Tie-in with Gauge Standing Projects + admin queue. **Reminder to Chris: bring this up after Cadence Hub V2 ships.**
+   - **Smarter auto-task generation + assignment (LOCKED — biggest pending build after Hub V2):** When Pip summarizes a cadence-meeting draft today, every action item it extracts becomes a new `folio_items` row. That creates duplicates ("work with Adam on roll out" already exists as a Gauge task), misses updates ("classic collision launch moved to June 8" should shift a date, not spawn a new task), and always assigns to the meeting author. V1 spec:
+     - **Context expansion:** `summarizeDraftPip` receives, in addition to the draft notes: existing open `folio_items` on the account, AND existing non-done tasks across active Gauge projects on the account (incl. child accounts via the rollup). ~5-8K tokens per call on Haiku ≈ $0.02/meeting — fine.
+     - **Structured output:** Pip returns a plan, not a flat action-item list. Schema (preferred shape):
+       ```
+       {
+         summary: "...",
+         follow_up_date: "...",
+         plan: [
+           { kind: "new_item",     text, due_date, suggested_assignee },
+           { kind: "update_item",  target_id, fields: { due_date?, text? } },
+           { kind: "close_item",   target_id, reason },
+           { kind: "new_task",     project_id, title, due_date, suggested_assignee },
+           { kind: "update_task",  project_id, task_id, fields: { due_date?, task_status? } },
+           { kind: "skip",         reason }   // duplicates Pip recognized
+         ]
+       }
+       ```
+     - **Preview modal (required, never auto-apply):** after summarize completes, a `PipSummarizePreview` modal renders Pip's plan. Each row is a checkbox + the human-readable action ("Update Classic Collision launch → due Jun 8", "Skip duplicate of existing task 'Work with Adam on roll out'", "New task: Schedule Sarah review"). User can uncheck rows. Hitting Apply runs the selected actions through the existing hooks (addItem / updateItem / closeItem / updateProject's stages mutation). Cancel discards the plan but keeps the meeting summarized.
+     - **Assignee inference (suggest + learn):** Pip suggests an assignee on each `new_task` and `new_item` based on (a) names mentioned in the notes that match an org_member, (b) override history. A new table `pip_assignment_hints` (or a jsonb column on `pip_account_state`) records `(account_id, task_pattern, assignee_email)` whenever the user overrides Pip's suggestion in the preview. Next summarize, Pip is fed those hints alongside the notes — over time, "shop integration" tasks always default to Adam, etc.
+     - **Confidence indicator:** each plan row carries a `confidence` (high / medium / low). Low-confidence rows render with a yellow caution dot so the user double-checks them. High-confidence rows are checked by default; low-confidence start unchecked.
+     - **Scope:** matches against both `folio_items` AND Gauge project tasks (the `stages` jsonb array inside `gauge_projects`). Existing project tasks include the project's title so Pip can disambiguate ("the integration task on the AllStar Shop NDA project").
+     - **Open question (do during build):** does the preview modal also surface meeting metadata edits? E.g. notes say "we agreed to move our next meeting to Tuesday" — Pip could suggest updating `follow_up_date` on the meeting. Probably yes but lower priority than the items/tasks logic.
+     - **Don't ship until:** preview is solid and Apply is idempotent (running twice doesn't double-create).
    - **Cadence Hub** — per-cadence all-access workspace. Locked spec:
      - **Schema:** add `cadence_id` (nullable uuid → `folio_cadences`), `method` ('phone'|'email'|'video'|'in_person'), `status` ('draft'|'summarized') to `folio_meetings`.
      - **Rename:** "Log Meeting" → "Log Conversation" everywhere (account detail button, quick actions banner `+ Meeting` → `+ Conversation`). DB stays `folio_meetings`.
