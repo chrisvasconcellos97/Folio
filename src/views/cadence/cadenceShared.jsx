@@ -6,6 +6,15 @@ var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 
 export var ACCOUNT_COLORS = [C.accent, C.green, C.blue, C.purple];
 
+// Matched dark tints (L≈0.18, low chroma) per accent color — same family
+// as the account-card tier tints. Keyed by the hex value of the accent.
+var TINT_BY_HEX = {};
+TINT_BY_HEX[C.accent] = "oklch(0.18 0.025 162)";   // teal-green
+TINT_BY_HEX[C.green]  = "oklch(0.18 0.025 140)";   // green
+TINT_BY_HEX[C.blue]   = "oklch(0.18 0.025 252)";   // blue
+TINT_BY_HEX[C.purple] = "oklch(0.18 0.030 295)";   // purple
+TINT_BY_HEX[C.yellow] = "oklch(0.18 0.025 80)";    // yellow (tasks)
+
 export function accountColor(id) {
   if (!id) return C.accent;
   var hash = id.split('').reduce(function (a, c) { return a + c.charCodeAt(0); }, 0);
@@ -14,6 +23,10 @@ export function accountColor(id) {
 
 export function eventColor(event) {
   return event.cadence.type === 'task' ? C.yellow : accountColor(event.cadence.account_id);
+}
+
+export function eventTint(event) {
+  return TINT_BY_HEX[eventColor(event)] || C.surface;
 }
 
 export var navBtnStyle = {
@@ -38,9 +51,11 @@ export function CadenceEventCard({ event, onSelectAccount, onCreateItem, onOpenH
     ? '✓ ' + (cadence.task_title || '?')
     : (account && account.name ? account.name : 'Unknown');
 
+  var tint = eventTint(event);
   return (
     <div
       style={Object.assign({}, glass, {
+        background: tint,
         borderLeft: '3px solid ' + col,
         borderRadius: 8,
         padding: '11px 14px',
