@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { logActivity } from "../lib/activity";
+import { touchAccount } from "../lib/touchAccount";
 import { useRealtimeSync } from "./useRealtimeSync";
 
 export function useContacts(userId, accountId, orgId) {
@@ -40,11 +41,7 @@ export function useContacts(userId, accountId, orgId) {
       .then(function (result) {
         if (result.error) throw result.error;
         if (accountId) {
-          supabase.from("folio_accounts")
-            .update({ last_interaction_at: new Date().toISOString() })
-            .eq("id", accountId)
-            .then(function (r) { if (r && r.error) console.error("Metadata update failed:", r.error.message); })
-            .catch(function (err) { console.error("Metadata update failed:", err); });
+          touchAccount(accountId);
         }
         logActivity(orgId, userId, accountId, "contact_added", { name: data.name });
         fetch();

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { logActivity } from "../lib/activity";
+import { touchAccount } from "../lib/touchAccount";
 import { useRealtimeSync } from "./useRealtimeSync";
 
 export function useItems(userId, accountId, orgId) {
@@ -41,11 +42,7 @@ export function useItems(userId, accountId, orgId) {
       .then(function (result) {
         if (result.error) throw result.error;
         if (data.account_id) {
-          supabase.from("folio_accounts")
-            .update({ last_interaction_at: new Date().toISOString() })
-            .eq("id", data.account_id)
-            .then(function (r) { if (r && r.error) console.error("Metadata update failed:", r.error.message); })
-            .catch(function (err) { console.error("Metadata update failed:", err); });
+          touchAccount(data.account_id);
         }
         logActivity(orgId, userId, data.account_id, "item_added", { text: data.text });
         fetch();

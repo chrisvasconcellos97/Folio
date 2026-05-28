@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { supabase } from "./lib/supabase";
+import { touchAccount } from "./lib/touchAccount";
 import { useAuth } from "./hooks/useAuth";
 import { useBreakpoint } from "./hooks/useBreakpoint";
 import { useAccounts } from "./hooks/useAccounts";
@@ -181,10 +182,7 @@ export default function App() {
       .then(function (r) {
         if (r.error) throw r.error;
         if (data.account_id) {
-          supabase.from("folio_accounts")
-            .update({ last_interaction_at: new Date().toISOString() })
-            .eq("id", data.account_id)
-            .then(function () {});
+          touchAccount(data.account_id);
         }
         setAllItems(function (prev) { return prev.concat(r.data || []); });
         return r.data && r.data[0];

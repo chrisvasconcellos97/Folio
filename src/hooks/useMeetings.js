@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { logActivity } from "../lib/activity";
 import { timed } from "../lib/net";
+import { touchAccount } from "../lib/touchAccount";
 import { useRealtimeSync } from "./useRealtimeSync";
 
 export function useMeetings(userId, accountId, orgId) {
@@ -50,11 +51,7 @@ export function useMeetings(userId, accountId, orgId) {
         if (result.error) throw result.error;
         var meeting = result.data[0];
         if (data.account_id && data.meeting_date) {
-          supabase.from("folio_accounts")
-            .update({ last_meeting: data.meeting_date, last_interaction_at: new Date().toISOString() })
-            .eq("id", data.account_id)
-            .then(function (r) { if (r && r.error) console.error("Metadata update failed:", r.error.message); })
-            .catch(function (err) { console.error("Metadata update failed:", err); });
+          touchAccount(data.account_id, { last_meeting: data.meeting_date });
         }
         logActivity(orgId, userId, data.account_id, "meeting_logged", { title: data.title || "Meeting" });
         fetch();
