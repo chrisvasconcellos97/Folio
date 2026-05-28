@@ -97,7 +97,10 @@ export default function App() {
     }
     maybeToast("accounts", acctError, refetchAccounts);
     maybeToast("meetings", meetError, refetchMeetings);
-  }, [session, acctError, meetError, refetchAccounts, refetchMeetings]);
+    maybeToast("cadences", cadenceError, refetchCadencesApp);
+    maybeToast("tasks",    tasksError,   null);
+    maybeToast("projects", projectsErrorApp, refetchProjectsApp);
+  }, [session, acctError, meetError, cadenceError, tasksError, projectsErrorApp, refetchAccounts, refetchMeetings, refetchCadencesApp, refetchProjectsApp]);
 
   useEffect(function () {
     if (!session || welcomeShown.current) return;
@@ -137,10 +140,10 @@ export default function App() {
       if (!r.error) setAllContacts(r.data || []);
     });
   }, [userId, accounts.length, meetings.length]);
-  var { cadences, loading: cadenceLoading, addCadence } = useCadences(userId);
+  var { cadences, loading: cadenceLoading, addCadence, error: cadenceError, refetch: refetchCadencesApp } = useCadences(userId);
   useCadenceSync(userId, cadences, cadenceLoading);
-  var { tasks, addTask, updateTask, deleteTask } = useQuickTasks(userId);
-  var { projects: allProjects } = useProjects(userId);
+  var { tasks, addTask, updateTask, deleteTask, error: tasksError } = useQuickTasks(userId);
+  var { projects: allProjects, error: projectsErrorApp, refetch: refetchProjectsApp } = useProjects(userId);
   var { revenueHistory, shopMetrics, upsertRevenue, upsertShopMetrics } = useAccountMetrics(userId);
 
   // Top-level write helpers used by Pip's native tool calls.
@@ -439,6 +442,8 @@ export default function App() {
     mainContent = (
       <CadenceView
         cadences={cadences}
+        cadencesError={cadenceError}
+        onRetryCadences={refetchCadencesApp}
         accounts={accounts}
         addCadence={addCadence}
         onOpenHub={function (cadence) {

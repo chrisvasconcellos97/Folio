@@ -33,6 +33,7 @@ import { AddContactModal } from "./AddContactModal";
 import { PrintAccountSheet } from "../../components/PrintAccountSheet";
 import { CadenceHub } from "../cadence/CadenceHub";
 import { CadenceBackfillBanner } from "../cadence/CadenceBackfillBanner";
+import { ErrorBanner } from "../../components/ErrorBanner";
 
 var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red };
 var STATUS_LABELS = { green: "Healthy", yellow: "Watch", red: "At Risk" };
@@ -103,11 +104,11 @@ export function AccountDetail({ account, userId, orgId, accounts, members, onBac
     setBriefError(null);
   }, [account.id]);
 
-  var { meetings, addMeeting, updateMeeting, deleteMeeting } = useMeetings(userId, account.id, orgId);
-  var { items, addItem, closeItem, updateItem }            = useItems(userId, account.id, orgId);
-  var { contacts, addContact, updateContact, deleteContact }  = useContacts(userId, account.id, orgId);
-  var { cadences, addCadence, updateCadence, deleteCadence } = useCadences(userId, account.id);
-  var { projects, addProject, updateProject, deleteProject } = useProjects(userId, account.id, orgId);
+  var { meetings, addMeeting, updateMeeting, deleteMeeting, error: meetingsError, refetch: refetchMeetings } = useMeetings(userId, account.id, orgId);
+  var { items, addItem, closeItem, updateItem, error: itemsError, refetch: refetchItems }                   = useItems(userId, account.id, orgId);
+  var { contacts, addContact, updateContact, deleteContact, error: contactsError, refetch: refetchContacts } = useContacts(userId, account.id, orgId);
+  var { cadences, addCadence, updateCadence, deleteCadence, error: cadencesError, refetch: refetchCadences } = useCadences(userId, account.id);
+  var { projects, addProject, updateProject, deleteProject, error: projectsError, refetch: refetchProjects } = useProjects(userId, account.id, orgId);
 
   useEffect(function () {
     if (!initialHubCadenceId || !cadences || cadences.length === 0) return;
@@ -581,6 +582,8 @@ export function AccountDetail({ account, userId, orgId, accounts, members, onBac
       )}
 
       {tab === "meetings" && (
+        <>
+          <ErrorBanner message={meetingsError ? "Couldn't load meetings — check your connection" : null} onRetry={refetchMeetings} />
         <MeetingsTab
           meetings={meetings}
           accountName={account.name}
@@ -593,9 +596,12 @@ export function AccountDetail({ account, userId, orgId, accounts, members, onBac
           onAddMeeting={addMeeting}
           onUpdateMeeting={updateMeeting}
         />
+        </>
       )}
 
       {tab === "tasks" && (
+        <>
+          <ErrorBanner message={itemsError ? "Couldn't load tasks — check your connection" : null} onRetry={refetchItems} />
         <ItemsTab
           items={items}
           taskCadences={cadences.filter(function (c) { return c.type === 'task'; })}
@@ -606,9 +612,12 @@ export function AccountDetail({ account, userId, orgId, accounts, members, onBac
           onUpdate={updateItem}
           onGoToCadence={function () { setTab("cadence"); }}
         />
+        </>
       )}
 
       {tab === "contacts" && (
+        <>
+          <ErrorBanner message={contactsError ? "Couldn't load contacts — check your connection" : null} onRetry={refetchContacts} />
         <ContactsTab
           contacts={contacts}
           accountId={account.id}
@@ -618,9 +627,12 @@ export function AccountDetail({ account, userId, orgId, accounts, members, onBac
           onAddContact={addContact}
           onUpdate={updateContact}
         />
+        </>
       )}
 
       {tab === "cadence" && (
+        <>
+          <ErrorBanner message={cadencesError ? "Couldn't load cadences — check your connection" : null} onRetry={refetchCadences} />
         <CadenceTab
           account={account}
           cadences={cadences}
@@ -640,9 +652,12 @@ export function AccountDetail({ account, userId, orgId, accounts, members, onBac
           onPrefillHandled={function () { setCadencePrefill(null); }}
           onOpenHub={function (cad) { setHubCadence(cad); }}
         />
+        </>
       )}
 
       {tab === "projects" && (
+        <>
+          <ErrorBanner message={projectsError ? "Couldn't load projects — check your connection" : null} onRetry={refetchProjects} />
         <ProjectsTab
           projects={projects}
           accounts={accounts}
@@ -652,6 +667,7 @@ export function AccountDetail({ account, userId, orgId, accounts, members, onBac
           updateProject={updateProject}
           deleteProject={deleteProject}
         />
+        </>
       )}
       </div>
 

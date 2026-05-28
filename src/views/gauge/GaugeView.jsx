@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { C } from "../../lib/colors";
 import { GaugeIcon } from "../../components/GaugeIcon";
 import { useProjects } from "../../hooks/useProjects";
+import { ErrorBanner } from "../../components/ErrorBanner";
 import { ProjectModal } from "./ProjectModal";
 import { ProjectStageEditor } from "./ProjectStageEditor";
 import { TemplatePickerModal } from "./TemplatePickerModal";
@@ -152,7 +153,7 @@ function buildGaugeInsight(projects, accountsById, handlers) {
 }
 
 export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
-  var { projects, loading, addProject, updateProject, deleteProject, templates, addTemplate, updateTemplate, deleteTemplate } = useProjects(userId, null, orgId);
+  var { projects, loading, error: projectsError, refetch: refetchProjects, addProject, updateProject, deleteProject, templates, addTemplate, updateTemplate, deleteTemplate } = useProjects(userId, null, orgId);
   var [isMobile, setIsMobile] = useState(typeof window !== "undefined" ? window.innerWidth < 640 : false);
   useEffect(function () {
     function onResize() { setIsMobile(window.innerWidth < 640); }
@@ -435,6 +436,7 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
 
       {projects && projects.length > 0 && (
         <div style={{ marginBottom: 10 }}>
+          <ErrorBanner message={projectsError ? "Couldn't load projects — check your connection" : null} onRetry={refetchProjects} />
           <PipInsightCard segments={[gaugeInsight]} />
         </div>
       )}

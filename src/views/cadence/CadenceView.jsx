@@ -13,6 +13,7 @@ import { CalendarView } from "./CalendarView";
 import { WeekView } from "./WeekView";
 import { ListView } from "./ListView";
 import { Glow } from "../../components/Glow";
+import { ErrorBanner } from "../../components/ErrorBanner";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
@@ -82,7 +83,7 @@ function buildGlobalCadenceInsight(cadences, handlers) {
 }
 
 /* ---- Main CadenceView ---- */
-export function CadenceView({ cadences, accounts, onSelectAccount, addCadence, onCreateItem, onOpenHub }) {
+export function CadenceView({ cadences, cadencesError, onRetryCadences, accounts, onSelectAccount, addCadence, onCreateItem, onOpenHub }) {
   var [viewMode, setViewMode] = useState('list');
   var insightHandlers = {
     onClickToday:    function () { setViewMode('list'); setTimeout(function () { scrollToCadenceGroup('today'); }, 50); },
@@ -167,6 +168,7 @@ export function CadenceView({ cadences, accounts, onSelectAccount, addCadence, o
             + Set Cadence
           </button>
         </div>
+        <ErrorBanner message={cadencesError ? "Couldn't load cadences — check your connection" : null} onRetry={onRetryCadences} />
         <PipInsightCard segments={[cadenceInsight]} />
         {viewToggle}
         <div style={{ textAlign: 'center', padding: '60px 0', color: C.textMuted }}>
