@@ -238,6 +238,19 @@ This app is currently single-user but should be built with multi-tenancy in mind
    - Pip context improvement — pass full account history (all meetings, open items, contacts) into Pip system prompt
    - Auto-create open items from meeting action items — checkbox in Add Meeting modal to promote each action item to an open item
    - In-app notification banner — shows on login: accounts gone cold, items overdue, follow-ups due this week
+   - **Cadence Hub V2 redesign (biggest pending build — LOCKED):** First real use of the hub surfaced major UX problems. Re-architect into a prep dashboard + a focused full-screen meeting mode.
+     - **Hub as prep dashboard.** Cadence page = pre-call command center. Top: Pip brief (cached + refresh). Middle: **Gauge projects rendered as real cards** (same visual grammar as GaugeView's project cards — title, status chip, task progress). **Click a card → it expands inline** showing tasks + statuses (no navigation, stays in the hub). Then: open items on the account, scheduled follow-ups, meeting history.
+     - **History shows everything on the account.** Show every meeting on this account regardless of `cadence_id`, sorted by date. Visually distinguished with `CADENCE` vs `AD-HOC` mono tags. Right now history is filtered strictly to `cadence_id === cadence.id` — widen that.
+     - **"Start Meeting" CTA.** Primary button on the hub. Click → (1) auto-creates a draft tied to this cadence, auto-titled `"{Cadence label} — {date}"`, then (2) opens full-screen takeover.
+     - **Full-screen meeting mode:**
+       - Top bar: account name + cadence label + "End & Summarize with Pip" button + close.
+       - **Left sidebar, collapsible.** Pip brief, Gauge projects mini-cards, open items, contacts. Context always one glance away. Collapse to all-notes mode.
+       - Center/right: **massive note-taking textarea** filling the rest of the viewport. Solves the "I had to scroll up to read what I just typed" problem.
+       - Optional: quick action-item add at bottom.
+       - **No title field.** Title auto-generated.
+       - Save behavior: notes autosave to draft every 1.5s (existing pattern). Closing returns to the hub with the draft visible in Active Drafts. "End & Summarize" runs the existing Pip flow.
+     - **Out of scope for V2:** smarter action-item promotion. Tracked separately below.
+   - **Smarter auto-task generation + assignment (placeholder — Chris will spec after Hub V2):** when Pip summarizes a draft, action items currently auto-create as `folio_items` on the account. Chris wants the system to be smarter about (a) which action items become Gauge tasks vs simple items, (b) who each task auto-assigns to (instead of always defaulting to the meeting author). Tie-in with Gauge Standing Projects + admin queue. **Reminder to Chris: bring this up after Cadence Hub V2 ships.**
    - **Cadence Hub** — per-cadence all-access workspace. Locked spec:
      - **Schema:** add `cadence_id` (nullable uuid → `folio_cadences`), `method` ('phone'|'email'|'video'|'in_person'), `status` ('draft'|'summarized') to `folio_meetings`.
      - **Rename:** "Log Meeting" → "Log Conversation" everywhere (account detail button, quick actions banner `+ Meeting` → `+ Conversation`). DB stays `folio_meetings`.
