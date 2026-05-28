@@ -84,7 +84,7 @@ export function AccountDetail({ account, userId, orgId, accounts, members, onBac
     setRefreshingState(true);
     Promise.resolve(pipAcctState.refreshState(account.id)).finally(function () {
       setRefreshingState(false);
-      showToast("Pip's memory refreshed");
+      showToast("Pip memory resynced");
     });
   }
 
@@ -333,7 +333,7 @@ export function AccountDetail({ account, userId, orgId, accounts, members, onBac
             <button
               onClick={handleRefreshPipMemory}
               disabled={refreshingState}
-              title="Have Pip re-read this account and refresh its cached memory."
+              title="Tells Pip to re-read this account from scratch — every meeting, item, contact, and project — and rebuild its cached understanding of where things stand. Use after a big update if Pip's next response should reflect the latest state. Otherwise it auto-refreshes in the background when stale."
               style={{
                 background: "transparent",
                 border: "1px solid " + C.border,
@@ -345,7 +345,7 @@ export function AccountDetail({ account, userId, orgId, accounts, members, onBac
                 opacity: refreshingState ? 0.5 : 1,
               }}
             >
-              {refreshingState ? "Refreshing…" : "Refresh Pip's memory"}
+              {refreshingState ? "Resyncing…" : "Resync Pip memory"}
             </button>
           </div>
 
