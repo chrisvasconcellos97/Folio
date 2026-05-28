@@ -497,6 +497,24 @@ export function HubProjectCard({ project, accounts, members, userEmail, onUpdate
             {tasks.length > 0 && <span>{doneCount}/{tasks.length} tasks</span>}
             {project.assignee && <span>{project.assignee}</span>}
           </div>
+          {tasks.length > 0 && (
+            <div style={{
+              marginTop: 8,
+              height: 4, width: "100%",
+              background: C.surface3,
+              borderRadius: 2,
+              overflow: "hidden",
+              position: "relative",
+            }}>
+              <div style={{
+                position: "absolute", left: 0, top: 0, bottom: 0,
+                width: Math.round((doneCount / tasks.length) * 100) + "%",
+                background: "linear-gradient(to right, oklch(0.42 0.09 232), oklch(0.55 0.12 200), oklch(0.68 0.13 178), oklch(0.80 0.13 162))",
+                borderRadius: 2,
+                transition: "width 0.3s ease",
+              }} />
+            </div>
+          )}
         </div>
         <div style={{
           fontSize: 10, color: statusColor, fontFamily: MONO,

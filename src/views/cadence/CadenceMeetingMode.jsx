@@ -170,7 +170,8 @@ export function CadenceMeetingMode({
       });
   }
 
-  var sidebarWidth = sidebarCollapsed ? 44 : 420;
+  var sidebarWidth = sidebarCollapsed ? 44 : 480;
+  var hasBrief     = Boolean(brief && brief.trim());
 
   var overlay = (
     <div
@@ -240,6 +241,26 @@ export function CadenceMeetingMode({
         </div>
       )}
 
+      {/* Pip brief strip — full-width across the top of the body */}
+      {hasBrief && (
+        <div style={{
+          flexShrink: 0,
+          padding: "12px 18px 14px 18px",
+          background: C.surface2,
+          borderBottom: "1px solid " + C.rule,
+        }}>
+          <PipBriefPanel
+            brief={brief}
+            briefAt={briefAt}
+            loading={false}
+            error={null}
+            onRefresh={null}
+            mobileCollapsed={false}
+            onExpand={null}
+          />
+        </div>
+      )}
+
       {/* Body */}
       <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
         {/* Sidebar */}
@@ -252,34 +273,35 @@ export function CadenceMeetingMode({
           transition: "width 0.18s ease",
           flexShrink: 0,
         }}>
-          <button
-            onClick={function () { setCollapsed(function (v) { return !v; }); }}
-            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            style={{
-              background: "none", border: "none",
-              color: C.textMuted, cursor: "pointer",
-              padding: "10px 12px",
-              fontFamily: MONO, fontSize: 12, textAlign: "left",
-              borderBottom: "1px solid " + C.rule,
-            }}
-          >
-            {sidebarCollapsed ? "›" : "‹ Collapse"}
-          </button>
+          <div style={{
+            display: "flex", justifyContent: "space-between", alignItems: "center",
+            padding: "12px 16px",
+            borderBottom: "1px solid " + C.rule,
+            background: C.surface,
+          }}>
+            {!sidebarCollapsed && (
+              <div style={{
+                fontFamily: SERIF, fontSize: 15, color: C.text,
+                letterSpacing: "-0.01em",
+              }}>
+                Context
+              </div>
+            )}
+            <button
+              onClick={function () { setCollapsed(function (v) { return !v; }); }}
+              aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              style={{
+                background: "none", border: "none",
+                color: C.textMuted, cursor: "pointer",
+                padding: 0,
+                fontFamily: MONO, fontSize: 12, lineHeight: 1,
+              }}
+            >
+              {sidebarCollapsed ? "›" : "‹"}
+            </button>
+          </div>
           {!sidebarCollapsed && (
-            <div style={{ flex: 1, overflowY: "auto", padding: "14px 14px 24px 14px" }}>
-              {brief && (
-                <SidebarSection title="Pip Brief">
-                  <PipBriefPanel
-                    brief={brief}
-                    briefAt={briefAt}
-                    loading={false}
-                    error={null}
-                    onRefresh={null}
-                    mobileCollapsed={false}
-                    onExpand={null}
-                  />
-                </SidebarSection>
-              )}
+            <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 28px 16px" }}>
               <SidebarSection title="Gauge Projects" count={(projects || []).length}>
                 {(projects || []).length === 0 ? (
                   <div style={{ fontSize: 11, color: C.textMuted }}>No active projects.</div>
@@ -325,22 +347,47 @@ export function CadenceMeetingMode({
         </div>
 
         {/* Notes area */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-          <textarea
-            ref={notesRef}
-            value={notes}
-            onChange={function (e) { setNotes(e.target.value); }}
-            placeholder="Take notes here. Pip will summarize when you end the meeting…"
-            style={{
-              flex: 1, width: "100%",
-              background: C.surface, color: C.text,
-              border: "none", outline: "none",
-              padding: "24px 32px",
-              fontFamily: INTER, fontSize: 16, lineHeight: 1.65,
-              resize: "none",
-              boxSizing: "border-box",
-            }}
-          />
+        <div style={{
+          flex: 1, display: "flex", flexDirection: "column", minWidth: 0,
+          background: C.bg,
+        }}>
+          <div style={{
+            flex: 1, overflowY: "auto",
+            display: "flex", justifyContent: "center",
+            padding: "32px 32px 8px 32px",
+          }}>
+            <div style={{
+              width: "100%", maxWidth: 920,
+              display: "flex", flexDirection: "column",
+            }}>
+              <div style={{
+                fontFamily: MONO, fontSize: 9.5, color: C.textMuted,
+                textTransform: "uppercase", letterSpacing: "0.1em",
+                marginBottom: 10,
+              }}>
+                {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+              </div>
+              <textarea
+                ref={notesRef}
+                value={notes}
+                onChange={function (e) { setNotes(e.target.value); }}
+                placeholder="Start typing — Pip will summarize when you end the meeting…"
+                style={{
+                  flex: 1, width: "100%", minHeight: 440,
+                  background: C.surface,
+                  color: C.text,
+                  border: "1px solid " + C.rule,
+                  borderRadius: 12,
+                  outline: "none",
+                  padding: "22px 26px",
+                  fontFamily: INTER, fontSize: 15.5, lineHeight: 1.7,
+                  resize: "none",
+                  boxSizing: "border-box",
+                  boxShadow: "0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.06)",
+                }}
+              />
+            </div>
+          </div>
           <div style={{
             display: "flex", gap: 8, alignItems: "center",
             padding: "10px 16px",
