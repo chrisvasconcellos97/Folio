@@ -88,6 +88,11 @@ export function Modal({ title, onClose, children, width }) {
               fontFamily: "'Inter', system-ui, sans-serif",
               lineHeight: 1,
               padding: "4px 8px",
+              minWidth: 44,
+              minHeight: 44,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
             aria-label="Close"
           >

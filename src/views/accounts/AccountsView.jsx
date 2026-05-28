@@ -935,6 +935,20 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                     )}
                   </div>
 
+                  {/* Compact mode hides the meta row but tier is color-only on
+                      the left stripe — show a small tier label so color-blind
+                      and screen-reader users get the signal too. */}
+                  {isCompact && a.tier && (
+                    <div style={{
+                      fontFamily: MONO, fontSize: 9.5,
+                      color: TIER_COLORS[a.tier] || C.textMuted,
+                      letterSpacing: "0.08em", textTransform: "uppercase",
+                      marginBottom: 2,
+                    }}>
+                      {a.tier}
+                    </div>
+                  )}
+
                   {!isCompact && (function () {
                     var bits = [];
                     if (a.tier)    bits.push({ text: a.tier, color: TIER_COLORS[a.tier] || C.textSoft });
