@@ -736,11 +736,15 @@ function ActivitySection({ userId, orgId, role, members, accounts }) {
   var [userFilter,      setUserFilter]      = useState(null);
   var [rangeFilter,     setRangeFilter]     = useState("30d");
 
-  var fromDate = (function () {
+  // Memoized so the ISO string is stable across renders for the same
+  // rangeFilter — otherwise Date.now() recomputes every render, filters
+  // gets a new identity, useActivity refetches in a loop, and the dropdown
+  // strobes.
+  var fromDate = useMemo(function () {
     if (rangeFilter === "all") return null;
     var days = rangeFilter === "7d" ? 7 : rangeFilter === "30d" ? 30 : 90;
     return new Date(Date.now() - days * 86400000).toISOString();
-  })();
+  }, [rangeFilter]);
 
   var filters = useMemo(function () {
     return {
