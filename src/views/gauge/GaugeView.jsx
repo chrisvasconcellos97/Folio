@@ -764,7 +764,13 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
                     onUpdate={updateProject}
                   />
                 ) : (
-                  <ProjectStageEditor project={p} onUpdate={updateProject} />
+                  <ProjectStageEditor
+                    project={p}
+                    onUpdate={updateProject}
+                    accounts={accounts}
+                    members={members}
+                    userEmail={userEmail}
+                  />
                 )}
               </div>
             )}

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { C } from "../../lib/colors";
+import { TaskDetailPanel } from "./TaskDetailPanel";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
@@ -59,12 +60,15 @@ function SubStageIcon({ sub, onClick }) {
   );
 }
 
-export function ProjectStageEditor({ project, onUpdate }) {
+export function ProjectStageEditor({ project, onUpdate, accounts, members, userEmail }) {
   var [expanded, setExpanded] = useState({});
   var [newStageTitle, setNewStageTitle] = useState("");
   var [addingSub, setAddingSub] = useState({}); // { stageIdx: "title text" }
+  var [detailIdx, setDetailIdx] = useState(null);     // open existing-task panel by index
+  var [showNewDetail, setShowNewDetail] = useState(false); // open new-task panel
 
   var stages = project.stages || [];
+  var hasSchema = (project.custom_field_schema || []).length > 0;
 
   function commitStages(next) { return onUpdate(project.id, { stages: next }); }
 
@@ -194,6 +198,18 @@ export function ProjectStageEditor({ project, onUpdate }) {
                 ⊘
               </button>
               <button
+                onClick={function () { setDetailIdx(idx); }}
+                title="Open task details"
+                style={{
+                  background: "none", border: "1px solid " + C.rule,
+                  borderRadius: 4, color: C.textMuted,
+                  fontSize: 11, padding: "2px 7px", cursor: "pointer",
+                  fontFamily: MONO, lineHeight: 1,
+                }}
+              >
+                ⋯
+              </button>
+              <button
                 onClick={function () { removeStage(idx); }}
                 title="Remove stage"
                 style={{
@@ -300,7 +316,57 @@ export function ProjectStageEditor({ project, onUpdate }) {
             Add task
           </button>
         )}
+        {hasSchema && (
+          <button
+            onClick={function () { setShowNewDetail(true); }}
+            title="Add task with full details"
+            style={{
+              background: "transparent", border: "1px solid " + C.rule,
+              color: C.textMuted, borderRadius: 6, padding: "6px 10px",
+              fontFamily: MONO, fontSize: 10, cursor: "pointer",
+              letterSpacing: "0.06em", textTransform: "uppercase",
+            }}
+          >
+            + with details
+          </button>
+        )}
       </div>
+
+      {showNewDetail && (
+        <TaskDetailPanel
+          project={project}
+          task={null}
+          taskIndex={null}
+          accounts={accounts}
+          members={members}
+          userEmail={userEmail}
+          onSave={function (taskShape) {
+            var next = stages.concat([taskShape]);
+            return commitStages(next).then(function () { setShowNewDetail(false); });
+          }}
+          onClose={function () { setShowNewDetail(false); }}
+        />
+      )}
+
+      {detailIdx !== null && stages[detailIdx] && (
+        <TaskDetailPanel
+          project={project}
+          task={stages[detailIdx]}
+          taskIndex={detailIdx}
+          accounts={accounts}
+          members={members}
+          userEmail={userEmail}
+          onSave={function (taskShape) {
+            var next = stages.map(function (s, i) { return i === detailIdx ? taskShape : s; });
+            return commitStages(next).then(function () { setDetailIdx(null); });
+          }}
+          onDelete={function () {
+            var next = stages.filter(function (_, i) { return i !== detailIdx; });
+            return commitStages(next).then(function () { setDetailIdx(null); });
+          }}
+          onClose={function () { setDetailIdx(null); }}
+        />
+      )}
     </div>
   );
 }

@@ -519,7 +519,13 @@ export function HubProjectCard({ project, accounts, members, userEmail, onUpdate
               onUpdate={onUpdateProject}
             />
           ) : (
-            <ProjectStageEditor project={project} onUpdate={onUpdateProject} />
+            <ProjectStageEditor
+              project={project}
+              onUpdate={onUpdateProject}
+              accounts={accounts}
+              members={members}
+              userEmail={userEmail}
+            />
           )}
         </div>
       )}
