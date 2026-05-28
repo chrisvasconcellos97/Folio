@@ -478,7 +478,7 @@ export function HubProjectCard({ project, accounts, members, userEmail, onUpdate
               <div style={{
                 position: "absolute", left: 0, top: 0, bottom: 0,
                 width: Math.round((doneCount / tasks.length) * 100) + "%",
-                background: "linear-gradient(to right, oklch(0.42 0.09 232), oklch(0.55 0.12 200), oklch(0.68 0.13 178), oklch(0.80 0.13 162))",
+                background: C.accent,
                 borderRadius: 2,
                 transition: "width 0.3s ease",
               }} />

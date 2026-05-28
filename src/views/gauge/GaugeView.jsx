@@ -40,20 +40,6 @@ var PRIORITY_COLORS = {
   low:    C.green,
 };
 
-// Gradient stop colors per priority/state — left edge fades into the row's
-// normal dark green surface. Complete uses a light-green gradient to flag
-// finished work without making it shout.
-var FADE_START = {
-  high:    "rgba(232, 88, 88, 0.32)",
-  medium:  "rgba(232, 152, 48, 0.30)",
-  low:     "rgba(232, 200, 56, 0.28)",
-  complete:"rgba(120, 200, 140, 0.28)",
-};
-function fadeForProject(p) {
-  if (p.status === "complete") return FADE_START.complete;
-  return FADE_START[p.priority] || null;
-}
-
 // Scope filter (the row of pills below the status boxes)
 var SCOPE_FILTERS = [
   { id: "all",      label: "All"      },
@@ -488,10 +474,7 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
           var isOpen = !!expandedRows[p.id];
           function toggleRow() { setExpandedRows(function (prev) { return Object.assign({}, prev, { [p.id]: !prev[p.id] }); }); }
 
-          var fadeStart = fadeForProject(p);
-          var rowBg = fadeStart
-            ? "linear-gradient(to right, " + fadeStart + " 0%, " + C.surface + " 55%)"
-            : C.surface;
+          var rowBg = C.surface;
 
           return (
             <div
@@ -653,7 +636,7 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
                       <div style={{ position: "relative", height: 4, background: C.surface3, borderRadius: 2, overflow: "hidden" }}>
                         <div style={{
                           position: "absolute", inset: 0,
-                          background: "linear-gradient(to right, oklch(0.42 0.09 232), oklch(0.55 0.12 200), oklch(0.68 0.13 178), oklch(0.80 0.13 162))",
+                          background: C.accent,
                           borderRadius: 2,
                         }} />
                         <div style={{
@@ -698,7 +681,7 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
                 <div style={{ position: "relative", height: 4, background: C.surface3, borderRadius: 2, overflow: "hidden" }}>
                   <div style={{
                     position: "absolute", inset: 0,
-                    background: "linear-gradient(to right, oklch(0.42 0.09 232), oklch(0.55 0.12 200), oklch(0.68 0.13 178), oklch(0.80 0.13 162))",
+                    background: C.accent,
                     borderRadius: 2,
                   }} />
                   <div style={{
