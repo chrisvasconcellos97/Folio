@@ -238,15 +238,14 @@ This app is currently single-user but should be built with multi-tenancy in mind
    - Pip context improvement — pass full account history (all meetings, open items, contacts) into Pip system prompt
    - Auto-create open items from meeting action items — checkbox in Add Meeting modal to promote each action item to an open item
    - In-app notification banner — shows on login: accounts gone cold, items overdue, follow-ups due this week
-   - **Cadence meeting reminders (Pip pre-call nudges):** Pip should warn that a cadence is coming up so Chris isn't surprised. Three thresholds tied to the cadence's `meeting_time`:
-     - **30 min out** — banner at top of app: "Heads up — {cadence label} with {account} starts in 30m."
-     - **5 min out** — banner upgrades: "Starting in 5m — open the hub?" CTA opens the cadence hub (which already auto-creates a draft + opens meeting mode if you tap Start Meeting).
+   - **Cadence meeting reminders (Pip pre-call nudges — LOCKED):** Pip warns that a cadence is coming up so Chris isn't surprised. Three thresholds tied to the cadence's `meeting_time`:
+     - **30 min out** — in-app banner at top of app: "Heads up — {cadence label} with {account} starts in 30m."
+     - **5 min out** — banner upgrades: "Starting in 5m — open the hub?" CTA opens the cadence hub.
      - **At start time** — banner: "{Cadence label} just started — jump in." Click goes straight into `CadenceMeetingMode` for that cadence (auto-creating today's draft via the existing Start-Meeting path).
-     - **Open design questions:**
-       (a) Browser Notification API (no backend) so reminders fire even when the tab is backgrounded but the app is open — opt-in via permission prompt. V1: in-app banner only OR add Notification API? Both are cheap.
-       (b) Real push notifications when the app is closed require service-worker push + backend cron + per-user subscription endpoints. Out of scope for v1; queue as a follow-up.
-       (c) Dismissal logic: each threshold fires once. Once dismissed at 30m, does the 5m banner still fire? Probably yes — each threshold is a distinct event. Lock during build.
-       (d) Source of truth for "next cadence occurrence": existing `getNextOccurrence(cadence, today)` from `src/lib/cadenceUtils.js`. Combine with `cadence.meeting_time`. Need to handle cadences without a set meeting_time (skip reminders for those).
+     - **Reach (locked):** in-app banner + browser Notification API. Prompt the user once for permission the first time a cadence with a `meeting_time` is set; surface a Settings toggle. Reminders fire system notifications when the tab is backgrounded (browser minimized, other tab focused).
+     - **Source of truth:** existing `getNextOccurrence(cadence, today)` from `src/lib/cadenceUtils.js` combined with `cadence.meeting_time`. Skip cadences without a `meeting_time` set.
+     - **Dismissal:** each threshold fires once. Dismissing the 30m banner doesn't suppress the 5m or start banner — they're distinct events.
+     - **Full PWA push (notifications when app is fully closed):** needs service-worker push + backend cron + per-user subscription endpoints. Out of scope for v1; queued as follow-up.
    - **Smarter auto-task generation + assignment (LOCKED — biggest pending build after Hub V2):** When Pip summarizes a cadence-meeting draft today, every action item it extracts becomes a new `folio_items` row. That creates duplicates ("work with Adam on roll out" already exists as a Gauge task), misses updates ("classic collision launch moved to June 8" should shift a date, not spawn a new task), and always assigns to the meeting author. V1 spec:
      - **Context expansion:** `summarizeDraftPip` receives, in addition to the draft notes: existing open `folio_items` on the account, AND existing non-done tasks across active Gauge projects on the account (incl. child accounts via the rollup). ~5-8K tokens per call on Haiku ≈ $0.02/meeting — fine.
      - **Structured output:** Pip returns a plan, not a flat action-item list. Schema (preferred shape):
