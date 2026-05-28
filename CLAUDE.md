@@ -65,34 +65,9 @@ no remount. Pre-mount theme application is done by an inline `<script>` in
 `index.html` (no flash-of-wrong-theme). `useTheme()` reads/writes the
 choice, persisting to `localStorage.folio_theme`.
 
-### Light Theme — Open Polish Items (deferred from initial light-theme batch)
+### Light Theme — Open Polish Items
 
-Punted by Patch during the initial light-theme ship, queued for a follow-up
-batch when ready. Each requires touching layout chrome or a render path
-that wasn't trivial to thread through without scope creep:
-
-1. **Sidebar "Mist" background in light mode.** The light spec calls for the
-   sidebar to use the `--rail` token (faint teal wash, `oklch(0.94 0.015 178)`)
-   as its background. Currently both layouts (`DesktopLayout.jsx`,
-   `MobileLayout.jsx`) inherit whatever surface color was hardcoded — in
-   light mode that's paper-white, which is fine but loses the spec's
-   visual separation between chrome and workspace.
-2. **Active-tab mark pulse animation.** Spec describes the active sidebar
-   nav item's mark pulsing via a 2.8s sonar keyframe. The `--accent-shadow`
-   token is wired, but the layout components don't currently expose an
-   `is-active` hook on the per-tab mark for the animation to target.
-3. **Stat-tile tier-colored halos (Accounts page).** Spec §6 says the
-   "Watching" (ochre) and "At Risk" (terracotta) stat tiles get a
-   tier-tinted shadow halo matching their numeral color — same trick as
-   the account cards but smaller. Token plumbing didn't have a clean
-   render hook.
-4. **Audit of `rgba(255,255,255,0.0X)` overlays** scattered across the
-   modals (SetCadenceModal, QuickMeetingModal, etc.). They're faint
-   washes that mostly disappear on cream, but worth a once-over to confirm
-   nothing reads off.
-5. **Hardcoded drop shadows** in Toast / Modal / CommandPalette / UserMenu
-   use `rgba(0,0,0,0.5)` directly. They render fine on both themes (just
-   darker overlays) but tokenizing them would make future tuning easier.
+All shipped — see "Folios design system refresh" in Already shipped.
 
 ## Font Rule
 **Never use Google Fonts CDN.** All fonts must be self-hosted via `@fontsource-variable` packages installed through npm and imported in `src/main.jsx`. Google Fonts calls get blocked by corporate network proxies. Current fonts: `@fontsource-variable/inter`, `@fontsource-variable/fraunces`, `@fontsource-variable/jetbrains-mono`.
@@ -304,6 +279,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
 17. *(shipped — see Already shipped)*
 
 **Already shipped (drop from list):**
+- ✅ **Folios design system refresh** — unified `Mark` component (10 tab marks + Pip brand) in `src/components/Mark.jsx` with shared rAF engine: page-size marks (>=52) animate per the README spec (accounts dossiers drift, departments cycle, partners breathe, meetings seats sequence, pipeline bars rise, cadence dot orbits, gauge needle sweeps, team triad pulses, route tracer travels, settings knobs glide); rail (22) + compact (32) stay static. Loop self-starts on first registration and stops when idle. Reduced-motion gating disables both rAF registration AND the CSS glow keyframe. Rail marks pick up `active` prop → 2.8s `fol-mark-active` pulse. `LitPill` component (Mist fill + teal border + glow + pulsing teal pip dot) — desktop rail "+ Account/Department/Partner" footer CTA migrated. L-connector for nested child accounts (`.acct-child::before` draws teal L with double drop-shadow). Sidebar Mist background in light mode via new `--c-rail-bg` token (desktop rail + mobile header + bottom nav). Stat-tile tier-tinted halos (`stat-tile-watching` ochre, `stat-tile-risk` terracotta) light-only. `rgba(255,255,255,0.04)` overlays across 5 modals tokenized via `--c-input-fill`. `rgba(0,0,0,0.X)` shadows in Toast / Modal / CommandPalette / UserMenu tokenized via `--c-overlay-shadow*`. NavMark kept as a thin alias to Mark for diagnostics + back-compat.
 - ✅ **Cadence meeting reminders (Pip pre-call nudges)** — `useCadenceReminders` hook ticks every 30s, computes each cadence's next occurrence via `getNextOccurrence` + `meeting_time`, fires three thresholds (30m / 5m / start) as in-app `MeetingReminderBanner` rows at the top of the app. Fired + dismissed sets persist in localStorage (`folio_cadence_reminders_fired` / `folio_cadence_reminders_dismissed`) so a refresh never replays. Browser `Notification` API fires system pop-ups when permission granted. One-time discreet "Want Pip to ping you?" prompt surfaces the first time a cadence with a `meeting_time` exists. Settings → Cadence Reminders section adds a browser-notifications request + in-app banners toggle. Start-tone banner CTA threads `autoOpenMeetingMode` through AccountDetail → CadenceHub, which programmatically clicks Start Meeting on mount (auto-creating today's draft and opening `CadenceMeetingMode`). Skips cadences without `meeting_time`, inactive accounts, and stale reminders (>6h past start).
 - ✅ **Smarter Pip summarize + preview modal** — `summarizeDraftPip` now receives existing open items + in-flight Gauge tasks + org members + learned assignment hints, and returns a structured `plan[]` (new_item / update_item / close_item / new_task / update_task / skip) instead of a flat action-item list. The new `PipSummarizePreview` modal renders the plan with checkboxes + assignee dropdowns + due-date inputs, grouped into Changes / New / Skipped, with yellow dots on low-confidence rows. Apply runs the selected rows through `addItem` / `updateItem` / `closeItem` / `updateProject` (project stages batched per project for one round-trip). Assignee overrides are persisted into `pip_assignment_hints` (`account_id`, normalized `task_pattern`, `assignee_email`) via `usePipAssignmentHints`, fed back into Pip's next summarize. Wired into both DraftCard (Cadence Hub) and CadenceMeetingMode (full-screen). Cancel preserves the summarized meeting but applies nothing. Falls back gracefully to synthesized new_item rows if Pip returns the legacy flat shape. SQL: `supabase/pip_assignment_hints.sql` (run manually) + canonical `schema.sql`.
 - ✅ **Multi-phase hardening pass (8 phases)** — Security (RLS holes patched, Pip prompt-injection guards, autosave/signout wipes, rate limits). Reliability (fetch timeouts, autosave-failure toasts + localStorage backup, top-level + view-level ErrorBanner Retry, double-click guards, `src/lib/net.js` with retry/timeout/timed). Pip cost (folio_pip_usage table + RLS, prompt caching on ask-pip & pip-state-refresh, Sonnet→Haiku downgrade for brief/summary/email, MeetingsTab + CadenceHub short-circuits, Pip Usage tile + details modal in Settings). Code quality (AccountDetail -42%, OverviewTab -29%, useBreakpoint extracted, accountInsights.jsx extracted, 24 new tests). Data integrity + export (19 hot-path indexes, gauge_projects cascade flipped to set null, canonical schema.sql sync, per-account JSON export). Observability (folio_errors table + RLS, ErrorBoundary at App + per-Suspense, window.onerror + unhandledrejection, Diagnostics nav with badge, ObservabilityView, `timed()` helper). Accessibility (skip-to-content, aria-live on Toast + StatusBanner, ARIA combobox/listbox on CommandPalette, account-card aria-label with tier/status, WCAG AA contrast bumps for light-mode `--text-mute`/red/blue, global `prefers-reduced-motion`, `:focus-visible` outline, `pointer: coarse` 44×44 tap targets, tier label in compact mode). Multi-device realtime sync (Supabase Realtime subscriptions on every data hook, ~500ms debounced refetch on change, ConnectionStatus indicator only on drop, visibility-change reconnect).

@@ -1,8 +1,9 @@
 import { C } from "../lib/colors";
 import { FolioIcon } from "../components/FolioIcon";
 import { PipOrb } from "../components/PipMark";
-import { NavMark } from "../components/NavMark";
+import { Mark } from "../components/Mark";
 import { AmberBtn } from "../components/Buttons";
+import { LitPill } from "../components/LitPill";
 import { UserMenu } from "../components/UserMenu";
 import { ConnectionStatus } from "../components/ConnectionStatus";
 
@@ -62,12 +63,14 @@ export function DesktopLayout({
       >
         Skip to content
       </a>
-      {/* Rail — 232px */}
+      {/* Rail — 232px. Background uses a token so light mode picks up Mist
+          (var(--c-rail)) while dark mode keeps surface. */}
       <div
+        className="app-rail"
         style={{
           width: 232,
           flexShrink: 0,
-          background: C.surface,
+          background: "var(--c-rail-bg)",
           borderRight: "1px solid " + C.rule,
           display: "flex",
           flexDirection: "column",
@@ -143,7 +146,7 @@ export function DesktopLayout({
                 onClick={function () { setView(item.id); }}
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "20px 1fr auto",
+                  gridTemplateColumns: "22px 1fr auto",
                   alignItems: "center",
                   gap: 10,
                   padding: "9px 10px",
@@ -166,11 +169,10 @@ export function DesktopLayout({
               >
                 <span style={{
                   display: "inline-flex", alignItems: "center", justifyContent: "center",
-                  width: 20, height: 20,
-                  color: active ? (isGauge ? C.blue : C.accent) : C.textMuted,
+                  width: 22, height: 22, flexShrink: 0,
                   opacity: active ? 1 : 0.78,
                 }}>
-                  <NavMark id={item.id} size={18} />
+                  <Mark tab={item.id} size={22} active={active} />
                 </span>
 
                 {/* Label */}
@@ -203,26 +205,14 @@ export function DesktopLayout({
           })}
         </nav>
 
-        {/* Footer */}
+        {/* Footer — lit-pill primary CTA */}
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
-          <button
+          <LitPill
             onClick={onAddAccount}
-            style={{
-              width: "100%",
-              padding: "9px 12px",
-              borderRadius: 6,
-              cursor: "pointer",
-              fontFamily: "'Inter', system-ui, sans-serif",
-              fontSize: 12.5,
-              fontWeight: 500,
-              background: "oklch(0.32 0.05 178 / 0.35)",
-              color: C.accent,
-              border: "1px solid " + C.accentBorder,
-              textAlign: "center",
-            }}
+            style={{ width: "100%", justifyContent: "center" }}
           >
-            {view === "departments" ? "+ Department" : view === "partners" ? "+ Partner" : "+ Account"}
-          </button>
+            {view === "departments" ? "Add Department" : view === "partners" ? "Add Partner" : "Add Account"}
+          </LitPill>
           <div style={{ borderTop: "1px solid " + C.rule, paddingTop: 10 }}>
             <UserMenu userMeta={userMeta} onSignOut={onSignOut} onTour={onTour} onSettings={function () { setView("settings"); }} dropUp />
           </div>

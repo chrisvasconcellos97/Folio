@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useDeferredValue } from "react";
 import { C } from "../../lib/colors";
 import { ownerInitials, findOwner } from "../../lib/ownerLabel";
-import { NavMark } from "../../components/NavMark";
+import { Mark } from "../../components/Mark";
 import { latestRecord, accountRecords, momPct, displayRevenue } from "../../lib/metricsUtils";
 import { Pill } from "../../components/Pill";
 import { InputField } from "../../components/InputField";
@@ -68,12 +68,12 @@ function SkeletonCard() {
         <div style={{ flex: 1 }}>
           <div style={{ display: "flex", gap: 7, marginBottom: 10, alignItems: "center" }}>
             <div style={{ width: 120, height: 14, borderRadius: 6, background: "rgba(255,255,255,0.05)", animation: "skeleton-pulse 1.5s ease-in-out infinite" }} />
-            <div style={{ width: 40, height: 14, borderRadius: 6, background: "rgba(255,255,255,0.04)", animation: "skeleton-pulse 1.5s ease-in-out infinite 0.2s" }} />
+            <div style={{ width: 40, height: 14, borderRadius: 6, background: "var(--c-input-fill)", animation: "skeleton-pulse 1.5s ease-in-out infinite 0.2s" }} />
           </div>
-          <div style={{ width: 70, height: 18, borderRadius: 6, background: "rgba(255,255,255,0.04)", animation: "skeleton-pulse 1.5s ease-in-out infinite 0.1s", marginBottom: 8 }} />
+          <div style={{ width: 70, height: 18, borderRadius: 6, background: "var(--c-input-fill)", animation: "skeleton-pulse 1.5s ease-in-out infinite 0.1s", marginBottom: 8 }} />
           <div style={{ width: 90, height: 10, borderRadius: 4, background: "rgba(255,255,255,0.03)", animation: "skeleton-pulse 1.5s ease-in-out infinite 0.3s" }} />
         </div>
-        <div style={{ width: 14, height: 14, borderRadius: 4, background: "rgba(255,255,255,0.04)" }} />
+        <div style={{ width: 14, height: 14, borderRadius: 4, background: "var(--c-input-fill)" }} />
       </div>
     </div>
   );
@@ -319,12 +319,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
       `}</style>
 
       <div style={{ marginBottom: 18, display: "flex", alignItems: "center", gap: 14 }}>
-        <span style={{
-          display: "inline-flex", alignItems: "center", justifyContent: "center",
-          width: 40, height: 40, color: C.accent, flexShrink: 0,
-        }}>
-          <NavMark id={workspaceMarkId} size={40} />
-        </span>
+        <Mark tab={workspaceMarkId} size={52} />
         <div>
           <div style={{ fontFamily: SERIF, fontSize: 40, fontWeight: 400, color: C.text, letterSpacing: "-0.02em", lineHeight: 1 }}>
             {workspaceTitle}
@@ -487,14 +482,15 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
         }}
       >
         {[
-          { l: "Accounts", v: loading ? "—" : accounts.length, c: C.text, filterId: "All" },
-          { l: "Watching", v: loading ? "—" : accounts.filter(function(a){ return a.status === "yellow"; }).length, c: C.yellow, filterId: "Watching" },
-          { l: "At Risk",  v: loading ? "—" : accounts.filter(function(a){ return a.status === "red"; }).length, c: C.red, filterId: "At Risk" },
+          { l: "Accounts", v: loading ? "—" : accounts.length, c: C.text,   filterId: "All",      cls: "" },
+          { l: "Watching", v: loading ? "—" : accounts.filter(function(a){ return a.status === "yellow"; }).length, c: C.yellow, filterId: "Watching", cls: "stat-tile-watching" },
+          { l: "At Risk",  v: loading ? "—" : accounts.filter(function(a){ return a.status === "red"; }).length,    c: C.red,    filterId: "At Risk",  cls: "stat-tile-risk" },
         ].map(function (s) {
           return (
             <div
               key={s.l}
               onClick={function() { setFilter(s.filterId); }}
+              className={s.cls}
               style={{
                 background: filter === s.filterId ? C.accentFaint : C.surface,
                 border: "1px solid " + (filter === s.filterId ? C.accentBorder : C.rule),
@@ -1066,20 +1062,11 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
           );
 
           if (isChild) {
+            // L-connector: separate sibling card, 32px left indent, glowing
+            // teal CSS pseudo-element draws the L (rule defined in index.html
+            // .acct-child::before).
             return (
-              <div key={a.id} className="list-item" style={{ display: "flex", alignItems: "flex-start", gap: 0, marginTop: -2, animationDelay: index * 0.04 + "s" }}>
-                <div style={{
-                  width: 24,
-                  flexShrink: 0,
-                  display: "flex",
-                  justifyContent: "center",
-                  paddingTop: 11,
-                  borderLeft: "1px dashed " + C.accentBorder,
-                  marginLeft: 10,
-                  marginRight: 4,
-                }}>
-                  <span style={{ fontSize: 11, color: C.textFaint, lineHeight: 1 }}>↳</span>
-                </div>
+              <div key={a.id} className="list-item acct-child" style={{ animationDelay: index * 0.04 + "s" }}>
                 {card}
               </div>
             );

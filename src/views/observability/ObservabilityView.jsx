@@ -85,9 +85,7 @@ export function ObservabilityView({ userId }) {
   return (
     <div style={{ maxWidth: 760, margin: "0 auto", padding: "8px 0 40px" }}>
       <div style={{ marginBottom: 24, display: "flex", alignItems: "center", gap: 14 }}>
-        <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 40, height: 40, color: C.accent, flexShrink: 0 }}>
-          <NavMark id="diagnostics" size={40} />
-        </span>
+        <NavMark id="diagnostics" size={52} />
         <div style={{ flex: 1 }}>
           <div style={{ fontFamily: SERIF, fontSize: 40, fontWeight: 400, color: C.text, letterSpacing: "-0.02em", lineHeight: 1 }}>
             Diagnostics

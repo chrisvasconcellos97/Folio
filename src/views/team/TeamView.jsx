@@ -1,5 +1,5 @@
 import { C } from "../../lib/colors";
-import { NavMark } from "../../components/NavMark";
+import { Mark } from "../../components/Mark";
 import { Card } from "../../components/Card";
 import { TeamSection, CreateOrgSection } from "../settings/SettingsView";
 
@@ -23,9 +23,7 @@ export function TeamView({
   return (
     <div style={{ maxWidth: 600, margin: "0 auto", padding: "8px 0 40px" }}>
       <div style={{ marginBottom: 24, display: "flex", alignItems: "center", gap: 14 }}>
-        <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 40, height: 40, color: C.accent, flexShrink: 0 }}>
-          <NavMark id="team" size={40} />
-        </span>
+        <Mark tab="team" size={52} />
         <div>
           <div style={{ fontFamily: SERIF, fontSize: 40, fontWeight: 400, color: C.text, letterSpacing: "-0.02em", lineHeight: 1 }}>
             Team

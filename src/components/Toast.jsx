@@ -67,7 +67,7 @@ export function Toast() {
             fontWeight: 600,
             fontFamily: "'Inter', system-ui, sans-serif",
             whiteSpace: "nowrap",
-            boxShadow: "0 4px 24px rgba(0,0,0,0.5)",
+            boxShadow: "0 4px 24px var(--c-overlay-shadow)",
             pointerEvents: t.onUndo || t.action ? "auto" : "none",
             display: "flex",
             alignItems: "center",

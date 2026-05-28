@@ -107,7 +107,7 @@ export function LogConversationModal({
                     onClick={function () { setMethod(m.value); }}
                     style={{
                       flex: "1 0 calc(50% - 4px)",
-                      background: active ? C.accentMid : "rgba(255,255,255,0.04)",
+                      background: active ? C.accentMid : "var(--c-input-fill)",
                       border: "1px solid " + (active ? C.accentBorder : C.border),
                       borderRadius: 8,
                       padding: "7px 8px",
@@ -171,7 +171,7 @@ export function LogConversationModal({
                     type="button"
                     onClick={function () { toggleAttendee(c.name); }}
                     style={{
-                      background: active ? C.accentMid : "rgba(255,255,255,0.04)",
+                      background: active ? C.accentMid : "var(--c-input-fill)",
                       border: "1px solid " + (active ? C.accentBorder : C.border),
                       borderRadius: 20,
                       padding: "5px 12px",

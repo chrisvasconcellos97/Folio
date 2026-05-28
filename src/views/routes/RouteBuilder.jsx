@@ -6,6 +6,10 @@ import { FL } from "../../components/FieldLabel";
 import { Modal } from "../../components/Modal";
 import { showToast } from "../../components/Toast";
 import { supabase } from "../../lib/supabase";
+import { Mark } from "../../components/Mark";
+
+var RB_SERIF = "'Fraunces', Georgia, serif";
+var RB_MONO  = "'JetBrains Mono', ui-monospace, monospace";
 
 function haversine(lat1, lng1, lat2, lng2) {
   var R = 3958.8;
@@ -195,10 +199,17 @@ export function RouteBuilder({ accounts, userId }) {
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
-        <div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 4 }}>Route Builder</div>
-          <div style={{ fontSize: 12, color: C.textMuted }}>Select accounts with addresses to build an optimized visit route.</div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <Mark tab="route" size={52} />
+          <div>
+            <div style={{ fontFamily: RB_SERIF, fontSize: 40, fontWeight: 400, color: C.text, letterSpacing: "-0.02em", lineHeight: 1 }}>
+              Route
+            </div>
+            <div style={{ fontFamily: RB_MONO, fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", marginTop: 4 }}>
+              Optimized Visit Routes · Field Schedules
+            </div>
+          </div>
         </div>
       </div>
 

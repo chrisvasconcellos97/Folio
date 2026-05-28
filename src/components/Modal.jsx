@@ -44,7 +44,7 @@ export function Modal({ title, onClose, children, width }) {
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.65)",
+        background: "var(--c-overlay-shadow-strong)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",

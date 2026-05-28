@@ -72,7 +72,7 @@ export function CommandPalette({ accounts, contacts, onSelectAccount, onSelectCo
         onClick={function(e) { e.stopPropagation(); }}
         style={{
           background: C.bgCard, border: "1px solid " + C.borderBright, borderRadius: 14,
-          width: "100%", maxWidth: 480, boxShadow: "0 24px 60px rgba(0,0,0,0.5)", overflow: "hidden",
+          width: "100%", maxWidth: 480, boxShadow: "0 24px 60px var(--c-overlay-shadow)", overflow: "hidden",
         }}
       >
         <div style={{ padding: "12px 16px", borderBottom: "1px solid " + C.border }}>

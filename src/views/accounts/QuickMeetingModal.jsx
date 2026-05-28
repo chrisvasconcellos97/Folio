@@ -66,7 +66,7 @@ export function QuickMeetingModal({ accountId, userId, accountName, contacts, on
                     type="button"
                     onClick={function () { toggleAttendee(c.name); }}
                     style={{
-                      background: active ? C.accentMid : "rgba(255,255,255,0.04)",
+                      background: active ? C.accentMid : "var(--c-input-fill)",
                       border: "1px solid " + (active ? C.accentBorder : C.border),
                       borderRadius: 20,
                       padding: "5px 12px",

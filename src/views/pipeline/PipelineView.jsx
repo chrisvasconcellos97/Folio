@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { C, glass } from "../../lib/colors";
 import { Glow } from "../../components/Glow";
-import { NavMark } from "../../components/NavMark";
+import { Mark } from "../../components/Mark";
 
 var PV_MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var PV_SERIF = "'Fraunces', Georgia, serif";
@@ -342,9 +342,7 @@ export function PipelineView({ accounts, loading, revenueHistory, shopMetrics, o
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 40, height: 40, color: C.accent, flexShrink: 0 }}>
-            <NavMark id="pipeline" size={40} />
-          </span>
+          <Mark tab="pipeline" size={52} />
           <div>
             <div style={{ fontFamily: PV_SERIF, fontSize: 40, fontWeight: 400, color: C.text, letterSpacing: "-0.02em", lineHeight: 1 }}>
               Pipeline

@@ -152,6 +152,29 @@
         --c-tier-growth:   #e879a8;
         --c-tier-watching: #d4932a;
         --c-tier-risk:     #c85a3e;
+
+        /* ── Folio mark family (teal disc chrome used by <Mark>) ──
+           Same hue family as the accent; deeper for glyph legibility. */
+        --c-folio:         oklch(0.72 0.12 178);
+        --c-folio-deep:    oklch(0.62 0.13 178);
+        --c-folio-tint-2:  oklch(0.72 0.12 178 / 0.18);
+        --c-folio-border:  oklch(0.72 0.12 178 / 0.42);
+        --c-folio-shadow:  oklch(0.72 0.16 178 / 0.55);
+
+        /* ── Mist (sidebar + lit-pill button) ── */
+        --c-rail:          #11201e;
+        /* Sidebar / mobile chrome background — dark uses surface so the rail
+           reads as solid panel; light flips this to the Mist tint below. */
+        --c-rail-bg:       #0c1615;
+
+        /* ── Overlay shadow (modals / Toast / palette drop shadows) ── */
+        --c-overlay-shadow:        rgba(0,0,0,0.5);
+        --c-overlay-shadow-strong: rgba(0,0,0,0.65);
+        --c-overlay-shadow-soft:   rgba(0,0,0,0.45);
+
+        /* ── Input / inactive chip fill — was rgba(255,255,255,0.04) inline.
+           Tokenized so light theme can map it to a faint warm wash. */
+        --c-input-fill:    rgba(255,255,255,0.04);
       }
 
       :root[data-theme="light"] {
@@ -280,6 +303,29 @@
         --c-folio-mark-front:         oklch(0.92 0.02 178);
         --c-folio-mark-stroke:        oklch(0.55 0.04 178);
         --c-folio-mark-stroke-bright: oklch(0.45 0.05 178);
+
+        /* ── Folio mark family (teal disc chrome used by <Mark>) ──
+           Same teal anchor for both themes; glyph color deepens for
+           paper legibility. */
+        --c-folio:         oklch(0.72 0.12 178);
+        --c-folio-deep:    oklch(0.50 0.12 178);
+        --c-folio-tint-2:  oklch(0.72 0.12 178 / 0.18);
+        --c-folio-border:  oklch(0.72 0.12 178 / 0.42);
+        --c-folio-shadow:  oklch(0.72 0.16 178 / 0.55);
+
+        /* ── Mist (sidebar + lit-pill button) ── */
+        --c-rail:          oklch(0.94 0.015 178);
+        /* Light sidebar background = Mist (spec §3) so sidebar separates
+           visually from the cream workspace canvas. */
+        --c-rail-bg:       oklch(0.94 0.015 178);
+
+        /* ── Overlay shadow (modals / Toast / palette drop shadows) ── */
+        --c-overlay-shadow:        rgba(20,25,22,0.22);
+        --c-overlay-shadow-strong: rgba(20,25,22,0.40);
+        --c-overlay-shadow-soft:   rgba(20,25,22,0.14);
+
+        /* ── Input / inactive chip fill — paper-friendly warm wash. */
+        --c-input-fill:    oklch(0.96 0.008 80 / 0.7);
       }
 
       /* Global focus-visible outline — keyboard users finally know where they are.
@@ -465,6 +511,107 @@
       /* Skeleton pulse */
       @keyframes skeleton-pulse { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
 
+      /* ── Folios Mark (unified disc + glyph) ─────────────────────────────
+         Disc chrome lives inline in src/components/Mark.jsx. CSS here adds
+         the slow ambient glow pulse on page-size marks (>=52) and the
+         active-rail pulse. All animation is opt-in: only the `is-active`
+         class on rail marks pulses, and only `fol-mark-52/72/120` get the
+         ambient glow. Both classes are reduced-motion-safe via the
+         existing global `prefers-reduced-motion: reduce` block. */
+      @keyframes fol-mark-glow {
+        0%, 100% { box-shadow: 0 0 var(--mark-glow, 22px) var(--c-folio-shadow); }
+        50%      { box-shadow: 0 0 calc(var(--mark-glow, 22px) * 1.45) var(--c-folio-shadow); }
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .fol-mark-52 { animation: fol-mark-glow 5s ease-in-out infinite; }
+        .fol-mark-72,
+        .fol-mark-120 { animation: fol-mark-glow 5s ease-in-out infinite; }
+        .fol-mark.is-active {
+          animation: fol-mark-active 2.8s ease-in-out infinite;
+        }
+      }
+      @keyframes fol-mark-active {
+        0%, 100% {
+          box-shadow: 0 0 10px var(--c-folio-shadow);
+          border-color: var(--c-folio-border);
+        }
+        50% {
+          box-shadow: 0 0 16px var(--c-folio-shadow), 0 0 4px var(--c-folio-shadow);
+          border-color: var(--c-folio);
+        }
+      }
+
+      /* ── Lit pill (primary CTA) ───────────────────────────────────────
+         Mist fill, teal border, teal glow, pulsing teal pip dot. Themed
+         tokens so the same rule renders correctly in dark + light. */
+      .lit-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        padding: 9px 18px 9px 14px;
+        background: var(--c-rail);
+        color: var(--c-text);
+        border: 1px solid var(--c-folio-border);
+        border-radius: 999px;
+        box-shadow: 0 0 18px var(--c-folio-shadow);
+        cursor: pointer;
+        font-family: 'Inter', system-ui, sans-serif;
+        font-weight: 500;
+        font-size: 13px;
+        line-height: 1;
+        transition: box-shadow 0.18s ease, transform 0.12s ease;
+      }
+      .lit-pill:hover { box-shadow: 0 0 26px var(--c-folio-shadow); }
+      .lit-pill:active { transform: scale(0.98); }
+      .lit-pill[disabled] { opacity: 0.6; cursor: not-allowed; }
+      .lit-pill .pip-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--c-folio);
+        box-shadow: 0 0 7px var(--c-folio-shadow);
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .lit-pill .pip-dot {
+          animation: lit-pill-pulse 2.2s ease-in-out infinite;
+        }
+      }
+      @keyframes lit-pill-pulse {
+        0%, 100% { box-shadow: 0 0 5px var(--c-folio-shadow); }
+        50%      { box-shadow: 0 0 12px var(--c-folio-shadow), 0 0 3px var(--c-folio); }
+      }
+
+      /* ── L-connector for nested child accounts (light + dark) ──────────
+         Replaces the old faded `↳` arrow. The child card is the sibling
+         element; the L is drawn by this pseudo-element off the child's
+         left edge with a double drop-shadow glow. */
+      .acct-child { position: relative; margin-left: 32px; }
+      .acct-child::before {
+        content: "";
+        position: absolute;
+        left: -20px;
+        top: -10px;
+        width: 16px;
+        height: calc(50% + 10px);
+        border-left: 1px solid var(--c-folio);
+        border-bottom: 1px solid var(--c-folio);
+        border-bottom-left-radius: 8px;
+        filter:
+          drop-shadow(0 0 4px var(--c-folio-shadow))
+          drop-shadow(0 0 8px var(--c-folio-shadow));
+        pointer-events: none;
+      }
+
+      /* ── Stat-tile tier-tinted halos (Accounts page) ──────────────────
+         Light spec §6: Watching + At Risk tiles get a small tinted halo
+         from the left edge matching their numeral color. Dark stays flat. */
+      :root[data-theme="light"] .stat-tile-watching {
+        box-shadow: -6px 0 18px -4px oklch(0.58 0.10 72 / 0.35);
+      }
+      :root[data-theme="light"] .stat-tile-risk {
+        box-shadow: -6px 0 18px -4px oklch(0.50 0.13 30 / 0.40);
+      }
+
       /* Skip-to-content — hidden until keyboard focus. Themed so it reads
          on both palettes. Critical for keyboard-only users. */
       .skip-to-content {
@@ -512,7 +659,10 @@
         }
         .pip > svg, .pip.sonar::before, .pip.sonar::after,
         .folio-mark .fm-orb-glow, .folio-mark .fm-orb-ring,
-        .folio-mark .fm-orb-head, .folio-mark .fm-orb-tail {
+        .folio-mark .fm-orb-head, .folio-mark .fm-orb-tail,
+        .fol-mark, .fol-mark.is-active,
+        .fol-mark-52, .fol-mark-72, .fol-mark-120,
+        .lit-pill .pip-dot {
           animation: none !important;
         }
       }

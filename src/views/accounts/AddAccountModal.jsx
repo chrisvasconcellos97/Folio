@@ -213,7 +213,7 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
                     onClick={function () { setAccountType(opt.value); }}
                     style={{
                       flex: 1,
-                      background: on ? C.accentMid : "rgba(255,255,255,0.04)",
+                      background: on ? C.accentMid : "var(--c-input-fill)",
                       color: on ? C.accent : C.textMuted,
                       border: "1px solid " + (on ? C.accentRing : C.border),
                       borderRadius: 8, padding: "9px 6px", fontSize: 12,
@@ -349,7 +349,7 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
                   <button key={t} type="button" onClick={function () { setTier(t); }}
                     style={{
                       flex: 1,
-                      background: on ? C.accentMid : "rgba(255,255,255,0.04)",
+                      background: on ? C.accentMid : "var(--c-input-fill)",
                       color: on ? C.accent : C.textMuted,
                       border: "1px solid " + (on ? C.accentRing : C.border),
                       borderRadius: 8, padding: "9px 6px", fontSize: 12,
@@ -374,7 +374,7 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
                   <button key={s.value} type="button" onClick={function () { setStatus(s.value); }}
                     style={{
                       flex: 1,
-                      background: on ? "rgba(" + bgRgb + ",0.15)" : "rgba(255,255,255,0.04)",
+                      background: on ? "rgba(" + bgRgb + ",0.15)" : "var(--c-input-fill)",
                       color: on ? col : C.textMuted,
                       border: "1px solid " + (on ? "rgba(" + bgRgb + ",0.4)" : C.border),
                       borderRadius: 8, padding: "9px 4px", fontSize: 11,
@@ -478,7 +478,7 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
             onClick={function () { setStatePickerOpen(function (o) { return !o; }); }}
             style={{
               width: "100%",
-              background: "rgba(255,255,255,0.04)",
+              background: "var(--c-input-fill)",
               border: "1px solid " + (statePickerOpen ? C.accentBorder : C.border),
               borderRadius: 8,
               padding: "9px 12px",
@@ -585,7 +585,7 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
                               type="button"
                               onClick={function () { toggleState(s); }}
                               style={{
-                                background: on ? "rgba(124,92,191,0.2)" : "rgba(255,255,255,0.04)",
+                                background: on ? "rgba(124,92,191,0.2)" : "var(--c-input-fill)",
                                 color: on ? C.purple : C.textMuted,
                                 border: "1px solid " + (on ? "rgba(124,92,191,0.4)" : C.border),
                                 borderRadius: 5,

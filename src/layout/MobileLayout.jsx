@@ -6,7 +6,7 @@ import { PipOrb } from "../components/PipMark";
 import { AmberBtn } from "../components/Buttons";
 import { UserMenu } from "../components/UserMenu";
 import { ConnectionStatus } from "../components/ConnectionStatus";
-import { NavMark } from "../components/NavMark";
+import { Mark } from "../components/Mark";
 import { FirstRunTooltip } from "../components/Tooltip";
 
 var MONO = "'JetBrains Mono', ui-monospace, monospace";
@@ -52,10 +52,11 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
         background: C.bg,
       }}
     >
-      {/* Mobile header */}
+      {/* Mobile header — Mist in light mode via --c-rail-bg token */}
       <div
+        className="app-rail"
         style={{
-          background: C.surface,
+          background: "var(--c-rail-bg)",
           borderBottom: "1px solid " + C.rule,
           padding: "max(14px, env(safe-area-inset-top)) 18px 12px",
           position: "sticky",
@@ -183,14 +184,15 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
         </>
       )}
 
-      {/* Bottom nav */}
+      {/* Bottom nav — Mist in light mode via --c-rail-bg token */}
       <div
+        className="app-rail"
         style={{
           position: "fixed",
           bottom: 0,
           left: 0,
           right: 0,
-          background: C.surface,
+          background: "var(--c-rail-bg)",
           borderTop: "1px solid " + C.rule,
           padding: "8px 16px max(12px, env(safe-area-inset-bottom))",
           zIndex: 50,
@@ -250,11 +252,10 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
               >
                 <span style={{
                   display: "inline-flex", alignItems: "center", justifyContent: "center",
-                  width: 18, height: 18,
-                  color: active ? (isGauge ? C.blue : C.accent) : C.textMuted,
+                  width: 22, height: 22, flexShrink: 0,
                   opacity: active ? 1 : 0.78,
                 }}>
-                  <NavMark id={item.id} size={17} />
+                  <Mark tab={item.id} size={22} active={active} />
                 </span>
                 {displayLabel}
                 {isWorkspaces && (
