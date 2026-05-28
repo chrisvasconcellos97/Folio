@@ -1,26 +1,20 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { C } from "../lib/colors";
 import { PipOrb } from "./PipMark";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
 
-function todayKey() {
-  return "folio_banner_dismissed_" + new Date().toISOString().split("T")[0];
-}
-
 export function StatusBanner({ accounts, items, meetings, onColdClick, onOverdueClick, onFollowUpClick }) {
-  var [dismissed, setDismissed] = useState(function () {
-    try { return !!localStorage.getItem(todayKey()); } catch (e) { return false; }
-  });
-
-  useEffect(function () {
-    function handleStorage() {
-      try { setDismissed(!!localStorage.getItem(todayKey())); } catch (e) {}
-    }
-    window.addEventListener("storage", handleStorage);
-    return function () { window.removeEventListener("storage", handleStorage); };
-  }, []);
+  // Session-only dismiss — reloading brings the card back.
+  // Also purge any leftover per-day dismiss flags from the previous behavior
+  // so users who already tapped × today don't stay stuck.
+  try {
+    Object.keys(localStorage).forEach(function (k) {
+      if (k.indexOf("folio_banner_dismissed_") === 0) localStorage.removeItem(k);
+    });
+  } catch (e) {}
+  var [dismissed, setDismissed] = useState(false);
 
   var stats = useMemo(function () {
     var now      = Date.now();
@@ -50,7 +44,6 @@ export function StatusBanner({ accounts, items, meetings, onColdClick, onOverdue
   if (stats.cold === 0 && stats.overdue === 0 && stats.followUps === 0) return null;
 
   function dismiss() {
-    try { localStorage.setItem(todayKey(), "1"); } catch (e) {}
     setDismissed(true);
   }
 
@@ -101,7 +94,7 @@ export function StatusBanner({ accounts, items, meetings, onColdClick, onOverdue
         <button
           onClick={dismiss}
           aria-label="Dismiss"
-          title="Dismiss for today"
+          title="Hide until next reload"
           style={{
             background: "none", border: "none", color: C.textMuted,
             cursor: "pointer", fontSize: 16, lineHeight: 1, padding: "0 4px",
