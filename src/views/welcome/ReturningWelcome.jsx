@@ -90,7 +90,9 @@ export function ReturningWelcome({ userId, userName, accountCount, onDismiss }) 
       onClick={loaded ? onDismiss : undefined}
       style={{
         position: "fixed", inset: 0, zIndex: 1000,
-        background: "radial-gradient(ellipse at center, oklch(0.18 0.04 178 / 0.25) 0%, transparent 60%), #07100f",
+        // Theme-aware: gradient anchors on the bg token so the splash works
+        // on both palettes (cream radial in light, deep teal in dark).
+        background: "radial-gradient(ellipse at center, oklch(0.72 0.12 178 / 0.18) 0%, transparent 60%), " + C.bg,
         display: "flex", flexDirection: "column",
         alignItems: "center", justifyContent: "center",
         padding: "40px 32px",

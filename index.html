@@ -3,25 +3,44 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#07100f" />
+    <meta name="theme-color" content="#07100f" id="meta-theme-color" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Folios" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <title>Folios — Account Management</title>
+    <script>
+      // Apply theme before stylesheet/React render to avoid flash-of-wrong-theme.
+      (function () {
+        try {
+          var t = localStorage.getItem("folio_theme");
+          if (t !== "light" && t !== "dark") t = "dark";
+          document.documentElement.dataset.theme = t;
+          var meta = document.getElementById("meta-theme-color");
+          if (meta) meta.setAttribute("content", t === "light" ? "#f6f4ef" : "#07100f");
+        } catch (e) {
+          document.documentElement.dataset.theme = "dark";
+        }
+      })();
+    </script>
     <style>
       * { box-sizing: border-box; margin: 0; padding: 0; }
       body {
         font-family: 'Inter', system-ui, sans-serif;
-        background: #07100f;
-        color: #e7ece9;
+        background: var(--c-bg);
+        color: var(--c-text);
         -webkit-font-smoothing: antialiased;
         font-size: 14px;
         line-height: 1.5;
       }
 
-      /* CSS custom properties for oklch accent */
-      :root {
+      /* ── Theme palettes ────────────────────────────────────────────────
+         Tokens read by src/lib/colors.js (`C`) and by inline styles via
+         CSS vars. Light values come from .claude/light-theme-spec.md. */
+
+      /* Default = dark (also explicitly :root[data-theme="dark"]) */
+      :root, :root[data-theme="dark"] {
+        /* Legacy accent var names — kept for components reading `--accent*` directly */
         --accent:        oklch(0.72 0.12 178);
         --accent-deep:   oklch(0.62 0.13 178);
         --accent-dim:    oklch(0.45 0.10 178);
@@ -44,6 +63,235 @@
         --serif: 'Fraunces', Georgia, serif;
         --sans:  'Inter', system-ui, sans-serif;
         --mono:  'JetBrains Mono', ui-monospace, monospace;
+
+        /* ── Tokens consumed by `C` in src/lib/colors.js ── */
+        --c-bg:           #07100f;
+        --c-surface:      #0c1615;
+        --c-surface-2:    #11201e;
+        --c-surface-3:    #162927;
+        --c-bg-dropdown:  #1a2b28;
+        --c-bg-pill-active: oklch(0.22 0.04 178 / 0.5);
+
+        --c-accent:       #4db896;
+        --c-accent-deep:  #2d8f70;
+        --c-accent-dim:   #1a5c47;
+        --c-accent-glow:  rgba(77,184,150,0.14);
+        --c-accent-glow-2:rgba(77,184,150,0.22);
+        --c-accent-faint: rgba(77,184,150,0.08);
+        --c-accent-mid:   rgba(77,184,150,0.15);
+        --c-accent-subtle:rgba(77,184,150,0.30);
+        --c-accent-line:  rgba(77,184,150,0.2);
+        --c-accent-ring:  rgba(77,184,150,0.35);
+        --c-accent-border:rgba(77,184,150,0.42);
+        --c-accent-shadow:rgba(77,184,150,0.55);
+
+        --c-rule:         #1c2c2a;
+        --c-rule-soft:    #15201f;
+
+        --c-green:  #4db896;
+        --c-yellow: #d4932a;
+        --c-red:    #c85a3e;
+        --c-blue:   #5b8fd4;
+        --c-purple: #7B6CF6;
+
+        --c-red-faint:    rgba(200,90,62,0.12);
+        --c-red-line:     rgba(200,90,62,0.2);
+        --c-yellow-faint: rgba(212,147,42,0.12);
+        --c-blue-faint:   rgba(91,143,212,0.12);
+        --c-blue-line:    rgba(91,143,212,0.2);
+
+        --c-status-planned-text:    #7ab0e8;
+        --c-status-planned-bg:      rgba(40,60,110,0.5);
+        --c-status-planned-border:  #4a80c8;
+        --c-status-progress-text:   #4db896;
+        --c-status-progress-bg:     rgba(30,70,55,0.5);
+        --c-status-progress-border: rgba(77,184,150,0.42);
+        --c-status-blocked-text:    #e06040;
+        --c-status-blocked-bg:      rgba(80,30,20,0.5);
+        --c-status-blocked-border:  #b84830;
+        --c-status-onhold-text:     #7a8c8a;
+        --c-status-onhold-bg:       rgba(30,40,40,0.6);
+        --c-status-onhold-border:   #506060;
+        --c-status-complete-text:   #5dc890;
+        --c-status-complete-bg:     rgba(20,65,45,0.5);
+        --c-status-complete-border: #3a9060;
+
+        --c-text:        #e7ece9;
+        --c-text-soft:   #aebbb6;
+        --c-text-muted:  #6f7c79;
+        --c-text-faint:  #475251;
+
+        /* Glass — pip card + cadence event cards */
+        --c-glass-bg:     rgba(12,22,21,0.85);
+        --c-glass-border: rgba(255,255,255,0.05);
+        --c-glass-shadow: 0 4px 20px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
+
+        /* Tier surface tints (account cards) — dark uses background tint */
+        --c-tier-surface-major:  oklch(0.18 0.025 252);
+        --c-tier-surface-mid:    oklch(0.18 0.025 80);
+        --c-tier-surface-growth: oklch(0.18 0.030 10);
+        --c-tier-shadow-major:   transparent;
+        --c-tier-shadow-mid:     transparent;
+        --c-tier-shadow-growth:  transparent;
+
+        /* Cadence event tints — keyed parallel to TINT_BY_HEX entries */
+        --c-cadence-tint-accent: oklch(0.18 0.025 162);
+        --c-cadence-tint-green:  oklch(0.18 0.025 140);
+        --c-cadence-tint-blue:   oklch(0.18 0.025 252);
+        --c-cadence-tint-purple: oklch(0.18 0.030 295);
+        --c-cadence-tint-yellow: oklch(0.18 0.025 80);
+
+        /* Pip-card surface (Pip insight + status banner) */
+        --c-pip-card-bg: oklch(0.18 0.025 178 / 0.5);
+        --c-pip-card-shadow: none;
+
+        /* Tier text colors — same in dark, deeper in light */
+        --c-tier-major:    #5b8fd4;
+        --c-tier-mid:      #d4932a;
+        --c-tier-growth:   #e879a8;
+        --c-tier-watching: #d4932a;
+        --c-tier-risk:     #c85a3e;
+      }
+
+      :root[data-theme="light"] {
+        /* Legacy accent var names — tuned for cream paper. The accent stays
+           teal; deep variant darkens for text/glyph legibility on warm paper. */
+        --accent:        oklch(0.72 0.12 178);
+        --accent-deep:   oklch(0.50 0.12 178);
+        --accent-dim:    oklch(0.40 0.10 178);
+        --accent-glow:   oklch(0.72 0.12 178 / 0.10);
+        --accent-glow-2: oklch(0.72 0.12 178 / 0.18);
+        --accent-border: oklch(0.72 0.12 178 / 0.42);
+        --accent-shadow: oklch(0.72 0.16 178 / 0.55);
+        --warn:  oklch(0.62 0.13 44);
+        --alert: oklch(0.58 0.16 28);
+        --gauge: oklch(0.58 0.12 232);
+        --bg:        #f6f4ef;
+        --surface:   #ffffff;
+        --surface-2: #fafaf6;
+        --surface-3: #efeadc;
+        --rule:      #e3ddcd;
+        --text:      #18201d;
+        --text-soft: #545d59;
+        --text-mute: #8b918d;
+        --text-faint:#b3b6ad;
+        --serif: 'Fraunces', Georgia, serif;
+        --sans:  'Inter', system-ui, sans-serif;
+        --mono:  'JetBrains Mono', ui-monospace, monospace;
+
+        /* ── Tokens consumed by `C` in src/lib/colors.js ──
+           Per spec: cream canvas, paper elevation, pulp warm beige, mist sidebar */
+        --c-bg:           #f6f4ef;
+        --c-surface:      #ffffff;
+        --c-surface-2:    #fafaf6;
+        --c-surface-3:    #efeadc;
+        --c-bg-dropdown:  #ffffff;
+        --c-bg-pill-active: oklch(0.72 0.12 178 / 0.12);
+
+        --c-accent:       oklch(0.72 0.12 178);
+        --c-accent-deep:  oklch(0.50 0.12 178);
+        --c-accent-dim:   oklch(0.40 0.10 178);
+        --c-accent-glow:  oklch(0.72 0.12 178 / 0.10);
+        --c-accent-glow-2:oklch(0.72 0.12 178 / 0.18);
+        --c-accent-faint: oklch(0.72 0.12 178 / 0.08);
+        --c-accent-mid:   oklch(0.72 0.12 178 / 0.15);
+        --c-accent-subtle:oklch(0.72 0.12 178 / 0.28);
+        --c-accent-line:  oklch(0.72 0.12 178 / 0.30);
+        --c-accent-ring:  oklch(0.72 0.12 178 / 0.40);
+        --c-accent-border:oklch(0.72 0.12 178 / 0.42);
+        --c-accent-shadow:oklch(0.72 0.16 178 / 0.55);
+
+        --c-rule:         #e3ddcd;
+        --c-rule-soft:    #ece6d6;
+
+        /* Status colors — deeper, lower-chroma versions for cream */
+        --c-green:  oklch(0.55 0.13 162);
+        --c-yellow: oklch(0.62 0.13 72);
+        --c-red:    oklch(0.55 0.16 28);
+        --c-blue:   oklch(0.50 0.13 252);
+        --c-purple: oklch(0.55 0.16 295);
+
+        --c-red-faint:    oklch(0.55 0.16 28 / 0.12);
+        --c-red-line:     oklch(0.55 0.16 28 / 0.30);
+        --c-yellow-faint: oklch(0.62 0.13 72 / 0.14);
+        --c-blue-faint:   oklch(0.50 0.13 252 / 0.12);
+        --c-blue-line:    oklch(0.50 0.13 252 / 0.30);
+
+        /* Gauge status pills — lighter, paper-friendly */
+        --c-status-planned-text:    oklch(0.40 0.13 252);
+        --c-status-planned-bg:      oklch(0.50 0.13 252 / 0.10);
+        --c-status-planned-border:  oklch(0.50 0.13 252 / 0.40);
+        --c-status-progress-text:   oklch(0.45 0.12 178);
+        --c-status-progress-bg:     oklch(0.72 0.12 178 / 0.10);
+        --c-status-progress-border: oklch(0.72 0.12 178 / 0.42);
+        --c-status-blocked-text:    oklch(0.45 0.16 28);
+        --c-status-blocked-bg:      oklch(0.55 0.16 28 / 0.10);
+        --c-status-blocked-border:  oklch(0.55 0.16 28 / 0.40);
+        --c-status-onhold-text:     oklch(0.45 0.01 178);
+        --c-status-onhold-bg:       oklch(0.85 0.01 178 / 0.40);
+        --c-status-onhold-border:   oklch(0.75 0.01 178 / 0.50);
+        --c-status-complete-text:   oklch(0.45 0.13 162);
+        --c-status-complete-bg:     oklch(0.55 0.13 162 / 0.12);
+        --c-status-complete-border: oklch(0.55 0.13 162 / 0.42);
+
+        --c-text:        #18201d;
+        --c-text-soft:   #545d59;
+        --c-text-muted:  #8b918d;
+        --c-text-faint:  #b3b6ad;
+
+        /* Glass — light analog: warm paper translucency */
+        --c-glass-bg:     rgba(255,255,255,0.85);
+        --c-glass-border: #e3ddcd;
+        --c-glass-shadow: 0 1px 2px rgba(20,25,22,0.04), 0 4px 14px -6px rgba(20,25,22,0.06);
+
+        /* Tier surface tints — light mode keeps PAPER background and adds a
+           tier-colored halo glow from the left edge (spec §The Depth System).
+           So the surface var stays white; the shadow var carries the halo. */
+        --c-tier-surface-major:  #ffffff;
+        --c-tier-surface-mid:    #ffffff;
+        --c-tier-surface-growth: #ffffff;
+        --c-tier-shadow-major:   -6px 0 18px -4px oklch(0.46 0.10 260 / 0.45);
+        --c-tier-shadow-mid:     -6px 0 18px -4px oklch(0.58 0.10 72 / 0.45);
+        --c-tier-shadow-growth:  -6px 0 18px -4px oklch(0.52 0.11 355 / 0.45);
+
+        /* Cadence event tints — light uses gentle paper-tones with hue hint */
+        --c-cadence-tint-accent: oklch(0.97 0.015 162);
+        --c-cadence-tint-green:  oklch(0.97 0.015 140);
+        --c-cadence-tint-blue:   oklch(0.97 0.015 252);
+        --c-cadence-tint-purple: oklch(0.97 0.020 295);
+        --c-cadence-tint-yellow: oklch(0.97 0.025 80);
+
+        /* Pip-card surface — soft teal wash + teal shadow halo (spec §4) */
+        --c-pip-card-bg: oklch(0.72 0.12 178 / 0.06);
+        --c-pip-card-shadow: 0 1px 2px rgba(20,25,22,0.04), 0 8px 22px -6px oklch(0.72 0.16 178 / 0.35);
+
+        /* Tier text colors — deeper, lower-chroma per spec */
+        --c-tier-major:    oklch(0.46 0.10 260);
+        --c-tier-mid:      oklch(0.58 0.10 72);
+        --c-tier-growth:   oklch(0.52 0.11 355);
+        --c-tier-watching: oklch(0.50 0.11 178);
+        --c-tier-risk:     oklch(0.50 0.13 30);
+
+        /* Folio folder mark — light variant uses pulp/paper layered fills */
+        --c-folio-mark-back:          oklch(0.85 0.015 178);
+        --c-folio-mark-tab:           oklch(0.88 0.018 178);
+        --c-folio-mark-front:         oklch(0.92 0.02 178);
+        --c-folio-mark-stroke:        oklch(0.55 0.04 178);
+        --c-folio-mark-stroke-bright: oklch(0.45 0.05 178);
+      }
+
+      /* Light-only effects (spec §The Depth System + §Animation):
+         hover-lift on cards, mark pulse on active tab. Gated to light so dark
+         renders unchanged. Honor reduced-motion users. */
+      @media (prefers-reduced-motion: no-preference) {
+        :root[data-theme="light"] .acct-card,
+        :root[data-theme="light"] .hover-lift {
+          transition: transform .18s ease, box-shadow .25s ease;
+        }
+        :root[data-theme="light"] .acct-card:hover,
+        :root[data-theme="light"] .hover-lift:hover {
+          transform: translateY(-2px);
+        }
       }
 
       /* Canonical Pip orb */
@@ -92,9 +340,9 @@
       /* Folio folder mark */
       .folio-mark { display: inline-block; position: relative; line-height: 0; }
       .folio-mark svg { display: block; }
-      .folio-mark .fm-folder-back  { fill: oklch(0.16 0.02 178); stroke: oklch(0.30 0.03 178); stroke-width: 1; }
-      .folio-mark .fm-folder-tab   { fill: oklch(0.20 0.025 178); stroke: oklch(0.30 0.03 178); stroke-width: 1; }
-      .folio-mark .fm-folder-front { fill: oklch(0.22 0.03 178); stroke: oklch(0.36 0.04 178); stroke-width: 1; }
+      .folio-mark .fm-folder-back  { fill: var(--c-folio-mark-back, oklch(0.16 0.02 178));  stroke: var(--c-folio-mark-stroke, oklch(0.30 0.03 178)); stroke-width: 1; }
+      .folio-mark .fm-folder-tab   { fill: var(--c-folio-mark-tab,  oklch(0.20 0.025 178)); stroke: var(--c-folio-mark-stroke, oklch(0.30 0.03 178)); stroke-width: 1; }
+      .folio-mark .fm-folder-front { fill: var(--c-folio-mark-front,oklch(0.22 0.03 178));  stroke: var(--c-folio-mark-stroke-bright, oklch(0.36 0.04 178)); stroke-width: 1; }
       .folio-mark .fm-folder-edge  { stroke: var(--accent-border); stroke-width: 0.8; fill: none; opacity: 0.55; }
       .folio-mark .fm-orb-glow,
       .folio-mark .fm-orb-ring,

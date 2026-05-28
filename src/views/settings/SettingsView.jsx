@@ -8,6 +8,7 @@ import { showToast } from "../../components/Toast";
 import { supabase } from "../../lib/supabase";
 import { usePipFacts } from "../../hooks/usePipFacts";
 import { usePipUsage } from "../../hooks/usePipUsage";
+import { useTheme } from "../../hooks/useTheme";
 
 var PIP_FACT_PLACEHOLDERS = [
   "Prefer concise replies",
@@ -455,6 +456,58 @@ function PipUsageSection({ userId }) {
 var SETTINGS_MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var SETTINGS_SERIF = "'Fraunces', Georgia, serif";
 
+function AppearanceSection() {
+  var t = useTheme();
+  var options = [
+    { id: "dark",  label: "Dark",  hint: "Default — deep teal" },
+    { id: "light", label: "Light", hint: "Cream paper" },
+  ];
+  return (
+    <Card>
+      <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 6 }}>Appearance</div>
+      <div style={{ fontSize: 13, color: C.textSub, lineHeight: 1.6, marginBottom: 14 }}>
+        Choose how Folios looks. Switches instantly, sticks across sessions.
+      </div>
+      <div role="radiogroup" aria-label="Theme" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        {options.map(function (o) {
+          var active = t.theme === o.id;
+          return (
+            <button
+              key={o.id}
+              role="radio"
+              aria-checked={active}
+              onClick={function () { t.setTheme(o.id); }}
+              style={{
+                textAlign: "left",
+                background: active ? C.accentFaint : "transparent",
+                border: "1px solid " + (active ? C.accentBorder : C.rule),
+                borderRadius: 10,
+                padding: "12px 14px",
+                cursor: "pointer",
+                fontFamily: "'Inter', system-ui, sans-serif",
+                transition: "background 0.18s ease, border-color 0.18s ease",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+                <span aria-hidden="true" style={{
+                  display: "inline-block", width: 14, height: 14, borderRadius: "50%",
+                  background: o.id === "dark" ? "#0c1615" : "#f6f4ef",
+                  border: "1px solid " + (o.id === "dark" ? "#1c2c2a" : "#e3ddcd"),
+                  boxShadow: active ? "0 0 0 2px " + C.accentBorder : "none",
+                }} />
+                <div style={{ fontSize: 13, fontWeight: 600, color: active ? C.accent : C.text }}>{o.label}</div>
+              </div>
+              <div style={{ fontSize: 11, color: C.textMuted, fontFamily: SETTINGS_MONO, textTransform: "uppercase", letterSpacing: "0.07em" }}>
+                {o.hint}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </Card>
+  );
+}
+
 export function SettingsView({ userId, userMeta, org, role, members, pendingInvites, onCreateOrg, onInvite, onRevoke }) {
   return (
     <div style={{ maxWidth: 600, margin: "0 auto", padding: "8px 0 40px" }}>
@@ -463,11 +516,13 @@ export function SettingsView({ userId, userMeta, org, role, members, pendingInvi
           Settings
         </div>
         <div style={{ fontFamily: SETTINGS_MONO, fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", marginTop: 4 }}>
-          Profile · Team · Org
+          Profile · Team · Org · Appearance
         </div>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <AppearanceSection />
+
         <ProfileSection userMeta={userMeta} />
 
         {userId && <PipPrefsSection userId={userId} />}

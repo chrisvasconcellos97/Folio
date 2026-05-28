@@ -37,6 +37,34 @@ Chris has burned cycles on "fixes" that compiled clean but didn't actually fire 
 
 This rule applies to me (Claude) AND to Patch when spawned for batch builds.
 
+## Theme Rule
+
+Folios supports two themes — **dark** (default) and **light**. Any new
+UI work MUST support both:
+
+1. **Use the `C` token from `src/lib/colors.js`** — never hardcode hex or
+   rgba values for colors that have a token. If a token doesn't exist for
+   your need, add it to both palettes in `index.html`'s CSS-vars block
+   AND to `colors.js`.
+2. **Light-only or dark-only effects** (animations, shadows, halos) must
+   be scoped via `[data-theme="light"]` or `[data-theme="dark"]` so the
+   other theme renders correctly.
+3. **Before claiming a feature done, manually toggle the theme** and
+   confirm both palettes render correctly. The toggle lives in Settings →
+   Appearance.
+4. **The dark theme is canonical for layout decisions; the light theme
+   is the spec'd translation.** Light-mode-specific behaviors (hover
+   lifts, mark pulse) are part of the light spec — don't backport to
+   dark without an explicit instruction.
+
+Mechanics: the palette swap happens via CSS custom properties on
+`<html data-theme="…">`. The values live in `index.html`; `src/lib/colors.js`
+exports a `C` object whose every property is a `var(--…)` reference, so all
+inline `style={{ background: C.surface }}` consumers re-theme instantly with
+no remount. Pre-mount theme application is done by an inline `<script>` in
+`index.html` (no flash-of-wrong-theme). `useTheme()` reads/writes the
+choice, persisting to `localStorage.folio_theme`.
+
 ## Font Rule
 **Never use Google Fonts CDN.** All fonts must be self-hosted via `@fontsource-variable` packages installed through npm and imported in `src/main.jsx`. Google Fonts calls get blocked by corporate network proxies. Current fonts: `@fontsource-variable/inter`, `@fontsource-variable/fraunces`, `@fontsource-variable/jetbrains-mono`.
 

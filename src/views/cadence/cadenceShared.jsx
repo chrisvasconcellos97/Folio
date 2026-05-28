@@ -6,14 +6,15 @@ var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 
 export var ACCOUNT_COLORS = [C.accent, C.green, C.blue, C.purple];
 
-// Matched dark tints (L≈0.18, low chroma) per accent color — same family
-// as the account-card tier tints. Keyed by the hex value of the accent.
+// Per-accent surface tints, theme-aware via CSS vars. Dark uses L≈0.18
+// hue-shifted backgrounds; light uses L≈0.97 paper-tone washes. Keyed by
+// the C-token reference string so the lookup is stable across themes.
 var TINT_BY_HEX = {};
-TINT_BY_HEX[C.accent] = "oklch(0.18 0.025 162)";   // teal-green
-TINT_BY_HEX[C.green]  = "oklch(0.18 0.025 140)";   // green
-TINT_BY_HEX[C.blue]   = "oklch(0.18 0.025 252)";   // blue
-TINT_BY_HEX[C.purple] = "oklch(0.18 0.030 295)";   // purple
-TINT_BY_HEX[C.yellow] = "oklch(0.18 0.025 80)";    // yellow (tasks)
+TINT_BY_HEX[C.accent] = "var(--c-cadence-tint-accent)";
+TINT_BY_HEX[C.green]  = "var(--c-cadence-tint-green)";
+TINT_BY_HEX[C.blue]   = "var(--c-cadence-tint-blue)";
+TINT_BY_HEX[C.purple] = "var(--c-cadence-tint-purple)";
+TINT_BY_HEX[C.yellow] = "var(--c-cadence-tint-yellow)";
 
 export function accountColor(id) {
   if (!id) return C.accent;

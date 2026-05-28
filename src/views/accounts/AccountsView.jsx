@@ -30,15 +30,24 @@ function saveSearchHistory(query) {
 
 var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red };
 var STATUS_LABELS = { green: "Healthy", yellow: "Watch",  red: "At Risk" };
-var TIER_COLORS   = { Major: C.blue, Mid: C.yellow, Growth: "#e879a8" };
+// Tier accent colors — route through CSS vars so light theme can ship deeper
+// hues per the light-theme spec (warm ochre, deep rose, indigo).
+var TIER_COLORS   = { Major: "var(--c-tier-major)", Mid: "var(--c-tier-mid)", Growth: "var(--c-tier-growth)" };
 var TIER_ORDER    = { Major: 1, Mid: 2, Growth: 3 };
 
-// Whole-card surface tint per tier — same darkness as C.surface (L≈0.18),
-// just a subtle hue shift so the card reads as "barely that color".
+// Whole-card surface tint per tier — dark theme uses a subtle hue-shifted
+// background (L≈0.18). Light theme keeps the card on PAPER and projects a
+// tier-colored halo glow from the left edge instead (spec §Depth System).
+// Both paths resolve through CSS vars defined in index.html.
 var TIER_SURFACE = {
-  Major:  "oklch(0.18 0.025 252)",
-  Mid:    "oklch(0.18 0.025 80)",
-  Growth: "oklch(0.18 0.030 10)",
+  Major:  "var(--c-tier-surface-major)",
+  Mid:    "var(--c-tier-surface-mid)",
+  Growth: "var(--c-tier-surface-growth)",
+};
+var TIER_SHADOW = {
+  Major:  "var(--c-tier-shadow-major)",
+  Mid:    "var(--c-tier-shadow-mid)",
+  Growth: "var(--c-tier-shadow-growth)",
 };
 
 var FILTERS = ["All", "Major", "Mid", "Growth", "Watching", "At Risk"];
@@ -825,9 +834,14 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
           }
 
           var isCompact = density === "compact";
+          // Light theme: project a tier-colored halo from the left edge in
+          // lieu of a tinted background (spec §Depth System). In dark mode
+          // TIER_SHADOW resolves to `transparent` via CSS vars.
+          var tierShadow = TIER_SHADOW[a.tier];
           var card = (
             <div
               onClick={function () { onSelect(a); }}
+              className="acct-card"
               role="button"
               tabIndex={0}
               onKeyDown={function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(a); } }}
@@ -841,6 +855,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                 cursor: "pointer",
                 userSelect: "none",
                 transition: "opacity 0.12s",
+                boxShadow: tierShadow || undefined,
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>

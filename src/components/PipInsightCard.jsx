@@ -11,11 +11,14 @@ export function PipInsightCard({ text, segments }) {
   if (!body) return null;
   return (
     <div style={{
-      background: "oklch(0.18 0.025 178 / 0.5)",
+      // Theme-aware: dark uses a teal-tinted dark surface, light uses
+      // the spec's paper Pip-card surface + halo shadow (var resolves both).
+      background: "var(--c-pip-card-bg)",
       border: "1px solid " + C.accentBorder,
       borderRadius: 8,
       padding: "14px 16px",
       marginBottom: 4,
+      boxShadow: "var(--c-pip-card-shadow)",
     }}>
       <div style={{ display: "grid", gridTemplateColumns: "32px 1fr", gap: 10, alignItems: "start" }}>
         <PipOrb size="md" />
