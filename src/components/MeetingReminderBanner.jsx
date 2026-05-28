@@ -69,8 +69,8 @@ export function MeetingReminderBanner({ reminders, onDismiss, onOpen }) {
           to   { transform: translate(-50%, 0);     opacity: 1; }
         }
         @keyframes remindPillGlow {
-          0%, 100% { box-shadow: 0 0 0 1px ${tone.barColor}33, 0 8px 28px ${tone.barColor}26, 0 2px 8px rgba(0,0,0,0.25); }
-          50%      { box-shadow: 0 0 0 1px ${tone.barColor}55, 0 10px 36px ${tone.barColor}40, 0 2px 8px rgba(0,0,0,0.25); }
+          0%, 100% { box-shadow: 0 0 0 1px ${tone.barColor}, 0 0 18px ${tone.barColor}80, 0 0 36px ${tone.barColor}55, 0 6px 24px rgba(0,0,0,0.35); }
+          50%      { box-shadow: 0 0 0 1px ${tone.barColor}, 0 0 24px ${tone.barColor}aa, 0 0 48px ${tone.barColor}66, 0 6px 24px rgba(0,0,0,0.35); }
         }
       `}</style>
       <div
@@ -85,8 +85,8 @@ export function MeetingReminderBanner({ reminders, onDismiss, onOpen }) {
           alignItems: "center",
           gap: 12,
           padding: "7px 8px 7px 14px",
-          background: C.bgCard,
-          border: "1px solid " + tone.barColor + "55",
+          background: C.surface,
+          border: "1.5px solid " + tone.barColor,
           borderRadius: 999,
           maxWidth: "calc(100vw - 24px)",
           fontFamily: INTER,
