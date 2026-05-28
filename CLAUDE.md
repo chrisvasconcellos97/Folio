@@ -408,6 +408,15 @@ High and medium priority items are now in the **Pending Updates** queue above.
 - [ ] **Lanyard → Folios live sync** — post-conference notes flow into Folios automatically once auth is shared
 - [ ] **CRM integrations** — Salesforce / HubSpot sync
 - [ ] **Mobile app** — React Native wrapper or PWA improvements
+- [ ] **Revenue-impact Update Calendar / Change Log (still in design)** — Chris's idea (from a Google Sheet at his old job): log "things that could affect revenue" against accounts so revenue dips can be root-caused. Example flow: see Mar mid-month dip on a customer → check update log → "we updated their catalog Mar 15, that broke parts lookup." Honest gap: we only know about updates *we* made (or that the customer tells us about) — supplier-side changes and customer internal moves are blind spots unless logged manually.
+  - **Likely data model:** new `folio_account_updates` table — `update_date`, `update_type` (catalog / pricing / integration / product_launch / training / promo / external_event / other), `title`, `description`, `observed_impact` (positive / negative / mixed / unknown). Linked back to source via optional `gauge_project_id`.
+  - **Gauge integration (Chris's spitball, agreed):** checkbox on Gauge projects — "Revenue impact" — with a paired `update_type` dropdown. When a flagged project's status flips to `complete`, auto-insert a `folio_account_updates` row per affected account (preserves multi-account semantics). Manual entries still possible for non-Gauge events.
+  - **Display:** dedicated "Updates" tab on AccountDetail + small markers on the Overview revenue sparkline + Pipeline graph at each update_date. Pip insight: when revenue drops MoM, cross-reference any updates in the prior ±2-week window and call them out by name.
+  - **Open design call (Chris, May 2026):** scope is uncertain. Three nested versions to pick from before locking:
+    (1) Narrow — track only our actions. Auto from Gauge + manual entries. Honest about supplier-side blind spots.
+    (2) Wider — add an "external event" update_type so customer-mentioned supplier/internal changes get logged when discovered (Pip could auto-extract from meeting notes).
+    (3) Ambitious — supplier/customer feed (webhook / portal / email parser). Big lift, probably not v1.
+    Same `folio_account_updates` schema for all three; can start narrow and widen later without re-architecting. Re-visit when Chris is ready to lock scope — don't ship until then.
 
 ---
 
