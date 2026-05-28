@@ -29,6 +29,7 @@ var CadenceView    = lazy(function () { return import("./views/cadence/CadenceVi
 var GaugeView      = lazy(function () { return import("./views/gauge/GaugeView").then(function (m) { return { default: m.GaugeView }; }); });
 var RouteBuilder   = lazy(function () { return import("./views/routes/RouteBuilder").then(function (m) { return { default: m.RouteBuilder }; }); });
 var SettingsView   = lazy(function () { return import("./views/settings/SettingsView").then(function (m) { return { default: m.SettingsView }; }); });
+var TeamView       = lazy(function () { return import("./views/team/TeamView").then(function (m) { return { default: m.TeamView }; }); });
 var LeadershipView = lazy(function () { return import("./views/leadership/LeadershipView").then(function (m) { return { default: m.LeadershipView }; }); });
 var ObservabilityView = lazy(function () { return import("./views/observability/ObservabilityView").then(function (m) { return { default: m.ObservabilityView }; }); });
 import { DesktopLayout } from "./layout/DesktopLayout";
@@ -568,14 +569,22 @@ export default function App() {
     mainContent = (
       <SettingsView
         userId={userId}
-        userEmail={userEmail}
         userMeta={userMeta}
-        org={org}
         orgId={orgId}
         role={role}
         members={members}
-        pendingInvites={pendingInvites}
         accounts={accounts}
+      />
+    );
+  }
+
+  if (view === "team") {
+    mainContent = (
+      <TeamView
+        org={org}
+        role={role}
+        members={members}
+        pendingInvites={pendingInvites}
         onCreateOrg={createOrg}
         onInvite={inviteMember}
         onRevoke={revokeMember}

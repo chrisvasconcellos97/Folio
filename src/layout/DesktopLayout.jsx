@@ -19,7 +19,7 @@ var NAV_ITEMS = [
   { id: "cadence",     label: "Cadence",     icon: "↻"     },
   { id: "gauge",       label: "Gauge",       icon: "gauge" },
   { id: "pip",         label: "Pip",         icon: null    },
-  { id: "settings",    label: "Team",        icon: "◈"     },
+  { id: "team",        label: "Team",        icon: "◈"     },
   { id: "routes",      label: "Route",       icon: "⊕"     },
 ];
 

@@ -164,6 +164,10 @@ export var MARKS = {
 // Mobile uses the same accounts mark for the Workspaces tab so the
 // label-tracks-active-workspace pattern still reads sensibly.
 MARKS.workspaces = MARKS.accounts;
+// Team nav reuses the three-circle mark (originally on Settings) since
+// the glyph reads as "three people" cleanly. Settings will pick up a
+// dedicated gear glyph separately.
+MARKS.team = MARKS.settings;
 
 export function NavMark({ id, size }) {
   var render = MARKS[id];

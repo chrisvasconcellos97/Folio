@@ -60,7 +60,7 @@ function ProfileSection({ userMeta }) {
   );
 }
 
-function CreateOrgSection({ onCreateOrg }) {
+export function CreateOrgSection({ onCreateOrg }) {
   var [orgName, setOrgName] = useState("");
   var [creating, setCreating] = useState(false);
 
@@ -101,7 +101,7 @@ function CreateOrgSection({ onCreateOrg }) {
   );
 }
 
-function TeamSection({ org, role, members, pendingInvites, onInvite, onRevoke, onArchiveMember, onReactivateMember }) {
+export function TeamSection({ org, role, members, pendingInvites, onInvite, onRevoke, onArchiveMember, onReactivateMember }) {
   var [email, setEmail]         = useState("");
   var [inviteRole, setInviteRole] = useState("member");
   var [inviting, setInviting]   = useState(false);
@@ -1131,7 +1131,7 @@ function AppearanceSection() {
   );
 }
 
-export function SettingsView({ userId, userMeta, org, orgId, role, members, pendingInvites, accounts, onCreateOrg, onInvite, onRevoke, onArchiveMember, onReactivateMember }) {
+export function SettingsView({ userId, userMeta, orgId, role, members, accounts }) {
   return (
     <div style={{ maxWidth: 600, margin: "0 auto", padding: "8px 0 40px" }}>
       <div style={{ marginBottom: 24, display: "flex", alignItems: "center", gap: 14 }}>
@@ -1143,7 +1143,7 @@ export function SettingsView({ userId, userMeta, org, orgId, role, members, pend
             Settings
           </div>
           <div style={{ fontFamily: SETTINGS_MONO, fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", marginTop: 4 }}>
-            Profile · Team · Org · Appearance
+            Appearance · Notifications · Profile · Pip · Activity
           </div>
         </div>
       </div>
@@ -1169,20 +1169,6 @@ export function SettingsView({ userId, userMeta, org, orgId, role, members, pend
           />
         )}
 
-        {org ? (
-          <TeamSection
-            org={org}
-            role={role}
-            members={members}
-            pendingInvites={pendingInvites}
-            onInvite={onInvite}
-            onRevoke={onRevoke}
-            onArchiveMember={onArchiveMember}
-            onReactivateMember={onReactivateMember}
-          />
-        ) : (
-          <CreateOrgSection onCreateOrg={onCreateOrg} />
-        )}
       </div>
     </div>
   );
