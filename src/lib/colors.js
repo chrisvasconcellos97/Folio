@@ -64,6 +64,7 @@ export const C = {
 
   // ── Gauge status pill colors ──────────────────────────────────────────────
   // Each property uses CSS vars so the pills re-theme correctly.
+  statusDraft:      { text: "var(--c-status-draft-text)",      bg: "var(--c-status-draft-bg)",      border: "var(--c-status-draft-border)" },
   statusPlanned:    { text: "var(--c-status-planned-text)",    bg: "var(--c-status-planned-bg)",    border: "var(--c-status-planned-border)" },
   statusInProgress: { text: "var(--c-status-progress-text)",   bg: "var(--c-status-progress-bg)",   border: "var(--c-status-progress-border)" },
   statusBlocked:    { text: "var(--c-status-blocked-text)",    bg: "var(--c-status-blocked-bg)",    border: "var(--c-status-blocked-border)" },

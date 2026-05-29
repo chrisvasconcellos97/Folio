@@ -108,6 +108,58 @@ export function ProjectModal({
   var [newStageTitle, setNewStageTitle] = useState("");
   var [saving, setSaving]           = useState(false);
   var [confirmDel, setConfirmDel]   = useState(false);
+  var [confirmDraft, setConfirmDraft] = useState(false);
+
+  // Track whether the form has unsaved content so we can prompt on X-close
+  var defaultSchemaLen = defaultCustomFieldSchema().length;
+  var hasContent = (
+    title.trim() !== "" ||
+    description.trim() !== "" ||
+    stages.length > 0 ||
+    customFieldSchema.length > defaultSchemaLen
+  );
+
+  // Intercept close: if new project and has content, show draft prompt
+  function onCloseRequest() {
+    // Editing an existing project (including a draft being resumed) — just close
+    if (existing) { onClose(); return; }
+    if (hasContent) {
+      setConfirmDraft(true);
+    } else {
+      onClose();
+    }
+  }
+
+  // Save as draft and close
+  function handleSaveAsDraft() {
+    if (saving) return;
+    setSaving(true);
+    onSave({
+      title:         title.trim() || "Untitled Draft",
+      description:   description.trim() || null,
+      status:        "draft",
+      priority,
+      due_date:      dueDate || null,
+      start_date:    startDate || null,
+      account_id:    accountIds[0] || null,
+      account_ids:   accountIds,
+      scope,
+      assignee:      (scope === "team" && assigneeEmail) ? assigneeEmail : null,
+      requested_by:  requestedBy || null,
+      blocked_reason: null,
+      stages,
+      is_standing:   isStanding,
+      custom_field_schema: customFieldSchema,
+      task_status_columns: taskStatusColumns,
+    }).then(function () {
+      setSaving(false);
+      showToast("Draft saved");
+      onClose();
+    }).catch(function () {
+      setSaving(false);
+      showToast("Couldn't save draft", "error");
+    });
+  }
 
   // Contacts for Requested By (loaded when account_ids changes)
   var [contacts, setContacts]       = useState([]);
@@ -270,10 +322,12 @@ export function ProjectModal({
     if (!title.trim() || saving) return;
     if (status === "blocked" && !blockedReason.trim()) return;
     setSaving(true);
+    // If this is a draft being promoted via the Save button, bump to "planned"
+    var saveStatus = status === "draft" ? "planned" : status;
     onSave({
       title:         title.trim(),
       description:   description.trim() || null,
-      status,
+      status:        saveStatus,
       priority,
       due_date:      dueDate || null,
       start_date:    startDate || null,
@@ -330,8 +384,13 @@ export function ProjectModal({
 
   var canSave = title.trim() && !(status === "blocked" && !blockedReason.trim());
 
+  // Title label: draft editing gets "Draft Project", otherwise Edit/New
+  var modalTitle = existing
+    ? (existing.status === "draft" ? "Draft Project" : "Edit Project")
+    : "New Project";
+
   return (
-    <Modal title={existing ? "Edit Project" : "New Project"} onClose={onClose} width={560}>
+    <Modal title={modalTitle} onClose={onCloseRequest} width={560}>
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
 
         {/* Title */}
@@ -902,6 +961,87 @@ export function ProjectModal({
           </div>
         )}
 
+        {/* Draft-on-close confirmation panel */}
+        {confirmDraft && (
+          <div style={{
+            background: C.yellowFaint,
+            border: "1px solid " + C.yellow,
+            borderRadius: 10,
+            padding: "14px 16px",
+            marginTop: 4,
+          }}>
+            <div style={{
+              fontFamily: "'Inter', system-ui, sans-serif",
+              fontSize: 13,
+              fontWeight: 600,
+              color: C.text,
+              marginBottom: 6,
+            }}>
+              Save this as a draft?
+            </div>
+            <div style={{
+              fontFamily: "'Inter', system-ui, sans-serif",
+              fontSize: 12,
+              color: C.textSoft,
+              lineHeight: 1.5,
+              marginBottom: 12,
+            }}>
+              You've started filling in this project. Save it as a draft so you can come back and finish it later.
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button
+                onClick={handleSaveAsDraft}
+                disabled={saving}
+                style={{
+                  background: C.yellow,
+                  border: "none",
+                  borderRadius: 20,
+                  padding: "7px 16px",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: C.bg,
+                  fontFamily: "'Inter', system-ui, sans-serif",
+                  cursor: saving ? "default" : "pointer",
+                  opacity: saving ? 0.6 : 1,
+                }}
+              >
+                {saving ? "Saving…" : "Save as draft"}
+              </button>
+              <button
+                onClick={onClose}
+                style={{
+                  background: "transparent",
+                  border: "1px solid " + C.rule,
+                  borderRadius: 20,
+                  padding: "7px 16px",
+                  fontSize: 12,
+                  fontWeight: 500,
+                  color: C.textMuted,
+                  fontFamily: "'Inter', system-ui, sans-serif",
+                  cursor: "pointer",
+                }}
+              >
+                Discard
+              </button>
+              <button
+                onClick={function () { setConfirmDraft(false); }}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  borderRadius: 20,
+                  padding: "7px 12px",
+                  fontSize: 12,
+                  color: C.textSoft,
+                  fontFamily: "'Inter', system-ui, sans-serif",
+                  cursor: "pointer",
+                }}
+              >
+                Keep editing
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Footer */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4, flexWrap: "wrap", gap: 8 }}>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
@@ -947,7 +1087,7 @@ export function ProjectModal({
               </button>
             )}
             <button
-              onClick={onClose}
+              onClick={onCloseRequest}
               style={{
                 background: "none", border: "1px solid " + C.border,
                 borderRadius: 20, padding: "8px 18px", fontSize: 12,
@@ -969,7 +1109,7 @@ export function ProjectModal({
                 cursor: !canSave || saving ? "default" : "pointer",
               }}
             >
-              {saving ? "Saving…" : existing ? "Save Changes" : "Add Project"}
+              {saving ? "Saving…" : existing ? (existing.status === "draft" ? "Publish Project" : "Save Changes") : "Add Project"}
             </button>
           </div>
         </div>

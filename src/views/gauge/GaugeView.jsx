@@ -28,6 +28,7 @@ var STATUS_COLORS = {
 };
 
 var STATUS_LABELS = {
+  draft:       "Draft",
   planned:     "Planned",
   in_progress: "In Progress",
   blocked:     "Blocked",
@@ -181,10 +182,11 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
     return byStatus;
   })();
 
-  // Dim complete to bottom
-  var activeFiltered   = filtered.filter(function (p) { return p.status !== "complete"; });
+  // Drafts float to top, complete sinks to bottom
+  var draftFiltered    = filtered.filter(function (p) { return p.status === "draft"; });
+  var activeFiltered   = filtered.filter(function (p) { return p.status !== "complete" && p.status !== "draft"; });
   var completeFiltered = filtered.filter(function (p) { return p.status === "complete"; });
-  var sortedFiltered   = activeFiltered.concat(completeFiltered);
+  var sortedFiltered   = draftFiltered.concat(activeFiltered).concat(completeFiltered);
 
   var totalCount      = projects.length;
   var inProgressCount = projects.filter(function (p) { return p.status === "in_progress"; }).length;
@@ -458,6 +460,7 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
       <div style={{ display: scopeFilter === "my_queue" ? "none" : "flex", flexDirection: "column", gap: 6 }}>
         {sortedFiltered.map(function (p) {
           var isComplete  = p.status === "complete";
+          var isDraft     = p.status === "draft";
           var overdue     = p.status === "in_progress" && isOverdue(p.due_date);
           var steps       = countSteps(p.stages);
           var pct         = steps.total > 0 ? Math.round((steps.done / steps.total) * 100) : 0;
@@ -482,11 +485,11 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
               className="hover-lift"
               style={{
                 background: C.surface,
-                border: "1px solid " + (p.status === "blocked" ? C.statusBlocked.border : C.rule),
-                borderLeft: leftEdge ? "3px solid " + leftEdge : "1px solid " + C.rule,
+                border: "1px solid " + (p.status === "blocked" ? C.statusBlocked.border : isDraft ? C.statusDraft.border : C.rule),
+                borderLeft: leftEdge ? "3px solid " + leftEdge : "1px solid " + (isDraft ? C.statusDraft.border : C.rule),
                 borderRadius: 8,
                 boxShadow: glow,
-                opacity: isComplete ? 0.45 : 1,
+                opacity: isComplete ? 0.45 : isDraft ? 0.65 : 1,
               }}
             >
             <div

@@ -350,7 +350,7 @@ create table if not exists gauge_projects (
   description    text,
   notes          text,
   status         text default 'planned'
-                 check (status in ('planned', 'in_progress', 'blocked', 'complete', 'on_hold')),
+                 check (status in ('draft', 'planned', 'in_progress', 'blocked', 'complete', 'on_hold')),
   priority       text default 'medium'
                  check (priority in ('high', 'medium', 'low')),
   due_date       date,
