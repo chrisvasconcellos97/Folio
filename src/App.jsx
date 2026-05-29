@@ -18,7 +18,6 @@ import { AddAccountModal } from "./views/accounts/AddAccountModal";
 import { StartConversationModal } from "./views/accounts/StartConversationModal";
 import { AdHocConversationFlow } from "./views/accounts/AdHocConversationFlow";
 import { OnboardingTour } from "./views/welcome/OnboardingTour";
-import { ReturningWelcome } from "./views/welcome/ReturningWelcome";
 import { PipLoader } from "./components/PipLoader";
 
 // Code-split heavy views — only fetched when navigated to. Cuts initial
@@ -60,7 +59,6 @@ export default function App() {
   var [editingAccount, setEditingAccount] = useState(null);
   var [pipPrefill, setPipPrefill]       = useState(null);
   var [showOnboarding, setShowOnboarding] = useState(false);
-  var [showReturning, setShowReturning]   = useState(false);
   var [pipTransition, setPipTransition] = useState("idle");
   var [showPalette, setShowPalette]     = useState(false);
   var [showStartConv, setShowStartConv] = useState(false);
@@ -68,7 +66,6 @@ export default function App() {
   var welcomeShown = useRef(false);
 
   function replayTour() {
-    setShowReturning(false);
     setShowOnboarding(true);
   }
 
@@ -110,10 +107,11 @@ export default function App() {
     var isNewUser   = createdAt >= featureDate;
     if (!onboarded && isNewUser) {
       setShowOnboarding(true);
-    } else {
-      if (!onboarded) localStorage.setItem("folio_onboarded_" + uid, "true");
-      setShowReturning(true);
+    } else if (!onboarded) {
+      localStorage.setItem("folio_onboarded_" + uid, "true");
     }
+    // ReturningWelcome was deprecated: the HomeView does the same job
+    // (Pip greeting + day orientation) without an extra modal step.
   }, [session]);
   useEffect(function() {
     function handleKeyDown(e) {
@@ -805,14 +803,6 @@ export default function App() {
             setShowOnboarding(false);
           }} />
         )}
-        {!showOnboarding && showReturning && (
-          <ReturningWelcome
-            userId={userId}
-            userName={userMeta ? userMeta.full_name : ""}
-            accountCount={accounts.length}
-            onDismiss={function () { setShowReturning(false); }}
-          />
-        )}
         {notifPrompt}
         {isDesktop && showPalette && (
           <CommandPalette
@@ -885,14 +875,6 @@ export default function App() {
           localStorage.setItem("folio_onboarded_" + userId, "true");
           setShowOnboarding(false);
         }} />
-      )}
-      {!showOnboarding && showReturning && (
-        <ReturningWelcome
-          userId={userId}
-          userName={userMeta ? userMeta.full_name : ""}
-          accountCount={accounts.length}
-          onDismiss={function () { setShowReturning(false); }}
-        />
       )}
       {notifPrompt}
     </>
