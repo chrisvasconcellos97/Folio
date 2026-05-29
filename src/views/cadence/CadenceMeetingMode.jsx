@@ -5,6 +5,9 @@ import { PipMark } from "../../components/PipMark";
 import { showToast } from "../../components/Toast";
 import { PipBriefPanel, HubProjectCard, OpenItemRow } from "./CadenceHub";
 import { useBreakpoint } from "../../hooks/useBreakpoint";
+import { useAutoBullet } from "../../lib/useAutoBullet";
+
+var BULLET_KEY = "folio_autobullet_meeting_mode";
 
 var INTER = "'Inter', system-ui, sans-serif";
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
@@ -123,6 +126,13 @@ export function CadenceMeetingMode({
   var isDesktop                         = useBreakpoint();
   var isMobile                          = !isDesktop;
   var [notes, setNotes]                 = useState(draft.notes || "");
+  var [bulletsOn, setBulletsOn]         = useState(function () {
+    try { var v = localStorage.getItem(BULLET_KEY); return v === null ? true : v === "1"; } catch (e) { return true; }
+  });
+  var bulletProps = useAutoBullet({ value: notes, onChange: setNotes, enabled: bulletsOn });
+  useEffect(function () {
+    try { localStorage.setItem(BULLET_KEY, bulletsOn ? "1" : "0"); } catch (e) {}
+  }, [bulletsOn]);
   // Start collapsed by default on mobile; the user can expand it if they want
   // to see the sidebar context. Below the desktop breakpoint the sidebar is
   // effectively hidden (44px icon-strip toggle) so the notepad gets the
@@ -540,19 +550,41 @@ export function CadenceMeetingMode({
               width: "100%", maxWidth: 920,
               display: "flex", flexDirection: "column",
             }}>
-              {!isMobile && (
-                <div style={{
-                  fontFamily: MONO, fontSize: 9.5, color: C.textMuted,
-                  textTransform: "uppercase", letterSpacing: "0.1em",
-                  marginBottom: 10,
-                }}>
-                  {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
-                </div>
-              )}
+              <div style={{
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+                marginBottom: 10, gap: 8,
+              }}>
+                {!isMobile ? (
+                  <div style={{
+                    fontFamily: MONO, fontSize: 9.5, color: C.textMuted,
+                    textTransform: "uppercase", letterSpacing: "0.1em",
+                  }}>
+                    {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+                  </div>
+                ) : <span />}
+                <button
+                  onClick={function () { setBulletsOn(function (v) { return !v; }); }}
+                  aria-pressed={bulletsOn}
+                  title="Auto-bullet new lines"
+                  style={{
+                    fontFamily: MONO, fontSize: 9.5,
+                    textTransform: "uppercase", letterSpacing: "0.08em",
+                    background: bulletsOn ? C.accentFaint : "transparent",
+                    color: bulletsOn ? C.accent : C.textMuted,
+                    border: "1px solid " + (bulletsOn ? C.accentLine : C.rule),
+                    borderRadius: 999, padding: "3px 10px",
+                    cursor: "pointer", flexShrink: 0,
+                  }}
+                >
+                  • Bullets {bulletsOn ? "on" : "off"}
+                </button>
+              </div>
               <textarea
                 ref={notesRef}
                 value={notes}
                 onChange={function (e) { setNotes(e.target.value); }}
+                onKeyDown={bulletProps.onKeyDown}
+                onFocus={bulletProps.onFocus}
                 placeholder="Start typing — Pip will summarize when you end the meeting…"
                 style={{
                   flex: 1, width: "100%",

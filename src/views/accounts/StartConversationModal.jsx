@@ -8,6 +8,9 @@ import { useBreakpoint } from "../../hooks/useBreakpoint";
 import { useContacts } from "../../hooks/useContacts";
 import { extractTouchpointActionsPip } from "../../lib/pip";
 import { showToast } from "../../components/Toast";
+import { useAutoBullet } from "../../lib/useAutoBullet";
+
+var BULLET_KEY = "folio_autobullet_quick_capture";
 
 var INTER = "'Inter', system-ui, sans-serif";
 
@@ -62,6 +65,13 @@ export function StartConversationModal({ accountId, accounts, userId, orgId, mem
   var [method, setMethod]   = useState("");
   var [date, setDate]       = useState(todayISO());
   var [quickNote, setQuickNote] = useState("");
+  var [bulletsOn, setBulletsOn] = useState(function () {
+    try { var v = localStorage.getItem(BULLET_KEY); return v === null ? true : v === "1"; } catch (e) { return true; }
+  });
+  useEffect(function () {
+    try { localStorage.setItem(BULLET_KEY, bulletsOn ? "1" : "0"); } catch (e) {}
+  }, [bulletsOn]);
+  var bulletProps = useAutoBullet({ value: quickNote, onChange: setQuickNote, enabled: bulletsOn });
   var [withContacts, setWithContacts] = useState([]); // contact names
   var [loading, setLoading] = useState(false);
   var [error, setError]     = useState(null);
@@ -404,13 +414,36 @@ export function StartConversationModal({ accountId, accounts, userId, orgId, mem
 
         {isQuickLog && phase === "compose" && (
           <div>
-            <FL htmlFor="start-conv-note">
-              What was it about? <span style={{ color: C.textMuted, fontWeight: 400 }}>(optional)</span>
-            </FL>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+              <FL htmlFor="start-conv-note">
+                What was it about? <span style={{ color: C.textMuted, fontWeight: 400 }}>(optional)</span>
+              </FL>
+              <button
+                type="button"
+                onClick={function () { setBulletsOn(function (v) { return !v; }); }}
+                aria-pressed={bulletsOn}
+                title="Auto-bullet new lines"
+                style={{
+                  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+                  fontSize: 9.5,
+                  textTransform: "uppercase", letterSpacing: "0.08em",
+                  background: bulletsOn ? C.accentFaint : "transparent",
+                  color: bulletsOn ? C.accent : C.textMuted,
+                  border: "1px solid " + (bulletsOn ? C.accentLine : C.rule),
+                  borderRadius: 999, padding: "3px 10px",
+                  cursor: "pointer", flexShrink: 0,
+                  marginBottom: 4,
+                }}
+              >
+                • Bullets {bulletsOn ? "on" : "off"}
+              </button>
+            </div>
             <TextArea
               id="start-conv-note"
               value={quickNote}
               onChange={function (e) { setQuickNote(e.target.value); }}
+              onKeyDown={bulletProps.onKeyDown}
+              onFocus={bulletProps.onFocus}
               placeholder="One or two lines — 'Adam confirmed deck, asked for follow-up Tue.'"
               rows={3}
               autoFocus
