@@ -611,6 +611,7 @@ export function CadenceHub({
   autoOpenMeetingMode,
   onAutoOpenMeetingModeConsumed,
   pipLessonsLearned,
+  pipAccountStateRow,
 }) {
   var [briefLoading, setBriefLoading] = useState(false);
   var [briefError, setBriefError]     = useState(null);
@@ -809,6 +810,7 @@ export function CadenceHub({
       glossary:          glossaryApi.entries,
       accountRoster:     accountRoster,
       accountType:       account.account_type || "standard",
+      pipAccountState:   pipAccountStateRow || null,
     }).then(function (out) {
       var followUp = out.follow_up_date || null;
       return updateMeeting(draftId, {
@@ -820,7 +822,7 @@ export function CadenceHub({
       }).then(function () { return out; });
     }).then(function (out) {
       setSummarizingId(null);
-      setPreviewPlan({ plan: out.plan || [], summary: out.summary || "", draftId: draftId });
+      setPreviewPlan({ plan: out.plan || [], summary: out.summary || "", draftId: draftId, skippedByPip: !!out.skippedByPip });
       // The meeting is already marked summarized; close meeting mode if it was open.
       if (meetingMode && meetingMode.draft && meetingMode.draft.id === draftId) {
         setMeetingMode(null);
@@ -1115,6 +1117,7 @@ export function CadenceHub({
       meetingId={previewPlan.draftId}
       accountRoster={accountRoster}
       currentAccountId={account.id}
+      skippedByPip={!!previewPlan.skippedByPip}
     />
   ) : null;
 

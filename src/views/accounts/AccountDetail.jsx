@@ -244,6 +244,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
       glossary:         glossaryApi.entries,
       accountRoster:    accountRoster,
       accountType:      account.account_type || "standard",
+      pipAccountState:  pipAcctState.getStateRow(account.id) || null,
     }).then(function (out) {
       var followUp = out.follow_up_date || null;
       return updateMeeting(draftPayload.id, {
@@ -255,7 +256,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
       }).then(function () { return out; });
     }).then(function (out) {
       setAdHocSummarizing(false);
-      setAdHocPreviewPlan({ plan: out.plan || [], summary: out.summary || "", draftId: draftPayload.id });
+      setAdHocPreviewPlan({ plan: out.plan || [], summary: out.summary || "", draftId: draftPayload.id, skippedByPip: !!out.skippedByPip });
     }).catch(function (err) {
       setAdHocSummarizing(false);
       setAdHocSummarizeErr((err && err.message) || "Pip couldn't summarize.");
@@ -352,6 +353,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
         autoOpenMeetingMode={autoOpenMeetingMode}
         onAutoOpenMeetingModeConsumed={onAutoOpenMeetingModeConsumed}
         pipLessonsLearned={(pipAcctState.getStateRow(account.id) || {}).lessons_learned || null}
+        pipAccountStateRow={pipAcctState.getStateRow(account.id) || null}
       />
     );
   }
@@ -605,6 +607,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
           meetingId={adHocPreviewPlan.draftId}
           accountRoster={accountRoster}
           currentAccountId={account.id}
+          skippedByPip={!!adHocPreviewPlan.skippedByPip}
         />
       )}
 

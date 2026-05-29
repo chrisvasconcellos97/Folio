@@ -840,6 +840,7 @@ export default function App() {
         userEmail={userEmail}
         orgId={orgId}
         onClose={function () { setAdHocFlow(null); }}
+        pipAccountStateRow={pipAcctStateApp.getStateRow(acct.id) || null}
       />
     );
   })();

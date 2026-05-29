@@ -279,11 +279,26 @@ export default async function handler(req, res) {
   var focusedAccountIds = Array.isArray(body.focusedAccountIds) ? body.focusedAccountIds : null;
   var facts = Array.isArray(body.facts) ? body.facts.filter(function (f) { return typeof f === "string"; }) : null;
 
+  // summarySystemBlocks — static schema/rules block sent by the client for
+  // summary mode. Each entry is { type: "text", text: "...", cache_control? }.
+  // When present, these replace the default PIP_STATIC_SYSTEM for summary mode
+  // so the schema spec (not the Pip persona) is what gets cached at BP1.
+  var summarySystemBlocks = (mode === "summary" && Array.isArray(body.summarySystemBlocks))
+    ? body.summarySystemBlocks : null;
+
+  // userContentBlocks — pre-structured content block array for the user message.
+  // When present (summary mode), the server uses it verbatim as message[0].content
+  // instead of building a string. Each entry may carry cache_control so stable
+  // layers get their own cache breakpoints.
+  var userContentBlocks = (mode === "summary" && Array.isArray(body.userContentBlocks) && body.userContentBlocks.length)
+    ? body.userContentBlocks : null;
+
   // Curate + render context as prose. Use the last user message as the resolver hint.
   var lastUserMsg = "";
   for (var i = rawMessages.length - 1; i >= 0; i--) {
     if (rawMessages[i].role === "user") {
-      lastUserMsg = String(rawMessages[i].content || rawMessages[i].text || "");
+      var mc = rawMessages[i].content || rawMessages[i].text || "";
+      lastUserMsg = typeof mc === "string" ? mc : (Array.isArray(mc) ? mc.map(function (b) { return b.text || ""; }).join(" ") : "");
       break;
     }
   }
@@ -294,13 +309,37 @@ export default async function handler(req, res) {
     contextProse = renderContextProse(curated);
   }
 
-  // History trim
-  var trimmed = trimHistory(rawMessages).map(function (m) {
-    return { role: m.role === "assistant" ? "assistant" : "user", content: m.content || m.text || "" };
-  });
+  var trimmed;
+  if (userContentBlocks) {
+    // summary mode with structured blocks — use them directly. Only single-turn
+    // for summarize so no history trim needed.
+    trimmed = [{ role: "user", content: userContentBlocks }];
+  } else {
+    // Standard path — flatten to strings.
+    trimmed = trimHistory(rawMessages).map(function (m) {
+      return { role: m.role === "assistant" ? "assistant" : "user", content: m.content || m.text || "" };
+    });
+  }
 
-  // Build system as array of blocks (static gets cache_control, dynamic doesn't).
-  var systemBlocks = buildSystem(facts, PIP_STATIC_SYSTEM, contextProse, null);
+  var systemBlocks;
+  if (summarySystemBlocks) {
+    // summary mode — use the client-supplied static schema/rules as system.
+    // No Pip persona, no context prose in system (context lives in user blocks).
+    // User memory facts still prepended if present.
+    var sysArr = [];
+    if (facts && facts.length) {
+      var memLines = ["USER MEMORY (things this user has told Pip to remember):"];
+      facts.slice(0, 20).forEach(function (f) {
+        if (typeof f === "string" && f.trim()) memLines.push("- " + f.trim());
+      });
+      if (memLines.length > 1) sysArr.push({ type: "text", text: memLines.join("\n") });
+    }
+    summarySystemBlocks.forEach(function (b) { sysArr.push(b); });
+    systemBlocks = sysArr;
+  } else {
+    // Build system as array of blocks (static gets cache_control, dynamic doesn't).
+    systemBlocks = buildSystem(facts, PIP_STATIC_SYSTEM, contextProse, null);
+  }
 
   var client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -308,12 +347,13 @@ export default async function handler(req, res) {
   // for it. Tool use works with streaming — we forward tool_use blocks via SSE.
   var wantStream = body.stream === true;
 
+  // summary mode never uses tools — the response is structured JSON only.
   var createParams = {
     model:      cfg.model,
     max_tokens: cfg.max_tokens,
     system:     systemBlocks,
     messages:   trimmed,
-    tools:      PIP_TOOLS,
+    tools:      mode === "summary" ? undefined : PIP_TOOLS,
   };
 
   try {

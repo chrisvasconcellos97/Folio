@@ -36,6 +36,7 @@ export function AdHocConversationFlow({
   userEmail,
   orgId,
   onClose,
+  pipAccountStateRow,
 }) {
   var { meetings, addMeeting, updateMeeting } = useMeetings(userId, account.id, orgId);
   var { items, addItem, updateItem, closeItem } = useItems(userId, account.id, orgId);
@@ -114,6 +115,7 @@ export function AdHocConversationFlow({
       glossary:         glossaryApi.entries,
       accountRoster:    accountRoster,
       accountType:      account.account_type || "standard",
+      pipAccountState:  pipAccountStateRow || null,
     }).then(function (out) {
       var followUp = out.follow_up_date || null;
       return updateMeeting(draftPayload.id, {
@@ -125,7 +127,7 @@ export function AdHocConversationFlow({
       }).then(function () { return out; });
     }).then(function (out) {
       setSummarizing(false);
-      setPreviewPlan({ plan: out.plan || [], summary: out.summary || "", draftId: draftPayload.id });
+      setPreviewPlan({ plan: out.plan || [], summary: out.summary || "", draftId: draftPayload.id, skippedByPip: !!out.skippedByPip });
     }).catch(function (err) {
       setSummarizing(false);
       setSummarizeErr((err && err.message) || "Pip couldn't summarize.");
@@ -203,6 +205,7 @@ export function AdHocConversationFlow({
           meetingId={previewPlan.draftId}
           accountRoster={accountRoster}
           currentAccountId={account.id}
+          skippedByPip={!!previewPlan.skippedByPip}
         />
       )}
     </>

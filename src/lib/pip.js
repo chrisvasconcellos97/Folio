@@ -105,6 +105,44 @@ function renderAccountRosterBlock(roster, currentAccountId) {
   return "── YOUR ACCOUNTS ──\n" + lines + "\n\n";
 }
 
+// Renders a compact bulleted list of correction rows for Pip's read-back.
+function renderCorrectionLines(corrections) {
+  var lines = (corrections || [])
+    .map(function (c) {
+      var orig = c.original_value || {};
+      var corr = c.corrected_value || {};
+      switch (c.correction_type) {
+        case "rejected_row":
+          return "- DECLINED a " + (orig.kind || "row") +
+            " (\"" + (orig.text || orig.title || "—").slice(0, 80) + "\")" +
+            (c.reason ? " — context: " + c.reason.slice(0, 120) : "");
+        case "item_text_edit":
+          return "- REWROTE item from \"" + (orig.original || "").slice(0, 60) +
+            "\" → \"" + (corr.text || "").slice(0, 80) + "\"";
+        case "task_text_edit":
+          return "- REWROTE task from \"" + (orig.original || "").slice(0, 60) +
+            "\" → \"" + (corr.text || "").slice(0, 80) + "\"";
+        case "summary_edit":
+          return "- EDITED summary: user rewrote " +
+            ((corr.text || "").length < (orig.text || "").length ? "shorter" : "differently") +
+            (c.reason ? " — reason: " + c.reason.slice(0, 80) : "");
+        case "missed_item":
+          return "- ADDED a row you missed: \"" + (corr.text || "").slice(0, 100) +
+            "\" — watch for scope cues (\"all\", \"these\", \"every\", \"in general\") " +
+            "that signal a broader item beyond the specific example";
+        case "routed_account_changed":
+          return "- ROUTED a row to a different account than I picked: \"" +
+            ((orig.text || "")).slice(0, 80) +
+            "\" — the user moved it to a different account. Pay closer attention to which account " +
+            "names are mentioned in the notes vs the meeting's current account.";
+        default:
+          return "- " + c.correction_type;
+      }
+    })
+    .filter(Boolean);
+  return lines.length ? lines.join("\n") : "";
+}
+
 // Renders an extra instructional block injected ONLY for internal_team meetings.
 function renderInternalMeetingBlock() {
   return "── INTERNAL TEAM MEETING ──\n" +
@@ -175,6 +213,14 @@ export function callPipApi(messages, context, opts) {
   }
   if (opts.facts && opts.facts.length) {
     body.facts = opts.facts;
+  }
+  // summary-mode structured caching — passes pre-built content blocks and
+  // static system blocks so api/pip.js can apply cache_control at each layer.
+  if (opts.summarySystemBlocks && opts.summarySystemBlocks.length) {
+    body.summarySystemBlocks = opts.summarySystemBlocks;
+  }
+  if (opts.userContentBlocks && opts.userContentBlocks.length) {
+    body.userContentBlocks = opts.userContentBlocks;
   }
   return timed("pip." + (opts.mode || "chat"), function () {
     return authHeaders().then(function (headers) {
@@ -359,18 +405,19 @@ export function callAskPip(payload) {
  * still renders something meaningful.
  *
  * @param {Object} payload
- * @param {Object} payload.draft           - the meeting/draft object
- * @param {string} payload.accountName     - parent account name
- * @param {string} payload.cadenceLabel    - cadence label for context
- * @param {string} [payload.accountId]     - the account id (for hints)
- * @param {Array}  [payload.existingItems] - open folio_items on the account
- * @param {Array}  [payload.activeProjects]- gauge projects (with .stages tasks)
- * @param {Array}  [payload.orgMembers]    - org members (for assignee options)
+ * @param {Object} payload.draft             - the meeting/draft object
+ * @param {string} payload.accountName       - parent account name
+ * @param {string} payload.cadenceLabel      - cadence label for context
+ * @param {string} [payload.accountId]       - the account id (for hints)
+ * @param {Array}  [payload.existingItems]   - open folio_items on the account
+ * @param {Array}  [payload.activeProjects]  - gauge projects (with .stages tasks)
+ * @param {Array}  [payload.orgMembers]      - org members (for assignee options)
  * @param {Array}  [payload.assignmentHints] - learned hints rows
- * @param {string} [payload.accountObjective] - account context / notes for Pip
+ * @param {string} [payload.accountObjective]  - account context / notes for Pip
  * @param {Array}  [payload.glossary]          - known terms to inject
- * @param {Array}  [payload.accountRoster]      - full list of user's accounts for cross-routing
- * @param {string} [payload.accountType]        - account_type of the current account
+ * @param {Array}  [payload.accountRoster]     - full list of user's accounts for cross-routing
+ * @param {string} [payload.accountType]       - account_type of the current account
+ * @param {Object} [payload.pipAccountState]   - { lessons_learned, last_compression_at } row
  */
 export function summarizeDraftPip(payload) {
   var m              = payload.draft || {};
@@ -383,6 +430,23 @@ export function summarizeDraftPip(payload) {
   var glossary         = Array.isArray(payload.glossary) ? payload.glossary : [];
   var accountRoster    = Array.isArray(payload.accountRoster) ? payload.accountRoster : [];
   var accountType      = payload.accountType || "standard";
+  var pipAccountState  = payload.pipAccountState || null;
+
+  // #5 — skip Pip on trivial drafts (< 100 chars of notes + action_items).
+  // Returns immediately with an empty plan so the caller still shows the
+  // preview modal; the user can add rows manually via "+ Add an item".
+  var noteLen = ((m.notes || "") + (m.action_items || "")).trim().length;
+  if (noteLen < 100) {
+    return Promise.resolve({
+      summary:        (m.notes || "").trim() || "(no notes)",
+      short_title:    m.title || "Conversation",
+      follow_up_date: null,
+      tone:           null,
+      plan:           [],
+      action_items:   [],
+      skippedByPip:   true,
+    });
+  }
 
   var itemLines = existingItems.length
     ? existingItems.map(function (i) {
@@ -419,48 +483,47 @@ export function summarizeDraftPip(payload) {
       }).join("\n")
     : "(no hints yet)";
 
-  // V2 brain — read-back of the user's recent corrections so Pip stops
-  // repeating misreads. Take the most recent 10 across all types, render
-  // as a compact bulleted list. Reason is the user's edited excerpt (best
-  // signal) or the original excerpt fallback.
-  var correctionLines = (corrections || [])
-    .slice(0, 10)
-    .map(function (c) {
-      var orig = c.original_value || {};
-      var corr = c.corrected_value || {};
-      switch (c.correction_type) {
-        case "rejected_row":
-          return "- DECLINED a " + (orig.kind || "row") +
-            " (\"" + (orig.text || orig.title || "—").slice(0, 80) + "\")" +
-            (c.reason ? " — context: " + c.reason.slice(0, 120) : "");
-        case "item_text_edit":
-          return "- REWROTE item from \"" + (orig.original || "").slice(0, 60) +
-            "\" → \"" + (corr.text || "").slice(0, 80) + "\"";
-        case "task_text_edit":
-          return "- REWROTE task from \"" + (orig.original || "").slice(0, 60) +
-            "\" → \"" + (corr.text || "").slice(0, 80) + "\"";
-        case "summary_edit":
-          return "- EDITED summary: user rewrote " +
-            ((corr.text || "").length < (orig.text || "").length ? "shorter" : "differently") +
-            (c.reason ? " — reason: " + c.reason.slice(0, 80) : "");
-        case "missed_item":
-          return "- ADDED a row you missed: \"" + (corr.text || "").slice(0, 100) +
-            "\" — watch for scope cues (\"all\", \"these\", \"every\", \"in general\") " +
-            "that signal a broader item beyond the specific example";
-        case "routed_account_changed":
-          return "- ROUTED a row to a different account than I picked: \"" +
-            ((orig.text || "")).slice(0, 80) +
-            "\" — the user moved it to a different account. Pay closer attention to which account " +
-            "names are mentioned in the notes vs the meeting's current account.";
-        default:
-          return "- " + c.correction_type;
-      }
-    })
-    .filter(Boolean)
-    .join("\n");
-  var correctionBlock = correctionLines.length ? correctionLines : "(no prior corrections — first time on this account)";
+  // #2 — V2 brain correction context. Prefer compressed lessons_learned (fresher
+  // than 14 days) over raw corrections. If both exist but lessons_learned > 14d,
+  // include both so Pip gets institutional memory + recent signal.
+  var correctionBlock;
+  var lessonsLearned = pipAccountState && pipAccountState.lessons_learned ? pipAccountState.lessons_learned.trim() : "";
+  var lastCompAt     = pipAccountState && pipAccountState.last_compression_at
+    ? new Date(pipAccountState.last_compression_at).getTime()
+    : 0;
+  var compAgeMs      = lastCompAt ? Date.now() - lastCompAt : Infinity;
+  var FOURTEEN_DAYS  = 14 * 24 * 60 * 60 * 1000;
 
-  var prompt =
+  if (lessonsLearned && compAgeMs <= FOURTEEN_DAYS) {
+    correctionBlock = "── PATTERNS PIP HAS LEARNED ABOUT THIS ACCOUNT ──\n" + lessonsLearned + "\n\n";
+  } else if (lessonsLearned) {
+    var recentCorrLines = renderCorrectionLines(corrections.slice(0, 3));
+    correctionBlock =
+      "── PATTERNS PIP HAS LEARNED ──\n" + lessonsLearned + "\n\n" +
+      "── RECENT CORRECTIONS (last 3) ──\n" + (recentCorrLines || "(none)") + "\n\n";
+  } else {
+    var rawCorrLines = renderCorrectionLines(corrections.slice(0, 10));
+    correctionBlock =
+      "Things the user has corrected before — STUDY these and don't repeat the same misreads. " +
+      "If the pattern matches the current notes, route accordingly (decline merges that were " +
+      "declined before, prefer wording the user has rewritten to, etc):\n" +
+      (rawCorrLines || "(no prior corrections — first time on this account)") + "\n\n";
+  }
+
+  // ── Structured content blocks with cache breakpoints ────────────────────
+  //
+  // Block layout for stacked caching (up to 4 breakpoints):
+  //   BP1 (system)  — static schema/rules  — cached globally across all calls
+  //   BP2 (user)    — glossary + org members  — stable per user for hours
+  //   BP3 (user)    — account roster + objective + learned patterns  — stable per account
+  //   BP4 (user)    — existing items + tasks + projects + hints  — changes per meeting
+  //   (no marker)   — CONTEXT header + NOTES  — varies every call
+  //
+  // Everything marked cache_control is the TAIL of that layer — Anthropic
+  // caches all content up to and including the marked block.
+
+  // BP1 — static schema + rules (sent as summarySystemBlocks to api/pip.js)
+  var SUMMARIZE_SCHEMA_RULES =
     "You are planning post-meeting bookkeeping. Compare the meeting notes against the user's " +
     "existing open items and existing in-flight Gauge tasks. Return a structured plan that " +
     "AVOIDS duplicates and prefers updates/closes over new rows.\n\n" +
@@ -509,37 +572,58 @@ export function summarizeDraftPip(payload) {
     "to 'low' so the user can pick.\n" +
     "- target_account_id = null means \"the current account\" (the one this meeting belongs to).\n" +
     "- Don't aggressively route — when an item is clearly about the current account or no other " +
-    "account is mentioned, leave target_account_id null.\n\n" +
-    renderGlossaryBlock(glossary) +
+    "account is mentioned, leave target_account_id null.\n";
+
+  // BP1 — system: static schema + rules, cached globally
+  var summarySystemBlocks = [
+    { type: "text", text: SUMMARIZE_SCHEMA_RULES, cache_control: { type: "ephemeral" } },
+  ];
+
+  // BP2 — glossary + org members (stable per user, changes infrequently)
+  var bp2Text = renderGlossaryBlock(glossary) + "Org members (valid assignee emails):\n" + memberLines;
+
+  // BP3 — account roster + objective + learned patterns (stable per account)
+  var bp3Text =
     renderAccountRosterBlock(accountRoster, payload.accountId || null) +
     (accountType === "internal_team" ? renderInternalMeetingBlock() : "") +
     renderAccountObjectiveBlock(accountObjective) +
-    "── CONTEXT ──\n" +
-    "Account: " + (payload.accountName || "—") + "\n" +
-    "Cadence: " + (payload.cadenceLabel || "—") + "\n" +
-    "Method: "  + (m.method || "—") + "\n" +
-    "Date: "    + (m.meeting_date || "") + "\n" +
-    "Title: "   + (m.title || "Conversation") + "\n\n" +
+    correctionBlock;
+
+  // BP4 — existing items + tasks + projects + hints (changes per meeting session)
+  var bp4Text =
     "Existing open items on this account:\n" + itemLines + "\n\n" +
     "Existing in-flight Gauge tasks on this account (incl. child accounts):\n" + taskBlock + "\n\n" +
     "Active Gauge projects (use these ids for project_id):\n" +
     (activeProjects.length
       ? activeProjects.map(function (p) { return "- " + p.id + " · " + (p.title || "Untitled"); }).join("\n")
       : "(none)") + "\n\n" +
-    "Org members (valid assignee emails):\n" + memberLines + "\n\n" +
-    "Assignment hints (historical overrides on this account):\n" + hintLines + "\n\n" +
-    "Things the user has corrected before — STUDY these and don't repeat the same misreads. " +
-    "If the pattern matches the current notes, route accordingly (decline merges that were " +
-    "declined before, prefer wording the user has rewritten to, etc):\n" + correctionBlock + "\n\n" +
+    "Assignment hints (historical overrides on this account):\n" + hintLines;
+
+  // Variable tail — CONTEXT + NOTES, different every call, no cache marker
+  var tailText =
+    "\n\n── CONTEXT ──\n" +
+    "Account: " + (payload.accountName || "—") + "\n" +
+    "Cadence: " + (payload.cadenceLabel || "—") + "\n" +
+    "Method: "  + (m.method || "—") + "\n" +
+    "Date: "    + (m.meeting_date || "") + "\n" +
+    "Title: "   + (m.title || "Conversation") + "\n\n" +
     "── NOTES ──\n" +
     (m.notes        ? m.notes + "\n" : "(empty)\n") +
     (m.action_items ? "\nExtra action notes: " + m.action_items + "\n" : "") +
     (m.commitments  ? "Commitments: " + m.commitments + "\n" : "");
 
+  // Assemble user content blocks with cache_control on stable tails
+  var userContentBlocks = [
+    { type: "text", text: bp2Text, cache_control: { type: "ephemeral" } },
+    { type: "text", text: bp3Text, cache_control: { type: "ephemeral" } },
+    { type: "text", text: bp4Text, cache_control: { type: "ephemeral" } },
+    { type: "text", text: tailText },
+  ];
+
   return callPipApi(
-    [{ role: "user", content: prompt }],
+    [{ role: "user", content: tailText }],
     null,
-    { mode: "summary" }
+    { mode: "summary", summarySystemBlocks: summarySystemBlocks, userContentBlocks: userContentBlocks }
   ).then(function (resp) {
     var text = resp.content || "";
     var match = text.match(/\{[\s\S]*\}/);

@@ -369,6 +369,7 @@ export function PipSummarizePreview({
   meetingId,         // optional; tags corrections with the draft they came from
   accountRoster,     // [{ id, name, account_type }] — for cross-account routing
   currentAccountId,  // the account this meeting belongs to
+  skippedByPip,      // true when notes were too short for Pip to extract anything
 }) {
   var memberEmails = useMemo(function () {
     return (orgMembers || [])
@@ -892,7 +893,9 @@ export function PipSummarizePreview({
 
         {(plan || []).length === 0 && (
           <div style={{ fontSize: 13, color: C.textMuted, padding: "8px 0" }}>
-            Pip didn't find anything to do here.
+            {skippedByPip
+              ? "Notes were short — Pip skipped extraction. Add items manually if needed."
+              : "Pip didn't find anything to do here."}
           </div>
         )}
 
