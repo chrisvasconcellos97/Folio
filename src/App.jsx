@@ -23,6 +23,7 @@ import { PipLoader } from "./components/PipLoader";
 
 // Code-split heavy views — only fetched when navigated to. Cuts initial
 // bundle and speeds up first paint by ~30-40%.
+var HomeView       = lazy(function () { return import("./views/home/HomeView").then(function (m) { return { default: m.HomeView }; }); });
 var MeetingsView   = lazy(function () { return import("./views/meetings/MeetingsView").then(function (m) { return { default: m.MeetingsView }; }); });
 var PipView        = lazy(function () { return import("./views/pip/PipView").then(function (m) { return { default: m.PipView }; }); });
 var CadenceView    = lazy(function () { return import("./views/cadence/CadenceView").then(function (m) { return { default: m.CadenceView }; }); });
@@ -49,7 +50,7 @@ export default function App() {
   var userMeta  = session ? session.user.user_metadata : null;
   var isDesktop = useBreakpoint();
 
-  var [view, setView]                   = useState("accounts");
+  var [view, setView]                   = useState("home");
   var [selectedAccount, setSelected]    = useState(null);
   var [pendingHubCadenceId, setPendingHubCadenceId] = useState(null);
   var [pendingAutoOpenMeetingMode, setPendingAutoOpenMeetingMode] = useState(false);
@@ -472,6 +473,10 @@ export default function App() {
         </div>
       );
     }
+  }
+
+  if (view === "home") {
+    mainContent = <HomeView />;
   }
 
   if (view === "meetings") {

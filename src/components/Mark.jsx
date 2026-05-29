@@ -203,6 +203,7 @@ function MarkImpl({ tab, size, active }) {
   var t = tab === "routes" ? "route"
         : tab === "workspaces" ? "accounts"
         : tab === "diagnostics" ? "settings"  // diagnostics keeps its own glyph below
+        : tab === "home" ? "pip"  // home shares Pip's mark — Pip IS the home page
         : tab;
 
   var px = size || 22;

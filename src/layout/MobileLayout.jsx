@@ -22,11 +22,10 @@ var WORKSPACE_IDS = ["accounts", "departments", "partners"];
 var WORKSPACE_LABELS = { accounts: "Accounts", departments: "Departments", partners: "Partners" };
 
 var NAV_ITEMS = [
-  { id: "workspaces", label: "Workspaces", icon: "▣",  isWorkspaces: true },
-  { id: "meetings",   label: "Meetings",   icon: "◷"     },
-  { id: "cadence",    label: "Cadence",    icon: "↻"     },
+  { id: "home",       label: "Home",       icon: "◉"     },
+  { id: "workspaces", label: "Accounts",   icon: "▣",  isWorkspaces: true },
+  { id: "meetings",   label: "Calendar",   icon: "◷"     },
   { id: "gauge",      label: "Gauge",      icon: "gauge"  },
-  { id: "routes",     label: "Route",      icon: "⊕"     },
 ];
 
 export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, onSettings, onDiagnostics, diagnosticsCount, userMeta, children }) {
