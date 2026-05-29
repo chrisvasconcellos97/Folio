@@ -150,6 +150,14 @@ export default function App() {
   // browser supports Notifications. Persist "asked" so the prompt never
   // re-appears regardless of grant/deny outcome.
   var [showNotifPrompt, setShowNotifPrompt] = useState(false);
+  // Persists the user's last-selected workspace pill (customer/internal_team/partner)
+  // so the Accounts page reopens to whichever they were just viewing.
+  var [pillWorkspaceType, setPillWorkspaceType] = useState(function () {
+    try { return localStorage.getItem("folio_account_workspace") || "customer"; } catch (e) { return "customer"; }
+  });
+  useEffect(function () {
+    try { localStorage.setItem("folio_account_workspace", pillWorkspaceType); } catch (e) {}
+  }, [pillWorkspaceType]);
   useEffect(function () {
     if (!session || !cadences || cadences.length === 0) return;
     if (typeof Notification === "undefined") return;
@@ -400,13 +408,6 @@ export default function App() {
   // When the pill is used in AccountsView, it calls onTypeFilterChange.
   // Desktop nav still works: clicking "Departments" or "Partners" sets view,
   // which sets currentWorkspaceType. The pill just adds in-view switching.
-  var [pillWorkspaceType, setPillWorkspaceType] = useState(function () {
-    try { return localStorage.getItem("folio_account_workspace") || "customer"; } catch (e) { return "customer"; }
-  });
-  useEffect(function () {
-    try { localStorage.setItem("folio_account_workspace", pillWorkspaceType); } catch (e) {}
-  }, [pillWorkspaceType]);
-
   function workspaceTypeFor(v) {
     if (v === "departments") return "internal_team";
     if (v === "partners")    return "partner";
