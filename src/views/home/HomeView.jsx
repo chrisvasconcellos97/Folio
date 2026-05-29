@@ -123,7 +123,7 @@ function Panel({ title, subtitle, accent, children, isEmpty, emptyText }) {
   );
 }
 
-export function HomeView({ accounts, meetings, items, cadences, onOpenAccount, onOpenCadenceHub }) {
+export function HomeView({ accounts, meetings, items, cadences, projects, onOpenAccount, onOpenCadenceHub, onOpenConversation }) {
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
   var [mounted, setMounted] = useState(false);
@@ -138,6 +138,8 @@ export function HomeView({ accounts, meetings, items, cadences, onOpenAccount, o
     (accounts || []).forEach(function (a) { if (!a.is_inactive) m[a.id] = a; });
     return m;
   }, [accounts]);
+
+  var todayISO = startOfToday().toISOString().slice(0, 10);
 
   // ── Today's Calls ────────────────────────────────────────────────────
   var todaysCalls = useMemo(function () {
@@ -159,19 +161,146 @@ export function HomeView({ accounts, meetings, items, cadences, onOpenAccount, o
       });
   }, [cadences, accountById]);
 
-  // ── Burning (overdue items + cold accounts) ──────────────────────────
-  // Just compute the count for the hero line for now. Real rendering of
-  // this panel comes in the next pass.
-  var overdueCount = useMemo(function () {
-    var todayISO = startOfToday().toISOString().slice(0, 10);
-    return (items || []).filter(function (i) {
-      return !i.done && i.due_date && i.due_date < todayISO;
-    }).length;
-  }, [items]);
+  // ── Burning ──────────────────────────────────────────────────────────
+  // Overdue items + blocked/overdue projects + cold accounts (>45d).
+  // Sorted: longest overdue first, oldest cold next. Top 6.
+  var burningRows = useMemo(function () {
+    var rows = [];
+
+    (items || []).forEach(function (i) {
+      if (i.done || !i.due_date || i.due_date >= todayISO) return;
+      var acct = accountById[i.account_id];
+      if (!acct) return;
+      var daysOver = Math.floor((Date.now() - new Date(i.due_date + "T00:00:00").getTime()) / 86400000);
+      rows.push({
+        key: "item:" + i.id,
+        kind: "item",
+        accountId: i.account_id,
+        sortKey: -daysOver * 100 - 50,
+        left: i.text,
+        sub: acct.name,
+        right: daysOver === 0 ? "today" : daysOver + "d over",
+      });
+    });
+
+    (projects || []).forEach(function (p) {
+      var acct = accountById[p.account_id];
+      if (!acct) return;
+      var isBlocked = p.status === "blocked";
+      var isOverdue = p.status !== "complete" && p.due_date && p.due_date < todayISO;
+      if (!isBlocked && !isOverdue) return;
+      var daysOver = isOverdue ? Math.floor((Date.now() - new Date(p.due_date + "T00:00:00").getTime()) / 86400000) : 0;
+      rows.push({
+        key: "project:" + p.id,
+        kind: "project",
+        accountId: p.account_id,
+        sortKey: isBlocked ? -800 : -daysOver * 100 - 200,
+        left: p.title,
+        sub: acct.name,
+        right: isBlocked ? "blocked" : (daysOver + "d over"),
+      });
+    });
+
+    (accounts || []).forEach(function (a) {
+      if (a.is_inactive) return;
+      var last = a.last_interaction_at ? new Date(a.last_interaction_at).getTime() : 0;
+      if (!last) return;
+      var daysCold = Math.floor((Date.now() - last) / 86400000);
+      if (daysCold < 45) return;
+      rows.push({
+        key: "cold:" + a.id,
+        kind: "cold",
+        accountId: a.id,
+        sortKey: -daysCold,
+        left: a.name + " — gone cold",
+        sub: "no contact in " + daysCold + " days",
+        right: daysCold + "d",
+      });
+    });
+
+    rows.sort(function (x, y) { return x.sortKey - y.sortKey; });
+    return rows.slice(0, 6);
+  }, [items, projects, accounts, accountById, todayISO]);
+
+  // ── Loose Ends ───────────────────────────────────────────────────────
+  // Draft meetings that haven't been summarized yet, sorted by stale-ness.
+  var looseEnds = useMemo(function () {
+    return (meetings || [])
+      .filter(function (m) { return m.status === "draft"; })
+      .map(function (m) {
+        var acct = accountById[m.account_id];
+        if (!acct) return null;
+        var updated = m.updated_at || m.created_at;
+        var days = updated ? Math.floor((Date.now() - new Date(updated).getTime()) / 86400000) : 0;
+        return {
+          key: "draft:" + m.id,
+          accountId: m.account_id,
+          cadenceId: m.cadence_id,
+          left: m.title || (acct.name + " — untitled draft"),
+          sub: acct.name,
+          right: days === 0 ? "today" : days + "d ago",
+          days: days,
+        };
+      })
+      .filter(Boolean)
+      .sort(function (a, b) { return b.days - a.days; })
+      .slice(0, 5);
+  }, [meetings, accountById]);
+
+  // ── Ahead ────────────────────────────────────────────────────────────
+  // Upcoming cadences (next 7 days, excluding today) that don't yet have
+  // a draft, plus warm Growth accounts not touched in 14-21 days.
+  var aheadRows = useMemo(function () {
+    var rows = [];
+    var today = startOfToday();
+    var weekOut = new Date(today.getTime() + 7 * 86400000);
+
+    (cadences || []).forEach(function (c) {
+      if (c.type === "task") return;
+      var next = getNextOccurrence(c, new Date(today.getTime() + 86400000));
+      if (!next || next > weekOut) return;
+      var acct = accountById[c.account_id];
+      if (!acct) return;
+      // Has a draft for this cadence?
+      var hasDraft = (meetings || []).some(function (m) {
+        return m.cadence_id === c.id && m.status === "draft";
+      });
+      if (hasDraft) return;
+      var daysOut = Math.floor((next.getTime() - today.getTime()) / 86400000);
+      rows.push({
+        key: "ahead-cadence:" + c.id,
+        accountId: c.account_id,
+        cadenceId: c.id,
+        sortKey: daysOut * 10,
+        left: acct.name + " — start prepping",
+        sub: "cadence in " + daysOut + "d",
+        right: daysOut + "d",
+      });
+    });
+
+    (accounts || []).forEach(function (a) {
+      if (a.is_inactive || a.tier !== "Growth") return;
+      var last = a.last_interaction_at ? new Date(a.last_interaction_at).getTime() : 0;
+      if (!last) return;
+      var daysCold = Math.floor((Date.now() - last) / 86400000);
+      if (daysCold < 14 || daysCold > 21) return;
+      rows.push({
+        key: "warm:" + a.id,
+        accountId: a.id,
+        sortKey: 1000 + (21 - daysCold),
+        left: a.name + " — stay warm",
+        sub: "no contact in " + daysCold + "d, growth tier",
+        right: daysCold + "d",
+      });
+    });
+
+    rows.sort(function (x, y) { return x.sortKey - y.sortKey; });
+    return rows.slice(0, 5);
+  }, [cadences, meetings, accounts, accountById]);
 
   var heroLine = pickHeroLine({
     calls: todaysCalls.length,
-    overdue: overdueCount,
+    overdue: burningRows.filter(function (r) { return r.kind === "item"; }).length,
   });
 
   // ── Panels ──────────────────────────────────────────────────────────
@@ -203,27 +332,71 @@ export function HomeView({ accounts, meetings, items, cadences, onOpenAccount, o
       title="Burning"
       subtitle="These need eyes."
       accent={C.red}
-      isEmpty
-      emptyText="Wiring up next."
-    />
+      isEmpty={burningRows.length === 0}
+      emptyText="All clear. Nothing on fire."
+    >
+      {burningRows.map(function (r) {
+        return (
+          <PanelRow
+            key={r.key}
+            left={r.left}
+            right={r.right}
+            accent={C.red}
+            onClick={function () { onOpenAccount(r.accountId); }}
+          />
+        );
+      })}
+    </Panel>
   );
+
   var loosePanel = (
     <Panel
       title="Loose Ends"
       subtitle="Let me clean these up."
       accent={C.yellow}
-      isEmpty
-      emptyText="Wiring up next."
-    />
+      isEmpty={looseEnds.length === 0}
+      emptyText="No drafts hanging around."
+    >
+      {looseEnds.map(function (r) {
+        return (
+          <PanelRow
+            key={r.key}
+            left={r.left}
+            right={r.right}
+            accent={C.yellow}
+            onClick={function () {
+              if (r.cadenceId) onOpenCadenceHub(r.accountId, r.cadenceId);
+              else onOpenAccount(r.accountId);
+            }}
+          />
+        );
+      })}
+    </Panel>
   );
+
   var aheadPanel = (
     <Panel
       title="Ahead"
       subtitle="While you weren't looking."
-      accent={C.accentDim || C.accent}
-      isEmpty
-      emptyText="Wiring up next."
-    />
+      accent={C.accent}
+      isEmpty={aheadRows.length === 0}
+      emptyText="No upcoming work I can prep yet."
+    >
+      {aheadRows.map(function (r) {
+        return (
+          <PanelRow
+            key={r.key}
+            left={r.left}
+            right={r.right}
+            accent={C.accent}
+            onClick={function () {
+              if (r.cadenceId) onOpenCadenceHub(r.accountId, r.cadenceId);
+              else onOpenAccount(r.accountId);
+            }}
+          />
+        );
+      })}
+    </Panel>
   );
 
   var mobileOrder  = [burningPanel, callsPanel, loosePanel, aheadPanel];
@@ -271,7 +444,7 @@ export function HomeView({ accounts, meetings, items, cadences, onOpenAccount, o
           }}>
             {todaysCalls.length > 0 ? "Open brief →" : "No brief today"}
           </LitPill>
-          <LitPill onClick={function () {}}>
+          <LitPill onClick={function () { if (onOpenConversation) onOpenConversation(); }}>
             Quick capture +
           </LitPill>
         </div>
@@ -311,7 +484,7 @@ export function HomeView({ accounts, meetings, items, cadences, onOpenAccount, o
           display: "flex", gap: 8, zIndex: 50,
         }}>
           <button
-            onClick={function () {}}
+            onClick={function () { if (onOpenConversation) onOpenConversation(); }}
             style={{
               flex: 1, background: C.surface,
               border: "1px solid " + C.rule, borderRadius: 8,

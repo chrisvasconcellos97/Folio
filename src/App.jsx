@@ -482,6 +482,7 @@ export default function App() {
         meetings={meetings}
         items={allItems}
         cadences={cadences}
+        projects={allProjects}
         onOpenAccount={function (accountId) {
           var a = (accounts || []).find(function (x) { return x.id === accountId; });
           if (a) setSelected(a);
@@ -493,6 +494,7 @@ export default function App() {
             setPendingHubCadenceId(cadenceId);
           }
         }}
+        onOpenConversation={function () { setShowStartConv(true); }}
       />
     );
   }
