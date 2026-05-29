@@ -11,6 +11,7 @@ import { useCadenceReminders } from "./hooks/useCadenceReminders";
 import { useQuickTasks } from "./hooks/useQuickTasks";
 import { useProjects } from "./hooks/useProjects";
 import { useOrg } from "./hooks/useOrg";
+import { usePipAccountState } from "./hooks/usePipAccountState";
 import { AuthView } from "./views/auth/AuthView";
 import { AccountsView } from "./views/accounts/AccountsView";
 import { AccountDetail } from "./views/accounts/AccountDetail";
@@ -171,6 +172,27 @@ export default function App() {
   }
   var { tasks, addTask, updateTask, deleteTask, error: tasksError } = useQuickTasks(userId);
   var { projects: allProjects, error: projectsErrorApp, refetch: refetchProjectsApp } = useProjects(userId);
+  var pipAcctStateApp = usePipAccountState(userId);
+
+  // Part 9 — periodic background pip_account_state refresh.
+  // Once per 6h, silently refresh the top 10 accounts by last_interaction_at.
+  // No UI, no toasts. Swallows all failures. Keeps Pip's per-account memory
+  // stale-by-at-most-6h so V2 brain reads current baselines.
+  useEffect(function () {
+    if (!userId || !accounts || accounts.length === 0) return;
+    var key = 'folio_pip_state_refresh_last';
+    var last = 0;
+    try { last = parseInt(localStorage.getItem(key) || '0', 10); } catch (e) {}
+    if (Date.now() - last < 6 * 60 * 60 * 1000) return; // throttle: once per 6h
+    var recent = accounts
+      .filter(function (a) { return !a.is_inactive && a.last_interaction_at; })
+      .sort(function (a, b) { return new Date(b.last_interaction_at) - new Date(a.last_interaction_at); })
+      .slice(0, 10);
+    recent.forEach(function (a, i) {
+      setTimeout(function () { pipAcctStateApp.refreshState(a.id).catch(function () {}); }, i * 1200);
+    });
+    try { localStorage.setItem(key, String(Date.now())); } catch (e) {}
+  }, [userId, accounts]);
   // Observability — gate the Diagnostics nav entry on unresolved errors in
   // the last 7 days. Hook fails soft if the phase6 SQL hasn't been run yet
   // (returns unresolvedRecent=0, so the nav stays hidden).
@@ -374,6 +396,17 @@ export default function App() {
 
   /* ---------- Content panes ---------- */
 
+  // Workspace type pill state — persisted across sessions.
+  // When the pill is used in AccountsView, it calls onTypeFilterChange.
+  // Desktop nav still works: clicking "Departments" or "Partners" sets view,
+  // which sets currentWorkspaceType. The pill just adds in-view switching.
+  var [pillWorkspaceType, setPillWorkspaceType] = useState(function () {
+    try { return localStorage.getItem("folio_account_workspace") || "customer"; } catch (e) { return "customer"; }
+  });
+  useEffect(function () {
+    try { localStorage.setItem("folio_account_workspace", pillWorkspaceType); } catch (e) {}
+  }, [pillWorkspaceType]);
+
   function workspaceTypeFor(v) {
     if (v === "departments") return "internal_team";
     if (v === "partners")    return "partner";
@@ -384,8 +417,16 @@ export default function App() {
     return (
       <AccountsView
         accounts={accounts}
+        allAccounts={accounts}
         loading={acctLoading}
         typeFilter={typeFilter}
+        onTypeFilterChange={function (t) {
+          setPillWorkspaceType(t);
+          // Also update the nav view so the nav item highlights correctly.
+          if (t === "internal_team") handleSetView("departments");
+          else if (t === "partner")  handleSetView("partners");
+          else                       handleSetView("accounts");
+        }}
         userId={userId}
         members={members}
         onSelect={handleSelectAccount}

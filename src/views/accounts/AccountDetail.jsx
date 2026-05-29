@@ -39,6 +39,8 @@ import { usePipAssignmentHints } from "../../hooks/usePipAssignmentHints";
 import { ErrorBanner } from "../../components/ErrorBanner";
 import { supabase } from "../../lib/supabase";
 import { buildAccountExport, downloadAccountExport } from "../../lib/accountExport";
+import { computeAccountHealth, gatherSignals } from "../../lib/accountHealth";
+import { AccountHealthOverrideModal } from "./AccountHealthOverrideModal";
 
 function getDefaultTab(accountId) {
   try { return localStorage.getItem("folio_default_tab_" + accountId) || null; } catch(e) { return null; }
@@ -80,6 +82,8 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
   var [briefText, setBriefText]         = useState(null);
   var [briefLoading, setBriefLoading]   = useState(false);
   var [briefError, setBriefError]       = useState(null);
+
+  var [showHealthOverride, setShowHealthOverride] = useState(false);
 
   var pipAcctState = usePipAccountState(userId);
   var [refreshingState, setRefreshingState] = useState(false);
@@ -168,6 +172,17 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
 
   var openCount = items.filter(function (i) { return !i.done; }).length;
 
+  // Compute Pip health for this account (used by header pill + override modal).
+  var todayISO   = new Date().toISOString().slice(0, 10);
+  var healthSignals = gatherSignals(account, items, projects, todayISO);
+  var computedHealth = computeAccountHealth(account, healthSignals);
+
+  function handleSaveHealthOverride(data) {
+    return onUpdate(data).then(function () {
+      showToast("Health " + (data.status_override ? "pinned to " + data.status_override : "cleared"));
+    });
+  }
+
   /* ---- Ad-hoc conversation (Log Conversation → full-screen meeting mode) ---- */
   var adHocHintsApi = usePipAssignmentHints(userId, account.id);
   var adHocDraft = adHocDraftId
@@ -203,6 +218,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
       return updateMeeting(draftPayload.id, {
         pip_summary:     out.summary || null,
         pip_short_title: out.short_title || null,
+        pip_tone:        out.tone || null,
         follow_up_date:  followUp,
         status:          "summarized",
       }).then(function () { return out; });
@@ -309,6 +325,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
     <div>
       <AccountDetailHeader
         account={account}
+        health={computedHealth}
         userId={userId}
         members={members}
         meetings={meetings}
@@ -331,6 +348,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
         onDelete={onDelete}
         onReactivate={onReactivate}
         onOpenMerge={function () { setShowMergeModal(true); }}
+        onOpenHealthOverride={isCustomerType ? function () { setShowHealthOverride(true); } : undefined}
         confirmDelete={confirmDelete}
         onConfirmDelete={function () { setConfirmDelete(true); }}
         onCancelDelete={function () { setConfirmDelete(false); }}
@@ -626,6 +644,14 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
         meetings={meetings}
         items={items}
       />
+
+      {showHealthOverride && (
+        <AccountHealthOverrideModal
+          account={account}
+          onSave={handleSaveHealthOverride}
+          onClose={function () { setShowHealthOverride(false); }}
+        />
+      )}
     </div>
   );
 }

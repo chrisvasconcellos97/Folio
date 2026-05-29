@@ -20,11 +20,6 @@ var REGION_GROUPS = [
 var ALL_STATES = Object.keys(STATE_NAMES);
 
 var TIERS    = ["Major", "Mid", "Growth"];
-var STATUSES = [
-  { value: "green",  label: "Healthy" },
-  { value: "yellow", label: "Watch"   },
-  { value: "red",    label: "At Risk" },
-];
 var PRESET_TAGS = [];
 
 function TagChip({ label, active, onClick, onRemove, color }) {
@@ -65,7 +60,6 @@ function TagChip({ label, active, onClick, onRemove, color }) {
 export function AddAccountModal({ userId, onSave, onClose, existing, accounts, defaultType, defaultParentId, members }) {
   var [name, setName]       = useState(existing ? existing.name : "");
   var [tier, setTier]       = useState(existing ? (existing.tier || "Mid") : "Mid");
-  var [status, setStatus]   = useState(existing ? (existing.status || "green") : "green");
   var [notes, setNotes]     = useState(existing ? (existing.objective || "") : "");
   var [tags, setTags]       = useState(existing ? (existing.tags || []) : []);
   var [customTag, setCustomTag] = useState("");
@@ -148,7 +142,6 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
     var data = {
       name:              name.trim(),
       tier:              isCustomer ? tier : null,
-      status:            status,
       objective:         notes.trim() || null,
       tags:              tags.length > 0 ? tags : null,
       serviced_states:   states.length > 0 ? states : null,
@@ -301,9 +294,8 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
           />
         </div>
 
-        {/* Tier + Status */}
-        <div style={{ display: "grid", gridTemplateColumns: isCustomer ? "1fr 1fr" : "1fr", gap: 10 }}>
-          {isCustomer && (
+        {/* Tier */}
+        {isCustomer && (
           <div>
             <FL>Tier</FL>
             <div style={{ display: "flex", gap: 5 }}>
@@ -326,32 +318,7 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
               })}
             </div>
           </div>
-          )}
-          <div>
-            <FL>Status</FL>
-            <div style={{ display: "flex", gap: 5 }}>
-              {STATUSES.map(function (s) {
-                var on = status === s.value;
-                var col = s.value === "green" ? C.accent : s.value === "yellow" ? C.yellow : C.red;
-                var bgRgb = s.value === "green" ? "74,155,130" : s.value === "yellow" ? "232,168,56" : "224,92,92";
-                return (
-                  <button key={s.value} type="button" onClick={function () { setStatus(s.value); }}
-                    style={{
-                      flex: 1,
-                      background: on ? "rgba(" + bgRgb + ",0.15)" : "var(--c-input-fill)",
-                      color: on ? col : C.textMuted,
-                      border: "1px solid " + (on ? "rgba(" + bgRgb + ",0.4)" : C.border),
-                      borderRadius: 8, padding: "9px 4px", fontSize: 11,
-                      fontWeight: on ? 700 : 400,
-                      fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer",
-                    }}>
-                    {s.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+        )}
 
         {/* MSO toggle — customer-type only */}
         {defaultType !== 'shop' && isCustomer && (

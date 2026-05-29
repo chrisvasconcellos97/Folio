@@ -19,12 +19,13 @@ import { useBreakpoint } from "../../hooks/useBreakpoint";
 var MONO = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
 
-var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red };
-var STATUS_LABELS = { green: "Healthy", yellow: "Watch", red: "At Risk" };
+var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red, new: C.textMuted };
+var STATUS_LABELS = { green: "Healthy", yellow: "Watch", red: "At Risk", new: "New" };
 var TIER_COLORS   = { Major: C.blue, Mid: C.purple, Growth: C.green };
 
 export function AccountDetailHeader({
   account,
+  health,
   userId,
   members,
   meetings,
@@ -47,6 +48,7 @@ export function AccountDetailHeader({
   onDelete,
   onReactivate,
   onOpenMerge,
+  onOpenHealthOverride,
   confirmDelete,
   onConfirmDelete,
   onCancelDelete,
@@ -54,7 +56,9 @@ export function AccountDetailHeader({
   var isDesktop   = useBreakpoint();
   var isMobile    = !isDesktop;
   var isInactive  = !!account.is_inactive;
-  var statusColor = STATUS_COLORS[account.status] || C.textSub;
+  // Use computed health if provided, fall back to account.status
+  var computedHealth  = health || { status: account.status || "green", reason: null, pinned: false };
+  var statusColor     = STATUS_COLORS[computedHealth.status] || C.textSub;
 
   var meetingBars = (function () {
     if (!meetings || meetings.length === 0) return null;
@@ -171,10 +175,32 @@ export function AccountDetailHeader({
               </Pill>
             )}
             {isCustomerType && (
-              <Pill color={statusColor}>
-                <span style={{ display: "inline-block", width: 5, height: 5, borderRadius: "50%", background: statusColor, marginRight: 4, verticalAlign: "middle" }} />
-                {STATUS_LABELS[account.status] || account.status}
-              </Pill>
+              <button
+                onClick={onOpenHealthOverride || undefined}
+                title={computedHealth.reason ? "Health: " + computedHealth.reason + (computedHealth.pinned ? " (pinned)" : " (Pip-computed)") : "Pip-computed health"}
+                style={{
+                  background: "transparent", border: "none", padding: 0,
+                  cursor: onOpenHealthOverride ? "pointer" : "default",
+                  display: "inline-flex", alignItems: "center", gap: 4,
+                }}
+              >
+                <Pill color={statusColor}>
+                  <span style={{ display: "inline-block", width: 5, height: 5, borderRadius: "50%", background: statusColor, marginRight: 4, verticalAlign: "middle" }} />
+                  {STATUS_LABELS[computedHealth.status] || computedHealth.status}
+                  {computedHealth.pinned && (
+                    <span style={{ marginLeft: 4, fontSize: 9 }}>📌</span>
+                  )}
+                </Pill>
+                {computedHealth.reason && !computedHealth.pinned && (
+                  <span style={{
+                    fontFamily: MONO, fontSize: 9, color: statusColor,
+                    textTransform: "uppercase", letterSpacing: "0.08em",
+                    opacity: 0.85,
+                  }}>
+                    {computedHealth.reason}
+                  </span>
+                )}
+              </button>
             )}
             {openCount > 0 && (
               <Pill

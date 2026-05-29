@@ -5,14 +5,12 @@ import { Mark } from "../../components/Mark";
 import { useBreakpoint } from "../../hooks/useBreakpoint";
 import { Pill } from "../../components/Pill";
 import { InputField } from "../../components/InputField";
-import { Card } from "../../components/Card";
 import { PipOrb } from "../../components/PipMark";
 import { PipLoader } from "../../components/PipLoader";
 import { QuickTaskModal } from "../quicktasks/QuickTaskModal";
 import { Modal } from "../../components/Modal";
 import { AmberBtn, SecBtn } from "../../components/Buttons";
-import { QuickActionBar } from "../../components/QuickActionBar";
-import { StatusBanner } from "../../components/StatusBanner";
+import { computeAccountHealth, gatherSignals } from "../../lib/accountHealth";
 
 var MONO = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
@@ -30,8 +28,8 @@ function saveSearchHistory(query) {
   try { localStorage.setItem("folio_search_history", JSON.stringify(history)); } catch(e) {}
 }
 
-var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red };
-var STATUS_LABELS = { green: "Healthy", yellow: "Watch",  red: "At Risk" };
+var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red, new: C.textMuted };
+var STATUS_LABELS = { green: "Healthy", yellow: "Watch",  red: "At Risk", new: "New" };
 // Tier accent colors — route through CSS vars so light theme can ship deeper
 // hues per the light-theme spec (warm ochre, deep rose, indigo).
 var TIER_COLORS   = { Major: "var(--c-tier-major)", Mid: "var(--c-tier-mid)", Growth: "var(--c-tier-growth)" };
@@ -95,7 +93,7 @@ function matchesTypeFilter(account, typeFilter) {
   return !t || t === "standard" || t === "mso" || t === "shop";
 }
 
-export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks, addTask, updateTask, deleteTask, hasMeetings, hasCadences, items, meetings, contacts, onColdClick, onOverdueClick, onFollowUpClick, onOpenConversation, typeFilter, userId, members, bannerFilter, onClearBannerFilter }) {
+export function AccountsView({ accounts, allAccounts, loading, onSelect, onAddAccount, tasks, addTask, updateTask, deleteTask, hasMeetings, hasCadences, items, meetings, contacts, onColdClick, onOverdueClick, onFollowUpClick, onOpenConversation, typeFilter, onTypeFilterChange, userId, members, bannerFilter, onClearBannerFilter }) {
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
   var activeType = typeFilter || "customer";
@@ -230,6 +228,16 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
     return set;
   }, [deferredSearch, contacts]);
 
+  // Pre-compute health for every account once (feeds both filter and card render).
+  var healthByAccount = useMemo(function () {
+    var map = {};
+    accounts.forEach(function (a) {
+      var signals = gatherSignals(a, items, [], todayStr);
+      map[a.id] = computeAccountHealth(a, signals);
+    });
+    return map;
+  }, [accounts, items, todayStr]);
+
   var filtered = useMemo(function () {
     return accounts
       .filter(function (a) {
@@ -241,10 +249,11 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
           || (a.account_number && a.account_number.toLowerCase().includes(q))
           || (a.objective && a.objective.toLowerCase().includes(q))
           || accountIdsWithContactMatch[a.id];
+        var health = healthByAccount[a.id] || { status: "green" };
         var matchFilter =
           filter === "All" ||
-          (filter === "At Risk" ? a.status === "red" :
-           filter === "Watching" ? a.status === "yellow" :
+          (filter === "At Risk" ? health.status === "red" :
+           filter === "Watching" ? health.status === "yellow" :
            a.tier === filter);
         var matchTag    = !tagFilter    || (a.tags && a.tags.includes(tagFilter));
         var matchRegion = !regionFilter || a.region === regionFilter;
@@ -276,7 +285,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
         if (tierDiff !== 0) return tierDiff;
         return a.name.localeCompare(b.name);
       });
-  }, [accounts, deferredSearch, filter, tagFilter, regionFilter, sortMode, accountIdsWithContactMatch, mineOnly, hideInactive, userId, bannerFilter, items, todayStr]);
+  }, [accounts, deferredSearch, filter, tagFilter, regionFilter, sortMode, accountIdsWithContactMatch, mineOnly, hideInactive, userId, bannerFilter, items, todayStr, healthByAccount]);
 
   // Build display list: parents in sort order, children nested immediately below
   var displayList = useMemo(function () {
@@ -321,6 +330,13 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                        : typeFilter === "partner"       ? "partners"
                        : "accounts";
 
+  // Used to show the workspaces pill when multiple workspace types exist.
+  // allAccounts is the full unfiltered list (passed from App.jsx).
+  // Falls back to the already-filtered accounts if not provided.
+  var allAccountsForPill = allAccounts || accounts || [];
+  var hasDepartments = allAccountsForPill.some(function(a) { return a.account_type === 'internal_team'; });
+  var hasPartners    = allAccountsForPill.some(function(a) { return a.account_type === 'partner'; });
+
   return (
     <div>
       <style>{`
@@ -342,25 +358,42 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
         </div>
       </div>
 
-      {/* Status banner */}
-      <StatusBanner
-        accounts={accounts}
-        items={items}
-        meetings={meetings}
-        onColdClick={onColdClick}
-        onOverdueClick={onOverdueClick}
-        onFollowUpClick={onFollowUpClick}
-      />
-
-      {/* Quick Action Bar */}
-      <QuickActionBar
-        accounts={accounts}
-        onAddAccount={onAddAccount}
-        onOpenConversation={onOpenConversation || function() {}}
-        onAddTask={function(accountId, title) {
-          return addTask({ title: title, account_id: accountId || undefined });
-        }}
-      />
+      {/* Workspaces segmented pill — only shows when Departments or Partners exist */}
+      {(hasDepartments || hasPartners) && onTypeFilterChange && (
+        <div style={{
+          display: "flex", gap: 4, background: C.surface2,
+          border: "1px solid " + C.rule, borderRadius: 999,
+          padding: 3, marginBottom: 12, alignSelf: "flex-start",
+        }}>
+          {[
+            { key: "customer",      label: "Customers" },
+            ...(hasDepartments ? [{ key: "internal_team", label: "Departments" }] : []),
+            ...(hasPartners    ? [{ key: "partner",       label: "Partners"     }] : []),
+          ].map(function (tab) {
+            var on = activeType === tab.key;
+            return (
+              <button
+                key={tab.key}
+                onClick={function () { onTypeFilterChange(tab.key); }}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: 999,
+                  border: "none",
+                  background: on ? C.surface : "transparent",
+                  boxShadow: on ? "0 1px 3px rgba(0,0,0,0.3)" : "none",
+                  color: on ? C.accent : C.textSoft,
+                  fontFamily: MONO, fontSize: 11, fontWeight: on ? 700 : 400,
+                  letterSpacing: "0.04em",
+                  cursor: "pointer",
+                  transition: "background 0.12s, color 0.12s",
+                }}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Quick Task button (legacy - keep for direct task modal access) */}
       <button
@@ -484,45 +517,6 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
         </div>
       )}
 
-      {/* Stats */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr",
-          gap: 6,
-          marginBottom: 14,
-        }}
-      >
-        {[
-          { l: "Accounts", v: loading ? "—" : accounts.length, c: C.text,   filterId: "All",      cls: "" },
-          { l: "Watching", v: loading ? "—" : accounts.filter(function(a){ return a.status === "yellow"; }).length, c: C.yellow, filterId: "Watching", cls: "stat-tile-watching" },
-          { l: "At Risk",  v: loading ? "—" : accounts.filter(function(a){ return a.status === "red"; }).length,    c: C.red,    filterId: "At Risk",  cls: "stat-tile-risk" },
-        ].map(function (s) {
-          return (
-            <div
-              key={s.l}
-              onClick={function() { setFilter(s.filterId); }}
-              className={s.cls}
-              style={{
-                background: filter === s.filterId ? C.accentFaint : C.surface,
-                border: "1px solid " + (filter === s.filterId ? C.accentBorder : C.rule),
-                borderRadius: 8,
-                padding: "11px 12px",
-                cursor: "pointer",
-                transition: "border-color 0.12s, background 0.12s",
-              }}
-            >
-              <div style={{ fontFamily: SERIF, fontSize: 22, fontWeight: 400, color: s.c, fontFeatureSettings: '"tnum"' }}>
-                {s.v}
-              </div>
-              <div style={{ fontFamily: MONO, fontSize: 9, color: C.textMuted, marginTop: 3, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                {s.l}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
       {/* Upcoming meetings — Pip alert */}
       {upcoming.length > 0 && (
         <div style={{ marginBottom: 14 }}>
@@ -534,7 +528,8 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {upcoming.map(function (a) {
-              var statusColor = STATUS_COLORS[a.status] || C.textSub;
+              var upHealth = healthByAccount[a.id] || { status: "green" };
+              var statusColor = STATUS_COLORS[upHealth.status] || C.textSub;
               var meetDate = new Date(a.next_meeting + "T12:00:00");
               var daysUntil = Math.round((new Date(a.next_meeting + "T00:00:00") - new Date(todayStr + "T00:00:00")) / 86400000);
               var dayLabel = daysUntil === 0 ? "Today" : daysUntil === 1 ? "Tomorrow" : "In " + daysUntil + " days";
@@ -563,7 +558,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                   </div>
                   <div style={{ textAlign: "right", flexShrink: 0 }}>
                     <div style={{ fontFamily: MONO, fontSize: 10, color: C.accent, marginBottom: 4, fontFeatureSettings: '"tnum"' }}>{dayLabel}</div>
-                    <Pill color={statusColor}>{STATUS_LABELS[a.status] || a.status}</Pill>
+                    <Pill color={statusColor}>{STATUS_LABELS[upHealth.status] || upHealth.status}</Pill>
                   </div>
                 </div>
               );
@@ -777,39 +772,6 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
       )}
       {activeFilterCount === 0 && <div style={{ marginBottom: 8 }} />}
 
-      {/* New user checklist */}
-      {showChecklist && (
-        <div style={{
-          background: C.accentFaint, border: "1px solid " + C.accentLine,
-          borderRadius: 12, padding: "14px 16px", marginBottom: 12,
-        }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 10 }}>
-            Getting started
-          </div>
-          {[
-            { label: "Add your first account", done: accounts.length > 0 },
-            { label: "Log a meeting", done: !!hasMeetings },
-            { label: "Set a cadence", done: !!hasCadences },
-          ].map(function(item) {
-            return (
-              <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                <div style={{
-                  width: 16, height: 16, borderRadius: "50%", flexShrink: 0,
-                  background: item.done ? C.accent : "transparent",
-                  border: "1.5px solid " + (item.done ? C.accent : C.accentLine),
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                }}>
-                  {item.done && <span style={{ fontSize: 9, color: "#fff", fontWeight: 700 }}>✓</span>}
-                </div>
-                <span style={{ fontSize: 13, color: item.done ? C.textMuted : C.text, textDecoration: item.done ? "line-through" : "none" }}>
-                  {item.label}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
       {/* Account list */}
       <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
         {loading && <PipLoader height={300} />}
@@ -840,7 +802,8 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
         {!loading && displayList.map(function (item, index) {
           var a           = item.account;
           var isChild     = item.isChild;
-          var statusColor = STATUS_COLORS[a.status] || C.textSub;
+          var health      = healthByAccount[a.id] || { status: "green", reason: "on track", pinned: false };
+          var statusColor = STATUS_COLORS[health.status] || C.textSub;
 
           var daysColor, daysLabel;
           var lastDate = a.last_interaction_at
@@ -860,7 +823,7 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
           var tierShadow = isInactive ? undefined : TIER_SHADOW[a.tier];
           var ariaLabel = a.name
             + (a.tier ? ", " + a.tier + " tier" : "")
-            + (a.status ? ", " + (STATUS_LABELS[a.status] || a.status) : "")
+            + (health.status ? ", " + (STATUS_LABELS[health.status] || health.status) : "")
             + (isInactive ? ", inactive" : "");
           var card = (
             <div
@@ -874,7 +837,9 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                 flex: isChild ? 1 : undefined,
                 background: C.surface,
                 border: "1px solid " + C.rule,
-                borderLeft: TIER_COLORS[a.tier] && !isInactive ? "3px solid " + TIER_COLORS[a.tier] : "1px solid " + C.rule,
+                borderLeft: !isInactive && health.status !== "green" && health.status !== "new"
+                  ? "3px solid " + (STATUS_COLORS[health.status] || C.rule)
+                  : TIER_COLORS[a.tier] && !isInactive ? "3px solid " + TIER_COLORS[a.tier] : "1px solid " + C.rule,
                 borderRadius: 6,
                 padding: isChild ? (isCompact ? "6px 10px" : "10px 12px") : (isCompact ? "8px 12px" : "11px 12px"),
                 cursor: "pointer",
@@ -910,7 +875,25 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                         {a.merged_into_account_id ? "Merged" : "Inactive"}
                       </span>
                     )}
+                    {health.pinned && !isInactive && (
+                      <span style={{
+                        fontFamily: MONO, fontSize: 8, fontWeight: 700,
+                        color: C.textMuted, letterSpacing: "0.06em",
+                        lineHeight: 1.2,
+                      }}>📌</span>
+                    )}
                   </div>
+                  {/* Health micro caption — only when not green/new */}
+                  {!isInactive && health.status !== "green" && health.status !== "new" && (
+                    <div style={{
+                      fontFamily: MONO, fontSize: 9, fontWeight: 700,
+                      textTransform: "uppercase", letterSpacing: "0.1em",
+                      color: STATUS_COLORS[health.status] || C.textMuted,
+                      marginBottom: 2, lineHeight: 1,
+                    }}>
+                      {health.reason.toUpperCase()}
+                    </div>
+                  )}
 
                   {/* Compact mode hides the meta row but tier is color-only on
                       the left stripe — show a small tier label so color-blind

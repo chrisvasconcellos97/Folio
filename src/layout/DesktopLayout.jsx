@@ -13,8 +13,6 @@ var SERIF = "'Fraunces', Georgia, serif";
 var NAV_ITEMS = [
   { id: "home",        label: "Home",        icon: "◉"     },
   { id: "accounts",    label: "Accounts",    icon: "▣"     },
-  { id: "departments", label: "Departments", icon: "◰"     },
-  { id: "partners",    label: "Partners",    icon: "◳"     },
   { id: "__divider__", divider: true                       },
   { id: "meetings",    label: "Calendar",    icon: "◷"     },
   { id: "cadence",     label: "Cadence",     icon: "↻"     },

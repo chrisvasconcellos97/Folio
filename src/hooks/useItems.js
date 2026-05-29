@@ -51,14 +51,38 @@ export function useItems(userId, accountId, orgId) {
   }
 
   function closeItem(id) {
+    var closedAt = new Date().toISOString();
     return supabase
       .from("folio_items")
-      .update({ done: true, closed_at: new Date().toISOString() })
+      .update({ done: true, closed_at: closedAt })
       .eq("id", id)
       .then(function (result) {
         if (result.error) throw result.error;
         logActivity(orgId, userId, accountId, "item_completed", { id: id });
         fetch();
+        // Fire-and-forget promise completion ledger entry for V2 brain.
+        supabase
+          .from("folio_items")
+          .select("*")
+          .eq("id", id)
+          .single()
+          .then(function (r) {
+            if (r.error || !r.data) return;
+            var item    = r.data;
+            var created = item.created_at ? new Date(item.created_at) : null;
+            var closed  = new Date(closedAt);
+            var days    = created ? Math.max(0, Math.floor((closed - created) / 86400000)) : null;
+            return supabase.from("pip_promise_log").insert([{
+              user_id:          userId,
+              account_id:       item.account_id,
+              item_id:          item.id,
+              item_text:        item.text,
+              due_date:         item.due_date || null,
+              days_to_complete: days,
+              closed_at:        closedAt,
+            }]);
+          })
+          .catch(function () { /* ledger is fire-and-forget */ });
       });
   }
 

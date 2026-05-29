@@ -89,6 +89,7 @@ export function AdHocConversationFlow({
       return updateMeeting(draftPayload.id, {
         pip_summary:     out.summary || null,
         pip_short_title: out.short_title || null,
+        pip_tone:        out.tone || null,
         follow_up_date:  followUp,
         status:          "summarized",
       }).then(function () { return out; });

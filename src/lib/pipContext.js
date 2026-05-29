@@ -171,6 +171,14 @@ function renderAccountFull(a) {
   var isCustomerType = a.account_type !== "internal_team" && a.account_type !== "partner";
   if (a.tier && isCustomerType) statusLine += " · Tier: " + a.tier;
   lines.push(statusLine);
+  // Status override — surface to Pip so it can reference the manual pin in briefs.
+  if (a.status_override) {
+    var overrideLine = "Status override: " + a.status_override
+      + (a.status_override_reason ? " (" + a.status_override_reason + ")" : "")
+      + (a.status_override_at ? " — pinned " + fmtDate(a.status_override_at) : "")
+      + (a.status_override_until ? ", expires " + a.status_override_until : "");
+    lines.push(overrideLine);
+  }
   var focusHint = typeFocusHint(a.account_type);
   if (focusHint) lines.push(focusHint);
   if (a.account_type === "partner") {

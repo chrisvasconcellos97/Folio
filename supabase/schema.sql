@@ -60,6 +60,11 @@ create table if not exists folio_accounts (
   is_inactive             boolean default false,
   inactivated_at          timestamptz,
   merged_into_account_id  uuid,                                -- self-FK added below
+  -- Health override fields (Pip-computed health is the default; these let users pin).
+  status_override         text check (status_override is null or status_override in ('green','yellow','red')),
+  status_override_reason  text,
+  status_override_at      timestamptz,
+  status_override_until   date,
   created_at              timestamptz default now(),
   updated_at              timestamptz default now()
 );
@@ -159,6 +164,7 @@ create table if not exists folio_meetings (
   pip_summary    text,
   pip_short_title text,
   pip_email      text,
+  pip_tone       text check (pip_tone is null or pip_tone in ('positive','neutral','mixed','negative')),
   plan_applied_at timestamptz,
   created_at     timestamptz default now(),
   updated_at     timestamptz default now()
@@ -736,3 +742,26 @@ end;
 $$;
 
 grant execute on function folio_merge_accounts(uuid, uuid) to authenticated;
+
+-- ──────────────────────────────────────────────────────────────────────
+-- Promise completion ledger (account_health.sql migration)
+-- ──────────────────────────────────────────────────────────────────────
+create table if not exists pip_promise_log (
+  id                uuid primary key default gen_random_uuid(),
+  user_id           uuid references auth.users not null,
+  account_id        uuid references folio_accounts on delete cascade,
+  item_id           uuid references folio_items   on delete set null,
+  item_text         text not null,
+  due_date          date,
+  days_to_complete  integer,
+  closed_at         timestamptz default now(),
+  created_at        timestamptz default now()
+);
+
+alter table pip_promise_log enable row level security;
+create policy "Users manage own promise log"
+  on pip_promise_log for all
+  using (auth.uid() = user_id);
+
+create index if not exists pip_promise_log_user_account_idx
+  on pip_promise_log(user_id, account_id);

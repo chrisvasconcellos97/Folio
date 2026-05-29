@@ -354,6 +354,7 @@ export function summarizeDraftPip(payload) {
     "  \"short_title\": \"3-4 word email-subject-style label, Title Case (e.g. 'Q3 Forecast Prep', 'Dan Integration Request'). Never include date or account name.\",\n" +
     "  \"summary\": \"2-3 sentence summary\",\n" +
     "  \"follow_up_date\": \"YYYY-MM-DD or null\",\n" +
+    "  \"tone\": \"positive|neutral|mixed|negative — based on the meeting's overall energy. Customer pushback or blocker frustration = negative. Smooth check-in with no issues = neutral or positive. Both positive progress and some friction = mixed.\",\n" +
     "  \"plan\": [\n" +
     "    { \"kind\": \"new_item\",    \"text\": \"...\", \"due_date\": \"YYYY-MM-DD or null\", \"suggested_assignee\": \"email or null\", \"confidence\": \"high|medium|low\" },\n" +
     "    { \"kind\": \"update_item\", \"target_id\": \"I-...\", \"fields\": { \"due_date\": \"...\", \"text\": \"...\" }, \"confidence\": \"high|medium|low\" },\n" +
@@ -405,7 +406,7 @@ export function summarizeDraftPip(payload) {
   ).then(function (resp) {
     var text = resp.content || "";
     var match = text.match(/\{[\s\S]*\}/);
-    if (!match) return { summary: text, short_title: "", plan: [], action_items: [], follow_up_date: null };
+    if (!match) return { summary: text, short_title: "", plan: [], action_items: [], follow_up_date: null, tone: null };
     try {
       var parsed = JSON.parse(match[0]);
       var planRaw = Array.isArray(parsed.plan) ? parsed.plan : null;
@@ -414,6 +415,8 @@ export function summarizeDraftPip(payload) {
       var shortTitle = (parsed.short_title && typeof parsed.short_title === "string")
         ? String(parsed.short_title).trim().slice(0, 60)
         : "";
+      var tone = ["positive", "neutral", "mixed", "negative"].indexOf(parsed.tone) >= 0
+        ? parsed.tone : null;
 
       if (planRaw) {
         var plan = planRaw.map(normalizePlanRow).filter(Boolean);
@@ -421,6 +424,7 @@ export function summarizeDraftPip(payload) {
           summary:        summary,
           short_title:    shortTitle,
           follow_up_date: follow,
+          tone:           tone,
           plan:           plan,
           // Keep legacy field populated from new_item rows for any caller
           // that hasn't migrated yet.
@@ -449,11 +453,12 @@ export function summarizeDraftPip(payload) {
         summary:        summary,
         short_title:    shortTitle,
         follow_up_date: follow,
+        tone:           tone,
         plan:           synthPlan,
         action_items:   legacyItems,
       };
     } catch (e) {
-      return { summary: text, short_title: "", plan: [], action_items: [], follow_up_date: null };
+      return { summary: text, short_title: "", plan: [], action_items: [], follow_up_date: null, tone: null };
     }
   });
 }
