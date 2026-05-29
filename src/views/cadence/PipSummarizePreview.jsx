@@ -37,8 +37,10 @@ function hasEditableTitle(kind) {
   return kind === "new_item" || kind === "new_task" || kind === "update_item" || kind === "update_task";
 }
 
-// Short label shown above the editable input. Tells the user what the row
-// is *doing* without burying it in the textbox.
+// Short label shown above the editable input. For update rows we leave
+// the existing text out of the leader — it gets its own "CURRENT" line in
+// the diff block below so the user can read it in full instead of a
+// 60-char truncation.
 function rowLeader(row, ctx) {
   switch (row.kind) {
     case "new_item":    return "New item";
@@ -46,14 +48,10 @@ function rowLeader(row, ctx) {
       var np = findProject(ctx.activeProjects, row.project_id);
       return "New task on " + (np ? np.title : "project");
     }
-    case "update_item": {
-      var it = findItem(ctx.existingItems, row.target_id);
-      return it ? "Update \"" + (it.text || "").slice(0, 60) + "\"" : "Update item";
-    }
+    case "update_item": return "Update item";
     case "update_task": {
       var up = findProject(ctx.activeProjects, row.project_id);
-      var ut = findTask(up, row.task_id);
-      return "Update task" + (ut ? " \"" + (ut.title || "").slice(0, 60) + "\"" : "") + (up ? " on " + up.title : "");
+      return "Update task" + (up ? " on " + up.title : "");
     }
     case "close_item": {
       var ci = findItem(ctx.existingItems, row.target_id);
@@ -64,6 +62,21 @@ function rowLeader(row, ctx) {
     default:
       return row.kind;
   }
+}
+
+// For update_* rows, look up the existing item / task and return its
+// current text so the diff block can render "CURRENT → REPLACE WITH".
+function currentTextForUpdate(row, ctx) {
+  if (row.kind === "update_item") {
+    var it = findItem(ctx.existingItems, row.target_id);
+    return it ? (it.text || "") : "";
+  }
+  if (row.kind === "update_task") {
+    var p = findProject(ctx.activeProjects, row.project_id);
+    var t = findTask(p, row.task_id);
+    return t ? (t.title || t.text || "") : "";
+  }
+  return "";
 }
 
 function rowGroup(kind) {
@@ -438,6 +451,36 @@ export function PipSummarizePreview({
           }}>
             {rowLeader(row, ctx)}
           </div>
+          {(row.kind === "update_item" || row.kind === "update_task") && (
+            <div style={{
+              padding: "8px 10px",
+              background: C.bgDark,
+              border: "1px solid " + C.rule,
+              borderRadius: 6,
+              display: "flex", flexDirection: "column", gap: 4,
+            }}>
+              <div style={{
+                fontSize: 9, color: C.textMuted, fontFamily: MONO,
+                textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700,
+              }}>
+                Current
+              </div>
+              <div style={{
+                fontSize: 12, color: C.textMuted, lineHeight: 1.45,
+                textDecoration: "line-through",
+                textDecorationColor: C.textMuted,
+              }}>
+                {currentTextForUpdate(row, ctx) || "(empty)"}
+              </div>
+              <div style={{
+                fontSize: 9, color: C.accent, fontFamily: MONO,
+                textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700,
+                marginTop: 4,
+              }}>
+                ↓ Replace with
+              </div>
+            </div>
+          )}
           {hasEditableTitle(row.kind) ? (
             <TitleInput
               value={s.title || ""}
