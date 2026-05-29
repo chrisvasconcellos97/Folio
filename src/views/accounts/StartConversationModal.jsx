@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { C } from "../../lib/colors";
 import { Modal } from "../../components/Modal";
 import { AmberBtn, SecBtn } from "../../components/Buttons";
@@ -56,24 +56,10 @@ export function StartConversationModal({ accountId, accounts, userId, onStart, o
 
   var [selectedAccountId, setSelectedAccountId] = useState(accountId || "");
   var [search, setSearch]   = useState("");
-  var [pickerOpen, setPickerOpen] = useState(false);
   var [method, setMethod]   = useState("");
   var [date, setDate]       = useState(todayISO());
   var [loading, setLoading] = useState(false);
   var [error, setError]     = useState(null);
-
-  var pickerRef = useRef(null);
-
-  useEffect(function () {
-    if (!pickerOpen) return;
-    function onDown(e) {
-      if (pickerRef.current && !pickerRef.current.contains(e.target)) {
-        setPickerOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", onDown);
-    return function () { document.removeEventListener("mousedown", onDown); };
-  }, [pickerOpen]);
 
   var selectedAccount = useMemo(function () {
     if (!selectedAccountId) return null;
@@ -131,42 +117,65 @@ export function StartConversationModal({ accountId, accounts, userId, onStart, o
     <Modal title="Log Conversation" onClose={onClose} width={480}>
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         {needsAccountPicker && (
-          <div ref={pickerRef} style={{ position: "relative" }}>
-            <FL htmlFor="start-conv-acct">Account</FL>
-            <input
-              id="start-conv-acct"
-              type="text"
-              value={pickerOpen || !selectedAccount ? search : selectedAccount.name}
-              onChange={function (e) {
-                setSearch(e.target.value);
-                setPickerOpen(true);
-                if (selectedAccountId) setSelectedAccountId("");
-              }}
-              onFocus={function () { setPickerOpen(true); }}
-              placeholder="Type to search active accounts…"
-              autoComplete="off"
-              style={{
-                width: "100%",
-                background: C.bgDark,
-                border: "1px solid " + C.border,
-                borderRadius: 10,
-                padding: "10px 14px",
-                color: C.text,
-                fontSize: 16,
-                fontFamily: INTER,
-                outline: "none",
-                boxSizing: "border-box",
-              }}
-            />
-            {pickerOpen && (
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <FL htmlFor="start-conv-acct">Account</FL>
+              {selectedAccount ? (
+                <span style={{ fontSize: 10.5, color: C.accent, fontFamily: "'JetBrains Mono', ui-monospace, monospace", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                  ✓ {selectedAccount.name}
+                </span>
+              ) : (
+                <span style={{ fontSize: 10.5, color: C.textMuted, fontFamily: "'JetBrains Mono', ui-monospace, monospace", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                  {search.trim() ? filteredAccounts.length + " of " + activeAccounts.length : activeAccounts.length + " accounts"}
+                </span>
+              )}
+            </div>
+            <div style={{ position: "relative" }}>
+              <input
+                id="start-conv-acct"
+                type="text"
+                value={search}
+                onChange={function (e) {
+                  setSearch(e.target.value);
+                  if (selectedAccountId) setSelectedAccountId("");
+                }}
+                placeholder={selectedAccount ? selectedAccount.name : "Type an account name…"}
+                autoComplete="off"
+                style={{
+                  width: "100%",
+                  background: C.bgDark,
+                  border: "1px solid " + (selectedAccount ? C.accentBorder : C.border),
+                  borderRadius: 10,
+                  padding: "10px 36px 10px 14px",
+                  color: C.text,
+                  fontSize: 16,
+                  fontFamily: INTER,
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
+              />
+              {(search || selectedAccount) && (
+                <button
+                  type="button"
+                  onClick={function () { setSearch(""); setSelectedAccountId(""); }}
+                  aria-label="Clear account"
+                  style={{
+                    position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)",
+                    background: "transparent", border: "none", color: C.textMuted,
+                    fontSize: 18, lineHeight: 1, padding: "4px 8px", cursor: "pointer",
+                  }}
+                >
+                  ×
+                </button>
+              )}
+            </div>
+            {!selectedAccount && (
               <div style={{
-                position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0,
-                maxHeight: 240, overflowY: "auto",
+                marginTop: 6,
+                maxHeight: 200, overflowY: "auto",
                 background: C.bgDropdown,
                 border: "1px solid " + C.border,
                 borderRadius: 10,
-                boxShadow: "var(--c-overlay-shadow-md, 0 8px 24px rgba(0,0,0,0.3))",
-                zIndex: 10,
               }}>
                 {filteredAccounts.length === 0 ? (
                   <div style={{ padding: "10px 14px", fontSize: 12, color: C.textMuted, fontFamily: INTER }}>
@@ -181,7 +190,6 @@ export function StartConversationModal({ accountId, accounts, userId, onStart, o
                         onClick={function () {
                           setSelectedAccountId(a.id);
                           setSearch("");
-                          setPickerOpen(false);
                         }}
                         style={{
                           display: "block", width: "100%", textAlign: "left",
