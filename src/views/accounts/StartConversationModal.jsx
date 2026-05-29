@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { C } from "../../lib/colors";
 import { Modal } from "../../components/Modal";
 import { AmberBtn, SecBtn } from "../../components/Buttons";
-import { InputField } from "../../components/InputField";
+import { InputField, TextArea } from "../../components/InputField";
 import { FL } from "../../components/FieldLabel";
 import { useBreakpoint } from "../../hooks/useBreakpoint";
 
@@ -58,8 +58,13 @@ export function StartConversationModal({ accountId, accounts, userId, onStart, o
   var [search, setSearch]   = useState("");
   var [method, setMethod]   = useState("");
   var [date, setDate]       = useState(todayISO());
+  var [quickNote, setQuickNote] = useState("");
   var [loading, setLoading] = useState(false);
   var [error, setError]     = useState(null);
+
+  // Email = quick after-the-fact log. Other methods = real-time meeting
+  // overlay. The branch happens entirely in handleStart.
+  var isQuickLog = method === "email";
 
   var selectedAccount = useMemo(function () {
     if (!selectedAccountId) return null;
@@ -94,7 +99,9 @@ export function StartConversationModal({ accountId, accounts, userId, onStart, o
     if (!canStart) return;
     setError(null);
     setLoading(true);
-    var title = "Conversation — " + formatDateLong(date);
+    var title = isQuickLog
+      ? "Email — " + formatDateLong(date)
+      : "Conversation — " + formatDateLong(date);
     Promise.resolve(onStart({
       account_id:   selectedAccountId,
       user_id:      userId,
@@ -102,14 +109,16 @@ export function StartConversationModal({ accountId, accounts, userId, onStart, o
       method:       method,
       meeting_date: date,
       title:        title,
-      notes:        "",
-      status:       "draft",
+      notes:        isQuickLog ? quickNote.trim() : "",
+      // Email logs are after-the-fact summaries — skip the draft phase
+      // entirely so they don't show up in Loose Ends. Real-time
+      // conversations stay as drafts so the meeting overlay can open.
+      status:       isQuickLog ? "summarized" : "draft",
     })).then(function () {
       setLoading(false);
-      // onStart owner is responsible for closing & opening meeting mode
     }).catch(function (err) {
       setLoading(false);
-      setError((err && err.message) || "Couldn't start the conversation. Try again.");
+      setError((err && err.message) || (isQuickLog ? "Couldn't log it. Try again." : "Couldn't start the conversation. Try again."));
     });
   }
 
@@ -249,6 +258,22 @@ export function StartConversationModal({ accountId, accounts, userId, onStart, o
           />
         </div>
 
+        {isQuickLog && (
+          <div>
+            <FL htmlFor="start-conv-note">
+              What was it about? <span style={{ color: C.textMuted, fontWeight: 400 }}>(optional)</span>
+            </FL>
+            <TextArea
+              id="start-conv-note"
+              value={quickNote}
+              onChange={function (e) { setQuickNote(e.target.value); }}
+              placeholder="One or two lines — 'Adam confirmed deck, asked for follow-up Tue.'"
+              rows={3}
+              autoFocus
+            />
+          </div>
+        )}
+
         {error && (
           <div
             role="alert"
@@ -282,7 +307,9 @@ export function StartConversationModal({ accountId, accounts, userId, onStart, o
             Cancel
           </SecBtn>
           <AmberBtn style={{ flex: 1 }} onClick={handleStart} disabled={!canStart}>
-            {loading ? "Starting…" : "Start Conversation →"}
+            {loading
+              ? (isQuickLog ? "Logging…" : "Starting…")
+              : (isQuickLog ? "Log it" : "Start Conversation →")}
           </AmberBtn>
         </div>
       </div>

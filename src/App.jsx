@@ -639,7 +639,16 @@ export default function App() {
       onStart={function (data) {
         return addMeeting(data).then(function (m) {
           setShowStartConv(false);
-          setAdHocFlow({ accountId: data.account_id, draftId: m.id });
+          // Email = quick after-the-fact log. Already summarized on save,
+          // no overlay needed. Just bump the account so it counts as
+          // contact and show a toast.
+          if (data.status === "summarized") {
+            touchAccount(data.account_id);
+            showToast("Logged.");
+          } else {
+            // Real-time conversation → open the meeting overlay.
+            setAdHocFlow({ accountId: data.account_id, draftId: m.id });
+          }
           return m;
         });
       }}
