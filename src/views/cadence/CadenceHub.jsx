@@ -748,9 +748,10 @@ export function CadenceHub({
     }).then(function (out) {
       var followUp = out.follow_up_date || null;
       return updateMeeting(draftId, {
-        pip_summary:    out.summary || null,
-        follow_up_date: followUp,
-        status:         "summarized",
+        pip_summary:     out.summary || null,
+        pip_short_title: out.short_title || null,
+        follow_up_date:  followUp,
+        status:          "summarized",
       }).then(function () { return out; });
     }).then(function (out) {
       setSummarizingId(null);

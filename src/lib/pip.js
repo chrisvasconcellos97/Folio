@@ -351,6 +351,7 @@ export function summarizeDraftPip(payload) {
     "AVOIDS duplicates and prefers updates/closes over new rows.\n\n" +
     "Return ONLY valid JSON with this exact shape (no preamble, no markdown):\n" +
     "{\n" +
+    "  \"short_title\": \"3-4 word email-subject-style label, Title Case (e.g. 'Q3 Forecast Prep', 'Dan Integration Request'). Never include date or account name.\",\n" +
     "  \"summary\": \"2-3 sentence summary\",\n" +
     "  \"follow_up_date\": \"YYYY-MM-DD or null\",\n" +
     "  \"plan\": [\n" +
@@ -404,17 +405,21 @@ export function summarizeDraftPip(payload) {
   ).then(function (resp) {
     var text = resp.content || "";
     var match = text.match(/\{[\s\S]*\}/);
-    if (!match) return { summary: text, plan: [], action_items: [], follow_up_date: null };
+    if (!match) return { summary: text, short_title: "", plan: [], action_items: [], follow_up_date: null };
     try {
       var parsed = JSON.parse(match[0]);
       var planRaw = Array.isArray(parsed.plan) ? parsed.plan : null;
       var follow  = parsed.follow_up_date || null;
       var summary = parsed.summary || "";
+      var shortTitle = (parsed.short_title && typeof parsed.short_title === "string")
+        ? String(parsed.short_title).trim().slice(0, 60)
+        : "";
 
       if (planRaw) {
         var plan = planRaw.map(normalizePlanRow).filter(Boolean);
         return {
           summary:        summary,
+          short_title:    shortTitle,
           follow_up_date: follow,
           plan:           plan,
           // Keep legacy field populated from new_item rows for any caller
@@ -442,12 +447,13 @@ export function summarizeDraftPip(payload) {
         .filter(function (r) { return r && r.text; });
       return {
         summary:        summary,
+        short_title:    shortTitle,
         follow_up_date: follow,
         plan:           synthPlan,
         action_items:   legacyItems,
       };
     } catch (e) {
-      return { summary: text, plan: [], action_items: [], follow_up_date: null };
+      return { summary: text, short_title: "", plan: [], action_items: [], follow_up_date: null };
     }
   });
 }
@@ -574,11 +580,14 @@ export function extractTouchpointActionsPip(payload) {
   if (note.length < 6) return Promise.resolve({ items: [] });
 
   var prompt =
-    "Read this short email/touchpoint note about a customer. Extract any " +
-    "action items the user committed to or implied. Be conservative — only " +
-    "list things that are clearly actionable. If nothing is actionable, return " +
-    "{\"items\": []}.\n\n" +
-    "For each item return JSON with:\n" +
+    "Read this short email/touchpoint note about a customer. Do two things:\n" +
+    "1. Write a 3-4 word label for this touchpoint that reads like an email " +
+    "subject line (e.g. 'Dan integration request', 'Pricing pushback', 'Q3 forecast prep'). " +
+    "Title Case. Never include the date or the account name — both are shown elsewhere. " +
+    "Always return one even if the note is short.\n" +
+    "2. Extract any action items the user committed to or implied. Be conservative — only " +
+    "list things that are clearly actionable. Return [] if nothing is actionable.\n\n" +
+    "For each action item return JSON with:\n" +
     "  text                — the action in one short sentence (imperative voice)\n" +
     "  due_date            — ISO date if the note implies one (today=" + today + ", words like 'Tuesday', 'EOW', 'next week' should be resolved), else null\n" +
     "  suggested_assignee  — email of an org member if the note clearly names them; otherwise null\n" +
@@ -588,7 +597,7 @@ export function extractTouchpointActionsPip(payload) {
     "Org members (use exact email if assignable): " + (orgMembers.join(", ") || "none") + "\n" +
     "Today: " + today + "\n\n" +
     "── NOTE ──\n" + note + "\n\n" +
-    "Return ONLY valid JSON: { \"items\": [...] }";
+    "Return ONLY valid JSON: { \"short_title\": \"...\", \"items\": [...] }";
 
   return callPipApi(
     [{ role: "user", content: prompt }],
@@ -597,7 +606,7 @@ export function extractTouchpointActionsPip(payload) {
   ).then(function (resp) {
     var text = resp.content || "";
     var match = text.match(/\{[\s\S]*\}/);
-    if (!match) return { items: [] };
+    if (!match) return { short_title: "", items: [] };
     try {
       var parsed = JSON.parse(match[0]);
       var raw    = Array.isArray(parsed.items) ? parsed.items : [];
@@ -610,12 +619,15 @@ export function extractTouchpointActionsPip(payload) {
           confidence:          r.confidence === "high" || r.confidence === "low" ? r.confidence : "medium",
         };
       }).filter(Boolean);
-      return { items: items };
+      var shortTitle = (parsed.short_title && typeof parsed.short_title === "string")
+        ? String(parsed.short_title).trim().slice(0, 60)
+        : "";
+      return { short_title: shortTitle, items: items };
     } catch (e) {
-      return { items: [] };
+      return { short_title: "", items: [] };
     }
   }).catch(function () {
-    return { items: [] };
+    return { short_title: "", items: [] };
   });
 }
 

@@ -157,6 +157,7 @@ create table if not exists folio_meetings (
   rating         integer check (rating between 1 and 5),
   attendees      text[],
   pip_summary    text,
+  pip_short_title text,
   pip_email      text,
   plan_applied_at timestamptz,
   created_at     timestamptz default now(),

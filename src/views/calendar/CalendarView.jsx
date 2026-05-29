@@ -48,35 +48,21 @@ function isoDate(d) {
 
 var METHOD_LABEL = { phone: "Phone", email: "Email", video: "Video", in_person: "In Person" };
 
-// Pick a useful title to show in the calendar. The auto-generated
-// "Conversation — May 28, 2026" / "Email — May 28, 2026" titles are
-// redundant on a date-indexed surface — replace them with a sentence
-// the user can actually scan. Order:
-//   1. pip_summary first sentence
-//   2. notes first line
-//   3. user-set title (if it wasn't an auto title)
-//   4. method + account fallback
+// Pick a useful title to show in the calendar. Order:
+//   1. User-set title (only if they actually picked one — not the
+//      auto-generated date-stamped strings)
+//   2. pip_short_title — Pip's 3-4 word email-subject-style label
+//   3. method + account fallback ("Email · Empire")
+//
+// Old fallbacks (notes first line / pip_summary first sentence) are
+// gone — too verbose on a date-indexed surface. The short title is the
+// signal; click the row for the full summary.
 function meetingDisplayTitle(m, acct) {
-  function trim(s, n) {
-    s = String(s || "").trim();
-    if (s.length <= n) return s;
-    return s.slice(0, n - 1).trimEnd() + "…";
-  }
-  var summary = (m.pip_summary || "").trim();
-  if (summary) {
-    var firstSent = summary.split(/(?<=[.!?])\s+|\n/)[0];
-    return trim(firstSent, 90);
-  }
-  var notes = (m.notes || "").trim();
-  if (notes) {
-    var firstLine = notes.split(/\n/)[0];
-    return trim(firstLine, 90);
-  }
   var title = (m.title || "").trim();
-  // Heuristic: auto titles look like "Conversation — May 28, 2026" or
-  // "Email — May 28, 2026". Skip those — fall back to a built label.
   var isAuto = /^(Conversation|Email|Meeting)\s+—\s+\w+\s+\d+/.test(title);
   if (title && !isAuto) return title;
+  var shortTitle = (m.pip_short_title || "").trim();
+  if (shortTitle) return shortTitle;
   var label = METHOD_LABEL[m.method] || "";
   if (acct && label) return label + " · " + acct.name;
   if (acct) return acct.name;
@@ -370,24 +356,33 @@ function EventRow({ event, onClick, showAccount }) {
         flexShrink: 0,
         minHeight: 18,
       }} />
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <div style={{
           fontFamily: INTER,
           fontSize: 13,
           fontWeight: 600,
           color: C.text,
-          whiteSpace: "nowrap",
+          minWidth: 0,
           overflow: "hidden",
           textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
         }}>
           {event.title}
         </div>
-        {(showAccount && event.accountName) && (
-          <div style={{
-            fontFamily: INTER, fontSize: 11, color: C.textMuted, marginTop: 1,
+        {event.accountName && (
+          <span style={{
+            display: "inline-flex", alignItems: "center",
+            fontFamily: MONO, fontSize: 9.5, color: C.textSoft,
+            background: C.surface2,
+            border: "1px solid " + C.rule,
+            borderRadius: 999,
+            padding: "1px 8px",
+            letterSpacing: "0.04em",
+            whiteSpace: "nowrap",
+            flexShrink: 0,
           }}>
             {event.accountName}
-          </div>
+          </span>
         )}
       </div>
       {event.timeStr && (

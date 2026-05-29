@@ -70,6 +70,7 @@ export function StartConversationModal({ accountId, accounts, userId, orgId, mem
   // after the user clicks Log it.
   var [phase, setPhase]                 = useState("compose"); // compose | extracting | review | saving
   var [extractedItems, setExtractedItems] = useState([]); // [{ text, due_date, assignee, confidence, checked }]
+  var [extractedTitle, setExtractedTitle] = useState(""); // Pip's 3-4 word short title for the touchpoint
 
   // Email = quick after-the-fact log. Other methods = real-time meeting
   // overlay. The branch happens entirely in handleStart.
@@ -109,23 +110,27 @@ export function StartConversationModal({ accountId, accounts, userId, orgId, mem
 
   var canStart = Boolean(selectedAccountId && method && date && !loading);
 
-  function commitLog(itemsToCreate) {
+  function commitLog(itemsToCreate, shortTitleOverride) {
     setError(null);
     setPhase("saving");
     setLoading(true);
     var title = isQuickLog
       ? "Email — " + formatDateLong(date)
       : "Conversation — " + formatDateLong(date);
+    var pipShortTitle = isQuickLog
+      ? (shortTitleOverride || extractedTitle || "")
+      : "";
     return Promise.resolve(onStart({
-      account_id:   selectedAccountId,
-      user_id:      userId,
-      cadence_id:   null,
-      method:       method,
-      meeting_date: date,
-      title:        title,
-      notes:        isQuickLog ? quickNote.trim() : "",
-      attendees:    withContacts.length > 0 ? withContacts.slice() : null,
-      status:       isQuickLog ? "summarized" : "draft",
+      account_id:      selectedAccountId,
+      user_id:         userId,
+      cadence_id:      null,
+      method:          method,
+      meeting_date:    date,
+      title:           title,
+      notes:           isQuickLog ? quickNote.trim() : "",
+      attendees:       withContacts.length > 0 ? withContacts.slice() : null,
+      pip_short_title: pipShortTitle || null,
+      status:          isQuickLog ? "summarized" : "draft",
     })).then(function () {
       if (isQuickLog && itemsToCreate && itemsToCreate.length > 0 && onAddItems) {
         return onAddItems(selectedAccountId, itemsToCreate);
@@ -172,10 +177,12 @@ export function StartConversationModal({ accountId, accounts, userId, orgId, mem
       orgMembers:  members || [],
     }).then(function (result) {
       var items = (result && result.items) || [];
+      var title = (result && result.short_title) || "";
+      setExtractedTitle(title);
       setLoading(false);
       if (items.length === 0) {
         // Nothing to confirm — save straight through.
-        commitLog(null);
+        commitLog(null, title);
         return;
       }
       // High + medium default to checked. Low confidence starts unchecked.
