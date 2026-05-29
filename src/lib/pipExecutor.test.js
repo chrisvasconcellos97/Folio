@@ -136,12 +136,12 @@ describe("executeTool", function () {
   it("routes navigate to onNavigate and returns navTarget", async function () {
     var onNavigate = vi.fn();
     var r = await executeTool({
-      tool: { name: "navigate", input: { view: "pipeline" } },
+      tool: { name: "navigate", input: { view: "cadence" } },
       hooks: { onNavigate: onNavigate },
     });
-    expect(onNavigate).toHaveBeenCalledWith("pipeline");
+    expect(onNavigate).toHaveBeenCalledWith("cadence");
     expect(r.ok).toBe(true);
-    expect(r.navTarget).toBe("pipeline");
+    expect(r.navTarget).toBe("cadence");
   });
 
   it("routes open_meeting to onOpenAction with the resolved account", async function () {

@@ -1,9 +1,6 @@
-import { displayRevenue } from "../lib/metricsUtils";
-
 export function PrintAccountSheet({ account, contacts, meetings, items }) {
   var openItems  = (items || []).filter(function (i) { return !i.done; });
   var lastMeeting = meetings && meetings.length > 0 ? meetings[0] : null;
-  var revText = (account.revenue_amount != null || account.revenue) ? displayRevenue(account) : null;
 
   return (
     <div id="print-account-sheet" style={{ display: "none" }}>
@@ -20,7 +17,6 @@ export function PrintAccountSheet({ account, contacts, meetings, items }) {
 
       <h1>{account.name}</h1>
       <p>{[account.tier, account.status, account.region].filter(Boolean).join(" · ")}</p>
-      {revText && <p><strong>Revenue YTD:</strong> {revText}</p>}
       {account.address && <p><strong>Address:</strong> {account.address}</p>}
 
       {contacts && contacts.length > 0 && (

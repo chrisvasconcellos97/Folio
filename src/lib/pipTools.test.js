@@ -81,7 +81,7 @@ describe("describeToolCall", function () {
     expect(d).toContain("Send CAPA docs");
   });
   it("describes navigate", function () {
-    expect(describeToolCall({ name: "navigate", input: { view: "pipeline" } }, sampleAccounts)).toBe("Go to pipeline");
+    expect(describeToolCall({ name: "navigate", input: { view: "cadence" } }, sampleAccounts)).toBe("Go to cadence");
   });
 });
 
@@ -115,7 +115,7 @@ describe("planToolCalls (Phase 2.5)", function () {
 
   it("splits mixed responses — frictionless go immediate, confirms go to card", function () {
     var p = planToolCalls([
-      { name: "navigate",        input: { view: "pipeline" } },
+      { name: "navigate",        input: { view: "cadence" } },
       { name: "complete_task",   input: { task_id: "abc" } },
       { name: "open_meeting",    input: { account_name: "KSI" } },
       { name: "create_open_item",input: { account_id: "a1", text: "x" } },
@@ -271,10 +271,10 @@ describe("routeToolCall — routing to hooks", function () {
   it("routes navigate to onNavigate callback", async function () {
     var onNavigate = vi.fn();
     var r = await routeToolCall(
-      { id: "t7", name: "navigate", input: { view: "pipeline" } },
+      { id: "t7", name: "navigate", input: { view: "cadence" } },
       { onNavigate: onNavigate }
     );
-    expect(onNavigate).toHaveBeenCalledWith("pipeline");
+    expect(onNavigate).toHaveBeenCalledWith("cadence");
     expect(r.kind).toBe("navigate");
   });
 

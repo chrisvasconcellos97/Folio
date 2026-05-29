@@ -14,7 +14,6 @@ import { C } from "../../lib/colors";
 import { Pill } from "../../components/Pill";
 import { SecBtn, DangerBtn } from "../../components/Buttons";
 import { ownerInitials, findOwner } from "../../lib/ownerLabel";
-import { displayRevenue } from "../../lib/metricsUtils";
 import { useBreakpoint } from "../../hooks/useBreakpoint";
 
 var MONO = "'JetBrains Mono', ui-monospace, monospace";
@@ -278,33 +277,6 @@ export function AccountDetailHeader({
         </div>
 
         <div style={{ textAlign: isMobile ? "left" : "right", flexShrink: 0 }}>
-          {isCustomerType && (
-            <>
-              <div
-                style={{
-                  fontFamily: SERIF,
-                  fontSize: 28,
-                  fontWeight: 400,
-                  color: C.accent,
-                  fontFeatureSettings: '"tnum"',
-                }}
-              >
-                {displayRevenue(account)}
-              </div>
-              <div
-                style={{
-                  fontFamily: MONO,
-                  fontSize: 9.5,
-                  color: C.textMuted,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.08em",
-                  marginTop: 2,
-                }}
-              >
-                Revenue YTD
-              </div>
-            </>
-          )}
           {isPartner && account.spend_ytd != null && (
             <>
               <div

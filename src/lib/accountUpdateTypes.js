@@ -1,6 +1,7 @@
-// Shared metadata for revenue-impact update types — used by UpdatesTab,
-// OverviewTab's "Recent updates" block, and the sparkline tick markers.
-// Colors reuse existing C tokens so both themes resolve correctly.
+// Shared metadata for account update types — used by UpdatesTab and the
+// OverviewTab "Recent updates" block. The sparkline tick markers got ripped
+// with Pipeline V2 (see CLAUDE.md "Ripped" section). Colors reuse existing C
+// tokens so both themes resolve correctly.
 import { C } from "./colors";
 
 export var UPDATE_TYPES = [

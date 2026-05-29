@@ -87,37 +87,6 @@ function MeetingsPreview() {
   );
 }
 
-function PipelinePreview() {
-  var rows = [
-    { name: "Acme Corp",   rev: "$420K", pct: 78, status: "Active",      color: "#4ade80" },
-    { name: "BrightPath",  rev: "$180K", pct: 50, status: "Negotiating", color: C.accent  },
-    { name: "Vertex Labs", rev: "$310K", pct: 32, status: "At Risk",     color: C.red      },
-  ];
-  return (
-    <Shell>
-      <PreviewLabel text="Pipeline" />
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {rows.map(function (r) {
-          return (
-            <div key={r.name}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: C.text }}>{r.name}</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <div style={{ fontSize: 10, color: C.textMuted }}>{r.rev}</div>
-                  <div style={{ fontSize: 9, color: r.color }}>{r.status}</div>
-                </div>
-              </div>
-              <div style={{ height: 4, borderRadius: 2, background: C.bgCardAlt, overflow: "hidden" }}>
-                <div style={{ height: "100%", width: r.pct + "%", borderRadius: 2, background: r.color, opacity: 0.65 }} />
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </Shell>
-  );
-}
-
 function CadencePreview() {
   return (
     <Shell>
@@ -221,12 +190,6 @@ var SCREENS = [
     body: "Notes, action items, talking points — all of it. I'll read them.",
     pipTop: "10%", pipLeft: "82%",
     visual: MeetingsPreview,
-  },
-  {
-    headline: "Pipeline.",
-    body: "Revenue, tiers, and account health across your whole book at a glance.",
-    pipTop: "10%", pipLeft: "50%",
-    visual: PipelinePreview,
   },
   {
     headline: "Cadence.",

@@ -88,7 +88,6 @@ export function curateContext(raw, message, focusedAccountIds, opts) {
       tier:   a.tier,
       health: a.health,
       last_interaction_at: a.last_interaction_at,
-      revenue_amount: a.revenue_amount,
       account_type: a.account_type,
     };
   });
@@ -149,8 +148,8 @@ function typeLabel(t) {
 }
 
 function typeFocusHint(t) {
-  if (t === "internal_team") return "Focus: cross-team deliverables, overdue commitments, and internal follow-ups. Revenue/tier/pipeline don't apply.";
-  if (t === "partner")       return "Focus: agreement status, renewal date, scope drift, spend trends. Revenue/tier/pipeline don't apply.";
+  if (t === "internal_team") return "Focus: cross-team deliverables, overdue commitments, and internal follow-ups.";
+  if (t === "partner")       return "Focus: agreement status, renewal date, scope drift, spend trends.";
   return null;
 }
 
@@ -171,12 +170,6 @@ function renderAccountFull(a) {
   var statusLine = "Status: " + status + " · Health: " + health + " · Last contact: " + last + dsStr;
   var isCustomerType = a.account_type !== "internal_team" && a.account_type !== "partner";
   if (a.tier && isCustomerType) statusLine += " · Tier: " + a.tier;
-  if (isCustomerType && a.revenueTrend && a.revenueTrend.amount) {
-    statusLine += " · Revenue: " + a.revenueTrend.amount;
-    if (a.revenueTrend.momPct != null) statusLine += " (MoM " + (a.revenueTrend.momPct > 0 ? "+" : "") + a.revenueTrend.momPct + "%";
-    if (a.revenueTrend.yoyPct != null) statusLine += ", YoY " + (a.revenueTrend.yoyPct > 0 ? "+" : "") + a.revenueTrend.yoyPct + "%";
-    if (a.revenueTrend.momPct != null || a.revenueTrend.yoyPct != null) statusLine += ")";
-  }
   lines.push(statusLine);
   var focusHint = typeFocusHint(a.account_type);
   if (focusHint) lines.push(focusHint);
@@ -251,8 +244,7 @@ function renderAccountFull(a) {
     });
   }
 
-  // Revenue-impact updates — recent log of things that could have moved the
-  // revenue line. When a MoM dip shows up, Pip can cross-reference these.
+  // Recent account-level updates — catalog/pricing/integration changes etc.
   var recentUpdates = take(a.recentUpdates, 6);
   if (recentUpdates.length) {
     lines.push("");
@@ -279,7 +271,6 @@ function renderAccountListItem(a) {
   if (a.health) bits.push("health=" + a.health);
   var ds = daysSince(a.last_interaction_at);
   if (ds != null) bits.push(ds + "d ago");
-  if (a.revenue_amount != null) bits.push("$" + a.revenue_amount);
   return "- " + bits.join(" · ");
 }
 

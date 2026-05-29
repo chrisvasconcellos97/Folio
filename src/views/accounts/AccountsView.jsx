@@ -3,7 +3,6 @@ import { C } from "../../lib/colors";
 import { ownerInitials, findOwner } from "../../lib/ownerLabel";
 import { Mark } from "../../components/Mark";
 import { useBreakpoint } from "../../hooks/useBreakpoint";
-import { latestRecord, accountRecords, momPct, displayRevenue } from "../../lib/metricsUtils";
 import { Pill } from "../../components/Pill";
 import { InputField } from "../../components/InputField";
 import { Card } from "../../components/Card";
@@ -96,7 +95,7 @@ function matchesTypeFilter(account, typeFilter) {
   return !t || t === "standard" || t === "mso" || t === "shop";
 }
 
-export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks, addTask, updateTask, deleteTask, hasMeetings, hasCadences, revenueHistory, items, meetings, contacts, onColdClick, onOverdueClick, onFollowUpClick, onOpenConversation, typeFilter, userId, members, bannerFilter, onClearBannerFilter }) {
+export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks, addTask, updateTask, deleteTask, hasMeetings, hasCadences, items, meetings, contacts, onColdClick, onOverdueClick, onFollowUpClick, onOpenConversation, typeFilter, userId, members, bannerFilter, onClearBannerFilter }) {
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
   var activeType = typeFilter || "customer";
@@ -108,7 +107,12 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
   var deferredSearch = useDeferredValue(search);
   var [searchFocused, setSearchFocused] = useState(false);
   var [filter, setFilter]           = useState(function() { return loadPrefs().filter || "All"; });
-  var [sortMode, setSortMode]       = useState(function() { return loadPrefs().sort || "tier"; });
+  var [sortMode, setSortMode]       = useState(function() {
+    var s = loadPrefs().sort;
+    // Legacy "revenue" sort was ripped — fall back to default if persisted.
+    if (s === "revenue") s = "tier";
+    return s || "tier";
+  });
   var mineKey = "folio_mine_only_" + (typeFilter || "customer");
   var [mineOnly, setMineOnly]       = useState(function () { try { return localStorage.getItem(mineKey) === "1"; } catch (e) { return false; } });
   useEffect(function () { try { localStorage.setItem(mineKey, mineOnly ? "1" : "0"); } catch (e) {} }, [mineOnly, mineKey]);
@@ -259,12 +263,6 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
         return matchSearch && matchFilter && matchTag && matchRegion && matchMine && matchInactive && matchBanner;
       })
       .sort(function (a, b) {
-        if (sortMode === "revenue") {
-          var ra = a.revenue_amount != null ? Number(a.revenue_amount) : -1;
-          var rb = b.revenue_amount != null ? Number(b.revenue_amount) : -1;
-          if (ra !== rb) return rb - ra;
-          return a.name.localeCompare(b.name);
-        }
         if (sortMode === "name") {
           return a.name.localeCompare(b.name);
         }
@@ -951,25 +949,18 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                   })()}
 
                   {!isCompact && (function () {
-                    var hasRevenue = a.revenue_amount != null || a.revenue;
                     var openCount  = openItemsByAccount[a.id] || 0;
-                    if (!hasRevenue && !a.next_meeting && openCount === 0) return null;
+                    if (!a.next_meeting && openCount === 0) return null;
                     return (
                       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 0, fontFamily: MONO, fontSize: 10, letterSpacing: "0.04em", fontFeatureSettings: '"tnum"' }}>
-                        {hasRevenue && (
-                          <span style={{ color: C.textMuted }}>{displayRevenue(a)}</span>
-                        )}
                         {a.next_meeting && (
-                          <>
-                            {hasRevenue && <span style={{ color: C.textMuted, opacity: 0.6, margin: "0 6px" }}>·</span>}
-                            <span style={{ color: a.next_meeting < todayStr ? C.red : C.textMuted }}>
-                              {(a.next_meeting < todayStr ? "Overdue · " : "Next · ") + new Date(a.next_meeting + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                            </span>
-                          </>
+                          <span style={{ color: a.next_meeting < todayStr ? C.red : C.textMuted }}>
+                            {(a.next_meeting < todayStr ? "Overdue · " : "Next · ") + new Date(a.next_meeting + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                          </span>
                         )}
                         {openCount > 0 && (
                           <>
-                            {(hasRevenue || a.next_meeting) && <span style={{ color: C.textMuted, opacity: 0.6, margin: "0 6px" }}>·</span>}
+                            {a.next_meeting && <span style={{ color: C.textMuted, opacity: 0.6, margin: "0 6px" }}>·</span>}
                             <span style={{ color: C.yellow }}>
                               {openCount + " open"}
                             </span>
@@ -1009,33 +1000,6 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
                   );
                 })()}
               </div>
-              {!isCompact && (function() {
-                var recs = accountRecords(revenueHistory || [], a.id).slice(-8);
-                if (recs.length === 0) return null;
-                var maxRev = Math.max.apply(null, recs.map(function(r) { return r.revenue; }));
-                if (maxRev === 0) return null;
-                var mom = momPct(revenueHistory || [], a.id, "revenue");
-                var trendColor = mom === null ? C.textMuted : mom >= 0 ? C.green : C.red;
-                var trendArrow = mom === null ? null : mom >= 0 ? "↑" : "↓";
-                return (
-                  <div style={{ display: "flex", alignItems: "flex-end", gap: 6, marginTop: 6 }}>
-                    <div style={{ display: "flex", alignItems: "flex-end", gap: 1, height: 16 }}>
-                      {recs.map(function(r, i) {
-                        var h = Math.max(2, Math.round((r.revenue / maxRev) * 16));
-                        var isLast = i === recs.length - 1;
-                        return (
-                          <div key={i} style={{ width: 3, height: h, background: isLast ? C.accent : C.accentDim, borderRadius: 1, opacity: isLast ? 0.9 : 0.4 }} />
-                        );
-                      })}
-                    </div>
-                    {trendArrow && (
-                      <span style={{ fontSize: 10, fontWeight: 700, color: trendColor, fontVariantNumeric: "tabular-nums" }}>
-                        {trendArrow}{Math.abs(mom)}%
-                      </span>
-                    )}
-                  </div>
-                );
-              })()}
               {a.address && !isCompact && (
                 <div style={{ fontSize: 10, color: C.textMuted, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {a.address}
@@ -1162,7 +1126,6 @@ export function AccountsView({ accounts, loading, onSelect, onAddAccount, tasks,
               >
                 <option value="tier">Tier</option>
                 <option value="name">Name</option>
-                <option value="revenue">Revenue</option>
                 <option value="recent">Most recent</option>
               </select>
             </div>

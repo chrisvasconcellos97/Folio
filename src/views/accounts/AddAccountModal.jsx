@@ -64,8 +64,6 @@ function TagChip({ label, active, onClick, onRemove, color }) {
 
 export function AddAccountModal({ userId, onSave, onClose, existing, accounts, defaultType, defaultParentId, members }) {
   var [name, setName]       = useState(existing ? existing.name : "");
-  var [revenueAmount, setRevenueAmount] = useState(existing && existing.revenue_amount != null ? String(existing.revenue_amount) : "");
-  var [revenueNote, setRevenueNote] = useState(existing && existing.revenue && existing.revenue_amount == null ? existing.revenue : "");
   var [tier, setTier]       = useState(existing ? (existing.tier || "Mid") : "Mid");
   var [status, setStatus]   = useState(existing ? (existing.status || "green") : "green");
   var [notes, setNotes]     = useState(existing ? (existing.objective || "") : "");
@@ -145,14 +143,10 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
     setLoading(true);
     setError(null);
 
-    var parsedRev = revenueAmount.trim() === "" ? null : parseFloat(revenueAmount.replace(/[^0-9.]/g, ""));
-    if (parsedRev !== null && isNaN(parsedRev)) parsedRev = null;
     var parsedSpend = spendYtd.trim() === "" ? null : parseFloat(spendYtd.replace(/[^0-9.]/g, ""));
     if (parsedSpend !== null && isNaN(parsedSpend)) parsedSpend = null;
     var data = {
       name:              name.trim(),
-      revenue_amount:    isCustomer ? parsedRev : null,
-      revenue:           isCustomer ? (revenueNote.trim() || (parsedRev !== null ? null : null)) : null,
       tier:              isCustomer ? tier : null,
       status:            status,
       objective:         notes.trim() || null,
@@ -240,36 +234,6 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
           <FL htmlFor="account-number">Account # <span style={{ fontWeight: 400, color: C.textMuted }}>(optional)</span></FL>
           <InputField id="account-number" value={accountNumber} onChange={function (e) { setAccountNumber(e.target.value); }} placeholder="e.g. 10042" />
         </div>
-
-        {/* Revenue — customer only */}
-        {isCustomer && (
-        <div>
-          <FL htmlFor="account-revenue">Revenue (YTD)</FL>
-          <div style={{ position: "relative" }}>
-            <span style={{
-              position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)",
-              color: C.textMuted, fontSize: 14, pointerEvents: "none",
-              fontFamily: "'Inter', system-ui, sans-serif",
-            }}>$</span>
-            <InputField
-              id="account-revenue"
-              type="number"
-              inputMode="decimal"
-              value={revenueAmount}
-              onChange={function (e) { setRevenueAmount(e.target.value); }}
-              placeholder="4900000"
-              style={{ paddingLeft: 24 }}
-            />
-          </div>
-          <InputField
-            id="account-revenue-note"
-            value={revenueNote}
-            onChange={function (e) { setRevenueNote(e.target.value); }}
-            placeholder="Note (optional, e.g. ARR, estimated)"
-            style={{ marginTop: 6, fontSize: 12 }}
-          />
-        </div>
-        )}
 
         {/* Partner fields */}
         {isPartner && (

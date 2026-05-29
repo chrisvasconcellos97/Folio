@@ -9,7 +9,6 @@ import { useCadences } from "./hooks/useCadences";
 import { useCadenceSync } from "./hooks/useCadenceSync";
 import { useCadenceReminders } from "./hooks/useCadenceReminders";
 import { useQuickTasks } from "./hooks/useQuickTasks";
-import { useAccountMetrics } from "./hooks/useAccountMetrics";
 import { useProjects } from "./hooks/useProjects";
 import { useOrg } from "./hooks/useOrg";
 import { AuthView } from "./views/auth/AuthView";
@@ -25,7 +24,6 @@ import { PipLoader } from "./components/PipLoader";
 // Code-split heavy views — only fetched when navigated to. Cuts initial
 // bundle and speeds up first paint by ~30-40%.
 var MeetingsView   = lazy(function () { return import("./views/meetings/MeetingsView").then(function (m) { return { default: m.MeetingsView }; }); });
-var PipelineView   = lazy(function () { return import("./views/pipeline/PipelineView").then(function (m) { return { default: m.PipelineView }; }); });
 var PipView        = lazy(function () { return import("./views/pip/PipView").then(function (m) { return { default: m.PipView }; }); });
 var CadenceView    = lazy(function () { return import("./views/cadence/CadenceView").then(function (m) { return { default: m.CadenceView }; }); });
 var GaugeView      = lazy(function () { return import("./views/gauge/GaugeView").then(function (m) { return { default: m.GaugeView }; }); });
@@ -174,7 +172,6 @@ export default function App() {
   }
   var { tasks, addTask, updateTask, deleteTask, error: tasksError } = useQuickTasks(userId);
   var { projects: allProjects, error: projectsErrorApp, refetch: refetchProjectsApp } = useProjects(userId);
-  var { revenueHistory, shopMetrics, upsertRevenue, upsertShopMetrics } = useAccountMetrics(userId);
   // Observability — gate the Diagnostics nav entry on unresolved errors in
   // the last 7 days. Hook fails soft if the phase6 SQL hasn't been run yet
   // (returns unresolvedRecent=0, so the nav stays hidden).
@@ -406,7 +403,6 @@ export default function App() {
         deleteTask={deleteTask}
         hasMeetings={meetings.length > 0}
         hasCadences={cadences.length > 0}
-        revenueHistory={revenueHistory}
         items={allItems}
         meetings={meetings}
         contacts={allContacts}
@@ -452,8 +448,6 @@ export default function App() {
             onHubConsumed={function () { setPendingHubCadenceId(null); }}
             autoOpenMeetingMode={pendingAutoOpenMeetingMode}
             onAutoOpenMeetingModeConsumed={function () { setPendingAutoOpenMeetingMode(false); }}
-            revenueHistory={revenueHistory}
-            shopMetrics={shopMetrics}
             onAddAccount={addAccount}
           />
         </div>
@@ -484,10 +478,6 @@ export default function App() {
     mainContent = <MeetingsView meetings={meetings} loading={meetLoading} allItems={allItems} addItem={pipAddItem} accounts={accounts} />;
   }
 
-  if (view === "pipeline") {
-    mainContent = <PipelineView accounts={accounts} loading={acctLoading} revenueHistory={revenueHistory} shopMetrics={shopMetrics} onUpsertRevenue={upsertRevenue} onUpsertShopMetrics={upsertShopMetrics} />;
-  }
-
   if (view === "pip") {
     mainContent = <PipView
       accounts={accounts}
@@ -498,8 +488,6 @@ export default function App() {
       addTask={addTask}
       updateTask={updateTask}
       onAction={handlePipAction}
-      revenueHistory={revenueHistory}
-      shopMetrics={shopMetrics}
       cadences={cadences}
       projects={allProjects}
       updates={allUpdates}

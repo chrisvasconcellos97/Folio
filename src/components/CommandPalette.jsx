@@ -11,7 +11,6 @@ export function CommandPalette({ accounts, contacts, onSelectAccount, onSelectCo
   var NAV_ITEMS = [
     { label: "Accounts",  action: function() { onNavigate("accounts"); } },
     { label: "Meetings",  action: function() { onNavigate("meetings"); } },
-    { label: "Pipeline",  action: function() { onNavigate("pipeline"); } },
     { label: "Cadence",   action: function() { onNavigate("cadence"); } },
     { label: "Gauge",     action: function() { onNavigate("gauge"); } },
     { label: "Pip",       action: function() { onNavigate("pip"); } },

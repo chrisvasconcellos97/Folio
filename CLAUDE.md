@@ -106,7 +106,7 @@ Symptoms of regression: tap an input → viewport visibly zooms in → input los
 
 **Folios is the umbrella product** — a year-round account management app. Lanyard and Gauge are connected modules that live inside the Folios world, not separate apps with equal billing. The product name is **Folios** (plural); the GitHub repo is still named `Folio` (singular) for historical reasons — don't rename the repo.
 
-- **Folios** (`chrisvasconcellos97/Folio`) — the main app. Year-round account management: accounts, meetings, pipeline, contacts, open items, Pip AI. Production domain: `folioshq.com`.
+- **Folios** (`chrisvasconcellos97/Folio`) — the main app. Year-round account management: accounts, meetings, cadences, contacts, open items, Pip AI. Production domain: `folioshq.com`. (Pipeline / revenue surfaces were intentionally ripped — see "Ripped (deliberate simplification)" below.)
 - **Lanyard** (separate repo) — conference-specific module. Schedule, partner profiles, team chat, personal meeting notes, Pip AI. Punches out from Folios during conferences, feeds notes and partner data back.
 - **Gauge** (lives under `gauge/` in this repo) — project management module. Tracks commitments and deliverables from account meetings (Phase 1), then expands to company-wide product team integration where PMs manage work and AMs are linked to relevant projects (Phase 2). Feeds project status back into Folios account views.
 
@@ -224,8 +224,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 ## Pending Updates
 
-1. **Pipeline V2 + Revenue History + Shop Metrics:**
-   - Revenue field formatting — convert free-text revenue to a number type with currency display + proper sorting
+1. *(ripped — see "Ripped (deliberate simplification)" below)*
 
 2. **Code quality:** *(no open items)*
 
@@ -281,7 +280,6 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 9. **Search & discoverability:**
    - Extend global search to contacts (names, emails, titles) — currently covers accounts only
-   - Pipeline filters — tier, status, revenue range chips on PipelineView
 
 10. **Onboarding & contextual help:** *(no open items)*
 
@@ -316,8 +314,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
 - ✅ **Activity audit trail** — Settings → Activity section. Owner sees org-wide feed, non-owner sees own actions. Filters: time range / account / event type / user (owner-only). Pagination via `useActivity` hook reading `folio_activity` (already populated by every write hook).
 - ✅ **Pip card / nav / page conventions** — NavMark component with per-section SVG marks (folders/grid/circles/pawn/bars/speedometer/orb/triangle/route/exclamation). Each main page header shows its mark next to the Fraunces title. Glow component for inline clickable highlights inside Pip prose (used by StatusBanner + every PipInsightCard). ErrorBanner for hook-error retry. AddToTasksButton for action-item → task promotion.
 - ✅ **Demo data seed script** — `scripts/seed-demo-data.js` populates a Supabase Auth user with ~50 accounts (mixed tiers/types, ~4 inactive), ~150 contacts, ~400 meetings, ~300 items, ~25 cadences, ~20 Gauge projects, 25 quick tasks. Idempotent (wipes prior demo data first). Requires `DEMO_USER_EMAIL` / `DEMO_USER_PASSWORD` in `.env`.
-- ✅ Pipeline V2 + Revenue History + Shop Metrics — Log Month modal, MoM/YoY deltas, sparklines, shop metrics dots on pipeline cards
-- ✅ Data Visualization — 8-point sparklines + MoM trend arrows on account cards; 6-month meeting frequency bars on account detail header
+- ✅ Data Visualization — 8-point sparklines + MoM trend arrows on account cards (later ripped — see "Ripped" section); 6-month meeting frequency bars on account detail header (KEPT)
 - ✅ Gauge + Account Change Log — deliveries in Brief Me, active projects fed into Pip context, Recent Deliveries on Overview (already shipped)
 - ✅ Route Builder — TSP optimizer, Nominatim geocoding, schedule sidebar with arrival times and drive estimates, Google Maps handoff, save routes to DB
 - ✅ Team/Org Layer + Leadership View — `folio_orgs`, `folio_org_members`, `folio_account_notes`, `folio_activity` tables + migration SQL (`supabase/team_org_layer.sql`). `useOrg` hook, `useAccountNotes` hook (migrates from `account.objective`), fire-and-forget `logActivity` in all write hooks. Settings view with create-team + invite/revoke UI. Leadership view (full-width read-only portfolio dashboard). Invite banner on login. Role-aware rendering: leadership gets LeadershipView; everyone else gets normal app. "Team" nav item on desktop sidebar. "Settings" in UserMenu (mobile).
@@ -388,6 +385,12 @@ This app is currently single-user but should be built with multi-tenancy in mind
 - ✅ Brief Me modal — "✦ Brief Me" button on account detail header; Pip generates pre-call brief (last meeting, open items, contacts, sharp observation); caches per account
 - ✅ Multi-select email contacts — checkboxes on Contacts tab; "Email Selected" builds mailto with all checked addresses
 - ✅ Rebrand to Folios — product name changed from Folio to Folios across all user-facing copy, PWA manifest, page title, invite emails, print export, Pip system prompts (Folios + Gauge). "Briefcase Suite" framing dropped; Folios is now the umbrella with Lanyard/Gauge as connected modules. Domain `folioshq.com` live on Vercel/Porkbun.
+
+## Ripped (deliberate simplification)
+
+Personal Mode focus. Schema stays for future re-build when corporate data integration lands.
+
+- 🪓 **Pipeline V2 + Revenue History + Shop Metrics + revenue surfaces (May 2026)** — the Pipeline nav item, `PipelineView`, Log Month modal, MoM/YoY deltas, sparklines on account cards, MoM trend arrows, revenue display in account card meta + account detail header, Revenue YTD + Revenue Trend + Shop Connections cards on Overview, revenue input on AddAccountModal, Shop Metrics overlay, `useAccountMetrics` hook, financial helpers in `metricsUtils.js` (`displayRevenue`, `fmtRevenue`, `momPct`, `yoyPct`, `momDelta`, `fmtPct`, `fmtDelta`, `latestRecord`, `accountRecords`, `MONTH_NAMES`, `parseRevenueText`), `metricsUtils.test.js`, "revenue" sort option, pipeline mark in Onboarding tour, Pipeline filters from the wishlist, "Revenue/tier/pipeline don't apply" notes in Pip context, revenue/shop secondary-signal sentences in `accountInsights.jsx`, `revenueTrend` + `shopConnections` in PipView context payload. DB columns (`revenue`, `revenue_amount`, `folio_revenue_history`, `folio_shop_metrics`) intact. ShopsTab on MSO accounts stayed (operational child shop list). `pickV` survives in `metricsUtils.js` because it's reused across non-financial insight builders. The `pipeline` glyph in `Mark.jsx` stays in the family. Why: Folios is a notepad-on-steroids / external brain — revenue surfaces showed empty data and made the app feel busy without delivering value. Compliance blocks real revenue ingestion for the foreseeable future; git history is the safety net.
 
 **Security hardening — shipped in code, two items need Supabase dashboard toggle:**
 

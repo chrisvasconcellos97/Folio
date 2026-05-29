@@ -12,7 +12,7 @@ var THANKS_RE = /^(?:thanks?(?:\s+you)?|thx|ty|ok|okay|kk|cool|nice|great|got\s+
 var EMOJI_ONLY_RE = /^[\p{Emoji_Presentation}\s!.?]+$/u;
 
 // "mark X done", "add a task", "remind me to" → action mode
-var ACTION_RE = /\b(?:mark|complete|finish|done with|add\s+a?\s*(?:task|todo|reminder|item)|remind me|create\s+a?\s*(?:task|todo)|log\s+(?:a\s+)?meeting|set\s+(?:a\s+)?cadence|navigate\s+to|open\s+(?:the\s+)?(?:cadence|meeting|item|contact|pipeline))\b/i;
+var ACTION_RE = /\b(?:mark|complete|finish|done with|add\s+a?\s*(?:task|todo|reminder|item)|remind me|create\s+a?\s*(?:task|todo)|log\s+(?:a\s+)?meeting|set\s+(?:a\s+)?cadence|navigate\s+to|open\s+(?:the\s+)?(?:cadence|meeting|item|contact))\b/i;
 
 // "brief me", "tell me about X", "prep me for X"
 var BRIEF_RE = /\b(?:brief(?:\s+me)?|prep(?:\s+me)?\s+for|pre[-\s]?call|tell me about|what'?s? (?:going on|the deal) with|catch me up on|walk me through)\b/i;

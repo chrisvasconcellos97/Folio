@@ -11,7 +11,7 @@
 //    blocked) so the tap target is the data, not a bare verb.
 
 import { Glow } from "../components/Glow";
-import { pickV, latestRecord, momPct, momDelta } from "./metricsUtils";
+import { pickV } from "./metricsUtils";
 
 export function buildInternalTeamInsight(account, openItems, projects, handlers) {
   var openCount    = (openItems || []).filter(function (i) { return !i.done; }).length;
@@ -117,10 +117,7 @@ export function buildPartnerInsight(account, openItems) {
   return <>{lead}{tail}</>;
 }
 
-export function buildCustomerInsight(account, openItems, revenueHistory, shopMetrics, projects, handlers) {
-  var rh = revenueHistory || [];
-  var sm = shopMetrics    || [];
-
+export function buildCustomerInsight(account, openItems, projects, handlers) {
   var openCount    = openItems.filter(function (i) { return !i.done; }).length;
   var today        = new Date().toISOString().split("T")[0];
   var overdueCount = openItems.filter(function (i) { return !i.done && i.due_date && i.due_date < today; }).length;
@@ -129,12 +126,6 @@ export function buildCustomerInsight(account, openItems, revenueHistory, shopMet
   if (account.last_interaction_at) {
     daysSince = Math.floor((Date.now() - new Date(account.last_interaction_at).getTime()) / 86400000);
   }
-
-  var latestRev  = latestRecord(rh, account.id);
-  var revMom     = latestRev ? momPct(rh, account.id, "revenue") : null;
-  var latestShop = latestRecord(sm, account.id);
-  var nocDelta   = latestShop ? momDelta(sm, account.id, "no_connection") : null;
-  var intgDelta  = latestShop ? momDelta(sm, account.id, "integrated")    : null;
 
   var hasNextMeeting   = !!account.next_meeting;
   var nextMeetingLabel = account.next_meeting
@@ -191,31 +182,8 @@ export function buildCustomerInsight(account, openItems, revenueHistory, shopMet
     ]));
   }
 
-  // Secondary — revenue signal if meaningful
-  if (revMom !== null && revMom >= 10) {
-    parts.push(pickV(seed + "b", [
-      "Revenue is up " + revMom + "% month over month — strong.",
-      "MoM revenue is up " + revMom + "%. That's a good number.",
-    ]));
-  } else if (revMom !== null && revMom <= -10) {
-    parts.push(pickV(seed + "b", [
-      "Revenue dropped " + Math.abs(revMom) + "% month over month — worth a closer look.",
-      "MoM revenue is down " + Math.abs(revMom) + "%. Keep an eye on the trend.",
-    ]));
-  }
-
-  // Tertiary — shop signals
-  if (nocDelta !== null && nocDelta > 0) {
-    parts.push(pickV(seed + "c", [
-      "No-connection count is up " + nocDelta + " this month — flag it on your next call.",
-      nocDelta + " more shops with no connection this month. That needs follow-up.",
-    ]));
-  } else if (intgDelta !== null && intgDelta > 0) {
-    parts.push(pickV(seed + "c", [
-      intgDelta + " more shops integrated this month — nice progress.",
-      "Integration count is up " + intgDelta + ". That's a win.",
-    ]));
-  }
+  // Revenue/shop-metric "secondary signal" sections were ripped during
+  // Personal Mode simplification — DB columns still exist for future re-build.
 
   var h = handlers || {};
   var overdueGlow = <Glow onClick={h.onClickOverdue}>{overdueCount + " item" + (overdueCount !== 1 ? "s" : "") + " overdue"}</Glow>;
@@ -259,8 +227,8 @@ export function buildCustomerInsight(account, openItems, revenueHistory, shopMet
 }
 
 // Public entry — dispatches on account_type.
-export function buildPipInsight(account, openItems, revenueHistory, shopMetrics, projects, handlers) {
+export function buildPipInsight(account, openItems, projects, handlers) {
   if (account.account_type === "internal_team") return buildInternalTeamInsight(account, openItems, projects, handlers);
   if (account.account_type === "partner")       return buildPartnerInsight(account, openItems, projects, handlers);
-  return buildCustomerInsight(account, openItems, revenueHistory, shopMetrics, projects, handlers);
+  return buildCustomerInsight(account, openItems, projects, handlers);
 }

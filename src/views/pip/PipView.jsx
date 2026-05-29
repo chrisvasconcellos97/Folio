@@ -11,7 +11,6 @@ import { executeTool } from "../../lib/pipExecutor";
 var MONO = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
 import { askPip, classifyIntent } from "../../lib/pip";
-import { latestRecord, momPct, yoyPct, fmtRevenue } from "../../lib/metricsUtils";
 import { getNextOccurrence, getFrequencyLabel } from "../../lib/cadenceUtils";
 import { routeToolCall, planToolCalls, describeToolCall, classifyTool, CONFIRM_THRESHOLD } from "../../lib/pipTools";
 // (CONFIRM_THRESHOLD re-export below; routeToolCall still used by executeTools.)
@@ -47,8 +46,6 @@ export function PipView(props) {
   var addTask         = props.addTask;
   var updateTask      = props.updateTask;
   var onAction        = props.onAction;
-  var revenueHistory  = props.revenueHistory;
-  var shopMetrics     = props.shopMetrics;
   var cadences        = props.cadences;
   var projects        = props.projects;
   var updates         = props.updates || [];
@@ -156,8 +153,6 @@ export function PipView(props) {
   }, [userId, accounts, pipAcctState.loading, pipAcctState.states]);
 
   function buildContext() {
-    var rh = revenueHistory || [];
-    var sm = shopMetrics    || [];
     var allItems    = items    || [];
     var allContacts = contacts || [];
     var allMeetings = meetings || [];
@@ -170,8 +165,6 @@ export function PipView(props) {
     });
     return {
       accounts: accounts.map(function (a) {
-        var latest   = latestRecord(rh, a.id);
-        var shopLatest = latestRecord(sm, a.id);
         var acctMeetings = allMeetings.filter(function (m) { return m.account_id === a.id; })
           .slice(0, 8)
           .map(function (m) {
@@ -211,8 +204,6 @@ export function PipView(props) {
           name:    a.name,
           tier:    a.tier,
           status:  a.status,
-          revenue: a.revenue,
-          revenue_amount: a.revenue_amount,
           account_type: a.account_type || "standard",
           agreement_end_date: a.agreement_end_date || null,
           scope_summary: a.scope_summary || null,
@@ -228,20 +219,6 @@ export function PipView(props) {
           activeProjects: acctProjects,
           recentUpdates:  acctUpdates,
           cachedState:    cachedStateMap[a.id] || null,
-          revenueTrend: latest ? {
-            amount:    fmtRevenue(latest.revenue),
-            month:     latest.month,
-            year:      latest.year,
-            momPct:    momPct(rh, a.id, "revenue"),
-            yoyPct:    yoyPct(rh, a.id, "revenue"),
-          } : null,
-          shopConnections: shopLatest ? {
-            connected:    shopLatest.connected,
-            integrated:   shopLatest.integrated,
-            no_connection: shopLatest.no_connection,
-            month:        shopLatest.month,
-            year:         shopLatest.year,
-          } : null,
         };
       }),
       recentMeetings: meetings.slice(0, 10).map(function (m) {

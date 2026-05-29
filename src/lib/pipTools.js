@@ -69,7 +69,7 @@ export var PIP_TOOLS = [
     input_schema: {
       type: "object",
       properties: {
-        view: { type: "string", enum: ["accounts", "meetings", "pipeline", "cadence"] },
+        view: { type: "string", enum: ["accounts", "meetings", "cadence"] },
       },
       required: ["view"],
     },

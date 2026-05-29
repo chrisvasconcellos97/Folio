@@ -47,7 +47,7 @@ function setDefaultTab(accountId, tab) {
   try { localStorage.setItem("folio_default_tab_" + accountId, tab); } catch(e) {}
 }
 
-export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, accounts, members, onBack, onEdit, onDelete, onReactivate, onMerge, onUpdate, onSelectAccount, pipPrefill, onPipPrefillHandled, initialHubCadenceId, onHubConsumed, autoOpenMeetingMode, onAutoOpenMeetingModeConsumed, revenueHistory, shopMetrics, onAddAccount }) {
+export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, accounts, members, onBack, onEdit, onDelete, onReactivate, onMerge, onUpdate, onSelectAccount, pipPrefill, onPipPrefillHandled, initialHubCadenceId, onHubConsumed, autoOpenMeetingMode, onAutoOpenMeetingModeConsumed, onAddAccount }) {
   var isInternalTeam = account.account_type === 'internal_team';
   var isPartner      = account.account_type === 'partner';
   var isCustomerType = !isInternalTeam && !isPartner;
@@ -375,8 +375,6 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
           onUpdateAccount={onUpdate}
           subAccounts={subAccounts}
           onSelectAccount={onSelectAccount}
-          revenueHistory={revenueHistory || []}
-          shopMetrics={shopMetrics || []}
           projects={projects}
           updates={updates}
           onSwitchTab={setTab}

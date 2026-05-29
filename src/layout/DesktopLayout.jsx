@@ -16,7 +16,6 @@ var NAV_ITEMS = [
   { id: "partners",    label: "Partners",    icon: "◳"     },
   { id: "__divider__", divider: true                       },
   { id: "meetings",    label: "Meetings",    icon: "◷"     },
-  { id: "pipeline",    label: "Pipeline",    icon: "▦"     },
   { id: "cadence",     label: "Cadence",     icon: "↻"     },
   { id: "gauge",       label: "Gauge",       icon: "gauge" },
   { id: "pip",         label: "Pip",         icon: null    },

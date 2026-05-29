@@ -24,7 +24,6 @@ var WORKSPACE_LABELS = { accounts: "Accounts", departments: "Departments", partn
 var NAV_ITEMS = [
   { id: "workspaces", label: "Workspaces", icon: "▣",  isWorkspaces: true },
   { id: "meetings",   label: "Meetings",   icon: "◷"     },
-  { id: "pipeline",   label: "Pipeline",   icon: "▦"     },
   { id: "cadence",    label: "Cadence",    icon: "↻"     },
   { id: "gauge",      label: "Gauge",      icon: "gauge"  },
   { id: "routes",     label: "Route",      icon: "⊕"     },

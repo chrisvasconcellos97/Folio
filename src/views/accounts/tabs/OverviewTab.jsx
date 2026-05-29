@@ -7,12 +7,6 @@ import { FL } from "../../../components/FieldLabel";
 import { callAskPip } from "../../../lib/pip";
 import { useAccountNotes } from "../../../hooks/useAccountNotes";
 import { supabase } from "../../../lib/supabase";
-import {
-  latestRecord, accountRecords,
-  momPct, yoyPct, momDelta,
-  fmtRevenue, fmtPct, fmtDelta,
-  MONTH_NAMES,
-} from "../../../lib/metricsUtils";
 import { buildPipInsight } from "../../../lib/accountInsights.jsx";
 import { UPDATE_TYPE_LABELS, UPDATE_TYPE_COLORS } from "../../../lib/accountUpdateTypes";
 
@@ -22,93 +16,9 @@ var RANGES = [
   { label: "All Time", days: null },
 ];
 
-
-function pctColor(pct) {
-  if (pct === null || pct === undefined) return C.textMuted;
-  return pct >= 0 ? C.green : C.red;
-}
-
-function MiniSparkline({ records, updates }) {
-  if (!records || records.length === 0) return null;
-  var last12  = records.slice(-12);
-  var maxRev  = Math.max.apply(null, last12.map(function (r) { return r.revenue; }));
-  if (maxRev === 0) return null;
-
-  // Map any update_date that falls inside the last12 window onto a 0..1
-  // x-position so we can drop a tick at the right column.
-  var rangeStart = null;
-  var rangeEnd   = null;
-  if (last12.length > 0) {
-    var first = last12[0];
-    var last  = last12[last12.length - 1];
-    rangeStart = new Date(first.year, first.month - 1, 1);
-    rangeEnd   = new Date(last.year,  last.month,      0); // last day of last bucket
-  }
-  var ticks = (updates || []).map(function (u) {
-    if (!u.update_date || !rangeStart || !rangeEnd) return null;
-    var d = new Date(u.update_date + "T12:00:00");
-    if (d < rangeStart || d > rangeEnd) return null;
-    var span = rangeEnd - rangeStart;
-    var x = span > 0 ? (d - rangeStart) / span : 0;
-    return {
-      id:    u.id,
-      x:     x,
-      color: UPDATE_TYPE_COLORS[u.update_type] || C.textMuted,
-      title: u.title,
-      owner: u.owner,
-      date:  d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-    };
-  }).filter(Boolean);
-
-  return (
-    <div style={{ position: "relative", height: 22, marginTop: 8 }}>
-      <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 18, position: "absolute", inset: 0 }}>
-        {last12.map(function (r, i) {
-          var h      = Math.max(2, Math.round((r.revenue / maxRev) * 18));
-          var isLast = i === last12.length - 1;
-          return (
-            <div
-              key={i}
-              title={MONTH_NAMES[r.month - 1] + " " + r.year + ": " + fmtRevenue(r.revenue)}
-              style={{
-                flex: 1, height: h,
-                background: isLast ? C.accent : C.accentDim,
-                borderRadius: 1,
-                opacity: isLast ? 0.9 : 0.4,
-              }}
-            />
-          );
-        })}
-      </div>
-      {/* Update-event ticks overlaid on top of the bars. */}
-      {ticks.map(function (t) {
-        return (
-          <div
-            key={t.id}
-            title={t.title + (t.owner ? " · " + t.owner : "") + " · " + t.date}
-            style={{
-              position: "absolute",
-              top: 0,
-              bottom: 4,
-              left: "calc(" + (t.x * 100).toFixed(2) + "% - 0.75px)",
-              width: 1.5,
-              background: t.color,
-              opacity: 0.85,
-              borderRadius: 1,
-              pointerEvents: "auto",
-            }}
-          />
-        );
-      })}
-    </div>
-  );
-}
-
-export function OverviewTab({ account, userId, orgId, openItems, meetings, onQuickMeeting, onLogMeeting, onAddItem, onSaveSummary, subAccounts, onSelectAccount, revenueHistory, shopMetrics, onUpdateAccount, projects, updates, onSwitchTab }) {
-  var isInternalTeam = account.account_type === "internal_team";
-  var isPartner      = account.account_type === "partner";
-  var isCustomerType = !isInternalTeam && !isPartner;
-  var pipInsight = buildPipInsight(account, openItems, revenueHistory, shopMetrics, projects, {
+export function OverviewTab({ account, userId, orgId, openItems, meetings, onQuickMeeting, onLogMeeting, onAddItem, onSaveSummary, subAccounts, onSelectAccount, onUpdateAccount, projects, updates, onSwitchTab }) {
+  var isPartner = account.account_type === "partner";
+  var pipInsight = buildPipInsight(account, openItems, projects, {
     onClickOverdue: function () { onSwitchTab && onSwitchTab("tasks"); },
     onClickBlocked: function () { onSwitchTab && onSwitchTab("projects"); },
   });
@@ -364,7 +274,7 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
                 <span style={{ fontSize: 10, color: C.textMuted }}>0 logged</span>
               </div>
               <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.5, marginBottom: 8 }}>
-                No revenue-impact updates logged yet.
+                No account updates logged yet.
               </div>
               <SecBtn onClick={onSwitchTab ? function () { onSwitchTab("updates"); } : undefined} style={{ fontSize: 11 }}>
                 + Log update
@@ -476,14 +386,6 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
             </span>
           </div>
         </Card>
-        {isCustomerType && (
-          <Card>
-            <FL>Revenue YTD</FL>
-            <div style={{ fontSize: 18, fontWeight: 700, color: C.accent, fontVariantNumeric: "tabular-nums" }}>
-              {account.revenue || "—"}
-            </div>
-          </Card>
-        )}
         {isPartner && (
           <Card>
             <FL>Spend YTD</FL>
@@ -526,88 +428,6 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
           </div>
         </Card>
       )}
-
-      {/* Revenue trend — customer only */}
-      {isCustomerType && (function () {
-        var rh      = revenueHistory || [];
-        var sm      = shopMetrics || [];
-        var latest  = latestRecord(rh, account.id);
-        var records = accountRecords(rh, account.id);
-        var mom     = momPct(rh, account.id, "revenue");
-        var yoy     = yoyPct(rh, account.id, "revenue");
-        var latestShop = latestRecord(sm, account.id);
-        var smMomConn = latestShop ? momDelta(sm, account.id, "connected")     : null;
-        var smMomIntg = latestShop ? momDelta(sm, account.id, "integrated")    : null;
-        var smMomNoc  = latestShop ? momDelta(sm, account.id, "no_connection") : null;
-        var monthLabel = latest ? MONTH_NAMES[latest.month - 1] + " " + latest.year : "";
-        var shopLabel  = latestShop ? MONTH_NAMES[latestShop.month - 1] + " " + latestShop.year : "";
-        var total      = latestShop ? latestShop.connected + latestShop.integrated + latestShop.no_connection : 0;
-
-        return (
-          <>
-            {latest && (
-              <Card>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 2 }}>
-                  <FL>Revenue Trend</FL>
-                  <div style={{ fontSize: 10, color: C.textMuted }}>{monthLabel}</div>
-                </div>
-                <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 4 }}>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: C.accent, fontVariantNumeric: "tabular-nums" }}>
-                    {fmtRevenue(latest.revenue)}
-                  </div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    {mom !== null && (
-                      <span style={{ fontSize: 11, fontWeight: 600, color: pctColor(mom), fontVariantNumeric: "tabular-nums" }}>{fmtPct(mom)} MoM</span>
-                    )}
-                    {yoy !== null && (
-                      <span style={{ fontSize: 11, fontWeight: 600, color: pctColor(yoy), fontVariantNumeric: "tabular-nums" }}>{fmtPct(yoy)} YoY</span>
-                    )}
-                  </div>
-                </div>
-                <MiniSparkline records={records} updates={updates} />
-              </Card>
-            )}
-
-            {latestShop && (
-              <Card>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                  <FL>Shop Connections</FL>
-                  <div style={{ fontSize: 10, color: C.textMuted, fontVariantNumeric: "tabular-nums" }}>{total} total · {shopLabel}</div>
-                </div>
-                {[
-                  { label: "Connected",     key: "connected",     color: C.yellow, delta: smMomConn },
-                  { label: "Integrated",    key: "integrated",    color: C.green,  delta: smMomIntg },
-                  { label: "No Connection", key: "no_connection", color: C.red,    delta: smMomNoc  },
-                ].map(function (row) {
-                  var val = latestShop[row.key];
-                  var pct = total > 0 ? Math.round((val / total) * 100) : 0;
-                  return (
-                    <div key={row.key} style={{ marginBottom: 7 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          <div style={{ width: 6, height: 6, borderRadius: "50%", background: row.color, opacity: 0.8 }} />
-                          <span style={{ fontSize: 12, color: C.textSub }}>{row.label}</span>
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          {row.delta !== null && row.delta !== undefined && (
-                            <span style={{ fontSize: 11, fontWeight: 600, color: row.key === "no_connection" ? pctColor(-row.delta) : pctColor(row.delta), fontVariantNumeric: "tabular-nums" }}>
-                              {fmtDelta(row.delta)} MoM
-                            </span>
-                          )}
-                          <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontVariantNumeric: "tabular-nums", minWidth: 24, textAlign: "right" }}>{val}</span>
-                        </div>
-                      </div>
-                      <div style={{ height: 3, background: C.bgDark, borderRadius: 2, overflow: "hidden" }}>
-                        <div style={{ width: pct + "%", height: "100%", background: row.color, borderRadius: 2, opacity: 0.6 }} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </Card>
-            )}
-          </>
-        );
-      })()}
 
       {/* Recent Deliveries */}
       {(function() {

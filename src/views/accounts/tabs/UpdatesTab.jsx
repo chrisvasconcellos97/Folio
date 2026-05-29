@@ -89,7 +89,7 @@ export function UpdatesTab({ account, updates, orgMembers, addUpdate, deleteUpda
             Updates
           </div>
           <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
-            Things that could move the revenue line on {account.name}.
+            Notable changes worth tracking on {account.name}.
           </div>
         </div>
         <AmberBtn onClick={function () { setShowModal(true); }}>
@@ -100,7 +100,7 @@ export function UpdatesTab({ account, updates, orgMembers, addUpdate, deleteUpda
       {(!updates || updates.length === 0) && (
         <div style={{ textAlign: "center", padding: "40px 20px", color: C.textMuted, fontSize: 13 }}>
           <div style={{ marginBottom: 12 }}>
-            No revenue-impact updates logged yet. Log the next change — catalog push, pricing tweak, integration — so you can root-cause the dip later.
+            No updates logged yet. Log the next change — catalog push, pricing tweak, integration — so you have a paper trail.
           </div>
           <AmberBtn onClick={function () { setShowModal(true); }} style={{ fontSize: 12 }}>
             + Log first update
