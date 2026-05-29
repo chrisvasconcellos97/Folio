@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { C } from "../../lib/colors";
 import { Mark } from "../../components/Mark";
+import { PipOrb } from "../../components/PipMark";
 import { useBreakpoint } from "../../hooks/useBreakpoint";
 import {
   isSameDay,
@@ -45,6 +46,43 @@ function isoDate(d) {
   return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
 }
 
+var METHOD_LABEL = { phone: "Phone", email: "Email", video: "Video", in_person: "In Person" };
+
+// Pick a useful title to show in the calendar. The auto-generated
+// "Conversation — May 28, 2026" / "Email — May 28, 2026" titles are
+// redundant on a date-indexed surface — replace them with a sentence
+// the user can actually scan. Order:
+//   1. pip_summary first sentence
+//   2. notes first line
+//   3. user-set title (if it wasn't an auto title)
+//   4. method + account fallback
+function meetingDisplayTitle(m, acct) {
+  function trim(s, n) {
+    s = String(s || "").trim();
+    if (s.length <= n) return s;
+    return s.slice(0, n - 1).trimEnd() + "…";
+  }
+  var summary = (m.pip_summary || "").trim();
+  if (summary) {
+    var firstSent = summary.split(/(?<=[.!?])\s+|\n/)[0];
+    return trim(firstSent, 90);
+  }
+  var notes = (m.notes || "").trim();
+  if (notes) {
+    var firstLine = notes.split(/\n/)[0];
+    return trim(firstLine, 90);
+  }
+  var title = (m.title || "").trim();
+  // Heuristic: auto titles look like "Conversation — May 28, 2026" or
+  // "Email — May 28, 2026". Skip those — fall back to a built label.
+  var isAuto = /^(Conversation|Email|Meeting)\s+—\s+\w+\s+\d+/.test(title);
+  if (title && !isAuto) return title;
+  var label = METHOD_LABEL[m.method] || "";
+  if (acct && label) return label + " · " + acct.name;
+  if (acct) return acct.name;
+  return "Meeting";
+}
+
 // ── Event aggregation ────────────────────────────────────────────────────────
 
 // Returns array of unified events for a date range [startDate, endDate] (inclusive).
@@ -74,7 +112,7 @@ function buildEvents({ meetings, cadences, items, projects, quickTasks, accounts
         type: "meeting",
         date: d,
         timeStr: m.meeting_time ? formatTime(m.meeting_time) : null,
-        title: m.title || (acct ? acct.name + " — meeting" : "Meeting"),
+        title: meetingDisplayTitle(m, acct),
         accountId: m.account_id,
         accountName: acct ? acct.name : null,
         cadenceId: m.cadence_id || null,
@@ -262,16 +300,38 @@ function monthlyPipLine(events, cadences, accounts) {
 // ── Shared sub-components ───────────────────────────────────────────────────
 
 function PipLine({ text }) {
+  if (!text) return null;
   return (
     <div style={{
-      fontFamily: SERIF,
-      fontSize: 14,
-      color: C.accent,
-      fontStyle: "italic",
-      lineHeight: 1.5,
-      padding: "8px 0 4px",
+      display: "flex", alignItems: "flex-start", gap: 12,
+      background: C.accentGlow,
+      border: "1px solid " + C.accentLine,
+      borderRadius: 12,
+      padding: "12px 14px",
+      marginBottom: 14,
     }}>
-      {text}
+      <div style={{ flexShrink: 0, marginTop: 1 }}>
+        <PipOrb size="sm" sonar />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+          fontSize: 9.5, color: C.accent, fontWeight: 700,
+          letterSpacing: "0.09em", textTransform: "uppercase",
+          marginBottom: 4,
+        }}>
+          Pip
+        </div>
+        <div style={{
+          fontFamily: SERIF,
+          fontSize: 14.5,
+          color: C.text,
+          lineHeight: 1.55,
+          letterSpacing: "-0.005em",
+        }}>
+          {text}
+        </div>
+      </div>
     </div>
   );
 }
