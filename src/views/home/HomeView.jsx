@@ -123,7 +123,7 @@ function Panel({ title, subtitle, accent, children, isEmpty, emptyText }) {
   );
 }
 
-export function HomeView({ accounts, meetings, items, cadences, projects, onOpenAccount, onOpenCadenceHub, onOpenConversation }) {
+export function HomeView({ userName, accounts, meetings, items, cadences, projects, onOpenAccount, onOpenCadenceHub, onOpenConversation }) {
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
   var [mounted, setMounted] = useState(false);
@@ -409,7 +409,7 @@ export function HomeView({ accounts, meetings, items, cadences, projects, onOpen
           fontFamily: SERIF, fontSize: isMobile ? 26 : 34,
           color: C.text, letterSpacing: "-0.02em", lineHeight: 1.1,
         }}>
-          {timeOfDayGreeting()}
+          {timeOfDayGreeting(userName)}
         </div>
         <div style={{
           fontFamily: MONO, fontSize: 10.5, color: C.textMuted,

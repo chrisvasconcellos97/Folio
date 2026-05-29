@@ -478,6 +478,7 @@ export default function App() {
   if (view === "home") {
     mainContent = (
       <HomeView
+        userName={(userMeta && userMeta.full_name) ? String(userMeta.full_name).split(" ")[0] : ""}
         accounts={accounts}
         meetings={meetings}
         items={allItems}
