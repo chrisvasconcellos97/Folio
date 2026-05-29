@@ -67,6 +67,30 @@ function authHeaders() {
   });
 }
 
+// Renders the glossary block for system prompts.
+function renderGlossaryBlock(glossary) {
+  var entries = Array.isArray(glossary) ? glossary.filter(function (g) { return g && g.term && g.definition; }) : [];
+  if (entries.length === 0) {
+    return "── KNOWN TERMS (preserve verbatim where indicated) ──\n(no glossary entries yet — user can add terms in Settings → Pip's Glossary)\n\n";
+  }
+  var lines = entries.map(function (g) {
+    var line = "- " + g.term + ": " + g.definition;
+    var aliases = Array.isArray(g.aliases) ? g.aliases.filter(Boolean) : [];
+    if (aliases.length) line += ". Aliases: " + aliases.join(", ") + ".";
+    if (g.preserve_case !== false) line += " Preserve case exactly.";
+    return line;
+  }).join("\n");
+  return "── KNOWN TERMS (preserve verbatim where indicated) ──\n" + lines + "\n\n";
+}
+
+// Renders the account context block for system prompts.
+function renderAccountObjectiveBlock(objective) {
+  var text = (objective || "").trim();
+  return "── ABOUT THIS ACCOUNT (your notes) ──\n" +
+    (text || "(none yet — write notes about this account in the Overview tab so Pip knows context)") +
+    "\n\n";
+}
+
 // Re-export so callers (PipView) can short-circuit deterministic answers.
 export { classifyIntent };
 
@@ -166,6 +190,8 @@ export function callBriefMePip(payload) {
   var contacts = payload.contacts || [];
   var recentDeliveries = payload.recentDeliveries || [];
   var activeProjects = payload.activeProjects || [];
+  var accountObjective = (payload.accountObjective != null ? payload.accountObjective : account.objective) || "";
+  var glossary = Array.isArray(payload.glossary) ? payload.glossary : [];
 
   var context = {
     accounts: [{
@@ -204,7 +230,10 @@ export function callBriefMePip(payload) {
     recentDeliveries: recentDeliveries,
   };
 
-  var userMsg = "Give me a pre-call brief for **" + (account.name || "this account") + "**.";
+  var userMsg =
+    renderGlossaryBlock(glossary) +
+    renderAccountObjectiveBlock(accountObjective) +
+    "Give me a pre-call brief for **" + (account.name || "this account") + "**.";
 
   return callPipApi(
     [{ role: "user", content: userMsg }],
@@ -238,7 +267,11 @@ export function callAskPip(payload) {
   }
 
   var m = payload.meeting || {};
+  var glossary = Array.isArray(payload.glossary) ? payload.glossary : [];
+  var accountObjective = (payload.accountObjective || "").trim();
   var prompt =
+    renderGlossaryBlock(glossary) +
+    renderAccountObjectiveBlock(accountObjective) +
     "Summarize this meeting, extract action items aggressively, and draft a follow-up email. " +
     "Return ONLY valid JSON: {\"summary\":\"...\",\"action_items\":[\"...\"],\"email\":\"...\"}.\n\n" +
     "Account: " + (payload.accountName || "—") + "\n" +
@@ -302,6 +335,8 @@ export function callAskPip(payload) {
  * @param {Array}  [payload.activeProjects]- gauge projects (with .stages tasks)
  * @param {Array}  [payload.orgMembers]    - org members (for assignee options)
  * @param {Array}  [payload.assignmentHints] - learned hints rows
+ * @param {string} [payload.accountObjective] - account context / notes for Pip
+ * @param {Array}  [payload.glossary]          - known terms to inject
  */
 export function summarizeDraftPip(payload) {
   var m              = payload.draft || {};
@@ -310,6 +345,8 @@ export function summarizeDraftPip(payload) {
   var orgMembers     = Array.isArray(payload.orgMembers)     ? payload.orgMembers     : [];
   var hints          = Array.isArray(payload.assignmentHints) ? payload.assignmentHints : [];
   var corrections    = Array.isArray(payload.corrections)     ? payload.corrections     : [];
+  var accountObjective = (payload.accountObjective || "").trim();
+  var glossary         = Array.isArray(payload.glossary) ? payload.glossary : [];
 
   var itemLines = existingItems.length
     ? existingItems.map(function (i) {
@@ -424,6 +461,8 @@ export function summarizeDraftPip(payload) {
     "\"in general\", \"across the board\" signal a BROADER item that lives alongside any " +
     "specific example. When you see one, emit BOTH the specific item AND the broader item. " +
     "Don't collapse them into just the specific case.\n\n" +
+    renderGlossaryBlock(glossary) +
+    renderAccountObjectiveBlock(accountObjective) +
     "── CONTEXT ──\n" +
     "Account: " + (payload.accountName || "—") + "\n" +
     "Cadence: " + (payload.cadenceLabel || "—") + "\n" +
@@ -602,11 +641,13 @@ function sanitizeFields(fields, allowed) {
  * meeting history filtered to this cadence, plus open items.
  */
 export function callCadenceBriefPip(payload) {
-  var cadence        = payload.cadence        || {};
-  var account        = payload.account        || {};
-  var meetings       = payload.meetings       || [];
-  var openItems      = payload.openItems      || [];
-  var activeProjects = payload.activeProjects || [];
+  var cadence          = payload.cadence          || {};
+  var account          = payload.account          || {};
+  var meetings         = payload.meetings         || [];
+  var openItems        = payload.openItems        || [];
+  var activeProjects   = payload.activeProjects   || [];
+  var accountObjective = (payload.accountObjective || "").trim();
+  var glossary         = Array.isArray(payload.glossary) ? payload.glossary : [];
 
   var projectLines = activeProjects.slice(0, 6).map(function (p) {
     var bits = [];
@@ -617,6 +658,8 @@ export function callCadenceBriefPip(payload) {
   }).join("\n");
 
   var prompt =
+    renderGlossaryBlock(glossary) +
+    renderAccountObjectiveBlock(accountObjective) +
     "Give me a short per-cadence brief.\n\n" +
     "Cadence label: " + (payload.cadenceLabel || "cadence") + "\n" +
     "Account: " + (account.name || "—") + "\n" +

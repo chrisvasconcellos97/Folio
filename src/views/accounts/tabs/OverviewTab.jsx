@@ -245,9 +245,12 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
         </AmberBtn>
       </div>
 
-      {/* Notes — always visible, editable scratchpad */}
+      {/* Account context — Pip reads this on every summarize / brief call */}
       <Card>
-        <FL>Notes</FL>
+        <FL>Account context (Pip reads this)</FL>
+        <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 8, lineHeight: 1.5 }}>
+          Write anything Pip should know about this account — history, key people, terminology, deal context.
+        </div>
         <textarea
           value={notesDraft}
           onChange={function (e) { setNotesDraft(e.target.value); }}

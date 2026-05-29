@@ -145,7 +145,7 @@ function copySummary(meeting, accountName) {
   });
 }
 
-export function MeetingsTab({ meetings, accountName, accountId, userId, openItems, addItem, onLogMeeting, onDelete, onAddMeeting, onUpdateMeeting, logCorrection }) {
+export function MeetingsTab({ meetings, accountName, accountId, userId, openItems, addItem, onLogMeeting, onDelete, onAddMeeting, onUpdateMeeting, logCorrection, accountObjective, glossary }) {
   var [loadingPip, setLoadingPip] = useState({});
   var [pipErrors, setPipErrors]   = useState({});
   var [confirmDeleteId, setConfirmDeleteId] = useState(null);
@@ -164,9 +164,11 @@ export function MeetingsTab({ meetings, accountName, accountId, userId, openItem
     setLoadingPip(function (prev) { return Object.assign({}, prev, { [m.id]: true }); });
     setPipErrors(function (prev) { return Object.assign({}, prev, { [m.id]: null }); });
     callAskPip({
-      mode: "meeting",
-      accountName: accountName,
-      meeting: m,
+      mode:             "meeting",
+      accountName:      accountName,
+      meeting:          m,
+      accountObjective: accountObjective || "",
+      glossary:         Array.isArray(glossary) ? glossary : [],
     }).then(function (data) {
       setLoadingPip(function (prev) { return Object.assign({}, prev, { [m.id]: false }); });
       if (data.summary && onUpdateMeeting) {

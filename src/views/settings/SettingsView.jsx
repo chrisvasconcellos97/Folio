@@ -9,6 +9,7 @@ import { Modal } from "../../components/Modal";
 import { supabase } from "../../lib/supabase";
 import { usePipFacts } from "../../hooks/usePipFacts";
 import { usePipUsage } from "../../hooks/usePipUsage";
+import { useGlossary } from "../../hooks/useGlossary";
 import { useActivity } from "../../hooks/useActivity";
 import { useTheme } from "../../hooks/useTheme";
 import { Mark } from "../../components/Mark";
@@ -709,6 +710,264 @@ function PipUsageSection({ userId }) {
 var SETTINGS_MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var SETTINGS_SERIF = "'Fraunces', Georgia, serif";
 
+var SCOPE_GLOBAL = "__global__";
+
+function GlossaryEntryForm({ accounts, onSave, onCancel, initial }) {
+  var [term, setTerm]         = useState(initial ? initial.term : "");
+  var [definition, setDef]    = useState(initial ? initial.definition : "");
+  var [aliases, setAliases]   = useState(initial ? (initial.aliases || []).join(", ") : "");
+  var [scope, setScope]       = useState(initial ? (initial.account_id || SCOPE_GLOBAL) : SCOPE_GLOBAL);
+  var [preserveCase, setPC]   = useState(initial ? initial.preserve_case !== false : true);
+  var [saving, setSaving]     = useState(false);
+
+  function handleSave() {
+    if (!term.trim() || !definition.trim() || saving) return;
+    setSaving(true);
+    var aliasArr = aliases.split(",").map(function (a) { return a.trim(); }).filter(Boolean);
+    onSave({
+      term:          term.trim(),
+      definition:    definition.trim(),
+      aliases:       aliasArr,
+      account_id:    scope === SCOPE_GLOBAL ? null : scope,
+      preserve_case: preserveCase,
+    }).then(function () {
+      setSaving(false);
+    }).catch(function (err) {
+      setSaving(false);
+      showToast(err.message || "Couldn't save term", "error");
+    });
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "12px 0 4px" }}>
+      <div>
+        <FL>Term</FL>
+        <InputField
+          value={term}
+          onChange={function (e) { setTerm(e.target.value); }}
+          placeholder="Tire Hub"
+        />
+      </div>
+      <div>
+        <FL>Definition</FL>
+        <textarea
+          value={definition}
+          onChange={function (e) { setDef(e.target.value); }}
+          placeholder="Auto parts company we sell to"
+          style={{
+            width: "100%", background: C.surface2, border: "1px solid " + C.rule,
+            borderRadius: 8, padding: "9px 12px", color: C.text, fontSize: 16,
+            fontFamily: "'Inter', system-ui, sans-serif", lineHeight: 1.5,
+            resize: "none", minHeight: 64, outline: "none", boxSizing: "border-box",
+          }}
+        />
+      </div>
+      <div>
+        <FL>Aliases (comma-separated)</FL>
+        <InputField
+          value={aliases}
+          onChange={function (e) { setAliases(e.target.value); }}
+          placeholder="tirehub, TH, Tire Hub Inc"
+        />
+      </div>
+      <div>
+        <FL>Account scope</FL>
+        <select
+          value={scope}
+          onChange={function (e) { setScope(e.target.value); }}
+          style={{
+            width: "100%", background: C.surface2, border: "1px solid " + C.rule,
+            borderRadius: 8, padding: "9px 12px", color: C.text, fontSize: 16,
+            fontFamily: "'Inter', system-ui, sans-serif", outline: "none",
+            appearance: "none", cursor: "pointer",
+          }}
+        >
+          <option value={SCOPE_GLOBAL}>Global (all accounts)</option>
+          {(accounts || []).filter(function (a) { return !a.is_inactive; }).map(function (a) {
+            return <option key={a.id} value={a.id}>{a.name}</option>;
+          })}
+        </select>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <input
+          type="checkbox"
+          id="gloss-preserve-case"
+          checked={preserveCase}
+          onChange={function (e) { setPC(e.target.checked); }}
+          style={{ width: 16, height: 16, accentColor: C.accent, cursor: "pointer" }}
+        />
+        <label htmlFor="gloss-preserve-case" style={{ fontSize: 13, color: C.textSub, cursor: "pointer" }}>
+          Preserve case exactly
+        </label>
+      </div>
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 4 }}>
+        <button
+          onClick={onCancel}
+          style={{
+            background: "none", border: "1px solid " + C.rule, borderRadius: 7,
+            padding: "7px 16px", fontSize: 13, color: C.textSub, cursor: "pointer",
+            fontFamily: "'Inter', system-ui, sans-serif",
+          }}
+        >
+          Cancel
+        </button>
+        <AmberBtn
+          onClick={handleSave}
+          disabled={!term.trim() || !definition.trim() || saving}
+          style={{ fontSize: 13 }}
+        >
+          {saving ? "Saving…" : "Save"}
+        </AmberBtn>
+      </div>
+    </div>
+  );
+}
+
+function PipGlossarySection({ userId, orgId, accounts }) {
+  var glossaryApi = useGlossary(userId, orgId, null);
+  var [showForm, setShowForm]   = useState(false);
+  var [editEntry, setEditEntry] = useState(null); // entry being edited
+
+  var accountById = useMemo(function () {
+    var m = {};
+    (accounts || []).forEach(function (a) { m[a.id] = a; });
+    return m;
+  }, [accounts]);
+
+  function handleAdd(data) {
+    return glossaryApi.addEntry(data).then(function () {
+      setShowForm(false);
+      showToast("Term saved");
+    });
+  }
+
+  function handleUpdate(data) {
+    return glossaryApi.updateEntry(editEntry.id, {
+      term:          data.term,
+      definition:    data.definition,
+      aliases:       data.aliases,
+      account_id:    data.account_id,
+      preserve_case: data.preserve_case,
+    }).then(function () {
+      setEditEntry(null);
+      showToast("Term updated");
+    });
+  }
+
+  function handleDelete(id) {
+    glossaryApi.deleteEntry(id).then(function () {
+      showToast("Term removed");
+    }).catch(function () {
+      showToast("Couldn't remove — check your connection", "error");
+    });
+  }
+
+  return (
+    <Card>
+      <div style={{ fontFamily: SETTINGS_SERIF, fontSize: 20, fontWeight: 400, color: C.text, marginBottom: 4 }}>
+        Pip's Glossary
+      </div>
+      <div style={{ fontSize: 13, color: C.textSub, lineHeight: 1.6, marginBottom: 14 }}>
+        Terms, names, and acronyms Pip should always know.
+      </div>
+
+      {glossaryApi.entries.length === 0 && !showForm && (
+        <div style={{ fontSize: 13, color: C.textMuted, marginBottom: 14, lineHeight: 1.5 }}>
+          No glossary entries yet. Add terms Pip should remember — entity names, acronyms, jargon.
+        </div>
+      )}
+
+      {glossaryApi.entries.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 0, marginBottom: 14 }}>
+          {glossaryApi.entries.map(function (entry) {
+            var scopeLabel = entry.account_id
+              ? (accountById[entry.account_id] ? accountById[entry.account_id].name : "One account")
+              : "Global";
+            return editEntry && editEntry.id === entry.id ? (
+              <div key={entry.id} style={{ borderTop: "1px solid " + C.rule, paddingTop: 4 }}>
+                <GlossaryEntryForm
+                  accounts={accounts}
+                  onSave={handleUpdate}
+                  onCancel={function () { setEditEntry(null); }}
+                  initial={entry}
+                />
+              </div>
+            ) : (
+              <div
+                key={entry.id}
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  padding: "9px 0", borderTop: "1px solid " + C.rule, gap: 12,
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{entry.term}</span>
+                  <span style={{ fontSize: 13, color: C.textSub }}>{" · "}{entry.definition.slice(0, 80)}{entry.definition.length > 80 ? "…" : ""}</span>
+                  <span style={{
+                    marginLeft: 8, fontSize: 10, color: C.textMuted,
+                    fontFamily: SETTINGS_MONO, textTransform: "uppercase", letterSpacing: "0.07em",
+                  }}>
+                    {scopeLabel}
+                  </span>
+                </div>
+                <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                  <button
+                    onClick={function () { setEditEntry(entry); setShowForm(false); }}
+                    aria-label={"Edit " + entry.term}
+                    style={{
+                      background: "none", border: "1px solid " + C.rule, borderRadius: 6,
+                      padding: "4px 9px", fontSize: 11, color: C.textSub, cursor: "pointer",
+                      fontFamily: "'Inter', system-ui, sans-serif",
+                    }}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={function () { handleDelete(entry.id); }}
+                    aria-label={"Delete " + entry.term}
+                    style={{
+                      background: "none", border: "1px solid " + C.redLine, borderRadius: 6,
+                      padding: "4px 9px", fontSize: 11, color: C.red, cursor: "pointer",
+                      fontFamily: "'Inter', system-ui, sans-serif",
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {showForm && (
+        <div style={{ borderTop: glossaryApi.entries.length > 0 ? "1px solid " + C.rule : "none" }}>
+          <GlossaryEntryForm
+            accounts={accounts}
+            onSave={handleAdd}
+            onCancel={function () { setShowForm(false); }}
+          />
+        </div>
+      )}
+
+      {!showForm && !editEntry && (
+        <button
+          onClick={function () { setShowForm(true); setEditEntry(null); }}
+          style={{
+            background: C.accentSubtle, color: C.accent,
+            border: "1px solid " + C.accentBorder,
+            borderRadius: 8, padding: "7px 14px", fontSize: 13,
+            fontFamily: "'Inter', system-ui, sans-serif", fontWeight: 600,
+            cursor: "pointer",
+          }}
+        >
+          + Add term
+        </button>
+      )}
+    </Card>
+  );
+}
+
 var EVENT_LABELS = {
   meeting_logged:     "Meeting logged",
   item_added:         "Item added",
@@ -1156,6 +1415,8 @@ export function SettingsView({ userId, userMeta, orgId, role, members, accounts 
         {userId && <PipPrefsSection userId={userId} />}
 
         {userId && <PipUsageSection userId={userId} />}
+
+        {userId && <PipGlossarySection userId={userId} orgId={orgId} accounts={accounts} />}
 
         {orgId && (
           <ActivitySection

@@ -15,6 +15,7 @@ import { StandingBoardView } from "../gauge/StandingBoardView";
 import { ProjectNotesEditor } from "../gauge/ProjectNotesEditor";
 import { usePipAssignmentHints } from "../../hooks/usePipAssignmentHints";
 import { usePipCorrections } from "../../hooks/usePipCorrections";
+import { useGlossary } from "../../hooks/useGlossary";
 import { applyPipPlan } from "../../lib/pipPlanApply";
 
 var INTER = "'Inter', system-ui, sans-serif";
@@ -625,6 +626,7 @@ export function CadenceHub({
 
   var hintsApi       = usePipAssignmentHints(userId, account.id);
   var correctionsApi = usePipCorrections(userId, account.id);
+  var glossaryApi    = useGlossary(userId, null, account.id);
 
   var cadenceMeetings = useMemo(function () {
     return (meetings || []).filter(function (m) { return m.cadence_id === cadence.id; });
@@ -699,12 +701,14 @@ export function CadenceHub({
     setBriefLoading(true);
     setBriefError(null);
     callCadenceBriefPip({
-      cadence:        cadence,
-      account:        account,
-      cadenceLabel:   cadenceLabel,
-      meetings:       history,
-      openItems:      openItems,
-      activeProjects: activeProjects,
+      cadence:          cadence,
+      account:          account,
+      cadenceLabel:     cadenceLabel,
+      meetings:         history,
+      openItems:        openItems,
+      activeProjects:   activeProjects,
+      accountObjective: account.objective || "",
+      glossary:         glossaryApi.entries,
     }).then(function (out) {
       var brief = out.brief || "";
       var when  = new Date().toISOString();
@@ -771,15 +775,17 @@ export function CadenceHub({
     setSummarizingId(draftId);
     setSummarizeErrors(function (prev) { var next = Object.assign({}, prev); delete next[draftId]; return next; });
     summarizeDraftPip({
-      draft:            draftPayload,
-      accountName:      account.name,
-      cadenceLabel:     cadenceLabel,
-      accountId:        account.id,
-      existingItems:    openItems,
-      activeProjects:   activeProjects,
-      orgMembers:       members,
-      assignmentHints:  hintsApi.hints,
-      corrections:      correctionsApi.corrections,
+      draft:             draftPayload,
+      accountName:       account.name,
+      cadenceLabel:      cadenceLabel,
+      accountId:         account.id,
+      existingItems:     openItems,
+      activeProjects:    activeProjects,
+      orgMembers:        members,
+      assignmentHints:   hintsApi.hints,
+      corrections:       correctionsApi.corrections,
+      accountObjective:  account.objective || "",
+      glossary:          glossaryApi.entries,
     }).then(function (out) {
       var followUp = out.follow_up_date || null;
       return updateMeeting(draftId, {

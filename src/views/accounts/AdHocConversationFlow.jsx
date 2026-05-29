@@ -5,6 +5,7 @@ import { useContacts } from "../../hooks/useContacts";
 import { useProjects } from "../../hooks/useProjects";
 import { usePipAssignmentHints } from "../../hooks/usePipAssignmentHints";
 import { usePipCorrections } from "../../hooks/usePipCorrections";
+import { useGlossary } from "../../hooks/useGlossary";
 import { summarizeDraftPip } from "../../lib/pip";
 import { applyPipPlan } from "../../lib/pipPlanApply";
 import { CadenceMeetingMode } from "../cadence/CadenceMeetingMode";
@@ -47,6 +48,7 @@ export function AdHocConversationFlow({
   var { projects, updateProject } = useProjects(userId, account.id, orgId, childAccountIds);
   var hintsApi       = usePipAssignmentHints(userId, account.id);
   var correctionsApi = usePipCorrections(userId, account.id);
+  var glossaryApi    = useGlossary(userId, orgId, account.id);
 
   var [summarizing, setSummarizing] = useState(false);
   var [summarizeErr, setSummarizeErr] = useState(null);
@@ -78,15 +80,17 @@ export function AdHocConversationFlow({
     setSummarizing(true);
     setSummarizeErr(null);
     summarizeDraftPip({
-      draft:           draftPayload,
-      accountName:     account.name,
-      cadenceLabel:    (draftPayload.method && METHOD_LABEL[draftPayload.method]) || "Ad-hoc conversation",
-      accountId:       account.id,
-      existingItems:   openItems,
-      activeProjects:  activeProjects,
-      orgMembers:      members,
-      assignmentHints: hintsApi.hints,
-      corrections:     correctionsApi.corrections,
+      draft:            draftPayload,
+      accountName:      account.name,
+      cadenceLabel:     (draftPayload.method && METHOD_LABEL[draftPayload.method]) || "Ad-hoc conversation",
+      accountId:        account.id,
+      existingItems:    openItems,
+      activeProjects:   activeProjects,
+      orgMembers:       members,
+      assignmentHints:  hintsApi.hints,
+      corrections:      correctionsApi.corrections,
+      accountObjective: account.objective || "",
+      glossary:         glossaryApi.entries,
     }).then(function (out) {
       var followUp = out.follow_up_date || null;
       return updateMeeting(draftPayload.id, {

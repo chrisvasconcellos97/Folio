@@ -37,6 +37,7 @@ import { summarizeDraftPip } from "../../lib/pip";
 import { applyPipPlan } from "../../lib/pipPlanApply";
 import { usePipAssignmentHints } from "../../hooks/usePipAssignmentHints";
 import { usePipCorrections } from "../../hooks/usePipCorrections";
+import { useGlossary } from "../../hooks/useGlossary";
 import { ErrorBanner } from "../../components/ErrorBanner";
 import { supabase } from "../../lib/supabase";
 import { buildAccountExport, downloadAccountExport } from "../../lib/accountExport";
@@ -187,6 +188,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
   /* ---- Ad-hoc conversation (Log Conversation → full-screen meeting mode) ---- */
   var adHocHintsApi       = usePipAssignmentHints(userId, account.id);
   var adHocCorrectionsApi = usePipCorrections(userId, account.id);
+  var glossaryApi         = useGlossary(userId, orgId, account.id);
   var adHocDraft = adHocDraftId
     ? (meetings || []).find(function (m) { return m.id === adHocDraftId; }) || null
     : null;
@@ -207,15 +209,17 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
       ? ({ phone: "Phone", in_person: "In Person", video: "Video", email: "Email" }[draftPayload.method] || draftPayload.method)
       : "Ad-hoc conversation";
     summarizeDraftPip({
-      draft:           draftPayload,
-      accountName:     account.name,
-      cadenceLabel:    methodLabel,
-      accountId:       account.id,
-      existingItems:   openItemsList,
-      activeProjects:  activeProjects,
-      orgMembers:      members,
-      assignmentHints: adHocHintsApi.hints,
-      corrections:     adHocCorrectionsApi.corrections,
+      draft:            draftPayload,
+      accountName:      account.name,
+      cadenceLabel:     methodLabel,
+      accountId:        account.id,
+      existingItems:    openItemsList,
+      activeProjects:   activeProjects,
+      orgMembers:       members,
+      assignmentHints:  adHocHintsApi.hints,
+      corrections:      adHocCorrectionsApi.corrections,
+      accountObjective: account.objective || "",
+      glossary:         glossaryApi.entries,
     }).then(function (out) {
       var followUp = out.follow_up_date || null;
       return updateMeeting(draftPayload.id, {
@@ -280,6 +284,8 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
       activeProjects: (projects || [])
         .filter(function(p) { return p.status === "in_progress" || p.status === "blocked"; })
         .map(function(p) { return { title: p.title, status: p.status, due_date: p.due_date }; }),
+      accountObjective: account.objective || "",
+      glossary:         glossaryApi.entries,
     }).then(function (data) {
       setBriefLoading(false);
       setBriefText(data.brief || "Pip couldn't generate a brief right now.");
@@ -427,6 +433,8 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
           onAddMeeting={addMeeting}
           onUpdateMeeting={updateMeeting}
           logCorrection={adHocCorrectionsApi.logCorrection}
+          accountObjective={account.objective || ""}
+          glossary={glossaryApi.entries}
         />
         </>
       )}
