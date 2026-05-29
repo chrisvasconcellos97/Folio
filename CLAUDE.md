@@ -254,6 +254,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
    - Pip context improvement — pass full account history (all meetings, open items, contacts) into Pip system prompt
    - Auto-create open items from meeting action items — checkbox in Add Meeting modal to promote each action item to an open item
    - In-app notification banner — shows on login: accounts gone cold, items overdue, follow-ups due this week
+   - **Add Contact from Meeting Hub** — quick "+ Add Contact" button inside CadenceMeetingMode (and CadenceHub more broadly) so when someone new shows up on a call mid-meeting, you can capture them without leaving notes mode. Should drop a minimal-fields modal (name + role + email, all optional except name), save to `folio_contacts` on the meeting's account, and auto-append the new contact to the meeting's `attendees` multi-select. Live in the sidebar's Contacts section as a `+` next to the section header.
    - *(shipped — see Already shipped: Cadence meeting reminders)*
    - *(shipped — see Already shipped: Smarter Pip summarize + preview modal)*
    - **Cadence Hub** — per-cadence all-access workspace. Locked spec:
