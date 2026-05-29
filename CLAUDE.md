@@ -101,6 +101,7 @@ Symptoms of regression: tap an input → viewport visibly zooms in → input los
 - Use Patch for multi-file batches (5+ files) to keep the main context clean
 - Patch commits and pushes to `main` when done — one clean commit per batch
 - The stop hook has a 10-minute grace period so Patch can work without triggering mid-batch commits
+- **Default Patch to Sonnet, not Opus.** Pass `model: "sonnet"` when launching the Agent. Patch is execution-focused: the spec does the hard thinking, Sonnet just builds. ~4-5× cheaper per batch and noticeably faster than Opus, with no measurable quality regression on well-spec'd work. Reserve Opus-Patch for the rare build where mid-execution reasoning matters (e.g. an architecture refactor where Patch makes real judgment calls). Strategy + design + debugging conversations stay on Opus in the main session.
 
 ## Architecture
 
