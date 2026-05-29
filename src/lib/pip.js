@@ -356,11 +356,11 @@ export function summarizeDraftPip(payload) {
     "  \"follow_up_date\": \"YYYY-MM-DD or null\",\n" +
     "  \"tone\": \"positive|neutral|mixed|negative — based on the meeting's overall energy. Customer pushback or blocker frustration = negative. Smooth check-in with no issues = neutral or positive. Both positive progress and some friction = mixed.\",\n" +
     "  \"plan\": [\n" +
-    "    { \"kind\": \"new_item\",    \"text\": \"...\", \"due_date\": \"YYYY-MM-DD or null\", \"suggested_assignee\": \"email or null\", \"confidence\": \"high|medium|low\" },\n" +
-    "    { \"kind\": \"update_item\", \"target_id\": \"I-...\", \"fields\": { \"due_date\": \"...\", \"text\": \"...\" }, \"confidence\": \"high|medium|low\" },\n" +
-    "    { \"kind\": \"close_item\",  \"target_id\": \"I-...\", \"reason\": \"...\", \"confidence\": \"high|medium|low\" },\n" +
-    "    { \"kind\": \"new_task\",    \"project_id\": \"uuid\", \"title\": \"...\", \"due_date\": \"YYYY-MM-DD or null\", \"suggested_assignee\": \"email or null\", \"confidence\": \"high|medium|low\" },\n" +
-    "    { \"kind\": \"update_task\", \"project_id\": \"uuid\", \"task_id\": \"T-...\", \"fields\": { \"due_date\": \"...\", \"task_status\": \"...\" }, \"confidence\": \"high|medium|low\" },\n" +
+    "    { \"kind\": \"new_item\",    \"text\": \"...\", \"due_date\": \"YYYY-MM-DD or null\", \"suggested_assignee\": \"email or null\", \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim 1-3 line slice of the draft notes that triggered this row\" },\n" +
+    "    { \"kind\": \"update_item\", \"target_id\": \"I-...\", \"fields\": { \"due_date\": \"...\", \"text\": \"...\" }, \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim slice from notes\" },\n" +
+    "    { \"kind\": \"close_item\",  \"target_id\": \"I-...\", \"reason\": \"...\", \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim slice from notes\" },\n" +
+    "    { \"kind\": \"new_task\",    \"project_id\": \"uuid\", \"title\": \"...\", \"due_date\": \"YYYY-MM-DD or null\", \"suggested_assignee\": \"email or null\", \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim slice from notes\" },\n" +
+    "    { \"kind\": \"update_task\", \"project_id\": \"uuid\", \"task_id\": \"T-...\", \"fields\": { \"due_date\": \"...\", \"task_status\": \"...\" }, \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim slice from notes\" },\n" +
     "    { \"kind\": \"skip\",        \"reason\": \"duplicate of T-... or I-...\", \"confidence\": \"high\" }\n" +
     "  ]\n" +
     "}\n\n" +
@@ -378,6 +378,9 @@ export function summarizeDraftPip(payload) {
     "- suggested_assignee MUST be one of the listed org member emails or null. Use the assignment " +
     "hints to default to historically correct people for similar tasks.\n" +
     "- confidence: high = obvious from the notes, medium = a reasonable inference, low = stretching.\n" +
+    "- source_excerpt MUST be a direct, verbatim quote from the draft notes — the specific 1-3 lines " +
+    "that prompted this row. The user uses these to trace where each row came from and to correct " +
+    "you when you misread. Keep them short and exact. Omit only for `skip` rows.\n" +
     "- Be GENEROUS extracting commitments — promises, follow-ups, things to verify — but route " +
     "them as updates whenever a relevant existing item/task exists.\n\n" +
     "── CONTEXT ──\n" +
@@ -467,6 +470,9 @@ function normalizePlanRow(r) {
   if (!r || typeof r !== "object" || !r.kind) return null;
   var conf = r.confidence === "high" || r.confidence === "medium" || r.confidence === "low" ? r.confidence : "medium";
   var out  = { kind: r.kind, confidence: conf };
+  if (r.source_excerpt && typeof r.source_excerpt === "string") {
+    out.source_excerpt = r.source_excerpt.trim();
+  }
   switch (r.kind) {
     case "new_item":
       if (!r.text) return null;
