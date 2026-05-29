@@ -14,6 +14,7 @@ import { ProjectStageEditor } from "../gauge/ProjectStageEditor";
 import { StandingBoardView } from "../gauge/StandingBoardView";
 import { ProjectNotesEditor } from "../gauge/ProjectNotesEditor";
 import { usePipAssignmentHints } from "../../hooks/usePipAssignmentHints";
+import { usePipCorrections } from "../../hooks/usePipCorrections";
 import { applyPipPlan } from "../../lib/pipPlanApply";
 
 var INTER = "'Inter', system-ui, sans-serif";
@@ -590,7 +591,8 @@ export function CadenceHub({
   var [summarizeErrors, setSummarizeErrors] = useState({}); // { draftId: msg }
   var [previewPlan, setPreviewPlan]         = useState(null); // { plan, summary, draftId }
 
-  var hintsApi = usePipAssignmentHints(userId, account.id);
+  var hintsApi       = usePipAssignmentHints(userId, account.id);
+  var correctionsApi = usePipCorrections(userId, account.id);
 
   var cadenceMeetings = useMemo(function () {
     return (meetings || []).filter(function (m) { return m.cadence_id === cadence.id; });
@@ -745,6 +747,7 @@ export function CadenceHub({
       activeProjects:   activeProjects,
       orgMembers:       members,
       assignmentHints:  hintsApi.hints,
+      corrections:      correctionsApi.corrections,
     }).then(function (out) {
       var followUp = out.follow_up_date || null;
       return updateMeeting(draftId, {
@@ -1045,6 +1048,8 @@ export function CadenceHub({
       orgMembers={members}
       onApply={handleApplyPlan}
       onCancel={handleCancelPlan}
+      onLogCorrections={correctionsApi.logCorrections}
+      meetingId={previewPlan.draftId}
     />
   ) : null;
 

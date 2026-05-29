@@ -293,6 +293,8 @@ export function PipSummarizePreview({
   orgMembers,
   onApply,
   onCancel,
+  onLogCorrections,  // (entries[]) => Promise — fire-and-forget V2-brain capture
+  meetingId,         // optional; tags corrections with the draft they came from
 }) {
   var memberEmails = useMemo(function () {
     return (orgMembers || [])
@@ -360,20 +362,47 @@ export function PipSummarizePreview({
     setRowErrors({});
 
     var selected = [];
+    var corrections = [];  // V2 brain — captured fire-and-forget after Apply
+
     (plan || []).forEach(function (row, idx) {
       if (row.kind === "skip") return;
-      if (!state[idx] || !state[idx].checked) return;
-      var merged = Object.assign({}, row);
+      var s = state[idx] || {};
+      var originalTitle   = s.initialTitle   || "";
+      var originalExcerpt = s.initialExcerpt || "";
+      var typed           = (s.title   || "").trim();
+      var typedExcerpt    = (s.excerpt || "").trim();
+      var titleChanged    = hasEditableTitle(row.kind) && typed && typed !== originalTitle.trim();
+      var excerptChanged  = typedExcerpt !== originalExcerpt.trim() && typedExcerpt.length > 0;
 
-      // Apply title/text overrides where the row supports inline edits.
-      if (hasEditableTitle(row.kind)) {
-        var typed = (state[idx].title || "").trim();
-        if (typed) {
-          if (row.kind === "new_item")    merged.text = typed;
-          if (row.kind === "new_task")    merged.title = typed;
-          if (row.kind === "update_item") merged.fields = Object.assign({}, row.fields, { text: typed });
-          if (row.kind === "update_task") merged.fields = Object.assign({}, row.fields, { title: typed });
-        }
+      // Rejected row capture — user unchecked it. Reason prefers the edited
+      // excerpt (richer signal) but falls back to the original excerpt + a
+      // generic "declined" note so Pip at least knows it was wrong.
+      if (!s.checked) {
+        corrections.push({
+          correction_type: "rejected_row",
+          meeting_id:      meetingId || null,
+          original_value:  {
+            kind:           row.kind,
+            text:           row.text || (row.fields && row.fields.text) || null,
+            title:          row.title || (row.fields && row.fields.title) || null,
+            target_id:      row.target_id || null,
+            project_id:     row.project_id || null,
+            task_id:        row.task_id || null,
+            source_excerpt: row.source_excerpt || null,
+            confidence:     row.confidence,
+          },
+          corrected_value: null,
+          reason:          typedExcerpt || row.source_excerpt || "declined without note",
+        });
+        return;
+      }
+
+      var merged = Object.assign({}, row);
+      if (hasEditableTitle(row.kind) && typed) {
+        if (row.kind === "new_item")    merged.text = typed;
+        if (row.kind === "new_task")    merged.title = typed;
+        if (row.kind === "update_item") merged.fields = Object.assign({}, row.fields, { text: typed });
+        if (row.kind === "update_task") merged.fields = Object.assign({}, row.fields, { title: typed });
       }
       if (hasAssignee(row.kind)) {
         merged.assignee = state[idx].assignee || null;
@@ -382,9 +411,31 @@ export function PipSummarizePreview({
         merged.due_date = state[idx].due_date || null;
       }
       merged.suggestedAssignee = state[idx].suggestedAssignee || null;
-      merged.source_excerpt_edited = state[idx].excerpt || null;  // future: learning loop
+      merged.source_excerpt_edited = typedExcerpt || null;
       selected.push({ idx: idx, row: merged });
+
+      // Kept-but-edited capture: Pip's wording was wrong enough that user
+      // re-wrote it before applying. High signal for the learning loop.
+      if (titleChanged) {
+        var ctype = (row.kind === "new_task" || row.kind === "update_task") ? "task_text_edit" : "item_text_edit";
+        corrections.push({
+          correction_type: ctype,
+          meeting_id:      meetingId || null,
+          original_value:  {
+            kind:           row.kind,
+            original:       originalTitle,
+            source_excerpt: row.source_excerpt || null,
+          },
+          corrected_value: { text: typed },
+          reason:          excerptChanged ? typedExcerpt : null,
+        });
+      }
     });
+
+    if (onLogCorrections && corrections.length) {
+      // Fire-and-forget — never block Apply on logging.
+      Promise.resolve(onLogCorrections(corrections)).catch(function () { /* swallow */ });
+    }
 
     Promise.resolve(onApply(selected))
       .then(function (result) {

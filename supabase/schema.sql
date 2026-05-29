@@ -547,6 +547,35 @@ create policy "Users manage own hints"
   with check (auth.uid() = user_id);
 
 -- ──────────────────────────────────────────────────────────────────────
+-- Pip correction log (V2 brain foundation) — every disagreement the user
+-- has with Pip's output. Read back into the next summarize prompt so Pip
+-- stops repeating the same misreads. See pip_correction_log.sql.
+-- ──────────────────────────────────────────────────────────────────────
+create table if not exists pip_correction_log (
+  id                uuid primary key default gen_random_uuid(),
+  user_id           uuid references auth.users not null,
+  account_id        uuid references folio_accounts on delete cascade,
+  meeting_id        uuid references folio_meetings on delete set null,
+  correction_type   text not null check (correction_type in (
+    'summary_edit', 'rejected_row', 'item_text_edit', 'task_text_edit'
+  )),
+  original_value    jsonb,
+  corrected_value   jsonb,
+  reason            text,
+  created_at        timestamptz default now()
+);
+create index if not exists pip_correction_log_user_account_idx
+  on pip_correction_log(user_id, account_id, created_at desc);
+create index if not exists pip_correction_log_meeting_idx
+  on pip_correction_log(meeting_id);
+alter table pip_correction_log enable row level security;
+drop policy if exists "Users manage own corrections" on pip_correction_log;
+create policy "Users manage own corrections"
+  on pip_correction_log for all
+  using      (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+-- ──────────────────────────────────────────────────────────────────────
 -- Audit log (optional security feature)
 -- ──────────────────────────────────────────────────────────────────────
 create table if not exists folio_audit_log (

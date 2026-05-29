@@ -4,6 +4,7 @@ import { useItems } from "../../hooks/useItems";
 import { useContacts } from "../../hooks/useContacts";
 import { useProjects } from "../../hooks/useProjects";
 import { usePipAssignmentHints } from "../../hooks/usePipAssignmentHints";
+import { usePipCorrections } from "../../hooks/usePipCorrections";
 import { summarizeDraftPip } from "../../lib/pip";
 import { applyPipPlan } from "../../lib/pipPlanApply";
 import { CadenceMeetingMode } from "../cadence/CadenceMeetingMode";
@@ -44,7 +45,8 @@ export function AdHocConversationFlow({
       .map(function (a) { return a.id; });
   }, [accounts, account.id]);
   var { projects, updateProject } = useProjects(userId, account.id, orgId, childAccountIds);
-  var hintsApi = usePipAssignmentHints(userId, account.id);
+  var hintsApi       = usePipAssignmentHints(userId, account.id);
+  var correctionsApi = usePipCorrections(userId, account.id);
 
   var [summarizing, setSummarizing] = useState(false);
   var [summarizeErr, setSummarizeErr] = useState(null);
@@ -84,6 +86,7 @@ export function AdHocConversationFlow({
       activeProjects:  activeProjects,
       orgMembers:      members,
       assignmentHints: hintsApi.hints,
+      corrections:     correctionsApi.corrections,
     }).then(function (out) {
       var followUp = out.follow_up_date || null;
       return updateMeeting(draftPayload.id, {
@@ -168,6 +171,8 @@ export function AdHocConversationFlow({
           orgMembers={members}
           onApply={handleApplyPlan}
           onCancel={handleCancelPlan}
+          onLogCorrections={correctionsApi.logCorrections}
+          meetingId={previewPlan.draftId}
         />
       )}
     </>

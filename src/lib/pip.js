@@ -309,6 +309,7 @@ export function summarizeDraftPip(payload) {
   var activeProjects = Array.isArray(payload.activeProjects) ? payload.activeProjects : [];
   var orgMembers     = Array.isArray(payload.orgMembers)     ? payload.orgMembers     : [];
   var hints          = Array.isArray(payload.assignmentHints) ? payload.assignmentHints : [];
+  var corrections    = Array.isArray(payload.corrections)     ? payload.corrections     : [];
 
   var itemLines = existingItems.length
     ? existingItems.map(function (i) {
@@ -344,6 +345,38 @@ export function summarizeDraftPip(payload) {
         return "- tasks like \"" + h.task_pattern + "\" → " + h.assignee_email;
       }).join("\n")
     : "(no hints yet)";
+
+  // V2 brain — read-back of the user's recent corrections so Pip stops
+  // repeating misreads. Take the most recent 10 across all types, render
+  // as a compact bulleted list. Reason is the user's edited excerpt (best
+  // signal) or the original excerpt fallback.
+  var correctionLines = (corrections || [])
+    .slice(0, 10)
+    .map(function (c) {
+      var orig = c.original_value || {};
+      var corr = c.corrected_value || {};
+      switch (c.correction_type) {
+        case "rejected_row":
+          return "- DECLINED a " + (orig.kind || "row") +
+            " (\"" + (orig.text || orig.title || "—").slice(0, 80) + "\")" +
+            (c.reason ? " — context: " + c.reason.slice(0, 120) : "");
+        case "item_text_edit":
+          return "- REWROTE item from \"" + (orig.original || "").slice(0, 60) +
+            "\" → \"" + (corr.text || "").slice(0, 80) + "\"";
+        case "task_text_edit":
+          return "- REWROTE task from \"" + (orig.original || "").slice(0, 60) +
+            "\" → \"" + (corr.text || "").slice(0, 80) + "\"";
+        case "summary_edit":
+          return "- EDITED summary: user rewrote " +
+            ((corr.text || "").length < (orig.text || "").length ? "shorter" : "differently") +
+            (c.reason ? " — reason: " + c.reason.slice(0, 80) : "");
+        default:
+          return "- " + c.correction_type;
+      }
+    })
+    .filter(Boolean)
+    .join("\n");
+  var correctionBlock = correctionLines.length ? correctionLines : "(no prior corrections — first time on this account)";
 
   var prompt =
     "You are planning post-meeting bookkeeping. Compare the meeting notes against the user's " +
@@ -397,6 +430,9 @@ export function summarizeDraftPip(payload) {
       : "(none)") + "\n\n" +
     "Org members (valid assignee emails):\n" + memberLines + "\n\n" +
     "Assignment hints (historical overrides on this account):\n" + hintLines + "\n\n" +
+    "Things the user has corrected before — STUDY these and don't repeat the same misreads. " +
+    "If the pattern matches the current notes, route accordingly (decline merges that were " +
+    "declined before, prefer wording the user has rewritten to, etc):\n" + correctionBlock + "\n\n" +
     "── NOTES ──\n" +
     (m.notes        ? m.notes + "\n" : "(empty)\n") +
     (m.action_items ? "\nExtra action notes: " + m.action_items + "\n" : "") +

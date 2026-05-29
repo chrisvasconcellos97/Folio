@@ -36,6 +36,7 @@ import { CadenceBackfillBanner } from "../cadence/CadenceBackfillBanner";
 import { summarizeDraftPip } from "../../lib/pip";
 import { applyPipPlan } from "../../lib/pipPlanApply";
 import { usePipAssignmentHints } from "../../hooks/usePipAssignmentHints";
+import { usePipCorrections } from "../../hooks/usePipCorrections";
 import { ErrorBanner } from "../../components/ErrorBanner";
 import { supabase } from "../../lib/supabase";
 import { buildAccountExport, downloadAccountExport } from "../../lib/accountExport";
@@ -184,7 +185,8 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
   }
 
   /* ---- Ad-hoc conversation (Log Conversation → full-screen meeting mode) ---- */
-  var adHocHintsApi = usePipAssignmentHints(userId, account.id);
+  var adHocHintsApi       = usePipAssignmentHints(userId, account.id);
+  var adHocCorrectionsApi = usePipCorrections(userId, account.id);
   var adHocDraft = adHocDraftId
     ? (meetings || []).find(function (m) { return m.id === adHocDraftId; }) || null
     : null;
@@ -213,6 +215,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
       activeProjects:  activeProjects,
       orgMembers:      members,
       assignmentHints: adHocHintsApi.hints,
+      corrections:     adHocCorrectionsApi.corrections,
     }).then(function (out) {
       var followUp = out.follow_up_date || null;
       return updateMeeting(draftPayload.id, {
@@ -562,6 +565,8 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
           orgMembers={members}
           onApply={handleAdHocApplyPlan}
           onCancel={handleAdHocCancelPlan}
+          onLogCorrections={adHocCorrectionsApi.logCorrections}
+          meetingId={adHocPreviewPlan.draftId}
         />
       )}
 
