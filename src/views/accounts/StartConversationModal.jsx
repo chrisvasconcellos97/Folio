@@ -446,22 +446,25 @@ export function StartConversationModal({ accountId, accounts, userId, orgId, mem
                       display: "flex", flexDirection: "column", gap: 8,
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
                       <input
                         type="checkbox"
                         checked={it.checked}
                         onChange={function () { toggleItem(idx); }}
-                        style={{ width: 16, height: 16, accentColor: C.accent, flexShrink: 0 }}
+                        style={{ width: 16, height: 16, accentColor: C.accent, flexShrink: 0, marginTop: 4 }}
                       />
-                      <input
-                        type="text"
+                      <textarea
                         value={it.text}
                         onChange={function (e) { editItem(idx, "text", e.target.value); }}
+                        rows={2}
                         style={{
                           flex: 1, background: "transparent",
                           border: "none", outline: "none",
                           color: C.text, fontSize: 13.5, fontFamily: INTER,
-                          padding: 0,
+                          padding: 0, lineHeight: 1.45,
+                          resize: "none",
+                          boxSizing: "border-box",
+                          minWidth: 0,
                         }}
                       />
                     </div>
