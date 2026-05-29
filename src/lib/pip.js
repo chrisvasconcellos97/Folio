@@ -554,5 +554,70 @@ export function callCadenceBriefPip(payload) {
   });
 }
 
+/**
+ * Lightweight extractor for the quick email-touchpoint flow. Takes a
+ * short free-form note + the account's contacts + org members and asks
+ * Pip to pull out any action items the user committed to or implied.
+ * Returns { items: [{ text, due_date, suggested_assignee, confidence }] }.
+ *
+ * Tuned for speed and cheap inference: small prompt, JSON-only output,
+ * Haiku model. ~$0.003 per call. The user reviews + edits results
+ * inline before they ever hit the DB — Pip proposes, never writes.
+ */
+export function extractTouchpointActionsPip(payload) {
+  var note          = (payload.note || "").trim();
+  var accountName   = payload.accountName || "the account";
+  var contactNames  = (payload.contacts || []).map(function (c) { return c.name; }).filter(Boolean);
+  var orgMembers    = (payload.orgMembers || []).map(function (m) { return m.email || m.invited_email; }).filter(Boolean);
+  var today         = new Date().toISOString().slice(0, 10);
+
+  if (note.length < 6) return Promise.resolve({ items: [] });
+
+  var prompt =
+    "Read this short email/touchpoint note about a customer. Extract any " +
+    "action items the user committed to or implied. Be conservative — only " +
+    "list things that are clearly actionable. If nothing is actionable, return " +
+    "{\"items\": []}.\n\n" +
+    "For each item return JSON with:\n" +
+    "  text                — the action in one short sentence (imperative voice)\n" +
+    "  due_date            — ISO date if the note implies one (today=" + today + ", words like 'Tuesday', 'EOW', 'next week' should be resolved), else null\n" +
+    "  suggested_assignee  — email of an org member if the note clearly names them; otherwise null\n" +
+    "  confidence          — \"high\" | \"medium\" | \"low\"\n\n" +
+    "Account: " + accountName + "\n" +
+    "Customer contacts: " + (contactNames.join(", ") || "none on file") + "\n" +
+    "Org members (use exact email if assignable): " + (orgMembers.join(", ") || "none") + "\n" +
+    "Today: " + today + "\n\n" +
+    "── NOTE ──\n" + note + "\n\n" +
+    "Return ONLY valid JSON: { \"items\": [...] }";
+
+  return callPipApi(
+    [{ role: "user", content: prompt }],
+    null,
+    { mode: "summarize" }
+  ).then(function (resp) {
+    var text = resp.content || "";
+    var match = text.match(/\{[\s\S]*\}/);
+    if (!match) return { items: [] };
+    try {
+      var parsed = JSON.parse(match[0]);
+      var raw    = Array.isArray(parsed.items) ? parsed.items : [];
+      var items  = raw.map(function (r) {
+        if (!r || typeof r.text !== "string" || !r.text.trim()) return null;
+        return {
+          text:                String(r.text).trim(),
+          due_date:            r.due_date && /^\d{4}-\d{2}-\d{2}$/.test(r.due_date) ? r.due_date : null,
+          suggested_assignee:  r.suggested_assignee && orgMembers.indexOf(r.suggested_assignee) >= 0 ? r.suggested_assignee : null,
+          confidence:          r.confidence === "high" || r.confidence === "low" ? r.confidence : "medium",
+        };
+      }).filter(Boolean);
+      return { items: items };
+    } catch (e) {
+      return { items: [] };
+    }
+  }).catch(function () {
+    return { items: [] };
+  });
+}
+
 export var PIP_SYSTEM_PROMPT =
   "You are Pip, an AI account management assistant. Your personality is modeled after a loyal, slightly anxious field analyst who genuinely cares about the person you are helping. You feel like a ride-or-die friend who happens to also be very good at their job.";

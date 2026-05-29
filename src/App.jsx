@@ -636,21 +636,33 @@ export default function App() {
     <StartConversationModal
       accounts={accounts}
       userId={userId}
+      orgId={orgId}
+      members={members}
       onStart={function (data) {
         return addMeeting(data).then(function (m) {
-          setShowStartConv(false);
-          // Email = quick after-the-fact log. Already summarized on save,
-          // no overlay needed. Just bump the account so it counts as
-          // contact and show a toast.
           if (data.status === "summarized") {
+            // Quick log path — modal handles its own close + toast after
+            // any action items get created via onAddItems.
             touchAccount(data.account_id);
-            showToast("Logged.");
           } else {
-            // Real-time conversation → open the meeting overlay.
+            // Real-time conversation → open the meeting overlay and close
+            // the modal here so we get a clean handoff.
+            setShowStartConv(false);
             setAdHocFlow({ accountId: data.account_id, draftId: m.id });
           }
           return m;
         });
+      }}
+      onAddItems={function (accountId, items) {
+        var creations = (items || []).map(function (it) {
+          return pipAddItem({
+            account_id: accountId,
+            text:       it.text,
+            due_date:   it.due_date || null,
+            owner:      it.owner || null,
+          });
+        });
+        return Promise.all(creations);
       }}
       onClose={function () { setShowStartConv(false); }}
     />

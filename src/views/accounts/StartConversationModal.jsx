@@ -5,6 +5,9 @@ import { AmberBtn, SecBtn } from "../../components/Buttons";
 import { InputField, TextArea } from "../../components/InputField";
 import { FL } from "../../components/FieldLabel";
 import { useBreakpoint } from "../../hooks/useBreakpoint";
+import { useContacts } from "../../hooks/useContacts";
+import { extractTouchpointActionsPip } from "../../lib/pip";
+import { showToast } from "../../components/Toast";
 
 var INTER = "'Inter', system-ui, sans-serif";
 
@@ -44,7 +47,7 @@ function formatDateLong(iso) {
  *               → Promise<meeting>
  *  - onClose
  */
-export function StartConversationModal({ accountId, accounts, userId, onStart, onClose }) {
+export function StartConversationModal({ accountId, accounts, userId, orgId, members, onStart, onAddItems, onClose }) {
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
   var needsAccountPicker = !accountId;
@@ -59,12 +62,23 @@ export function StartConversationModal({ accountId, accounts, userId, onStart, o
   var [method, setMethod]   = useState("");
   var [date, setDate]       = useState(todayISO());
   var [quickNote, setQuickNote] = useState("");
+  var [withContacts, setWithContacts] = useState([]); // contact names
   var [loading, setLoading] = useState(false);
   var [error, setError]     = useState(null);
+
+  // Action item extraction state — drives the in-place "review" phase
+  // after the user clicks Log it.
+  var [phase, setPhase]                 = useState("compose"); // compose | extracting | review | saving
+  var [extractedItems, setExtractedItems] = useState([]); // [{ text, due_date, assignee, confidence, checked }]
 
   // Email = quick after-the-fact log. Other methods = real-time meeting
   // overlay. The branch happens entirely in handleStart.
   var isQuickLog = method === "email";
+
+  // Load contacts when an account is picked — only needed for the quick-log
+  // flow (contact chip selector + Pip extraction context).
+  var contactsApi = useContacts(userId, selectedAccountId || null, orgId);
+  var accountContacts = contactsApi.contacts || [];
 
   var selectedAccount = useMemo(function () {
     if (!selectedAccountId) return null;
@@ -95,14 +109,14 @@ export function StartConversationModal({ accountId, accounts, userId, onStart, o
 
   var canStart = Boolean(selectedAccountId && method && date && !loading);
 
-  function handleStart() {
-    if (!canStart) return;
+  function commitLog(itemsToCreate) {
     setError(null);
+    setPhase("saving");
     setLoading(true);
     var title = isQuickLog
       ? "Email — " + formatDateLong(date)
       : "Conversation — " + formatDateLong(date);
-    Promise.resolve(onStart({
+    return Promise.resolve(onStart({
       account_id:   selectedAccountId,
       user_id:      userId,
       cadence_id:   null,
@@ -110,15 +124,105 @@ export function StartConversationModal({ accountId, accounts, userId, onStart, o
       meeting_date: date,
       title:        title,
       notes:        isQuickLog ? quickNote.trim() : "",
-      // Email logs are after-the-fact summaries — skip the draft phase
-      // entirely so they don't show up in Loose Ends. Real-time
-      // conversations stay as drafts so the meeting overlay can open.
+      attendees:    withContacts.length > 0 ? withContacts.slice() : null,
       status:       isQuickLog ? "summarized" : "draft",
     })).then(function () {
+      if (isQuickLog && itemsToCreate && itemsToCreate.length > 0 && onAddItems) {
+        return onAddItems(selectedAccountId, itemsToCreate);
+      }
+      return null;
+    }).then(function () {
       setLoading(false);
+      // Real-time conversations: the parent handles the close + adHoc
+      // overlay mount via onStart. Quick logs close themselves here.
+      if (isQuickLog) {
+        var n = (itemsToCreate || []).length;
+        showToast(n > 0 ? "Logged — added " + n + " item" + (n !== 1 ? "s" : "") + "." : "Logged.");
+        if (onClose) onClose();
+      }
     }).catch(function (err) {
       setLoading(false);
+      setPhase(isQuickLog && extractedItems.length > 0 ? "review" : "compose");
       setError((err && err.message) || (isQuickLog ? "Couldn't log it. Try again." : "Couldn't start the conversation. Try again."));
+    });
+  }
+
+  function handleStart() {
+    if (!canStart) return;
+    // For real-time conversations (phone / in_person / video), skip the
+    // extractor entirely — those open the meeting overlay where the
+    // existing summarize flow already handles action items.
+    if (!isQuickLog) {
+      commitLog(null);
+      return;
+    }
+    var note = quickNote.trim();
+    if (!note) {
+      // Empty note → no extraction, just save.
+      commitLog(null);
+      return;
+    }
+    setError(null);
+    setPhase("extracting");
+    setLoading(true);
+    extractTouchpointActionsPip({
+      note:        note,
+      accountName: selectedAccount ? selectedAccount.name : "",
+      contacts:    withContacts.map(function (n) { return { name: n }; }),
+      orgMembers:  members || [],
+    }).then(function (result) {
+      var items = (result && result.items) || [];
+      setLoading(false);
+      if (items.length === 0) {
+        // Nothing to confirm — save straight through.
+        commitLog(null);
+        return;
+      }
+      // High + medium default to checked. Low confidence starts unchecked.
+      var prepared = items.map(function (it) {
+        return {
+          text:        it.text,
+          due_date:    it.due_date || "",
+          assignee:    it.suggested_assignee || "",
+          confidence:  it.confidence || "medium",
+          checked:     it.confidence !== "low",
+        };
+      });
+      setExtractedItems(prepared);
+      setPhase("review");
+    }).catch(function () {
+      // If the extractor fails, fall back to saving without items.
+      setLoading(false);
+      commitLog(null);
+    });
+  }
+
+  function handleSaveReviewed() {
+    var checkedItems = extractedItems
+      .filter(function (it) { return it.checked && (it.text || "").trim(); })
+      .map(function (it) {
+        return {
+          text:     it.text.trim(),
+          due_date: it.due_date || null,
+          owner:    it.assignee || null,
+        };
+      });
+    commitLog(checkedItems);
+  }
+
+  function toggleItem(idx) {
+    setExtractedItems(function (prev) {
+      return prev.map(function (it, i) { return i === idx ? Object.assign({}, it, { checked: !it.checked }) : it; });
+    });
+  }
+  function editItem(idx, key, val) {
+    setExtractedItems(function (prev) {
+      return prev.map(function (it, i) { return i === idx ? Object.assign({}, it, { [key]: val }) : it; });
+    });
+  }
+  function toggleContact(name) {
+    setWithContacts(function (prev) {
+      return prev.indexOf(name) >= 0 ? prev.filter(function (n) { return n !== name; }) : prev.concat([name]);
     });
   }
 
@@ -258,7 +362,40 @@ export function StartConversationModal({ accountId, accounts, userId, onStart, o
           />
         </div>
 
-        {isQuickLog && (
+        {isQuickLog && selectedAccountId && accountContacts.length > 0 && phase === "compose" && (
+          <div>
+            <FL>
+              Who was it with? <span style={{ color: C.textMuted, fontWeight: 400 }}>(optional)</span>
+            </FL>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {accountContacts.map(function (c) {
+                var active = withContacts.indexOf(c.name) >= 0;
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={function () { toggleContact(c.name); }}
+                    style={{
+                      background: active ? C.accentFaint : "transparent",
+                      color: active ? C.accent : C.textSoft,
+                      border: "1px solid " + (active ? C.accentBorder : C.rule),
+                      borderRadius: 999,
+                      padding: "5px 12px",
+                      fontSize: 12,
+                      fontWeight: active ? 600 : 400,
+                      fontFamily: INTER,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {active ? "✓ " : ""}{c.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {isQuickLog && phase === "compose" && (
           <div>
             <FL htmlFor="start-conv-note">
               What was it about? <span style={{ color: C.textMuted, fontWeight: 400 }}>(optional)</span>
@@ -271,6 +408,108 @@ export function StartConversationModal({ accountId, accounts, userId, onStart, o
               rows={3}
               autoFocus
             />
+          </div>
+        )}
+
+        {phase === "extracting" && (
+          <div style={{
+            display: "flex", alignItems: "center", gap: 10,
+            padding: "12px 14px",
+            background: C.accentGlow, border: "1px solid " + C.accentLine,
+            borderRadius: 10,
+            fontFamily: INTER, fontSize: 13, color: C.accent, fontWeight: 600,
+          }}>
+            <span style={{
+              display: "inline-block", width: 8, height: 8, borderRadius: "50%",
+              background: C.accent, animation: "pip-breathe 1.4s ease-in-out infinite",
+            }} />
+            Pip's reading…
+          </div>
+        )}
+
+        {phase === "review" && extractedItems.length > 0 && (
+          <div>
+            <FL>Pip noticed these action items — keep the ones you want.</FL>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {extractedItems.map(function (it, idx) {
+                var faded = !it.checked;
+                return (
+                  <div
+                    key={idx}
+                    style={{
+                      background: it.checked ? C.surface : "transparent",
+                      border: "1px solid " + (it.checked ? C.accentLine : C.rule),
+                      borderLeft: "2px solid " + (it.confidence === "low" ? C.yellow : it.confidence === "high" ? C.accent : C.accentDim),
+                      borderRadius: 10,
+                      padding: "10px 12px",
+                      opacity: faded ? 0.55 : 1,
+                      display: "flex", flexDirection: "column", gap: 8,
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <input
+                        type="checkbox"
+                        checked={it.checked}
+                        onChange={function () { toggleItem(idx); }}
+                        style={{ width: 16, height: 16, accentColor: C.accent, flexShrink: 0 }}
+                      />
+                      <input
+                        type="text"
+                        value={it.text}
+                        onChange={function (e) { editItem(idx, "text", e.target.value); }}
+                        style={{
+                          flex: 1, background: "transparent",
+                          border: "none", outline: "none",
+                          color: C.text, fontSize: 13.5, fontFamily: INTER,
+                          padding: 0,
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", paddingLeft: 26, flexWrap: "wrap" }}>
+                      <input
+                        type="date"
+                        value={it.due_date || ""}
+                        onChange={function (e) { editItem(idx, "due_date", e.target.value); }}
+                        style={{
+                          background: C.bgDark, border: "1px solid " + C.rule,
+                          borderRadius: 6, padding: "4px 8px",
+                          color: it.due_date ? C.text : C.textMuted,
+                          fontSize: 12, fontFamily: INTER, outline: "none",
+                          colorScheme: "dark",
+                        }}
+                      />
+                      <select
+                        value={it.assignee || ""}
+                        onChange={function (e) { editItem(idx, "assignee", e.target.value); }}
+                        style={{
+                          background: C.bgDark, border: "1px solid " + C.rule,
+                          borderRadius: 6, padding: "4px 8px",
+                          color: it.assignee ? C.text : C.textMuted,
+                          fontSize: 12, fontFamily: INTER, outline: "none",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <option value="">Unassigned</option>
+                        {(members || []).map(function (m) {
+                          var email = m.email || m.invited_email;
+                          if (!email) return null;
+                          return <option key={email} value={email}>{email}</option>;
+                        })}
+                      </select>
+                      {it.confidence === "low" && (
+                        <span style={{
+                          fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+                          fontSize: 9, color: C.yellow,
+                          textTransform: "uppercase", letterSpacing: "0.07em",
+                        }}>
+                          Pip's not sure
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 
@@ -303,14 +542,28 @@ export function StartConversationModal({ accountId, accounts, userId, onStart, o
           </div>
         )}
         <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-          <SecBtn style={{ flex: 1 }} onClick={onClose} disabled={loading}>
-            Cancel
+          <SecBtn
+            style={{ flex: 1 }}
+            onClick={phase === "review" ? function () { setPhase("compose"); } : onClose}
+            disabled={loading}
+          >
+            {phase === "review" ? "Back" : "Cancel"}
           </SecBtn>
-          <AmberBtn style={{ flex: 1 }} onClick={handleStart} disabled={!canStart}>
-            {loading
-              ? (isQuickLog ? "Logging…" : "Starting…")
-              : (isQuickLog ? "Log it" : "Start Conversation →")}
-          </AmberBtn>
+          {phase === "review" ? (
+            <AmberBtn style={{ flex: 1 }} onClick={handleSaveReviewed} disabled={loading}>
+              {(function () {
+                if (loading) return "Saving…";
+                var n = extractedItems.filter(function (it) { return it.checked; }).length;
+                return n > 0 ? "Save with " + n + " item" + (n !== 1 ? "s" : "") : "Save";
+              })()}
+            </AmberBtn>
+          ) : (
+            <AmberBtn style={{ flex: 1 }} onClick={handleStart} disabled={!canStart || phase === "extracting"}>
+              {phase === "extracting" ? "Pip's reading…"
+                : loading ? (isQuickLog ? "Logging…" : "Starting…")
+                : (isQuickLog ? "Log it" : "Start Conversation →")}
+            </AmberBtn>
+          )}
         </div>
       </div>
     </Modal>
