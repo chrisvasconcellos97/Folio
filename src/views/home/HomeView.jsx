@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { C } from "../../lib/colors";
 import { PipOrb } from "../../components/PipMark";
 import { LitPill } from "../../components/LitPill";
+import { Glow } from "../../components/Glow";
 import { useBreakpoint } from "../../hooks/useBreakpoint";
 import { getNextOccurrence, formatTime } from "../../lib/cadenceUtils";
 
@@ -61,66 +62,37 @@ function pickHeroLine(counts) {
   return calls + " call" + (calls !== 1 ? "s" : "") + " today, " + overdue + " thing" + (overdue !== 1 ? "s" : "") + " needing eyes.";
 }
 
-function PanelRow({ left, right, accent, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        display: "flex", justifyContent: "space-between", alignItems: "center",
-        gap: 10, width: "100%",
-        background: "transparent",
-        border: "1px solid " + C.rule,
-        borderLeft: "2px solid " + (accent || C.accentDim),
-        borderRadius: 8,
-        padding: "9px 11px",
-        cursor: onClick ? "pointer" : "default",
-        fontFamily: INTER,
-        textAlign: "left",
-      }}
-    >
-      <div style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 13, color: C.text, fontWeight: 500 }}>
-        {left}
-      </div>
-      <div style={{ fontFamily: MONO, fontSize: 10.5, color: accent || C.textMuted, fontVariantNumeric: "tabular-nums", flexShrink: 0 }}>
-        {right}
-      </div>
-    </button>
-  );
-}
-
-function Panel({ title, subtitle, accent, children, isEmpty, emptyText }) {
+function Panel({ title, accent, children }) {
   return (
     <div style={{
       background: C.surface,
       border: "1px solid " + C.rule,
+      borderLeft: "2px solid " + (accent || C.rule),
       borderRadius: 12,
-      padding: "16px 18px",
-      minHeight: 160,
+      padding: "14px 16px 16px",
+      minHeight: 110,
       display: "flex", flexDirection: "column", gap: 10,
     }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
-        <div style={{
-          fontFamily: MONO, fontSize: 10, color: accent || C.textMuted,
-          fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em",
-        }}>
-          {title}
-        </div>
+      <div style={{
+        fontFamily: MONO, fontSize: 10, color: accent || C.textMuted,
+        fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em",
+      }}>
+        {title}
       </div>
       <div style={{
-        fontFamily: INTER, fontSize: 12.5, color: C.textSoft,
-        fontStyle: "italic", lineHeight: 1.4, marginTop: -4,
+        fontFamily: INTER, fontSize: 14, color: C.textSoft,
+        lineHeight: 1.6,
       }}>
-        {subtitle}
-      </div>
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6, justifyContent: isEmpty ? "center" : "flex-start", alignItems: isEmpty ? "center" : "stretch" }}>
-        {isEmpty ? (
-          <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, opacity: 0.6 }}>
-            {emptyText || "empty for now"}
-          </div>
-        ) : children}
+        {children}
       </div>
     </div>
   );
+}
+
+// Account name from a row's accountId, short.
+function acctName(accountById, accountId) {
+  var a = accountById[accountId];
+  return a ? a.name : "an account";
 }
 
 export function HomeView({ userName, accounts, meetings, items, cadences, projects, onOpenAccount, onOpenCadenceHub, onOpenConversation }) {
@@ -304,100 +276,184 @@ export function HomeView({ userName, accounts, meetings, items, cadences, projec
   });
 
   // ── Panels ──────────────────────────────────────────────────────────
-  var callsPanel = (
-    <Panel
-      title="Today's Calls"
-      subtitle={"I'll prep you."}
-      accent={C.accent}
-      isEmpty={todaysCalls.length === 0}
-      emptyText="No calls scheduled today."
-    >
-      {todaysCalls.map(function (c) {
-        var t = c.cadence.meeting_time ? formatTime(c.cadence.meeting_time) : "anytime";
-        return (
-          <PanelRow
-            key={c.cadence.id}
-            left={c.account.name}
-            right={t}
-            accent={C.accent}
-            onClick={function () { onOpenCadenceHub(c.account.id, c.cadence.id); }}
-          />
-        );
-      })}
-    </Panel>
-  );
+  // ── Brief writers — Pip's narrative per panel ────────────────────────
 
-  var burningPanel = (
-    <Panel
-      title="Burning"
-      subtitle="These need eyes."
-      accent={C.red}
-      isEmpty={burningRows.length === 0}
-      emptyText="All clear. Nothing on fire."
-    >
-      {burningRows.map(function (r) {
-        return (
-          <PanelRow
-            key={r.key}
-            left={r.left}
-            right={r.right}
-            accent={C.red}
-            onClick={function () { onOpenAccount(r.accountId); }}
-          />
-        );
-      })}
-    </Panel>
-  );
+  function todaysCallsBrief() {
+    if (todaysCalls.length === 0) return <span>Nothing on the calendar today. Free day — use it.</span>;
+    var first = todaysCalls[0];
+    var firstT = first.cadence.meeting_time ? formatTime(first.cadence.meeting_time) : "no time set";
+    if (todaysCalls.length === 1) {
+      return (
+        <span>
+          One call today —{" "}
+          <Glow onClick={function () { onOpenCadenceHub(first.account.id, first.cadence.id); }}>
+            {first.account.name}
+          </Glow>{" "}
+          at <strong style={{ color: C.text, fontWeight: 600 }}>{firstT}</strong>. I'll prep you.
+        </span>
+      );
+    }
+    var second = todaysCalls[1];
+    var secondT = second.cadence.meeting_time ? formatTime(second.cadence.meeting_time) : "no time set";
+    if (todaysCalls.length === 2) {
+      return (
+        <span>
+          Two calls today —{" "}
+          <Glow onClick={function () { onOpenCadenceHub(first.account.id, first.cadence.id); }}>
+            {first.account.name}
+          </Glow>{" "}
+          at {firstT}, then{" "}
+          <Glow onClick={function () { onOpenCadenceHub(second.account.id, second.cadence.id); }}>
+            {second.account.name}
+          </Glow>{" "}
+          at {secondT}. I'll prep both.
+        </span>
+      );
+    }
+    return (
+      <span>
+        {todaysCalls.length} calls today. First up:{" "}
+        <Glow onClick={function () { onOpenCadenceHub(first.account.id, first.cadence.id); }}>
+          {first.account.name}
+        </Glow>{" "}
+        at {firstT}.{" "}
+        {todaysCalls.length - 1} more after.
+      </span>
+    );
+  }
 
-  var loosePanel = (
-    <Panel
-      title="Loose Ends"
-      subtitle="Let me clean these up."
-      accent={C.yellow}
-      isEmpty={looseEnds.length === 0}
-      emptyText="No drafts hanging around."
-    >
-      {looseEnds.map(function (r) {
-        return (
-          <PanelRow
-            key={r.key}
-            left={r.left}
-            right={r.right}
-            accent={C.yellow}
-            onClick={function () {
-              if (r.cadenceId) onOpenCadenceHub(r.accountId, r.cadenceId);
-              else onOpenAccount(r.accountId);
-            }}
-          />
-        );
-      })}
-    </Panel>
-  );
+  function burningBrief() {
+    if (burningRows.length === 0) return <span>Nothing on fire. Clean board.</span>;
+    var r1 = burningRows[0];
+    var r1Name = acctName(accountById, r1.accountId);
+    if (burningRows.length === 1) {
+      return (
+        <span>
+          One thing needs eyes —{" "}
+          <Glow onClick={function () { onOpenAccount(r1.accountId); }}>
+            {r1.left}
+          </Glow>{" "}
+          on {r1Name}, {r1.right}.
+        </span>
+      );
+    }
+    var r2 = burningRows[1];
+    var r2Name = acctName(accountById, r2.accountId);
+    if (burningRows.length === 2) {
+      return (
+        <span>
+          Two things to handle —{" "}
+          <Glow onClick={function () { onOpenAccount(r1.accountId); }}>
+            {r1.left}
+          </Glow>{" "}
+          ({r1Name}, {r1.right}) and{" "}
+          <Glow onClick={function () { onOpenAccount(r2.accountId); }}>
+            {r2.left}
+          </Glow>{" "}
+          ({r2Name}).
+        </span>
+      );
+    }
+    return (
+      <span>
+        {burningRows.length} things piling up. Worst is{" "}
+        <Glow onClick={function () { onOpenAccount(r1.accountId); }}>
+          {r1.left}
+        </Glow>{" "}
+        on {r1Name} — {r1.right}. {burningRows.length - 1} more behind it.
+      </span>
+    );
+  }
 
-  var aheadPanel = (
-    <Panel
-      title="Ahead"
-      subtitle="While you weren't looking."
-      accent={C.accent}
-      isEmpty={aheadRows.length === 0}
-      emptyText="No upcoming work I can prep yet."
-    >
-      {aheadRows.map(function (r) {
-        return (
-          <PanelRow
-            key={r.key}
-            left={r.left}
-            right={r.right}
-            accent={C.accent}
-            onClick={function () {
-              if (r.cadenceId) onOpenCadenceHub(r.accountId, r.cadenceId);
-              else onOpenAccount(r.accountId);
-            }}
-          />
-        );
-      })}
-    </Panel>
-  );
+  function looseEndsBrief() {
+    if (looseEnds.length === 0) return <span>No drafts hanging around. Clean.</span>;
+    var d1 = looseEnds[0];
+    var d1Name = acctName(accountById, d1.accountId);
+    if (looseEnds.length === 1) {
+      return (
+        <span>
+          A{" "}
+          <Glow onClick={function () {
+            if (d1.cadenceId) onOpenCadenceHub(d1.accountId, d1.cadenceId);
+            else onOpenAccount(d1.accountId);
+          }}>
+            {d1Name} draft
+          </Glow>{" "}
+          from {d1.right} is sitting unsummarized. Want me to clean it up?
+        </span>
+      );
+    }
+    return (
+      <span>
+        {looseEnds.length} drafts sitting. Oldest is{" "}
+        <Glow onClick={function () {
+          if (d1.cadenceId) onOpenCadenceHub(d1.accountId, d1.cadenceId);
+          else onOpenAccount(d1.accountId);
+        }}>
+          {d1Name}
+        </Glow>{" "}
+        from {d1.right}.
+      </span>
+    );
+  }
+
+  function aheadBrief() {
+    if (aheadRows.length === 0) return <span>Quiet week ahead. Nothing to flag.</span>;
+    var a1 = aheadRows[0];
+    var a1Name = acctName(accountById, a1.accountId);
+    if (aheadRows.length === 1) {
+      return (
+        <span>
+          <Glow onClick={function () {
+            if (a1.cadenceId) onOpenCadenceHub(a1.accountId, a1.cadenceId);
+            else onOpenAccount(a1.accountId);
+          }}>
+            {a1Name}
+          </Glow>{" "}
+          is up in {a1.right} — want a draft started so context piles up?
+        </span>
+      );
+    }
+    var a2 = aheadRows[1];
+    var a2Name = acctName(accountById, a2.accountId);
+    if (aheadRows.length === 2) {
+      return (
+        <span>
+          <Glow onClick={function () {
+            if (a1.cadenceId) onOpenCadenceHub(a1.accountId, a1.cadenceId);
+            else onOpenAccount(a1.accountId);
+          }}>
+            {a1Name}
+          </Glow>{" "}
+          in {a1.right}, then{" "}
+          <Glow onClick={function () {
+            if (a2.cadenceId) onOpenCadenceHub(a2.accountId, a2.cadenceId);
+            else onOpenAccount(a2.accountId);
+          }}>
+            {a2Name}
+          </Glow>{" "}
+          in {a2.right}. I can start drafts so context piles up.
+        </span>
+      );
+    }
+    return (
+      <span>
+        {aheadRows.length} cadences coming. Closest is{" "}
+        <Glow onClick={function () {
+          if (a1.cadenceId) onOpenCadenceHub(a1.accountId, a1.cadenceId);
+          else onOpenAccount(a1.accountId);
+        }}>
+          {a1Name}
+        </Glow>{" "}
+        in {a1.right}.
+      </span>
+    );
+  }
+
+  var callsPanel   = <Panel title="Today's Calls" accent={C.accent}>{todaysCallsBrief()}</Panel>;
+  var burningPanel = <Panel title="Burning"       accent={C.red}>{burningBrief()}</Panel>;
+  var loosePanel   = <Panel title="Loose Ends"    accent={C.yellow}>{looseEndsBrief()}</Panel>;
+  var aheadPanel   = <Panel title="Ahead"         accent={C.accent}>{aheadBrief()}</Panel>;
 
   var mobileOrder  = [burningPanel, callsPanel, loosePanel, aheadPanel];
   var desktopOrder = [callsPanel, burningPanel, loosePanel, aheadPanel];
