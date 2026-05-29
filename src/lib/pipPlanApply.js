@@ -58,16 +58,21 @@ export function applyPipPlan(selected, ctx) {
     }
 
     switch (row.kind) {
-      case "new_item":
-        return addItem({
-          text:           row.text,
-          due_date:       row.due_date || null,
-          owner:          row.assignee || null,
-          account_id:     accountId || null,
-          pip_created_at: new Date().toISOString(),
-        })
+      case "new_item": {
+        var addPayload = {
+          text:       row.text,
+          due_date:   row.due_date || null,
+          owner:      row.assignee || null,
+          account_id: accountId || null,
+        };
+        // _userAdded rows came from the user typing in the modal — they
+        // aren't Pip's creation, so don't stamp pip_created_at (which would
+        // trigger the 7-day "Pip got it wrong" capture window if edited).
+        if (!row._userAdded) addPayload.pip_created_at = new Date().toISOString();
+        return addItem(addPayload)
           .then(function () { return maybeLearnHint(row.text); })
           .catch(function (e) { fail(e && e.message ? e.message : "Add failed"); });
+      }
 
       case "update_item":
         return updateItem(row.target_id, row.fields)

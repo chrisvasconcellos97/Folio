@@ -560,7 +560,7 @@ create table if not exists pip_correction_log (
   account_id        uuid references folio_accounts on delete cascade,
   meeting_id        uuid references folio_meetings on delete set null,
   correction_type   text not null check (correction_type in (
-    'summary_edit', 'rejected_row', 'item_text_edit', 'task_text_edit'
+    'summary_edit', 'rejected_row', 'item_text_edit', 'task_text_edit', 'missed_item'
   )),
   original_value    jsonb,
   corrected_value   jsonb,

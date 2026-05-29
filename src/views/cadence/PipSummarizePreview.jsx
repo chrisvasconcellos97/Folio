@@ -326,6 +326,7 @@ export function PipSummarizePreview({
   var [showSkipped, setShowSkipped] = useState(false);
   var [touched, setTouched] = useState(false);
   var [confirmCancel, setConfirmCancel] = useState(false);
+  var [userRows, setUserRows] = useState([]);
 
   function patch(idx, fields) {
     setTouched(true);
@@ -334,6 +335,26 @@ export function PipSummarizePreview({
       next[idx] = Object.assign({}, next[idx], fields);
       return next;
     });
+  }
+
+  function addUserRow() {
+    setTouched(true);
+    var rid = (typeof crypto !== "undefined" && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : ("u-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8));
+    setUserRows(function (prev) {
+      return prev.concat([{ id: rid, title: "", assignee: null, due_date: null }]);
+    });
+  }
+  function patchUserRow(rid, fields) {
+    setTouched(true);
+    setUserRows(function (prev) {
+      return prev.map(function (r) { return r.id === rid ? Object.assign({}, r, fields) : r; });
+    });
+  }
+  function removeUserRow(rid) {
+    setTouched(true);
+    setUserRows(function (prev) { return prev.filter(function (r) { return r.id !== rid; }); });
   }
 
   var grouped = useMemo(function () {
@@ -351,10 +372,12 @@ export function PipSummarizePreview({
   }, [plan]);
 
   var anyChecked = useMemo(function () {
-    return state.some(function (s, idx) {
+    var planChecked = state.some(function (s, idx) {
       return s.checked && (plan[idx] && plan[idx].kind !== "skip");
     });
-  }, [state, plan]);
+    if (planChecked) return true;
+    return userRows.some(function (r) { return (r.title || "").trim().length > 0; });
+  }, [state, plan, userRows]);
 
   function handleApply() {
     if (applying || !anyChecked) return;
@@ -430,6 +453,37 @@ export function PipSummarizePreview({
           reason:          excerptChanged ? typedExcerpt : null,
         });
       }
+    });
+
+    // User-added rows — items Pip missed entirely. Synthesize as new_item
+    // rows so applyPipPlan handles them through the same addItem path, then
+    // log each one as a missed_item correction so the V2 brain learns Pip
+    // dropped scope.
+    var planSnapshot = (plan || []).map(function (r) { return { kind: r.kind, text: r.text || (r.fields && r.fields.text) || null, title: r.title || null }; });
+    userRows.forEach(function (ur) {
+      var typedTitle = (ur.title || "").trim();
+      if (!typedTitle) return;
+      var synth = {
+        kind:               "new_item",
+        text:               typedTitle,
+        due_date:           ur.due_date || null,
+        assignee:           ur.assignee || null,
+        suggestedAssignee:  null,
+        confidence:         "high",  // user wrote it themselves
+        source_excerpt_edited: null,
+        _userAdded:         true,    // applyPipPlan skips pip_created_at stamp
+      };
+      selected.push({ idx: "u_" + ur.id, row: synth });
+      corrections.push({
+        correction_type: "missed_item",
+        meeting_id:      meetingId || null,
+        original_value:  {
+          pip_plan_count: planSnapshot.length,
+          pip_plan_kinds: planSnapshot.map(function (p) { return p.kind; }),
+        },
+        corrected_value: { text: typedTitle, due_date: ur.due_date || null, assignee: ur.assignee || null },
+        reason:          null,
+      });
     });
 
     if (onLogCorrections && corrections.length) {
@@ -605,6 +659,70 @@ export function PipSummarizePreview({
     );
   }
 
+  function renderUserRow(ur) {
+    return (
+      <div
+        key={ur.id}
+        style={{
+          display: "flex", alignItems: "flex-start", gap: 10,
+          padding: "10px 12px",
+          background: C.surface,
+          border: "1px dashed " + C.accent,
+          borderRadius: 8,
+        }}
+      >
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{
+            fontSize: 11, color: C.accent, fontFamily: MONO,
+            textTransform: "uppercase", letterSpacing: "0.07em",
+            lineHeight: 1.4, fontWeight: 700,
+          }}>
+            You added — Pip missed this
+          </div>
+          <TitleInput
+            value={ur.title || ""}
+            onChange={function (v) { patchUserRow(ur.id, { title: v }); }}
+            edited={true}
+          />
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 10, color: C.textMuted, fontFamily: MONO, textTransform: "uppercase", letterSpacing: "0.07em" }}>
+                Assignee
+              </span>
+              <AssigneeSelect
+                value={ur.assignee}
+                options={memberEmails}
+                onChange={function (v) { patchUserRow(ur.id, { assignee: v }); }}
+              />
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 10, color: C.textMuted, fontFamily: MONO, textTransform: "uppercase", letterSpacing: "0.07em" }}>
+                Due
+              </span>
+              <DueInput
+                value={ur.due_date}
+                onChange={function (v) { patchUserRow(ur.id, { due_date: v }); }}
+              />
+            </div>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={function () { removeUserRow(ur.id); }}
+          aria-label="Remove this row"
+          title="Remove this row"
+          style={{
+            background: "none", border: "none", color: C.textMuted,
+            cursor: "pointer", padding: "2px 6px", fontSize: 18, lineHeight: 1,
+            fontFamily: INTER, flexShrink: 0,
+          }}
+        >
+          ×
+        </button>
+      </div>
+    );
+  }
+
   return (
     <Modal title="Pip's plan" onClose={handleCancelClick} width={620}>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -644,6 +762,35 @@ export function PipSummarizePreview({
             </div>
           </div>
         )}
+
+        {userRows.length > 0 && (
+          <div>
+            <GroupHeader first={grouped.changes.length === 0 && grouped.news.length === 0}>
+              Added by you ({userRows.length})
+            </GroupHeader>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {userRows.map(renderUserRow)}
+            </div>
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={addUserRow}
+          style={{
+            background: "none",
+            border: "1px dashed " + C.rule,
+            borderRadius: 8,
+            padding: "10px 12px",
+            color: C.textSoft,
+            cursor: "pointer",
+            fontFamily: INTER, fontSize: 12, fontWeight: 600,
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+            marginTop: userRows.length > 0 ? 4 : 8,
+          }}
+        >
+          + Add an item Pip missed
+        </button>
 
         {grouped.skipped.length > 0 && (
           <div>

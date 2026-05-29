@@ -370,6 +370,10 @@ export function summarizeDraftPip(payload) {
           return "- EDITED summary: user rewrote " +
             ((corr.text || "").length < (orig.text || "").length ? "shorter" : "differently") +
             (c.reason ? " — reason: " + c.reason.slice(0, 80) : "");
+        case "missed_item":
+          return "- ADDED a row you missed: \"" + (corr.text || "").slice(0, 100) +
+            "\" — watch for scope cues (\"all\", \"these\", \"every\", \"in general\") " +
+            "that signal a broader item beyond the specific example";
         default:
           return "- " + c.correction_type;
       }
@@ -415,7 +419,11 @@ export function summarizeDraftPip(payload) {
     "that prompted this row. The user uses these to trace where each row came from and to correct " +
     "you when you misread. Keep them short and exact. Omit only for `skip` rows.\n" +
     "- Be GENEROUS extracting commitments — promises, follow-ups, things to verify — but route " +
-    "them as updates whenever a relevant existing item/task exists.\n\n" +
+    "them as updates whenever a relevant existing item/task exists.\n" +
+    "- Watch for SCOPE CUES — phrases like \"all of these\", \"every\", \"these accounts\", " +
+    "\"in general\", \"across the board\" signal a BROADER item that lives alongside any " +
+    "specific example. When you see one, emit BOTH the specific item AND the broader item. " +
+    "Don't collapse them into just the specific case.\n\n" +
     "── CONTEXT ──\n" +
     "Account: " + (payload.accountName || "—") + "\n" +
     "Cadence: " + (payload.cadenceLabel || "—") + "\n" +
