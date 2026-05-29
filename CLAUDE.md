@@ -93,6 +93,26 @@ Rules for new code:
 
 Symptoms of regression: tap an input → viewport visibly zooms in → input loses focus or shifts under the keyboard.
 
+## React Hook Order Rule (App.jsx specifically)
+
+**Every `useState` / `useEffect` / `useMemo` / `useRef` declaration in `src/App.jsx` MUST be placed above the `if (authLoading) return …` early-return line.** Chris has been bit by React error #310 *three times* across different Patch runs — every time, a new hook got dropped below the early return. When `authLoading` flips false on subsequent renders, more hooks run than the first render saw → React tears the tree down → ErrorBoundary fires → bad UX.
+
+Rules for new code in App.jsx:
+1. **All in-component hook calls go above `if (authLoading) return …`.** No exceptions. The handlers (functions returned by useCallback or plain `function foo()`) can live below; hooks themselves must not.
+2. **When adding state for a feature, scan App.jsx first** to confirm you're adding it above the early return. Group new hooks with the existing `useState` block near the top.
+3. **Before declaring a Patch done that touches App.jsx, grep for `useState\|useEffect\|useMemo\|useRef` line numbers and confirm none are below the `authLoading` return line.**
+
+This rule applies to Patch agents AND to Claude. Adding a one-line comment marker above the early-return helps future passes notice:
+
+```js
+// ──── HOOKS ABOVE THIS LINE ────
+if (authLoading) {
+  return <PipLoader />;
+}
+```
+
+If you ever need a hook that legitimately depends on post-auth data (e.g. it reads `userId`), pass `userId` as a dep and let the hook no-op when null. Never gate the hook itself behind an `if`.
+
 ## Patch — Background Build Agent
 
 **Patch** is the name for the background agent used to execute large batch builds. When a batch of queued items is ready to ship, spawn Patch via the Agent tool with `isolation: "worktree"` so it works in a clean copy of the repo without disrupting the main conversation.

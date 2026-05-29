@@ -339,6 +339,7 @@ export default function App() {
     }).catch(function (e) { showToast(e.message || "Couldn't merge — check your connection", "error"); });
   }
 
+  // ──── ALL HOOKS MUST BE ABOVE THIS LINE — see React Hook Order Rule in CLAUDE.md ────
   if (authLoading) {
     return (
       <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
