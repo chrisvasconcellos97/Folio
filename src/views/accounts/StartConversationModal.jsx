@@ -444,6 +444,7 @@ export function StartConversationModal({ accountId, accounts, userId, orgId, mem
               onChange={function (e) { setQuickNote(e.target.value); }}
               onKeyDown={bulletProps.onKeyDown}
               onFocus={bulletProps.onFocus}
+              onPaste={bulletProps.onPaste}
               placeholder="One or two lines — 'Adam confirmed deck, asked for follow-up Tue.'"
               rows={3}
               autoFocus

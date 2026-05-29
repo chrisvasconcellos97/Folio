@@ -32,7 +32,7 @@ export function InputField({ id, value, onChange, placeholder, type, style, onKe
   );
 }
 
-export function TextArea({ id, value, onChange, onKeyDown, onFocus, placeholder, rows, style, autoFocus, ariaLabel }) {
+export function TextArea({ id, value, onChange, onKeyDown, onFocus, onPaste, placeholder, rows, style, autoFocus, ariaLabel }) {
   return (
     <textarea
       id={id}
@@ -40,6 +40,7 @@ export function TextArea({ id, value, onChange, onKeyDown, onFocus, placeholder,
       onChange={onChange}
       onKeyDown={onKeyDown}
       onFocus={onFocus}
+      onPaste={onPaste}
       placeholder={placeholder}
       rows={rows || 4}
       autoFocus={autoFocus}

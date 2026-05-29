@@ -585,6 +585,7 @@ export function CadenceMeetingMode({
                 onChange={function (e) { setNotes(e.target.value); }}
                 onKeyDown={bulletProps.onKeyDown}
                 onFocus={bulletProps.onFocus}
+                onPaste={bulletProps.onPaste}
                 placeholder="Start typing — Pip will summarize when you end the meeting…"
                 style={{
                   flex: 1, width: "100%",
