@@ -476,7 +476,25 @@ export default function App() {
   }
 
   if (view === "home") {
-    mainContent = <HomeView />;
+    mainContent = (
+      <HomeView
+        accounts={accounts}
+        meetings={meetings}
+        items={allItems}
+        cadences={cadences}
+        onOpenAccount={function (accountId) {
+          var a = (accounts || []).find(function (x) { return x.id === accountId; });
+          if (a) setSelected(a);
+        }}
+        onOpenCadenceHub={function (accountId, cadenceId) {
+          var a = (accounts || []).find(function (x) { return x.id === accountId; });
+          if (a) {
+            setSelected(a);
+            setPendingHubCadenceId(cadenceId);
+          }
+        }}
+      />
+    );
   }
 
   if (view === "meetings") {

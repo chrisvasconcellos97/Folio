@@ -1,20 +1,22 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { C } from "../../lib/colors";
 import { PipOrb } from "../../components/PipMark";
 import { LitPill } from "../../components/LitPill";
 import { useBreakpoint } from "../../hooks/useBreakpoint";
+import { getNextOccurrence, formatTime } from "../../lib/cadenceUtils";
 
 var SERIF = "'Fraunces', Georgia, serif";
 var INTER = "'Inter', system-ui, sans-serif";
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 
-function timeOfDayGreeting() {
+function timeOfDayGreeting(name) {
   var h = new Date().getHours();
-  if (h < 5)  return "Late, Chris.";
-  if (h < 12) return "Morning, Chris.";
-  if (h < 17) return "Afternoon, Chris.";
-  if (h < 21) return "Evening, Chris.";
-  return "Late, Chris.";
+  var n = name ? ", " + name : "";
+  if (h < 5)  return "Late" + n + ".";
+  if (h < 12) return "Morning" + n + ".";
+  if (h < 17) return "Afternoon" + n + ".";
+  if (h < 21) return "Evening" + n + ".";
+  return "Late" + n + ".";
 }
 
 function dateLabel() {
@@ -23,7 +25,70 @@ function dateLabel() {
   });
 }
 
-function Panel({ id, title, subtitle, accent, children }) {
+function startOfToday() {
+  var d = new Date(); d.setHours(0, 0, 0, 0); return d;
+}
+function isToday(d) {
+  if (!d) return false;
+  var s = startOfToday();
+  var dt = new Date(d);
+  return dt.getFullYear() === s.getFullYear() && dt.getMonth() === s.getMonth() && dt.getDate() === s.getDate();
+}
+
+function pickHeroLine(counts) {
+  // Template-driven hero line. The genius Pip rewrite happens later (V2 brain);
+  // for now we pick a tone based on the actual numbers and write in Pip's voice.
+  var calls    = counts.calls;
+  var overdue  = counts.overdue;
+
+  if (calls === 0 && overdue === 0) {
+    return "Quiet day. Nothing pressing — let's stay ahead.";
+  }
+  if (calls > 0 && overdue === 0) {
+    return calls === 1
+      ? "One call today. Nothing burning."
+      : calls + " calls today. Nothing burning.";
+  }
+  if (calls === 0 && overdue > 0) {
+    return overdue === 1
+      ? "Quiet calendar — but one thing needs your eyes."
+      : "Quiet calendar — but " + overdue + " things need your eyes.";
+  }
+  // Both
+  if (calls >= 4 || overdue >= 8) {
+    return "Big day. " + calls + " call" + (calls !== 1 ? "s" : "") + ", " + overdue + " thing" + (overdue !== 1 ? "s" : "") + " overdue. Let's pick a path.";
+  }
+  return calls + " call" + (calls !== 1 ? "s" : "") + " today, " + overdue + " thing" + (overdue !== 1 ? "s" : "") + " needing eyes.";
+}
+
+function PanelRow({ left, right, accent, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+        gap: 10, width: "100%",
+        background: "transparent",
+        border: "1px solid " + C.rule,
+        borderLeft: "2px solid " + (accent || C.accentDim),
+        borderRadius: 8,
+        padding: "9px 11px",
+        cursor: onClick ? "pointer" : "default",
+        fontFamily: INTER,
+        textAlign: "left",
+      }}
+    >
+      <div style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 13, color: C.text, fontWeight: 500 }}>
+        {left}
+      </div>
+      <div style={{ fontFamily: MONO, fontSize: 10.5, color: accent || C.textMuted, fontVariantNumeric: "tabular-nums", flexShrink: 0 }}>
+        {right}
+      </div>
+    </button>
+  );
+}
+
+function Panel({ title, subtitle, accent, children, isEmpty, emptyText }) {
   return (
     <div style={{
       background: C.surface,
@@ -47,69 +112,125 @@ function Panel({ id, title, subtitle, accent, children }) {
       }}>
         {subtitle}
       </div>
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        {children || (
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6, justifyContent: isEmpty ? "center" : "flex-start", alignItems: isEmpty ? "center" : "stretch" }}>
+        {isEmpty ? (
           <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, opacity: 0.6 }}>
-            empty for now
+            {emptyText || "empty for now"}
           </div>
-        )}
+        ) : children}
       </div>
     </div>
   );
 }
 
-export function HomeView() {
+export function HomeView({ accounts, meetings, items, cadences, onOpenAccount, onOpenCadenceHub }) {
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
   var [mounted, setMounted] = useState(false);
 
-  // Stagger-in: tiny delay so the panels feel like they assemble after the
-  // hero lands. Theater level B from the brief.
   useEffect(function () {
     var t = setTimeout(function () { setMounted(true); }, 60);
     return function () { clearTimeout(t); };
   }, []);
 
+  var accountById = useMemo(function () {
+    var m = {};
+    (accounts || []).forEach(function (a) { if (!a.is_inactive) m[a.id] = a; });
+    return m;
+  }, [accounts]);
+
+  // ── Today's Calls ────────────────────────────────────────────────────
+  var todaysCalls = useMemo(function () {
+    var today = startOfToday();
+    return (cadences || [])
+      .filter(function (c) { return c.type !== "task"; })
+      .map(function (c) {
+        var next = getNextOccurrence(c, today);
+        if (!next || !isToday(next)) return null;
+        var account = accountById[c.account_id];
+        if (!account) return null;
+        return { cadence: c, account: account, when: next };
+      })
+      .filter(Boolean)
+      .sort(function (a, b) {
+        var ta = (a.cadence.meeting_time || "23:59");
+        var tb = (b.cadence.meeting_time || "23:59");
+        return ta.localeCompare(tb);
+      });
+  }, [cadences, accountById]);
+
+  // ── Burning (overdue items + cold accounts) ──────────────────────────
+  // Just compute the count for the hero line for now. Real rendering of
+  // this panel comes in the next pass.
+  var overdueCount = useMemo(function () {
+    var todayISO = startOfToday().toISOString().slice(0, 10);
+    return (items || []).filter(function (i) {
+      return !i.done && i.due_date && i.due_date < todayISO;
+    }).length;
+  }, [items]);
+
+  var heroLine = pickHeroLine({
+    calls: todaysCalls.length,
+    overdue: overdueCount,
+  });
+
+  // ── Panels ──────────────────────────────────────────────────────────
+  var callsPanel = (
+    <Panel
+      title="Today's Calls"
+      subtitle={"I'll prep you."}
+      accent={C.accent}
+      isEmpty={todaysCalls.length === 0}
+      emptyText="No calls scheduled today."
+    >
+      {todaysCalls.map(function (c) {
+        var t = c.cadence.meeting_time ? formatTime(c.cadence.meeting_time) : "anytime";
+        return (
+          <PanelRow
+            key={c.cadence.id}
+            left={c.account.name}
+            right={t}
+            accent={C.accent}
+            onClick={function () { onOpenCadenceHub(c.account.id, c.cadence.id); }}
+          />
+        );
+      })}
+    </Panel>
+  );
+
   var burningPanel = (
     <Panel
-      id="burning"
       title="Burning"
       subtitle="These need eyes."
       accent={C.red}
-    />
-  );
-  var callsPanel = (
-    <Panel
-      id="calls"
-      title="Today's Calls"
-      subtitle="I'll prep you."
-      accent={C.accent}
+      isEmpty
+      emptyText="Wiring up next."
     />
   );
   var loosePanel = (
     <Panel
-      id="loose"
       title="Loose Ends"
       subtitle="Let me clean these up."
       accent={C.yellow}
+      isEmpty
+      emptyText="Wiring up next."
     />
   );
   var aheadPanel = (
     <Panel
-      id="ahead"
       title="Ahead"
       subtitle="While you weren't looking."
       accent={C.accentDim || C.accent}
+      isEmpty
+      emptyText="Wiring up next."
     />
   );
 
-  // Mobile order: BURNING first per locked design.
-  var mobileOrder    = [burningPanel, callsPanel, loosePanel, aheadPanel];
-  var desktopOrder   = [callsPanel, burningPanel, loosePanel, aheadPanel];
+  var mobileOrder  = [burningPanel, callsPanel, loosePanel, aheadPanel];
+  var desktopOrder = [callsPanel, burningPanel, loosePanel, aheadPanel];
 
   return (
     <div style={{ position: "relative", minHeight: "100%", paddingBottom: isMobile ? 80 : 32 }}>
-      {/* Greeting */}
       <div style={{ padding: isMobile ? "16px 16px 0" : "28px 32px 0", textAlign: "center" }}>
         <div style={{
           fontFamily: SERIF, fontSize: isMobile ? 26 : 34,
@@ -125,7 +246,6 @@ export function HomeView() {
         </div>
       </div>
 
-      {/* Hero — orb + hero line + actions */}
       <div style={{
         display: "flex", flexDirection: "column", alignItems: "center",
         gap: isMobile ? 16 : 20,
@@ -139,15 +259,17 @@ export function HomeView() {
           opacity: mounted ? 1 : 0,
           transition: "opacity 0.4s ease 0.2s",
         }}>
-          {"Quiet morning. Nothing on fire — let's stay ahead."}
+          {heroLine}
         </div>
         <div style={{
           display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center",
           opacity: mounted ? 1 : 0,
           transition: "opacity 0.4s ease 0.35s",
         }}>
-          <LitPill onClick={function () {}}>
-            Open brief →
+          <LitPill onClick={function () {
+            if (todaysCalls.length > 0) onOpenCadenceHub(todaysCalls[0].account.id, todaysCalls[0].cadence.id);
+          }}>
+            {todaysCalls.length > 0 ? "Open brief →" : "No brief today"}
           </LitPill>
           <LitPill onClick={function () {}}>
             Quick capture +
@@ -155,7 +277,6 @@ export function HomeView() {
         </div>
       </div>
 
-      {/* Panels — stagger in */}
       <div style={{
         padding: isMobile ? "0 12px 16px" : "0 32px 24px",
         display: "grid",
@@ -179,7 +300,6 @@ export function HomeView() {
         })}
       </div>
 
-      {/* Mobile sticky quick-capture strip */}
       {isMobile && (
         <div style={{
           position: "fixed",
