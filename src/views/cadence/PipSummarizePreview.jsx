@@ -182,6 +182,78 @@ function DueInput({ value, onChange }) {
   );
 }
 
+function TargetAccountChip({ targetAccountId, currentAccountName, rosterOptions, rosterLookup, onChange }) {
+  var [open, setOpen] = useState(false);
+  var targetName = targetAccountId
+    ? ((rosterLookup[targetAccountId] && rosterLookup[targetAccountId].name) || targetAccountId)
+    : null;
+  var label = targetName ? ("→ on " + targetName) : ("→ on " + currentAccountName);
+  var isRouted = !!targetAccountId;
+  return (
+    <div style={{ position: "relative", display: "inline-block" }}>
+      <button
+        type="button"
+        onClick={function () { setOpen(function (v) { return !v; }); }}
+        style={{
+          background: isRouted ? C.accentFaint : "none",
+          border: "1px solid " + (isRouted ? C.accentLine : C.rule),
+          borderRadius: 6,
+          padding: "3px 8px",
+          fontSize: 10,
+          color: isRouted ? C.accent : C.textMuted,
+          cursor: "pointer",
+          fontFamily: INTER,
+          display: "flex", alignItems: "center", gap: 4,
+        }}
+      >
+        <span>{label}</span>
+        <span style={{ fontSize: 9 }}>▾</span>
+      </button>
+      {open && (
+        <div
+          style={{
+            position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 200,
+            background: C.bgDropdown, border: "1px solid " + C.rule,
+            borderRadius: 8, padding: "4px 0",
+            minWidth: 200, maxWidth: 300,
+            boxShadow: "0 4px 16px var(--c-overlay-shadow)",
+          }}
+        >
+          <button
+            type="button"
+            onClick={function () { onChange(null); setOpen(false); }}
+            style={{
+              display: "block", width: "100%", textAlign: "left",
+              background: !targetAccountId ? C.accentFaint : "none",
+              border: "none", padding: "6px 12px",
+              fontSize: 11, color: C.text, cursor: "pointer", fontFamily: INTER,
+            }}
+          >
+            {currentAccountName} (current)
+          </button>
+          {rosterOptions.map(function (a) {
+            return (
+              <button
+                key={a.id}
+                type="button"
+                onClick={function () { onChange(a.id); setOpen(false); }}
+                style={{
+                  display: "block", width: "100%", textAlign: "left",
+                  background: targetAccountId === a.id ? C.accentFaint : "none",
+                  border: "none", padding: "6px 12px",
+                  fontSize: 11, color: C.text, cursor: "pointer", fontFamily: INTER,
+                }}
+              >
+                {a.name || a.id}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Inline editable title input. Uses a textarea so long titles wrap, and
 // auto-grows on input by syncing height to scrollHeight.
 function TitleInput({ value, onChange, edited }) {
@@ -295,12 +367,32 @@ export function PipSummarizePreview({
   onCancel,
   onLogCorrections,  // (entries[]) => Promise — fire-and-forget V2-brain capture
   meetingId,         // optional; tags corrections with the draft they came from
+  accountRoster,     // [{ id, name, account_type }] — for cross-account routing
+  currentAccountId,  // the account this meeting belongs to
 }) {
   var memberEmails = useMemo(function () {
     return (orgMembers || [])
       .map(function (m) { return m.invited_email || m.email || null; })
       .filter(Boolean);
   }, [orgMembers]);
+
+  var rosterLookup = useMemo(function () {
+    var map = {};
+    (accountRoster || []).forEach(function (a) { map[a.id] = a; });
+    return map;
+  }, [accountRoster]);
+
+  var currentAccountName = useMemo(function () {
+    if (!currentAccountId) return "Current Account";
+    var a = rosterLookup[currentAccountId];
+    return (a && a.name) ? a.name : "Current Account";
+  }, [currentAccountId, rosterLookup]);
+
+  var rosterOptions = useMemo(function () {
+    return (accountRoster || [])
+      .filter(function (a) { return a.id !== currentAccountId; })
+      .sort(function (a, b) { return (a.name || "").localeCompare(b.name || ""); });
+  }, [accountRoster, currentAccountId]);
 
   // Per-row UI state. titleOverride / excerptOverride land at apply time
   // (excerpt is captured for the future learning loop — no-op today).
@@ -316,6 +408,8 @@ export function PipSummarizePreview({
         initialTitle: t,
         excerpt: r.source_excerpt || "",
         initialExcerpt: r.source_excerpt || "",
+        targetAccountId: r.target_account_id || null,
+        initialTargetAccountId: r.target_account_id || null,
       };
     });
   }, [plan]);
@@ -343,7 +437,7 @@ export function PipSummarizePreview({
       ? crypto.randomUUID()
       : ("u-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8));
     setUserRows(function (prev) {
-      return prev.concat([{ id: rid, title: "", assignee: null, due_date: null }]);
+      return prev.concat([{ id: rid, title: "", assignee: null, due_date: null, targetAccountId: null }]);
     });
   }
   function patchUserRow(rid, fields) {
@@ -435,7 +529,34 @@ export function PipSummarizePreview({
       }
       merged.suggestedAssignee = state[idx].suggestedAssignee || null;
       merged.source_excerpt_edited = typedExcerpt || null;
+      if (row.kind === "new_item" || row.kind === "new_task") {
+        merged.target_account_id = state[idx].targetAccountId || null;
+      }
       selected.push({ idx: idx, row: merged });
+
+      // Routing correction — user changed where Pip wanted to file this row.
+      if ((row.kind === "new_item" || row.kind === "new_task") && s.checked) {
+        var pipPicked = s.initialTargetAccountId || null;
+        var userPicked = s.targetAccountId || null;
+        if (pipPicked !== userPicked) {
+          corrections.push({
+            correction_type: "routed_account_changed",
+            meeting_id:      meetingId || null,
+            account_id:      currentAccountId || null,
+            original_value:  {
+              pip_picked: pipPicked,
+              text:       row.text || row.title || null,
+            },
+            corrected_value: {
+              actual_account_id:   userPicked,
+              actual_account_name: userPicked
+                ? ((rosterLookup[userPicked] && rosterLookup[userPicked].name) || userPicked)
+                : currentAccountName,
+            },
+            reason: null,
+          });
+        }
+      }
 
       // Kept-but-edited capture: Pip's wording was wrong enough that user
       // re-wrote it before applying. High signal for the learning loop.
@@ -463,12 +584,14 @@ export function PipSummarizePreview({
     userRows.forEach(function (ur) {
       var typedTitle = (ur.title || "").trim();
       if (!typedTitle) return;
+      var urTargetAccountId = ur.targetAccountId || null;
       var synth = {
         kind:               "new_item",
         text:               typedTitle,
         due_date:           ur.due_date || null,
         assignee:           ur.assignee || null,
         suggestedAssignee:  null,
+        target_account_id:  urTargetAccountId,
         confidence:         "high",  // user wrote it themselves
         source_excerpt_edited: null,
         _userAdded:         true,    // applyPipPlan skips pip_created_at stamp
@@ -477,12 +600,18 @@ export function PipSummarizePreview({
       corrections.push({
         correction_type: "missed_item",
         meeting_id:      meetingId || null,
+        account_id:      currentAccountId || null,
         original_value:  {
           pip_plan_count: planSnapshot.length,
           pip_plan_kinds: planSnapshot.map(function (p) { return p.kind; }),
         },
-        corrected_value: { text: typedTitle, due_date: ur.due_date || null, assignee: ur.assignee || null },
-        reason:          null,
+        corrected_value: {
+          text:             typedTitle,
+          due_date:         ur.due_date || null,
+          assignee:         ur.assignee || null,
+          target_account_id: urTargetAccountId,
+        },
+        reason: null,
       });
     });
 
@@ -600,6 +729,17 @@ export function PipSummarizePreview({
               edited={excerptEdited}
             />
           )}
+          {(row.kind === "new_item" || row.kind === "new_task") && rosterOptions.length > 0 && (
+            <div>
+              <TargetAccountChip
+                targetAccountId={s.targetAccountId || null}
+                currentAccountName={currentAccountName}
+                rosterOptions={rosterOptions}
+                rosterLookup={rosterLookup}
+                onChange={function (v) { patch(idx, { targetAccountId: v }); }}
+              />
+            </div>
+          )}
           {(hasAssignee(row.kind) || hasDueEdit(row.kind)) && row.kind !== "skip" && (
             <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
               {hasAssignee(row.kind) && (
@@ -684,6 +824,17 @@ export function PipSummarizePreview({
             onChange={function (v) { patchUserRow(ur.id, { title: v }); }}
             edited={true}
           />
+          {rosterOptions.length > 0 && (
+            <div>
+              <TargetAccountChip
+                targetAccountId={ur.targetAccountId || null}
+                currentAccountName={currentAccountName}
+                rosterOptions={rosterOptions}
+                rosterLookup={rosterLookup}
+                onChange={function (v) { patchUserRow(ur.id, { targetAccountId: v }); }}
+              />
+            </div>
+          )}
           <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{ fontSize: 10, color: C.textMuted, fontFamily: MONO, textTransform: "uppercase", letterSpacing: "0.07em" }}>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { C } from "../../lib/colors";
 import { showToast } from "../../components/Toast";
 import { MarkdownText } from "../../components/MarkdownText";
@@ -189,6 +189,28 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
   var adHocHintsApi       = usePipAssignmentHints(userId, account.id);
   var adHocCorrectionsApi = usePipCorrections(userId, account.id);
   var glossaryApi         = useGlossary(userId, orgId, account.id);
+
+  var accountRoster = useMemo(function () {
+    var glossaryEntries = glossaryApi.entries || [];
+    var aliasesByAccount = {};
+    glossaryEntries.forEach(function (g) {
+      if (!g.account_id) return;
+      if (!aliasesByAccount[g.account_id]) aliasesByAccount[g.account_id] = [];
+      if (g.aliases && g.aliases.length) {
+        aliasesByAccount[g.account_id] = aliasesByAccount[g.account_id].concat(g.aliases);
+      }
+      if (g.term) aliasesByAccount[g.account_id].push(g.term);
+    });
+    return (accounts || []).map(function (a) {
+      return {
+        id:           a.id,
+        name:         a.name || "",
+        account_type: a.account_type || "standard",
+        aliases:      aliasesByAccount[a.id] || [],
+      };
+    });
+  }, [accounts, glossaryApi.entries]);
+
   var adHocDraft = adHocDraftId
     ? (meetings || []).find(function (m) { return m.id === adHocDraftId; }) || null
     : null;
@@ -220,6 +242,8 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
       corrections:      adHocCorrectionsApi.corrections,
       accountObjective: account.objective || "",
       glossary:         glossaryApi.entries,
+      accountRoster:    accountRoster,
+      accountType:      account.account_type || "standard",
     }).then(function (out) {
       var followUp = out.follow_up_date || null;
       return updateMeeting(draftPayload.id, {
@@ -247,6 +271,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
       updateProject:  updateProject,
       addHint:        adHocHintsApi.addHint,
       accountId:      account.id,
+      meetingId:      pDraftId || null,
       activeProjects: activeProjects,
     }).then(function (result) {
       if (pDraftId) {
@@ -578,6 +603,8 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
           onCancel={handleAdHocCancelPlan}
           onLogCorrections={adHocCorrectionsApi.logCorrections}
           meetingId={adHocPreviewPlan.draftId}
+          accountRoster={accountRoster}
+          currentAccountId={account.id}
         />
       )}
 

@@ -679,6 +679,27 @@ export function CadenceHub({
       .sort(function (a, b) { return a.follow_up_date > b.follow_up_date ? 1 : -1; });
   }, [cadenceMeetings]);
 
+  var accountRoster = useMemo(function () {
+    var glossaryEntries = glossaryApi.entries || [];
+    var aliasesByAccount = {};
+    glossaryEntries.forEach(function (g) {
+      if (!g.account_id) return;
+      if (!aliasesByAccount[g.account_id]) aliasesByAccount[g.account_id] = [];
+      if (g.aliases && g.aliases.length) {
+        aliasesByAccount[g.account_id] = aliasesByAccount[g.account_id].concat(g.aliases);
+      }
+      if (g.term) aliasesByAccount[g.account_id].push(g.term);
+    });
+    return (accounts || []).map(function (a) {
+      return {
+        id:           a.id,
+        name:         a.name || "",
+        account_type: a.account_type || "standard",
+        aliases:      aliasesByAccount[a.id] || [],
+      };
+    });
+  }, [accounts, glossaryApi.entries]);
+
   var today = new Date(); today.setHours(0, 0, 0, 0);
   var nextDue = getNextOccurrence(cadence, today);
   var lastConv = history[0] || null;
@@ -786,6 +807,8 @@ export function CadenceHub({
       corrections:       correctionsApi.corrections,
       accountObjective:  account.objective || "",
       glossary:          glossaryApi.entries,
+      accountRoster:     accountRoster,
+      accountType:       account.account_type || "standard",
     }).then(function (out) {
       var followUp = out.follow_up_date || null;
       return updateMeeting(draftId, {
@@ -823,6 +846,7 @@ export function CadenceHub({
       updateProject:  updateProject,
       addHint:        hintsApi.addHint,
       accountId:      account.id,
+      meetingId:      draftId || null,
       activeProjects: activeProjects,
     }).then(function (result) {
       if (draftId) {
@@ -1089,6 +1113,8 @@ export function CadenceHub({
       onCancel={handleCancelPlan}
       onLogCorrections={correctionsApi.logCorrections}
       meetingId={previewPlan.draftId}
+      accountRoster={accountRoster}
+      currentAccountId={account.id}
     />
   ) : null;
 

@@ -29,6 +29,7 @@ export function applyPipPlan(selected, ctx) {
   var updateProject  = ctx.updateProject;
   var addHint        = ctx.addHint;
   var accountId      = ctx.accountId;
+  var meetingId      = ctx.meetingId || null;
   var activeProjects = ctx.activeProjects || [];
 
   // Snapshot projects so multiple new_task / update_task rows on the same
@@ -59,15 +60,14 @@ export function applyPipPlan(selected, ctx) {
 
     switch (row.kind) {
       case "new_item": {
+        var targetAcct = row.target_account_id || accountId || null;
         var addPayload = {
-          text:       row.text,
-          due_date:   row.due_date || null,
-          owner:      row.assignee || null,
-          account_id: accountId || null,
+          text:              row.text,
+          due_date:          row.due_date || null,
+          owner:             row.assignee || null,
+          account_id:        targetAcct,
+          source_meeting_id: meetingId,
         };
-        // _userAdded rows came from the user typing in the modal — they
-        // aren't Pip's creation, so don't stamp pip_created_at (which would
-        // trigger the 7-day "Pip got it wrong" capture window if edited).
         if (!row._userAdded) addPayload.pip_created_at = new Date().toISOString();
         return addItem(addPayload)
           .then(function () { return maybeLearnHint(row.text); })
@@ -89,17 +89,19 @@ export function applyPipPlan(selected, ctx) {
           ? crypto.randomUUID()
           : ("t-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8));
         var pipCreatedAt = new Date().toISOString();
-        newStage.stages.push({
-          id:             newTaskId,
-          title:          row.title,
-          due_date:       row.due_date || null,
-          assignee:       row.assignee || null,
-          task_status:    firstStatusColumn(newStage.project),
-          account_id:     accountId || null,
-          created_at:     pipCreatedAt,
-          pip_created_at: pipCreatedAt,
-          custom_fields:  {},
-        });
+        var taskEntry = {
+          id:                newTaskId,
+          title:             row.title,
+          due_date:          row.due_date || null,
+          assignee:          row.assignee || null,
+          task_status:       firstStatusColumn(newStage.project),
+          account_id:        row.target_account_id || accountId || null,
+          source_meeting_id: meetingId,
+          created_at:        pipCreatedAt,
+          custom_fields:     {},
+        };
+        if (!row._userAdded) taskEntry.pip_created_at = pipCreatedAt;
+        newStage.stages.push(taskEntry);
         // Defer the actual updateProject call until after all rows have
         // mutated the snapshot — see flushStages below.
         return maybeLearnHint(row.title);

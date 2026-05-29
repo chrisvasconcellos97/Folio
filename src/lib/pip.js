@@ -83,6 +83,38 @@ function renderGlossaryBlock(glossary) {
   return "── KNOWN TERMS (preserve verbatim where indicated) ──\n" + lines + "\n\n";
 }
 
+// Renders the account roster block — lets Pip route new_item / new_task rows
+// to accounts other than the current one when the notes mention them.
+function renderAccountRosterBlock(roster, currentAccountId) {
+  if (!Array.isArray(roster) || roster.length === 0) {
+    return "── YOUR ACCOUNTS ──\n(no other accounts loaded)\n\n";
+  }
+  // Always place the current account first so Pip knows which is "home".
+  var sorted = roster.slice().sort(function (a, b) {
+    if (a.id === currentAccountId) return -1;
+    if (b.id === currentAccountId) return 1;
+    return (a.name || "").localeCompare(b.name || "");
+  });
+  var capped = sorted.slice(0, 60);
+  var lines = capped.map(function (a) {
+    var line = "- " + a.id + " · " + (a.name || "(unnamed)") + " (" + (a.account_type || "standard") + ")";
+    var aliases = Array.isArray(a.aliases) ? a.aliases.filter(Boolean) : [];
+    if (aliases.length) line += " — aliases: " + aliases.join(", ");
+    return line;
+  }).join("\n");
+  return "── YOUR ACCOUNTS ──\n" + lines + "\n\n";
+}
+
+// Renders an extra instructional block injected ONLY for internal_team meetings.
+function renderInternalMeetingBlock() {
+  return "── INTERNAL TEAM MEETING ──\n" +
+    "The current account is an internal team. Action items from these meetings are TYPICALLY " +
+    "for external accounts (customers / partners), not this team itself. Look hard for external " +
+    "account mentions in the notes and route accordingly via target_account_id. Items that DO " +
+    "belong to the internal team look like internal coordination (\"update template\", " +
+    "\"schedule team meeting\", \"review process\") — not delivery work or customer follow-ups.\n\n";
+}
+
 // Renders the account context block for system prompts.
 function renderAccountObjectiveBlock(objective) {
   var text = (objective || "").trim();
@@ -337,6 +369,8 @@ export function callAskPip(payload) {
  * @param {Array}  [payload.assignmentHints] - learned hints rows
  * @param {string} [payload.accountObjective] - account context / notes for Pip
  * @param {Array}  [payload.glossary]          - known terms to inject
+ * @param {Array}  [payload.accountRoster]      - full list of user's accounts for cross-routing
+ * @param {string} [payload.accountType]        - account_type of the current account
  */
 export function summarizeDraftPip(payload) {
   var m              = payload.draft || {};
@@ -347,6 +381,8 @@ export function summarizeDraftPip(payload) {
   var corrections    = Array.isArray(payload.corrections)     ? payload.corrections     : [];
   var accountObjective = (payload.accountObjective || "").trim();
   var glossary         = Array.isArray(payload.glossary) ? payload.glossary : [];
+  var accountRoster    = Array.isArray(payload.accountRoster) ? payload.accountRoster : [];
+  var accountType      = payload.accountType || "standard";
 
   var itemLines = existingItems.length
     ? existingItems.map(function (i) {
@@ -411,6 +447,11 @@ export function summarizeDraftPip(payload) {
           return "- ADDED a row you missed: \"" + (corr.text || "").slice(0, 100) +
             "\" — watch for scope cues (\"all\", \"these\", \"every\", \"in general\") " +
             "that signal a broader item beyond the specific example";
+        case "routed_account_changed":
+          return "- ROUTED a row to a different account than I picked: \"" +
+            ((orig.text || "")).slice(0, 80) +
+            "\" — the user moved it to a different account. Pay closer attention to which account " +
+            "names are mentioned in the notes vs the meeting's current account.";
         default:
           return "- " + c.correction_type;
       }
@@ -430,10 +471,10 @@ export function summarizeDraftPip(payload) {
     "  \"follow_up_date\": \"YYYY-MM-DD or null\",\n" +
     "  \"tone\": \"positive|neutral|mixed|negative — based on the meeting's overall energy. Customer pushback or blocker frustration = negative. Smooth check-in with no issues = neutral or positive. Both positive progress and some friction = mixed.\",\n" +
     "  \"plan\": [\n" +
-    "    { \"kind\": \"new_item\",    \"text\": \"...\", \"due_date\": \"YYYY-MM-DD or null\", \"suggested_assignee\": \"email or null\", \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim 1-3 line slice of the draft notes that triggered this row\" },\n" +
+    "    { \"kind\": \"new_item\",    \"text\": \"...\", \"due_date\": \"YYYY-MM-DD or null\", \"suggested_assignee\": \"email or null\", \"target_account_id\": \"id from YOUR ACCOUNTS list, or null if this belongs to the current account\", \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim 1-3 line slice of the draft notes that triggered this row\" },\n" +
     "    { \"kind\": \"update_item\", \"target_id\": \"I-...\", \"fields\": { \"due_date\": \"...\", \"text\": \"...\" }, \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim slice from notes\" },\n" +
     "    { \"kind\": \"close_item\",  \"target_id\": \"I-...\", \"reason\": \"...\", \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim slice from notes\" },\n" +
-    "    { \"kind\": \"new_task\",    \"project_id\": \"uuid\", \"title\": \"...\", \"due_date\": \"YYYY-MM-DD or null\", \"suggested_assignee\": \"email or null\", \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim slice from notes\" },\n" +
+    "    { \"kind\": \"new_task\",    \"project_id\": \"uuid\", \"title\": \"...\", \"due_date\": \"YYYY-MM-DD or null\", \"suggested_assignee\": \"email or null\", \"target_account_id\": \"id or null\", \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim slice from notes\" },\n" +
     "    { \"kind\": \"update_task\", \"project_id\": \"uuid\", \"task_id\": \"T-...\", \"fields\": { \"due_date\": \"...\", \"task_status\": \"...\" }, \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim slice from notes\" },\n" +
     "    { \"kind\": \"skip\",        \"reason\": \"duplicate of T-... or I-...\", \"confidence\": \"high\" }\n" +
     "  ]\n" +
@@ -460,8 +501,18 @@ export function summarizeDraftPip(payload) {
     "- Watch for SCOPE CUES — phrases like \"all of these\", \"every\", \"these accounts\", " +
     "\"in general\", \"across the board\" signal a BROADER item that lives alongside any " +
     "specific example. When you see one, emit BOTH the specific item AND the broader item. " +
-    "Don't collapse them into just the specific case.\n\n" +
+    "Don't collapse them into just the specific case.\n" +
+    "- Match account names mentioned in notes against YOUR ACCOUNTS above (whole-word matches, " +
+    "prefer capitalized proper nouns; glossary aliases are valid matches). If an item is about " +
+    "another account, set target_account_id to that account's id. If unsure or ambiguous " +
+    "(multiple accounts with similar names), leave target_account_id null AND set confidence " +
+    "to 'low' so the user can pick.\n" +
+    "- target_account_id = null means \"the current account\" (the one this meeting belongs to).\n" +
+    "- Don't aggressively route — when an item is clearly about the current account or no other " +
+    "account is mentioned, leave target_account_id null.\n\n" +
     renderGlossaryBlock(glossary) +
+    renderAccountRosterBlock(accountRoster, payload.accountId || null) +
+    (accountType === "internal_team" ? renderInternalMeetingBlock() : "") +
     renderAccountObjectiveBlock(accountObjective) +
     "── CONTEXT ──\n" +
     "Account: " + (payload.accountName || "—") + "\n" +
@@ -588,6 +639,9 @@ function normalizePlanRow(r) {
       out.text = String(r.text);
       out.due_date = r.due_date || null;
       out.suggested_assignee = r.suggested_assignee || null;
+      if (r.target_account_id && typeof r.target_account_id === "string" && r.target_account_id.trim()) {
+        out.target_account_id = r.target_account_id.trim();
+      }
       return out;
     case "update_item":
       if (!r.target_id) return null;
@@ -606,6 +660,9 @@ function normalizePlanRow(r) {
       out.title = String(r.title);
       out.due_date = r.due_date || null;
       out.suggested_assignee = r.suggested_assignee || null;
+      if (r.target_account_id && typeof r.target_account_id === "string" && r.target_account_id.trim()) {
+        out.target_account_id = r.target_account_id.trim();
+      }
       return out;
     case "update_task":
       if (!r.project_id || !r.task_id) return null;
@@ -794,6 +851,8 @@ export function compressCorrectionsPip(payload) {
         case "summary_edit":
           return date + " EDITED summary (rewrote differently)" +
             (c.reason ? " — " + c.reason.slice(0, 100) : "");
+        case "routed_account_changed":
+          return date + " ROUTED row to different account: \"" + (orig.text || "").slice(0, 80) + "\"";
         default:
           return date + " " + c.correction_type;
       }

@@ -196,8 +196,11 @@ create table if not exists folio_items (
   done           boolean default false,
   closed_at      timestamptz,
   created_at     timestamptz default now(),
-  pip_created_at timestamptz
+  pip_created_at    timestamptz,
+  source_meeting_id uuid references folio_meetings on delete set null
 );
+
+create index if not exists folio_items_source_meeting_idx on folio_items(source_meeting_id);
 
 alter table folio_items enable row level security;
 
@@ -560,7 +563,7 @@ create table if not exists pip_correction_log (
   account_id        uuid references folio_accounts on delete cascade,
   meeting_id        uuid references folio_meetings on delete set null,
   correction_type   text not null check (correction_type in (
-    'summary_edit', 'rejected_row', 'item_text_edit', 'task_text_edit', 'missed_item'
+    'summary_edit', 'rejected_row', 'item_text_edit', 'task_text_edit', 'missed_item', 'routed_account_changed'
   )),
   original_value    jsonb,
   corrected_value   jsonb,

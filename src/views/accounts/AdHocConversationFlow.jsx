@@ -50,6 +50,27 @@ export function AdHocConversationFlow({
   var correctionsApi = usePipCorrections(userId, account.id);
   var glossaryApi    = useGlossary(userId, orgId, account.id);
 
+  var accountRoster = useMemo(function () {
+    var glossaryEntries = glossaryApi.entries || [];
+    var aliasesByAccount = {};
+    glossaryEntries.forEach(function (g) {
+      if (!g.account_id) return;
+      if (!aliasesByAccount[g.account_id]) aliasesByAccount[g.account_id] = [];
+      if (g.aliases && g.aliases.length) {
+        aliasesByAccount[g.account_id] = aliasesByAccount[g.account_id].concat(g.aliases);
+      }
+      if (g.term) aliasesByAccount[g.account_id].push(g.term);
+    });
+    return (accounts || []).map(function (a) {
+      return {
+        id:           a.id,
+        name:         a.name || "",
+        account_type: a.account_type || "standard",
+        aliases:      aliasesByAccount[a.id] || [],
+      };
+    });
+  }, [accounts, glossaryApi.entries]);
+
   var [summarizing, setSummarizing] = useState(false);
   var [summarizeErr, setSummarizeErr] = useState(null);
   var [previewPlan, setPreviewPlan] = useState(null); // { plan, summary, draftId }
@@ -91,6 +112,8 @@ export function AdHocConversationFlow({
       corrections:      correctionsApi.corrections,
       accountObjective: account.objective || "",
       glossary:         glossaryApi.entries,
+      accountRoster:    accountRoster,
+      accountType:      account.account_type || "standard",
     }).then(function (out) {
       var followUp = out.follow_up_date || null;
       return updateMeeting(draftPayload.id, {
@@ -118,6 +141,7 @@ export function AdHocConversationFlow({
       updateProject:  updateProject,
       addHint:        hintsApi.addHint,
       accountId:      account.id,
+      meetingId:      pDraftId || null,
       activeProjects: activeProjects,
     }).then(function (result) {
       if (pDraftId) {
@@ -177,6 +201,8 @@ export function AdHocConversationFlow({
           onCancel={handleCancelPlan}
           onLogCorrections={correctionsApi.logCorrections}
           meetingId={previewPlan.draftId}
+          accountRoster={accountRoster}
+          currentAccountId={account.id}
         />
       )}
     </>
