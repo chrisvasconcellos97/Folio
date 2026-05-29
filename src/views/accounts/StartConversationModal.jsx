@@ -80,6 +80,20 @@ export function StartConversationModal({ accountId, accounts, userId, onStart, o
     return activeAccounts.find(function (a) { return a.id === selectedAccountId; }) || null;
   }, [selectedAccountId, activeAccounts]);
 
+  // Auto-select when the search narrows to exactly one match — saves a tap
+  // and means the Start button doesn't sit grayed-out while the user is
+  // typing what's obviously a single hit ("Ucc" → Power Auto Parts).
+  useEffect(function () {
+    var q = search.trim().toLowerCase();
+    if (!q || selectedAccountId) return;
+    var matches = activeAccounts.filter(function (a) {
+      return (a.name || "").toLowerCase().includes(q);
+    });
+    if (matches.length === 1) {
+      setSelectedAccountId(matches[0].id);
+    }
+  }, [search, activeAccounts, selectedAccountId]);
+
   var filteredAccounts = useMemo(function () {
     var q = search.trim().toLowerCase();
     if (!q) return activeAccounts.slice(0, 50);
@@ -244,6 +258,17 @@ export function StartConversationModal({ accountId, accounts, userId, onStart, o
           </div>
         )}
 
+        {!canStart && !loading && (
+          <div style={{
+            fontFamily: INTER, fontSize: 11.5, color: C.textMuted,
+            marginTop: -4, marginBottom: -4, textAlign: "right",
+          }}>
+            {!selectedAccountId ? "Pick an account from the list to start."
+              : !method ? "Pick a method to start."
+              : !date ? "Pick a date to start."
+              : ""}
+          </div>
+        )}
         <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
           <SecBtn style={{ flex: 1 }} onClick={onClose} disabled={loading}>
             Cancel

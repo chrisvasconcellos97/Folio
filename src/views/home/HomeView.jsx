@@ -459,7 +459,7 @@ export function HomeView({ userName, accounts, meetings, items, cadences, projec
   var desktopOrder = [callsPanel, burningPanel, loosePanel, aheadPanel];
 
   return (
-    <div style={{ position: "relative", minHeight: "100%", paddingBottom: isMobile ? 80 : 32 }}>
+    <div style={{ position: "relative", minHeight: "100%", paddingBottom: isMobile ? 150 : 32 }}>
       <div style={{ padding: isMobile ? "16px 16px 0" : "28px 32px 0", textAlign: "center" }}>
         <div style={{
           fontFamily: SERIF, fontSize: isMobile ? 26 : 34,
@@ -533,11 +533,12 @@ export function HomeView({ userName, accounts, meetings, items, cadences, projec
         <div style={{
           position: "fixed",
           left: 0, right: 0,
-          bottom: "calc(env(safe-area-inset-bottom, 0px) + 60px)",
-          padding: "8px 12px",
+          bottom: "calc(env(safe-area-inset-bottom, 0px) + 78px)",
+          padding: "10px 12px 12px",
           background: C.bg,
           borderTop: "1px solid " + C.rule,
-          display: "flex", gap: 8, zIndex: 50,
+          boxShadow: "0 -8px 18px -10px rgba(0,0,0,0.5)",
+          display: "flex", gap: 8, zIndex: 49,
         }}>
           <button
             onClick={function () { if (onOpenConversation) onOpenConversation(); }}
