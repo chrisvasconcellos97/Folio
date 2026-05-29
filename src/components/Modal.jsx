@@ -6,6 +6,12 @@ var FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabind
 
 export function Modal({ title, onClose, children, width }) {
   var innerRef = useRef(null);
+  // Stable ref so the focus-trap effect doesn't re-fire and steal focus
+  // every time the parent re-renders with a fresh inline onClose. Without
+  // this, typing inside the modal would yank focus to the close (×) button
+  // on every keystroke that caused a parent re-render.
+  var onCloseRef = useRef(onClose);
+  useEffect(function () { onCloseRef.current = onClose; }, [onClose]);
   var isDesktop = useBreakpoint();
   var isMobile = !isDesktop;
 
@@ -16,7 +22,7 @@ export function Modal({ title, onClose, children, width }) {
     if (focusable.length > 0) focusable[0].focus();
 
     function handleKey(e) {
-      if (e.key === "Escape") { onClose(); return; }
+      if (e.key === "Escape") { onCloseRef.current(); return; }
       if (e.key !== "Tab") return;
       var els = innerRef.current ? Array.from(innerRef.current.querySelectorAll(FOCUSABLE)) : [];
       if (els.length === 0) return;
@@ -34,10 +40,14 @@ export function Modal({ title, onClose, children, width }) {
       document.removeEventListener("keydown", handleKey);
       if (trigger && trigger.focus) trigger.focus();
     };
-  }, [onClose]);
+  // Empty deps on purpose — initial focus + key trap runs once per mount.
+  // onClose is read via onCloseRef so a fresh function from the parent
+  // doesn't retrigger the effect mid-typing.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function handleBackdrop(e) {
-    if (e.target === e.currentTarget) onClose();
+    if (e.target === e.currentTarget) onCloseRef.current();
   }
 
   return (
