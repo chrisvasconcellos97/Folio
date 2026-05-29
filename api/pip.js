@@ -158,7 +158,11 @@ var MODE_CONFIG = {
   chat:    { model: MODEL_HAIKU, max_tokens: 512 },
   action:  { model: MODEL_HAIKU, max_tokens: 384 },
   brief:   { model: MODEL_HAIKU, max_tokens: 1024 },
-  summary: { model: MODEL_HAIKU, max_tokens: 1024 },
+  // summary returns a JSON plan with one source_excerpt (~50-100 tokens)
+  // per row + summary + short_title + tone. Long meetings with 10+ action
+  // items can easily exceed 1024 and get truncated mid-JSON, producing an
+  // empty plan downstream. 3072 comfortably handles 15+ rows.
+  summary: { model: MODEL_HAIKU, max_tokens: 3072 },
   email:   { model: MODEL_HAIKU, max_tokens: 768 },
 };
 

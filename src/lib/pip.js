@@ -453,7 +453,25 @@ export function summarizeDraftPip(payload) {
   ).then(function (resp) {
     var text = resp.content || "";
     var match = text.match(/\{[\s\S]*\}/);
-    if (!match) return { summary: text, short_title: "", plan: [], action_items: [], follow_up_date: null, tone: null };
+
+    // Detect a truncated / unparseable response. If the model returned a
+    // long body but we can't extract clean JSON, treat as an error rather
+    // than silently returning an empty plan — silent empties make the
+    // user think Pip "found nothing" when really the response got cut off.
+    function looksTruncated(t) {
+      if (!t) return false;
+      if (t.length < 200) return false;  // short → genuine "nothing" is plausible
+      var openBraces = (t.match(/\{/g) || []).length;
+      var closeBraces = (t.match(/\}/g) || []).length;
+      return openBraces > closeBraces;
+    }
+
+    if (!match) {
+      if (looksTruncated(text)) {
+        throw new Error("Pip's response got cut off mid-way (likely too many tasks). Try again — token limit was bumped.");
+      }
+      return { summary: text, short_title: "", plan: [], action_items: [], follow_up_date: null, tone: null };
+    }
     try {
       var parsed = JSON.parse(match[0]);
       var planRaw = Array.isArray(parsed.plan) ? parsed.plan : null;
@@ -505,6 +523,14 @@ export function summarizeDraftPip(payload) {
         action_items:   legacyItems,
       };
     } catch (e) {
+      // JSON.parse failed mid-payload. If the response looks truncated,
+      // surface the real reason rather than a silent empty plan.
+      if (looksTruncated(text)) {
+        throw new Error("Pip's response got cut off mid-way (likely too many tasks). Try again — token limit was bumped.");
+      }
+      if (typeof window !== "undefined" && window.console) {
+        window.console.warn("[summarizeDraftPip] JSON parse failed:", e && e.message);
+      }
       return { summary: text, short_title: "", plan: [], action_items: [], follow_up_date: null, tone: null };
     }
   });
