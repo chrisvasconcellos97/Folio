@@ -212,7 +212,9 @@ function SectionHeader({ children, count, action }) {
 }
 
 /* ---- Pip brief panel ---- */
-export function PipBriefPanel({ brief, briefAt, loading, error, onRefresh, mobileCollapsed, onExpand }) {
+export function PipBriefPanel({ brief, briefAt, loading, error, onRefresh, mobileCollapsed, onExpand, lessonsLearned }) {
+  var [lessonsExpanded, setLessonsExpanded] = useState(false);
+
   if (mobileCollapsed) {
     var oneLiner = brief
       ? brief.split(/\n+/)[0].slice(0, 110) + (brief.length > 110 ? "…" : "")
@@ -233,6 +235,11 @@ export function PipBriefPanel({ brief, briefAt, loading, error, onRefresh, mobil
       </button>
     );
   }
+
+  var firstSentence = lessonsLearned
+    ? lessonsLearned.split(/\.\s+/)[0].slice(0, 120) + (lessonsLearned.length > 120 ? "…" : "")
+    : null;
+
   return (
     <div style={{
       background: C.accentGlow, border: "1px solid " + C.accentLine,
@@ -273,6 +280,30 @@ export function PipBriefPanel({ brief, briefAt, loading, error, onRefresh, mobil
           No brief yet. Hit Generate when you want Pip's read on this cadence.
         </div>
       ))}
+      {firstSentence && (
+        <div style={{ marginTop: 10, borderTop: "1px solid " + C.accentLine, paddingTop: 8 }}>
+          <button
+            onClick={function () { setLessonsExpanded(function (v) { return !v; }); }}
+            style={{
+              background: "none", border: "none", padding: 0,
+              cursor: "pointer", textAlign: "left", width: "100%",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 5 }}>
+              <span style={{ fontSize: 10, color: C.accent, flexShrink: 0 }}>✦</span>
+              <div>
+                <span style={{ fontSize: 9, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: MONO }}>
+                  Pip remembers
+                </span>
+                {" · "}
+                <span style={{ fontSize: 12, color: C.textSub, lineHeight: 1.5, fontFamily: INTER }}>
+                  {lessonsExpanded ? lessonsLearned : firstSentence}
+                </span>
+              </div>
+            </div>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -578,6 +609,7 @@ export function CadenceHub({
   isMobile,
   autoOpenMeetingMode,
   onAutoOpenMeetingModeConsumed,
+  pipLessonsLearned,
 }) {
   var [briefLoading, setBriefLoading] = useState(false);
   var [briefError, setBriefError]     = useState(null);
@@ -818,6 +850,7 @@ export function CadenceHub({
       onRefresh={handleRefreshBrief}
       mobileCollapsed={isMobile && !briefExpanded}
       onExpand={function () { setBriefExpanded(true); }}
+      lessonsLearned={pipLessonsLearned || null}
     />
   );
 

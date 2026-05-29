@@ -41,6 +41,7 @@ import { MeetingReminderBanner } from "./components/MeetingReminderBanner";
 import { Toast, showToast } from "./components/Toast";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useErrors } from "./hooks/useErrors";
+import { compressCorrectionsPip } from "./lib/pip";
 import { C } from "./lib/colors";
 
 export default function App() {
@@ -201,6 +202,98 @@ export default function App() {
     });
     try { localStorage.setItem(key, String(Date.now())); } catch (e) {}
   }, [userId, accounts]);
+
+  // V2 brain — compression pass. Once per 6h, check each account for 5+
+  // unprocessed corrections. For qualifying accounts, distill them into
+  // lessons_learned on pip_account_state. Move processed rows to the archive.
+  // Fire-and-forget; never blocks the UI.
+  var compressionInFlightRef = useRef(new Set());
+  useEffect(function () {
+    if (!userId || !accounts || accounts.length === 0) return;
+    var key = 'folio_pip_compression_last';
+    var last = 0;
+    try { last = parseInt(localStorage.getItem(key) || '0', 10); } catch (e) {}
+    if (Date.now() - last < 6 * 60 * 60 * 1000) return;
+
+    var activeAccounts = accounts.filter(function (a) { return !a.is_inactive; });
+    if (!activeAccounts.length) return;
+
+    try { localStorage.setItem(key, String(Date.now())); } catch (e) {}
+
+    supabase
+      .from("pip_correction_log")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(500)
+      .then(function (result) {
+        if (result.error || !result.data) return;
+        var allRows = result.data;
+
+        var rowsByAccount = {};
+        allRows.forEach(function (row) {
+          if (!row.account_id) return;
+          if (!rowsByAccount[row.account_id]) rowsByAccount[row.account_id] = [];
+          rowsByAccount[row.account_id].push(row);
+        });
+
+        activeAccounts.forEach(function (acct) {
+          var rows = rowsByAccount[acct.id];
+          if (!rows || rows.length < 5) return;
+          if (compressionInFlightRef.current.has(acct.id)) return;
+
+          var stateRow = pipAcctStateApp.states.find(function (s) { return s.account_id === acct.id; });
+          var lastCompAt = stateRow && stateRow.last_compression_at
+            ? new Date(stateRow.last_compression_at).getTime()
+            : 0;
+          var unprocessed = rows.filter(function (r) {
+            return new Date(r.created_at).getTime() > lastCompAt;
+          });
+          if (unprocessed.length < 5) return;
+
+          compressionInFlightRef.current.add(acct.id);
+          var existingLessons = stateRow && stateRow.lessons_learned ? stateRow.lessons_learned : "";
+          var userName = userEmail || "";
+          var accountName = acct.name || "";
+
+          compressCorrectionsPip({ corrections: unprocessed, accountName: accountName, userName: userName, existingLessons: existingLessons })
+            .then(function (paragraph) {
+              compressionInFlightRef.current.delete(acct.id);
+              if (!paragraph) return;
+
+              var now = new Date().toISOString();
+              supabase
+                .from("folio_pip_account_state")
+                .upsert([{
+                  account_id:          acct.id,
+                  user_id:             userId,
+                  state_prose:         (stateRow && stateRow.state_prose) || "",
+                  lessons_learned:     paragraph,
+                  last_compression_at: now,
+                }], { onConflict: "account_id" })
+                .then(function () {
+                  pipAcctStateApp.refetch();
+                  var archiveRows = unprocessed.map(function (r) {
+                    return Object.assign({}, r);
+                  });
+                  return supabase.from("pip_correction_log_archive").insert(archiveRows)
+                    .then(function (archiveResult) {
+                      if (archiveResult.error) return;
+                      var ids = unprocessed.map(function (r) { return r.id; });
+                      supabase.from("pip_correction_log").delete().in("id", ids).then(function () {});
+                    });
+                })
+                .catch(function (err) { console.warn("[pip-compress] upsert failed:", err && err.message); });
+            })
+            .catch(function (err) {
+              compressionInFlightRef.current.delete(acct.id);
+              console.warn("[pip-compress] failed for", acct.id, err && err.message);
+            });
+        });
+      })
+      .catch(function (err) { console.warn("[pip-compress] fetch failed:", err && err.message); });
+  }, [userId, accounts]);
+
   // Observability — gate the Diagnostics nav entry on unresolved errors in
   // the last 7 days. Hook fails soft if the phase6 SQL hasn't been run yet
   // (returns unresolvedRecent=0, so the nav stays hidden).

@@ -145,7 +145,7 @@ function copySummary(meeting, accountName) {
   });
 }
 
-export function MeetingsTab({ meetings, accountName, accountId, userId, openItems, addItem, onLogMeeting, onDelete, onAddMeeting, onUpdateMeeting }) {
+export function MeetingsTab({ meetings, accountName, accountId, userId, openItems, addItem, onLogMeeting, onDelete, onAddMeeting, onUpdateMeeting, logCorrection }) {
   var [loadingPip, setLoadingPip] = useState({});
   var [pipErrors, setPipErrors]   = useState({});
   var [confirmDeleteId, setConfirmDeleteId] = useState(null);
@@ -447,9 +447,25 @@ export function MeetingsTab({ meetings, accountName, accountId, userId, openItem
       {editingMeeting && (
         <EditMeetingModal
           meeting={editingMeeting}
-          onSave={function (id, data) {
+          onSave={function (id, data, meta) {
             return onUpdateMeeting(id, data).then(function () {
               showToast("Meeting updated");
+              if (
+                logCorrection &&
+                meta &&
+                meta.originalPipSummary &&
+                meta.newPipSummary &&
+                meta.originalPipSummary.trim() !== meta.newPipSummary.trim()
+              ) {
+                logCorrection({
+                  correction_type: 'summary_edit',
+                  account_id:      editingMeeting.account_id,
+                  meeting_id:      id,
+                  original_value:  { text: meta.originalPipSummary },
+                  corrected_value: { text: meta.newPipSummary },
+                  reason:          null,
+                });
+              }
               setEditingMeeting(null);
             }).catch(function (err) {
               showToast(err.message || "Couldn't save — check your connection", "error");

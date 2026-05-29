@@ -79,7 +79,9 @@ function buildItemsInsight(items, taskCadences, accountId) {
   return parts.join(" ");
 }
 
-export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAdd, onUpdate, onDelete, onGoToCadence }) {
+var SEVEN_DAYS_MS = 7 * 86400 * 1000;
+
+export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAdd, onUpdate, onDelete, onGoToCadence, logCorrection }) {
   var [editingItem, setEditingItem] = useState(null);
   // Track in-flight close requests so rapid taps on the same checkbox don't
   // fire closeItem twice (would log two activity entries + race the refetch).
@@ -288,6 +290,22 @@ export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAd
           onSave={function (id, data) {
             return onUpdate(id, data).then(function () {
               showToast("Item updated");
+              if (
+                logCorrection &&
+                editingItem.pip_created_at &&
+                data.text !== undefined &&
+                (Date.now() - new Date(editingItem.pip_created_at).getTime()) < SEVEN_DAYS_MS &&
+                (data.text || "").trim() !== (editingItem.text || "").trim()
+              ) {
+                logCorrection({
+                  correction_type: 'item_text_edit',
+                  account_id:      editingItem.account_id,
+                  meeting_id:      null,
+                  original_value:  { kind: 'item', original: editingItem.text, pip_created_at: editingItem.pip_created_at },
+                  corrected_value: { text: data.text },
+                  reason:          null,
+                });
+              }
               setEditingItem(null);
             }).catch(function (err) {
               showToast(err.message || "Couldn't save — check your connection", "error");

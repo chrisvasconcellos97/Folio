@@ -678,5 +678,74 @@ export function extractTouchpointActionsPip(payload) {
   });
 }
 
+/**
+ * Compression pass for the V2 brain. Distills a batch of correction rows
+ * into a stable 2-4 sentence "lessons learned" paragraph Pip reads on every
+ * summarize call. Uses Haiku (summary mode = cheap). Returns the paragraph
+ * string (may be empty if no clear patterns exist).
+ *
+ * @param {Object} payload
+ * @param {Array}  payload.corrections     - pip_correction_log rows
+ * @param {string} payload.accountName     - account display name
+ * @param {string} payload.userName        - user display name or email
+ * @param {string} [payload.existingLessons] - prior lessons_learned to incorporate
+ */
+export function compressCorrectionsPip(payload) {
+  var corrections    = Array.isArray(payload.corrections) ? payload.corrections : [];
+  var accountName    = payload.accountName || "this account";
+  var userName       = payload.userName || "the user";
+  var existingLessons = payload.existingLessons || "";
+
+  if (corrections.length === 0) return Promise.resolve("");
+
+  var correctionLines = corrections
+    .map(function (c) {
+      var orig = c.original_value || {};
+      var corr = c.corrected_value || {};
+      var date  = c.created_at ? c.created_at.slice(0, 10) : "";
+      switch (c.correction_type) {
+        case "rejected_row":
+          return date + " DECLINED " + (orig.kind || "row") +
+            " \"" + (orig.text || orig.title || "—").slice(0, 100) + "\"" +
+            (c.reason ? " — context: " + c.reason.slice(0, 150) : "");
+        case "item_text_edit":
+          return date + " REWROTE item from \"" + (orig.original || "").slice(0, 80) +
+            "\" → \"" + (corr.text || "").slice(0, 100) + "\"";
+        case "task_text_edit":
+          return date + " REWROTE task from \"" + (orig.original || "").slice(0, 80) +
+            "\" → \"" + (corr.text || "").slice(0, 100) + "\"";
+        case "summary_edit":
+          return date + " EDITED summary (rewrote differently)" +
+            (c.reason ? " — " + c.reason.slice(0, 100) : "");
+        default:
+          return date + " " + c.correction_type;
+      }
+    })
+    .filter(Boolean)
+    .join("\n");
+
+  var prompt =
+    "You are distilling a user's corrections to Pip's outputs into a stable paragraph of patterns Pip should remember about this account. " +
+    "Read the corrections below and write a 2-4 sentence paragraph in third person. " +
+    "Be specific and quotable — name the actual things (e.g. 'KSI Invoice Feed and KSI Collision are separate threads — never merge them'; " +
+    userName + " prefers \"build integration\" wording over \"obtain API documentation\"'). " +
+    "If existing lessons are provided, incorporate them — don't lose prior insight. " +
+    "If there are no clear patterns, return an empty string. " +
+    "Output ONLY the paragraph, no preamble, no markdown.\n\n" +
+    "Account: " + accountName + "\n" +
+    (existingLessons ? "Existing lessons:\n" + existingLessons + "\n\n" : "") +
+    "Recent corrections:\n" + correctionLines;
+
+  return callPipApi(
+    [{ role: "user", content: prompt }],
+    null,
+    { mode: "summary" }
+  ).then(function (resp) {
+    return (resp.content || "").trim();
+  }).catch(function () {
+    return "";
+  });
+}
+
 export var PIP_SYSTEM_PROMPT =
   "You are Pip, an AI account management assistant. Your personality is modeled after a loyal, slightly anxious field analyst who genuinely cares about the person you are helping. You feel like a ride-or-die friend who happens to also be very good at their job.";

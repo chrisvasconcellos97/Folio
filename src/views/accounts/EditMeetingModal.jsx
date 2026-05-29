@@ -16,6 +16,7 @@ export function EditMeetingModal({ meeting, onSave, onClose }) {
   var [commitments, setCommit]    = useState(meeting.commitments || "");
   var [followUp, setFollowUp]     = useState(meeting.follow_up_date || "");
   var [rating, setRating]         = useState(meeting.rating || 0);
+  var [pipSummary, setPipSummary] = useState(meeting.pip_summary || "");
   var [loading, setLoading]       = useState(false);
   var [error, setError]           = useState(null);
 
@@ -23,7 +24,7 @@ export function EditMeetingModal({ meeting, onSave, onClose }) {
     if (!title.trim()) { setError("Meeting title is required."); return; }
     setLoading(true);
     setError(null);
-    onSave(meeting.id, {
+    var patch = {
       title:          title.trim(),
       meeting_date:   date,
       notes:          notes.trim() || null,
@@ -32,6 +33,13 @@ export function EditMeetingModal({ meeting, onSave, onClose }) {
       commitments:    commitments.trim() || null,
       follow_up_date: followUp || null,
       rating:         rating || null,
+    };
+    if (meeting.pip_summary !== undefined) {
+      patch.pip_summary = pipSummary.trim() || null;
+    }
+    onSave(meeting.id, patch, {
+      originalPipSummary: meeting.pip_summary || null,
+      newPipSummary:      pipSummary.trim() || null,
     }).catch(function (err) {
       setLoading(false);
       setError(err ? (err.message || "Something went wrong.") : "Something went wrong.");
@@ -136,6 +144,19 @@ export function EditMeetingModal({ meeting, onSave, onClose }) {
             })}
           </div>
         </div>
+
+        {meeting.pip_summary !== undefined && (
+          <div>
+            <FL htmlFor="edit-meeting-pip-summary">Pip Summary</FL>
+            <TextArea
+              id="edit-meeting-pip-summary"
+              value={pipSummary}
+              onChange={function (e) { setPipSummary(e.target.value); }}
+              placeholder="Pip's meeting summary…"
+              rows={3}
+            />
+          </div>
+        )}
 
         {error && (
           <div

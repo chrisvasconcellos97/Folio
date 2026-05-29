@@ -14,6 +14,8 @@ function memberLabel(m) { return m.full_name || m.email || ""; }
 // (project + index === null) and edit (existing task at index). Renders
 // every custom field defined in the parent project's schema plus the
 // "bones" basics (title + assignee + account + task_status).
+var SEVEN_DAYS_MS = 7 * 86400 * 1000;
+
 export function TaskDetailPanel({
   project,
   task,           // null for "new task" mode
@@ -24,6 +26,7 @@ export function TaskDetailPanel({
   onSave,         // (taskShape) => Promise — caller does the project update
   onDelete,       // optional: (taskIndex) => Promise
   onClose,
+  logCorrection,  // optional: (entry) => void — captures V2-brain corrections
 }) {
   var schema = project.custom_field_schema || [];
   var statusColumns = project.task_status_columns || ["intake", "in_progress", "done"];
@@ -62,8 +65,9 @@ export function TaskDetailPanel({
   function handleSave() {
     if (!title.trim() || saving) return;
     setSaving(true);
+    var newTitle = title.trim();
     var taskShape = Object.assign({}, task || {}, {
-      title:          title.trim(),
+      title:          newTitle,
       assignee_email: assignee || null,
       account_id:     accountId || null,
       task_status:    taskStatus,
@@ -76,7 +80,26 @@ export function TaskDetailPanel({
       blocked_reason: task && task.blocked_reason !== undefined ? task.blocked_reason : null,
     });
     Promise.resolve(onSave(taskShape, taskIndex))
-      .then(function () { setSaving(false); onClose(); })
+      .then(function () {
+        setSaving(false);
+        if (
+          logCorrection &&
+          task &&
+          task.pip_created_at &&
+          (Date.now() - new Date(task.pip_created_at).getTime()) < SEVEN_DAYS_MS &&
+          newTitle !== (task.title || "").trim()
+        ) {
+          logCorrection({
+            correction_type: 'task_text_edit',
+            account_id:      accountId || task.account_id || null,
+            meeting_id:      null,
+            original_value:  { kind: 'task', original: task.title, pip_created_at: task.pip_created_at },
+            corrected_value: { text: newTitle },
+            reason:          null,
+          });
+        }
+        onClose();
+      })
       .catch(function () { setSaving(false); });
   }
 

@@ -192,10 +192,11 @@ create table if not exists folio_items (
   user_id    uuid references auth.users not null,
   text       text not null,
   due_date   date,
-  owner      text,
-  done       boolean default false,
-  closed_at  timestamptz,
-  created_at timestamptz default now()
+  owner          text,
+  done           boolean default false,
+  closed_at      timestamptz,
+  created_at     timestamptz default now(),
+  pip_created_at timestamptz
 );
 
 alter table folio_items enable row level security;
@@ -505,14 +506,16 @@ create policy "facts_owner_write" on folio_pip_facts
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 create table if not exists folio_pip_account_state (
-  account_id    uuid primary key references folio_accounts(id) on delete cascade,
-  user_id       uuid not null references auth.users(id) on delete cascade,
-  state_prose   text not null,
-  health_signal text,
-  momentum      text,
-  risk_flags    text[],
-  generated_at  timestamptz not null default now(),
-  stale_at      timestamptz
+  account_id          uuid primary key references folio_accounts(id) on delete cascade,
+  user_id             uuid not null references auth.users(id) on delete cascade,
+  state_prose         text not null,
+  health_signal       text,
+  momentum            text,
+  risk_flags          text[],
+  generated_at        timestamptz not null default now(),
+  stale_at            timestamptz,
+  lessons_learned     text,
+  last_compression_at timestamptz
 );
 alter table folio_pip_account_state enable row level security;
 
@@ -572,6 +575,20 @@ alter table pip_correction_log enable row level security;
 drop policy if exists "Users manage own corrections" on pip_correction_log;
 create policy "Users manage own corrections"
   on pip_correction_log for all
+  using      (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+-- ──────────────────────────────────────────────────────────────────────
+-- Pip correction log archive — rows older than 60 days are moved here
+-- after compression so the live table stays small. See pip_lessons_learned.sql.
+-- ──────────────────────────────────────────────────────────────────────
+create table if not exists pip_correction_log_archive (
+  like pip_correction_log including all
+);
+alter table pip_correction_log_archive enable row level security;
+drop policy if exists "Users manage own archived corrections" on pip_correction_log_archive;
+create policy "Users manage own archived corrections"
+  on pip_correction_log_archive for all
   using      (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 

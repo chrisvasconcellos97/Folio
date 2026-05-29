@@ -320,6 +320,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
         isMobile={!isDesktop}
         autoOpenMeetingMode={autoOpenMeetingMode}
         onAutoOpenMeetingModeConsumed={onAutoOpenMeetingModeConsumed}
+        pipLessonsLearned={(pipAcctState.getStateRow(account.id) || {}).lessons_learned || null}
       />
     );
   }
@@ -425,6 +426,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
           onDelete={deleteMeeting}
           onAddMeeting={addMeeting}
           onUpdateMeeting={updateMeeting}
+          logCorrection={adHocCorrectionsApi.logCorrection}
         />
         </>
       )}
@@ -442,6 +444,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
           onUpdate={updateItem}
           onDelete={deleteItem}
           onGoToCadence={function () { setTab("cadence"); }}
+          logCorrection={adHocCorrectionsApi.logCorrection}
         />
         </>
       )}

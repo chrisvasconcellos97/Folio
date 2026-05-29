@@ -60,10 +60,11 @@ export function applyPipPlan(selected, ctx) {
     switch (row.kind) {
       case "new_item":
         return addItem({
-          text:     row.text,
-          due_date: row.due_date || null,
-          owner:    row.assignee || null,
-          account_id: accountId || null,
+          text:           row.text,
+          due_date:       row.due_date || null,
+          owner:          row.assignee || null,
+          account_id:     accountId || null,
+          pip_created_at: new Date().toISOString(),
         })
           .then(function () { return maybeLearnHint(row.text); })
           .catch(function (e) { fail(e && e.message ? e.message : "Add failed"); });
@@ -82,15 +83,17 @@ export function applyPipPlan(selected, ctx) {
         var newTaskId = (typeof crypto !== "undefined" && crypto.randomUUID)
           ? crypto.randomUUID()
           : ("t-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8));
+        var pipCreatedAt = new Date().toISOString();
         newStage.stages.push({
-          id:            newTaskId,
-          title:         row.title,
-          due_date:      row.due_date || null,
-          assignee:      row.assignee || null,
-          task_status:   firstStatusColumn(newStage.project),
-          account_id:    accountId || null,
-          created_at:    new Date().toISOString(),
-          custom_fields: {},
+          id:             newTaskId,
+          title:          row.title,
+          due_date:       row.due_date || null,
+          assignee:       row.assignee || null,
+          task_status:    firstStatusColumn(newStage.project),
+          account_id:     accountId || null,
+          created_at:     pipCreatedAt,
+          pip_created_at: pipCreatedAt,
+          custom_fields:  {},
         });
         // Defer the actual updateProject call until after all rows have
         // mutated the snapshot — see flushStages below.
