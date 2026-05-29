@@ -23,7 +23,7 @@ import { PipLoader } from "./components/PipLoader";
 // Code-split heavy views — only fetched when navigated to. Cuts initial
 // bundle and speeds up first paint by ~30-40%.
 var HomeView       = lazy(function () { return import("./views/home/HomeView").then(function (m) { return { default: m.HomeView }; }); });
-var MeetingsView   = lazy(function () { return import("./views/meetings/MeetingsView").then(function (m) { return { default: m.MeetingsView }; }); });
+var CalendarView   = lazy(function () { return import("./views/calendar/CalendarView").then(function (m) { return { default: m.CalendarView }; }); });
 var PipView        = lazy(function () { return import("./views/pip/PipView").then(function (m) { return { default: m.PipView }; }); });
 var CadenceView    = lazy(function () { return import("./views/cadence/CadenceView").then(function (m) { return { default: m.CadenceView }; }); });
 var GaugeView      = lazy(function () { return import("./views/gauge/GaugeView").then(function (m) { return { default: m.GaugeView }; }); });
@@ -499,7 +499,30 @@ export default function App() {
   }
 
   if (view === "meetings") {
-    mainContent = <MeetingsView meetings={meetings} loading={meetLoading} allItems={allItems} addItem={pipAddItem} accounts={accounts} />;
+    mainContent = (
+      <CalendarView
+        meetings={meetings}
+        cadences={cadences}
+        items={allItems}
+        projects={allProjects}
+        quickTasks={tasks}
+        accounts={accounts}
+        onOpenAccount={function (accountId) {
+          var a = (accounts || []).find(function (x) { return x.id === accountId; });
+          if (a) { setSelected(a); handleSetView("accounts"); }
+        }}
+        onOpenCadenceHub={function (accountId, cadenceId) {
+          var a = (accounts || []).find(function (x) { return x.id === accountId; });
+          if (a) {
+            setSelected(a);
+            setPendingHubCadenceId(cadenceId);
+            handleSetView("accounts");
+          }
+        }}
+        onOpenConversation={function (opts) { setShowStartConv(true); }}
+        onAddItem={function (opts) {}}
+      />
+    );
   }
 
   if (view === "pip") {
