@@ -190,9 +190,9 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
 
   var totalCount      = projects.length;
   var inProgressCount = projects.filter(function (p) { return p.status === "in_progress"; }).length;
-  var completedCount  = projects.filter(function (p) { return p.status === "complete"; }).length;
   var blockedCount    = projects.filter(function (p) { return p.status === "blocked"; }).length;
   var onHoldCount     = projects.filter(function (p) { return p.status === "on_hold"; }).length;
+  var overdueCount    = projects.filter(function (p) { return p.status === "in_progress" && isOverdue(p.due_date); }).length;
 
   var accountsById = useMemo(function () {
     var map = {};
@@ -314,20 +314,31 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
         }}
       >
         {[
-          { label: "Total",       value: totalCount,      color: C.textSoft,              isZero: totalCount === 0,      statusId: "all"         },
-          { label: "In Progress", value: inProgressCount, color: C.accent,                isZero: inProgressCount === 0, statusId: "in_progress" },
-          { label: "Blocked",     value: blockedCount,    color: C.red,                   isZero: blockedCount === 0,    statusId: "blocked"     },
-          { label: "On Hold",     value: onHoldCount,     color: C.yellow,                isZero: onHoldCount === 0,     statusId: "on_hold"     },
-          { label: "Complete",    value: completedCount,  color: C.statusComplete.text,   isZero: completedCount === 0,  statusId: "complete"    },
+          { label: "Total",       value: totalCount,      color: C.textSoft, isZero: totalCount === 0,      statusId: "all"         },
+          { label: "In Progress", value: inProgressCount, color: C.accent,   isZero: inProgressCount === 0, statusId: "in_progress" },
+          { label: "Blocked",     value: blockedCount,    color: C.red,      isZero: blockedCount === 0,    statusId: "blocked"     },
+          { label: "On Hold",     value: onHoldCount,     color: C.yellow,   isZero: onHoldCount === 0,     statusId: "on_hold"     },
+          { label: "Past Due",    value: overdueCount,    color: C.red,      isZero: overdueCount === 0,    statusId: "overdue"     },
         ].map(function (s) {
-          var active = statusFilter === s.statusId;
+          var active = s.statusId === "overdue"
+            ? overdueOnly
+            : (!overdueOnly && statusFilter === s.statusId);
           return (
             <div
               key={s.label}
-              onClick={function () { setStatusFilter(s.statusId); }}
+              onClick={function () {
+                if (s.statusId === "overdue") { setOverdueOnly(true); setStatusFilter("all"); }
+                else { setOverdueOnly(false); setStatusFilter(s.statusId); }
+              }}
               role="button"
               tabIndex={0}
-              onKeyDown={function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setStatusFilter(s.statusId); } }}
+              onKeyDown={function (e) {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  if (s.statusId === "overdue") { setOverdueOnly(true); setStatusFilter("all"); }
+                  else { setOverdueOnly(false); setStatusFilter(s.statusId); }
+                }
+              }}
               style={{
                 background: active ? C.accentFaint : C.surface,
                 borderTop:    active ? "2px solid " + s.color : "2px solid transparent",
