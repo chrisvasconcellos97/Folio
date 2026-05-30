@@ -11,6 +11,23 @@ branch.
 
 ## May 2026
 
+### Gauge V3 — Phase 1: folio_tasks foundation
+The first phase of the unified-tasks rewrite. Creates the `folio_tasks`
+table that will eventually replace `folio_items` and absorb the
+`gauge_projects.stages` jsonb arrays. Schema includes project_id
+(nullable for loose tasks), parent_step_index, custom_fields, status,
+task_status (kanban column id), assignee_email, source_meeting_id,
+pip_created_at, and user_added flag.
+
+Pip's plan-apply path now dual-writes: every `new_item` and `new_task`
+also lands in `folio_tasks` (best-effort, swallows errors so the
+canonical write path is never blocked). The new `useTasks(userId, opts)`
+hook reads from folio_tasks with the same shape as useItems. SQL
+migration in `supabase/gauge_v3_folio_tasks.sql` (mirrored into
+canonical `schema.sql`). Existing UI continues operating on folio_items
+and gauge_projects.stages during the transition; Phases 2-6 will
+migrate consumers and eventually drop the legacy tables.
+
 ### V2 brain — Pip learning loop foundation
 The intelligence layer that makes Folios different.
 

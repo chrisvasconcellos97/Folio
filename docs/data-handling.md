@@ -1,6 +1,6 @@
 # Folios — Data Handling
 
-*Last updated: 2026-05-30*
+*Last updated: 2026-05-30 (Gauge V3 Phase 1 — folio_tasks added)*
 
 This document inventories what data Folios stores, where it lives,
 who can access it, and what crosses the boundary to third-party AI
@@ -20,6 +20,7 @@ For broader security posture, see [security.md](./security.md).
 | `folio_contacts` | Name, role, email, phone, LinkedIn URL, leader/primary flags | Business contact info |
 | `folio_meetings` | Meeting date, method, attendees, notes, AI summary, follow-up date, status | User-typed notes |
 | `folio_items` | Action item text, assignee, due date, done flag | User business data |
+| `folio_tasks` | Unified items+tasks home (Gauge V3 Phase 1; dual-written from Pip plan apply) — title, description, project link, assignee, due, custom fields | User business data |
 | `folio_cadences` | Cadence label, frequency, day-of-week, meeting time | User schedule |
 | `gauge_projects` | Project name, description, stages, custom fields | User business data |
 | `folio_quick_tasks` | Task text, due date, completed flag | User business data |

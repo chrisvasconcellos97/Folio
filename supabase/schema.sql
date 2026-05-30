@@ -211,6 +211,68 @@ create policy "Users manage own items"
   with check (auth.uid() = user_id);
 
 -- ──────────────────────────────────────────────────────────────────────
+-- Gauge V3 — folio_tasks (unified items + tasks home)
+-- Phase 1: table + indexes + RLS, dual-write from Pip plan apply.
+-- Eventually replaces folio_items and gauge_projects.stages[].
+-- ──────────────────────────────────────────────────────────────────────
+create table if not exists folio_tasks (
+  id                  uuid primary key default gen_random_uuid(),
+  user_id             uuid not null references auth.users(id) on delete cascade,
+  org_id              uuid,
+  account_id          uuid references folio_accounts(id) on delete set null,
+  project_id          uuid references gauge_projects(id) on delete set null,
+  parent_step_index   integer,
+  title               text not null,
+  description         text,
+  status              text not null default 'planned'
+                      check (status in ('planned','in_progress','blocked','complete')),
+  task_status         text,
+  assignee_email      text,
+  due_date            date,
+  done                boolean not null default false,
+  closed_at           timestamptz,
+  custom_fields       jsonb not null default '{}'::jsonb,
+  source_meeting_id   uuid references folio_meetings(id) on delete set null,
+  pip_created_at      timestamptz,
+  user_added          boolean not null default false,
+  created_at          timestamptz not null default now(),
+  updated_at          timestamptz not null default now()
+);
+
+create index if not exists folio_tasks_user_time_idx     on folio_tasks (user_id, created_at desc);
+create index if not exists folio_tasks_account_idx       on folio_tasks (account_id) where account_id is not null;
+create index if not exists folio_tasks_project_idx       on folio_tasks (project_id) where project_id is not null;
+create index if not exists folio_tasks_assignee_due_idx  on folio_tasks (assignee_email, due_date) where done = false;
+create index if not exists folio_tasks_open_idx          on folio_tasks (user_id, done, due_date);
+
+create or replace function folio_tasks_touch_updated_at()
+returns trigger language plpgsql as $$
+begin
+  new.updated_at := now();
+  return new;
+end;
+$$;
+
+drop trigger if exists folio_tasks_touch_updated_at on folio_tasks;
+create trigger folio_tasks_touch_updated_at
+  before update on folio_tasks
+  for each row execute function folio_tasks_touch_updated_at();
+
+alter table folio_tasks enable row level security;
+
+drop policy if exists "tasks_select_own" on folio_tasks;
+create policy "tasks_select_own" on folio_tasks for select using (auth.uid() = user_id);
+
+drop policy if exists "tasks_insert_own" on folio_tasks;
+create policy "tasks_insert_own" on folio_tasks for insert with check (auth.uid() = user_id);
+
+drop policy if exists "tasks_update_own" on folio_tasks;
+create policy "tasks_update_own" on folio_tasks for update using (auth.uid() = user_id);
+
+drop policy if exists "tasks_delete_own" on folio_tasks;
+create policy "tasks_delete_own" on folio_tasks for delete using (auth.uid() = user_id);
+
+-- ──────────────────────────────────────────────────────────────────────
 -- Quick Tasks
 -- ──────────────────────────────────────────────────────────────────────
 create table if not exists folio_quick_tasks (

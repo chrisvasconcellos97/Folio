@@ -1,4 +1,15 @@
 import { taskPattern } from "../hooks/usePipAssignmentHints";
+import { insertTask } from "../hooks/useTasks";
+
+// Gauge V3 Phase 1 — dual-write helper. Every Pip-created item and task
+// also lands in folio_tasks so the new queue UI (Phase 3) sees the work
+// immediately. Failures are swallowed so the canonical write path
+// (folio_items / gauge_projects.stages) is never blocked by a folio_tasks
+// hiccup during the migration window.
+function dualWriteToTasks(userId, payload) {
+  if (!userId) return Promise.resolve();
+  return insertTask(userId, payload).catch(function () { /* best-effort */ });
+}
 
 function firstStatusColumn(project) {
   var cols = project && project.task_status_columns;
@@ -31,6 +42,8 @@ export function applyPipPlan(selected, ctx) {
   var accountId      = ctx.accountId;
   var meetingId      = ctx.meetingId || null;
   var activeProjects = ctx.activeProjects || [];
+  var userId         = ctx.userId || null;  // Phase 1: needed for folio_tasks dual-write
+  var orgId          = ctx.orgId  || null;
 
   // Snapshot projects so multiple new_task / update_task rows on the same
   // project accumulate into one updateProject call (faster + idempotent).
@@ -61,6 +74,7 @@ export function applyPipPlan(selected, ctx) {
     switch (row.kind) {
       case "new_item": {
         var targetAcct = row.target_account_id || accountId || null;
+        var pipStampedAt = !row._userAdded ? new Date().toISOString() : null;
         var addPayload = {
           text:              row.text,
           due_date:          row.due_date || null,
@@ -68,9 +82,24 @@ export function applyPipPlan(selected, ctx) {
           account_id:        targetAcct,
           source_meeting_id: meetingId,
         };
-        if (!row._userAdded) addPayload.pip_created_at = new Date().toISOString();
+        if (pipStampedAt) addPayload.pip_created_at = pipStampedAt;
         return addItem(addPayload)
-          .then(function () { return maybeLearnHint(row.text); })
+          .then(function () {
+            // Phase 1 dual-write: also land in folio_tasks (project_id null
+            // for loose action items). Best-effort; doesn't block the row.
+            dualWriteToTasks(userId, {
+              org_id:            orgId,
+              account_id:        targetAcct,
+              project_id:        null,
+              title:             row.text,
+              assignee_email:    row.assignee || null,
+              due_date:          row.due_date || null,
+              source_meeting_id: meetingId,
+              pip_created_at:    pipStampedAt,
+              user_added:        !!row._userAdded,
+            });
+            return maybeLearnHint(row.text);
+          })
           .catch(function (e) { fail(e && e.message ? e.message : "Add failed"); });
       }
 
@@ -89,19 +118,34 @@ export function applyPipPlan(selected, ctx) {
           ? crypto.randomUUID()
           : ("t-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8));
         var pipCreatedAt = new Date().toISOString();
+        var taskAcct = row.target_account_id || accountId || null;
+        var firstStatus = firstStatusColumn(newStage.project);
         var taskEntry = {
           id:                newTaskId,
           title:             row.title,
           due_date:          row.due_date || null,
           assignee:          row.assignee || null,
-          task_status:       firstStatusColumn(newStage.project),
-          account_id:        row.target_account_id || accountId || null,
+          task_status:       firstStatus,
+          account_id:        taskAcct,
           source_meeting_id: meetingId,
           created_at:        pipCreatedAt,
           custom_fields:     {},
         };
         if (!row._userAdded) taskEntry.pip_created_at = pipCreatedAt;
         newStage.stages.push(taskEntry);
+        // Phase 1 dual-write: mirror this task into folio_tasks. Best-effort.
+        dualWriteToTasks(userId, {
+          org_id:            orgId,
+          account_id:        taskAcct,
+          project_id:        row.project_id,
+          title:             row.title,
+          assignee_email:    row.assignee || null,
+          due_date:          row.due_date || null,
+          task_status:       firstStatus,
+          source_meeting_id: meetingId,
+          pip_created_at:    row._userAdded ? null : pipCreatedAt,
+          user_added:        !!row._userAdded,
+        });
         // Defer the actual updateProject call until after all rows have
         // mutated the snapshot — see flushStages below.
         return maybeLearnHint(row.title);

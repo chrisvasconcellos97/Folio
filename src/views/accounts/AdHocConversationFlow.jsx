@@ -145,6 +145,8 @@ export function AdHocConversationFlow({
       accountId:      account.id,
       meetingId:      pDraftId || null,
       activeProjects: activeProjects,
+      userId:         userId,
+      orgId:          orgId,
     }).then(function (result) {
       if (pDraftId) {
         updateMeeting(pDraftId, { plan_applied_at: new Date().toISOString() })

@@ -850,6 +850,8 @@ export function CadenceHub({
       accountId:      account.id,
       meetingId:      draftId || null,
       activeProjects: activeProjects,
+      userId:         userId,
+      orgId:          orgId,
     }).then(function (result) {
       if (draftId) {
         updateMeeting(draftId, { plan_applied_at: new Date().toISOString() })
