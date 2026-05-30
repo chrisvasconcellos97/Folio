@@ -12,20 +12,24 @@ see CLAUDE.md → Documentation Discipline Rule.
 | [product-overview.md](./product-overview.md) | Substantive read after a pitch. Full capability inventory. |
 | [security.md](./security.md) | Security review, IT vetting, VP sponsorship discussions. |
 | [data-handling.md](./data-handling.md) | Data flow, retention, what crosses to Anthropic. Compliance reviewers ask for this. |
+| [architecture.md](./architecture.md) | How Folios is built — for engineering reviewers and technical due diligence. |
+| [ai-governance.md](./ai-governance.md) | How Pip is used responsibly. Guardrails, audit, cost controls. |
+| [reliability.md](./reliability.md) | Uptime, observability, auto-recovery, incident response. |
+| [roadmap.md](./roadmap.md) | Public-facing roadmap (separate from internal CLAUDE.md queue). |
+| [changelog.md](./changelog.md) | Notable releases and capability shipments. |
 
 ## Files planned (not yet built)
 
+These benefit from real-world input before drafting — built after the
+first round of presentations / user feedback so they're shaped by
+actual questions rather than guesses.
+
 | File | What it covers |
 |---|---|
-| architecture.md | How Folios is built — for engineering reviewers |
-| ai-governance.md | How Pip is used responsibly. Guardrails, audit, cost. |
-| reliability.md | Uptime, observability, incident response |
-| faq.md | Common objections, answered |
-| use-cases/account-manager.md | AM day-in-the-life |
-| use-cases/leader.md | Leader visibility & team-rollup story |
-| use-cases/admin.md | Admin task-executor flow |
-| roadmap.md | Public-facing roadmap (separate from internal CLAUDE.md queue) |
-| changelog.md | Version history (auto-extracted from git) |
+| faq.md | Common objections, answered. Best written from real questions heard. |
+| use-cases/account-manager.md | AM day-in-the-life. Best with real workflow patterns. |
+| use-cases/leader.md | Leader visibility & team-rollup story. |
+| use-cases/admin.md | Admin task-executor flow. |
 
 ## Conventions
 
