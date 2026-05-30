@@ -158,6 +158,16 @@ After any meaningful markdown edit in `docs/`, regenerate the PDFs in
 the same commit so the committed PDFs never lag the markdown source.
 The script handles all 9 docs at once (skips `README.md`); takes ~5s.
 
+**Upgrade log discipline:** every major upgrade (new feature, schema
+migration, architectural change — anything that meaningfully changes
+what Folios *does* or *is*) gets a plain-English entry in
+`docs/upgrades.md` in the same commit. Format: date + short heading +
+What I built / Problem it solves / What changed / What you see today /
+Why it matters. Written for Chris to read at a glance — no jargon, no
+release-note formality. Bug fixes, styling tweaks, and doc-only
+updates do NOT belong in upgrades.md — those live in git history.
+Technical release-notes detail still goes in `changelog.md`.
+
 ## Patch — Background Build Agent
 
 **Patch** is the name for the background agent used to execute large batch builds. When a batch of queued items is ready to ship, spawn Patch via the Agent tool with `isolation: "worktree"` so it works in a clean copy of the repo without disrupting the main conversation.

@@ -17,6 +17,7 @@ see CLAUDE.md → Documentation Discipline Rule.
 | [reliability.md](./reliability.md) | Uptime, observability, auto-recovery, incident response. |
 | [roadmap.md](./roadmap.md) | Public-facing roadmap (separate from internal CLAUDE.md queue). |
 | [changelog.md](./changelog.md) | Notable releases and capability shipments. |
+| [upgrades.md](./upgrades.md) | Plain-English upgrade log — what changed, when, and why it matters. For Chris (and anyone) to read at a glance. |
 
 ## Files planned (not yet built)
 
