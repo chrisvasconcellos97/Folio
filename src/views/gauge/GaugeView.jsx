@@ -11,6 +11,7 @@ import { MyQueueView } from "./MyQueueView";
 import { TemplatePickerModal } from "./TemplatePickerModal";
 import { PipLoader } from "../../components/PipLoader";
 import { PipInsightCard } from "../../components/PipInsightCard";
+import { PipGaugeCard } from "../../components/PipGaugeCard";
 import { Glow } from "../../components/Glow";
 import { Mark } from "../../components/Mark";
 import { pickV } from "../../lib/metricsUtils";
@@ -205,10 +206,11 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId, lens })
     (accounts || []).forEach(function (a) { map[a.id] = a; });
     return map;
   }, [accounts]);
-  var gaugeInsight = buildGaugeInsight(projects, accountsById, {
+  var gaugeHandlers = {
     onClickOverdue: function () { setStatusFilter("all"); setScopeFilter("all"); setOverdueOnly(true); },
     onClickBlocked: function () { setOverdueOnly(false); setStatusFilter("blocked"); },
     onClickProject: function (id) {
+      setPrimaryView("projects");
       setOverdueOnly(false); setStatusFilter("all");
       setExpandedRows(function (prev) { return Object.assign({}, prev, { [id]: true }); });
       setTimeout(function () {
@@ -216,7 +218,8 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId, lens })
         if (el && el.scrollIntoView) el.scrollIntoView({ behavior: "smooth", block: "center" });
       }, 50);
     },
-  });
+  };
+  var gaugeInsight = buildGaugeInsight(projects, accountsById, gaugeHandlers);
 
   function getAccountName(id) {
     if (!id) return null;
@@ -263,33 +266,6 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId, lens })
     setPrefill(Object.assign({}, tpl, { stages: hydratedStages }));
     setShowAdd(true);
   }
-
-  // Desktop right-sidebar derivations. Cheap one-pass scans, memo-eligible.
-  // Stuck = in_progress projects whose updated_at is > 7 days old.
-  var sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  var stuckProjects = (projects || []).filter(function (p) {
-    if (p.status !== "in_progress") return false;
-    var updated = p.updated_at ? new Date(p.updated_at).getTime() : 0;
-    return updated > 0 && updated < sevenDaysAgo;
-  });
-
-  // Team load = count open stages per assignee across in_progress projects.
-  var teamLoad = (function () {
-    var counts = {};
-    (projects || []).forEach(function (p) {
-      if (p.status !== "in_progress") return;
-      (p.stages || []).forEach(function (s) {
-        if (!s || s.completed_at) return;
-        var who = (s.assignee || "").trim();
-        if (!who) return;
-        counts[who] = (counts[who] || 0) + 1;
-      });
-    });
-    return Object.keys(counts)
-      .map(function (k) { return { name: k, count: counts[k] }; })
-      .sort(function (a, b) { return b.count - a.count; })
-      .slice(0, 4);
-  })();
 
   return (
     <div>
@@ -403,7 +379,11 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId, lens })
               display: "flex", flexDirection: "column", gap: 12,
               maxWidth: 300,
             }}>
-              <PipInsightCard segments={[gaugeInsight]} />
+              <PipGaugeCard
+                projects={projects}
+                accountsById={accountsById}
+                handlers={gaugeHandlers}
+              />
             </div>
           )}
         </div>
@@ -909,77 +889,18 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId, lens })
           </div>
         </div>
 
-        {/* Desktop right sidebar — Pip + derived insights */}
+        {/* Desktop right sidebar — Gauge-specific Pip card */}
         {isDesktop && scopeFilter !== "my_queue" && projects && projects.length > 0 && (
           <div style={{
             position: "sticky", top: 16, alignSelf: "start",
             display: "flex", flexDirection: "column", gap: 12,
             maxWidth: 300,
           }}>
-            <PipInsightCard segments={[gaugeInsight]} />
-
-            {/* Stuck block */}
-            {stuckProjects.length > 0 && (
-              <div style={{
-                background: C.surface, border: "1px solid " + C.rule,
-                borderRadius: 8, padding: "12px 14px",
-              }}>
-                <div style={{ fontFamily: MONO, fontSize: 9.5, color: C.textMuted,
-                  textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
-                  Stuck · {stuckProjects.length}
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {stuckProjects.slice(0, 4).map(function (p) {
-                    return (
-                      <div key={p.id} style={{
-                        fontFamily: "'Inter', system-ui, sans-serif",
-                        fontSize: 12, color: C.textSoft, lineHeight: 1.35,
-                      }}>
-                        <span style={{ color: C.text }}>{p.name}</span>
-                        <span style={{ color: C.textFaint, marginLeft: 6 }}>
-                          no update 7d+
-                        </span>
-                      </div>
-                    );
-                  })}
-                  {stuckProjects.length > 4 && (
-                    <div style={{ fontFamily: MONO, fontSize: 10, color: C.textFaint, marginTop: 2 }}>
-                      + {stuckProjects.length - 4} more
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Team load block */}
-            {teamLoad.length > 0 && (
-              <div style={{
-                background: C.surface, border: "1px solid " + C.rule,
-                borderRadius: 8, padding: "12px 14px",
-              }}>
-                <div style={{ fontFamily: MONO, fontSize: 9.5, color: C.textMuted,
-                  textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
-                  Team load
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {teamLoad.map(function (t) {
-                    return (
-                      <div key={t.name} style={{
-                        display: "flex", justifyContent: "space-between", alignItems: "baseline",
-                        fontFamily: "'Inter', system-ui, sans-serif", fontSize: 12,
-                      }}>
-                        <span style={{ color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginRight: 8 }}>
-                          {t.name}
-                        </span>
-                        <span style={{ fontFamily: MONO, fontSize: 11, color: C.accent, fontFeatureSettings: '"tnum"' }}>
-                          {t.count} open
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+            <PipGaugeCard
+              projects={projects}
+              accountsById={accountsById}
+              handlers={gaugeHandlers}
+            />
           </div>
         )}
       </div>
