@@ -18,6 +18,8 @@ import { pickV } from "../../lib/metricsUtils";
 import { useBreakpoint } from "../../hooks/useBreakpoint";
 import { useTasks } from "../../hooks/useTasks";
 import { FlatTaskQueue } from "./FlatTaskQueue";
+import { LeaderProjectsView } from "./LeaderProjectsView";
+import { TeammateDetailView } from "./TeammateDetailView";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
@@ -152,7 +154,14 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId, lens })
   var { projects, loading, error: projectsError, refetch: refetchProjects, addProject, updateProject, deleteProject, templates, addTemplate, updateTemplate, deleteTemplate } = useProjects(userId, null, orgId);
   // Phase 3 — flat task queue. Defaults to Tasks tab for Admin lens, Projects for everyone else.
   var { tasks: flatTasks } = useTasks(userId);
-  var [primaryView, setPrimaryView] = useState(lens === "admin" ? "tasks" : "projects");
+  var [primaryView, setPrimaryView] = useState(
+    lens === "leader" ? "leader" :
+    lens === "admin"  ? "tasks"  :
+                        "projects"
+  );
+  // Phase 5 — drill-in to a teammate from the Leader view. When set, the
+  // primary view is suppressed in favor of a read-only TeammateDetailView.
+  var [viewingMember, setViewingMember] = useState(null);
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
 
@@ -327,12 +336,15 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId, lens })
         </div>
       </div>
 
-      {/* Phase 3 — Projects | Tasks toggle. Defaults per lens. */}
-      <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+      {/* Phase 3 + 5 — primary view toggle. Leader option only shows for
+          users whose default_lens is "leader". Drill-in to a teammate
+          hides the toggle while the detail view is up. */}
+      <div style={{ display: scopeFilter === "my_queue" || viewingMember ? "none" : "flex", gap: 6, marginBottom: 14 }}>
         {[
+          lens === "leader" ? { id: "leader",   label: "Leader"   } : null,
           { id: "projects", label: "Projects" },
           { id: "tasks",    label: "Tasks"    },
-        ].map(function (v) {
+        ].filter(Boolean).map(function (v) {
           var active = primaryView === v.id;
           return (
             <button
@@ -356,7 +368,32 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId, lens })
         })}
       </div>
 
-      {primaryView === "tasks" ? (
+      {viewingMember ? (
+        <TeammateDetailView
+          userId={userId}
+          memberEmail={viewingMember}
+          projects={projects}
+          accounts={accounts}
+          onBack={function () { setViewingMember(null); }}
+        />
+      ) : primaryView === "leader" ? (
+        <LeaderProjectsView
+          projects={projects}
+          accounts={accounts}
+          members={members}
+          userEmail={userEmail}
+          onOpenProject={function (id) {
+            setPrimaryView("projects");
+            setOverdueOnly(false); setStatusFilter("all"); setScopeFilter("all");
+            setExpandedRows(function (prev) { return Object.assign({}, prev, { [id]: true }); });
+            setTimeout(function () {
+              var el = document.querySelector('[data-project-id="' + id + '"]');
+              if (el && el.scrollIntoView) el.scrollIntoView({ behavior: "smooth", block: "center" });
+            }, 50);
+          }}
+          onOpenMember={function (email) { setViewingMember(email); }}
+        />
+      ) : primaryView === "tasks" ? (
         <div style={{
           display: isDesktop ? "grid" : "block",
           gridTemplateColumns: isDesktop ? "minmax(0, 1fr) 340px" : undefined,

@@ -1,6 +1,6 @@
 # Folios — Upgrade Log
 
-*Last updated: 2026-05-30 (Gauge V3 Phase 2 — lens system)*
+*Last updated: 2026-05-30 (Gauge V3 Phase 5 — Leader view)*
 
 Plain-English log of major upgrades shipped to Folios. Date, time, and
 a short explanation written in terms anyone can read — not technical
@@ -14,6 +14,48 @@ For the technical changelog with full release detail, see
 architectural changes, anything that meaningfully changes what Folios
 *does* or *is*. Not bug fixes, styling tweaks, or doc-only updates —
 those live in git history.
+
+---
+
+## 2026-05-30 — Gauge V3 Phase 5: Leader view
+
+**What I built:** The org-wide project rollup that the Leader lens
+has been waiting for, plus a read-only drill-in to see what any
+teammate has on their plate.
+
+**The problem it solves:** Leaders need a view that's about *the
+team*, not their personal queue. Until today, leaders were looking
+at the same AM-focused project list as everyone else — useful for
+their own work, useless for spotting that Tony's been stuck on the
+KSI Salvage audit for 12 days.
+
+**What changed:**
+- New "Leader" tab in Gauge (only visible to users whose default
+  view is Leader). Lists every project across every AM and account,
+  hiding drafts and completed work.
+- Each row shows: title, status, account chip, AM chip, progress
+  (X/Y stages, percent), due date, and a "STUCK · Nd" pill that
+  lights up when no stage has been completed in 7+ days. Expanding
+  a row shows every stage with its assignee and due date inline.
+- Filter bar: by AM, by account, by status, by stuck-only.
+  Sort by due date, progress, or stuck-time. "Clear" resets all.
+- Clicking an AM chip drills into a read-only view of that teammate
+  — their open tasks, project stages assigned to them, projects
+  they're on, and the accounts they touch. No edit buttons; the
+  point is visibility, not mutation.
+- Open-project button on each expanded row jumps over to the
+  standard Projects view with that project's row pre-expanded.
+
+**What you see today:** If your default view is Leader (set on the
+team-member record), Gauge opens straight to the Leader rollup.
+Everyone else still lands on Projects or Tasks. Toggle in the
+top-left switches between Leader / Projects / Tasks.
+
+**Why it matters:** This is the team-rollup story the Leader lens
+from Phase 2 was setting up. Pip's tone already adapts per lens;
+now there's a real UI to match. The drill-in pattern also lays
+groundwork for org-wide hints in Phase 6 — once you can see what
+Sara owns, the system can start routing similar work to her.
 
 ---
 
