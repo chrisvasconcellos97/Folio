@@ -17,6 +17,37 @@ those live in git history.
 
 ---
 
+## 2026-05-30 — Gauge V3 Phase 4: discrete project templates
+
+**What I built:** Save any project as a template, then spin up new
+projects from it in one click — with assignees pre-filled and due
+dates auto-scheduled relative to the day you create the new project.
+
+**The problem it solves:** Discrete projects like audits or onboardings
+have the same stages every time — same people, same approximate
+durations. Today you'd re-type all 7 stages every time. Templates
+remove that drudgery.
+
+**What changed:**
+- "Save as template" button at the bottom of the project modal now
+  preserves each stage's assignee email and a "due offset days" value
+  (how many days after kickoff each stage is due).
+- "+ From Template" picker (already in Gauge) now hydrates due dates
+  when you use a template — every stage gets a due_date computed from
+  today + the saved offset. Assignees pre-fill from the saved emails.
+- Sub-stages get the same treatment.
+
+**What you see today:** Saving a project as a template now actually
+captures the structure people use — who does what, when. Using a
+template puts a fully populated project on the table ready to tweak,
+not a blank skeleton.
+
+**Why it matters:** Templates were partially built earlier (the table
++ basic picker existed) but never carried the data that made them
+worth using. Now they do. AMs running repeat workflows save real time.
+
+---
+
 ## 2026-05-30 — Gauge V3 Phase 3: flat task queue
 
 **What I built:** The new flat task queue — every task and action item

@@ -37,12 +37,18 @@ function normalizeStages(stages) {
       title:                s.title || "",
       completed_at:         s.completed_at || null,
       assignee_email:       s.assignee_email || null,
+      due_date:             s.due_date || null,
       is_external:          s.is_external || false,
       external_contact_id:  s.external_contact_id || null,
       external_contact_name: s.external_contact_name || null,
       blocked_reason:       s.blocked_reason || null,
       sub_stages:           (s.sub_stages || []).map(function (sub) {
-        return { title: sub.title || "", completed_at: sub.completed_at || null };
+        return {
+          title:          sub.title || "",
+          completed_at:   sub.completed_at || null,
+          assignee_email: sub.assignee_email || null,
+          due_date:       sub.due_date || null,
+        };
       }),
     };
   });
@@ -352,10 +358,29 @@ export function ProjectModal({
   function handleSaveAsTemplate() {
     if (!addTemplate) return;
     var tplTitle = title.trim() || "Untitled Template";
+    // Phase 4 — preserve assignee_email + compute due_offset_days relative to
+    // today so the template re-schedules cleanly when used again.
+    var todayMs = (function () {
+      var d = new Date(); d.setHours(0,0,0,0); return d.getTime();
+    })();
+    function offsetFromToday(d) {
+      if (!d) return null;
+      var t = new Date(d + "T00:00:00").getTime();
+      if (isNaN(t)) return null;
+      return Math.max(0, Math.round((t - todayMs) / 86400000));
+    }
     var tplStages = stages.map(function (s) {
       return {
-        title: s.title,
-        sub_stages: (s.sub_stages || []).map(function (sub) { return { title: sub.title }; }),
+        title:           s.title,
+        assignee_email:  s.assignee_email || null,
+        due_offset_days: offsetFromToday(s.due_date),
+        sub_stages: (s.sub_stages || []).map(function (sub) {
+          return {
+            title:           sub.title,
+            assignee_email:  sub.assignee_email || null,
+            due_offset_days: offsetFromToday(sub.due_date),
+          };
+        }),
       };
     });
     addTemplate({

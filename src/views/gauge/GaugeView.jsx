@@ -242,7 +242,25 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId, lens })
 
   function handleUseTemplate(tpl) {
     setShowPicker(false);
-    setPrefill(tpl);
+    // Phase 4 — hydrate due_date from due_offset_days so each stage lands with
+    // a real date computed off today. Assignees ride along untouched.
+    var today = new Date(); today.setHours(0,0,0,0);
+    function dateFromOffset(off) {
+      if (typeof off !== "number" || off < 0) return null;
+      var d = new Date(today.getTime() + off * 86400000);
+      return d.toISOString().slice(0, 10);
+    }
+    var hydratedStages = (tpl.stages || []).map(function (s) {
+      var out = Object.assign({}, s);
+      if (typeof s.due_offset_days === "number") out.due_date = dateFromOffset(s.due_offset_days);
+      out.sub_stages = (s.sub_stages || []).map(function (sub) {
+        var subOut = Object.assign({}, sub);
+        if (typeof sub.due_offset_days === "number") subOut.due_date = dateFromOffset(sub.due_offset_days);
+        return subOut;
+      });
+      return out;
+    });
+    setPrefill(Object.assign({}, tpl, { stages: hydratedStages }));
     setShowAdd(true);
   }
 
