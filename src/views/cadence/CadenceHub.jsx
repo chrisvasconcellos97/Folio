@@ -596,6 +596,7 @@ export function CadenceHub({
   cadences,
   projects,
   contacts,
+  addContact,
   addMeeting,
   updateMeeting,
   deleteMeeting,
@@ -1104,6 +1105,7 @@ export function CadenceHub({
       onSummarizeRequest={handleSummarizeRequest}
       summarizing={summarizingId != null && meetingMode && summarizingId === meetingMode.draft.id}
       summarizeErr={meetingMode ? summarizeErrors[meetingMode.draft.id] || null : null}
+      onAddContact={addContact || undefined}
     />
   ) : null;
 

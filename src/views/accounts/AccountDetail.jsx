@@ -337,6 +337,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
         cadences={cadences}
         projects={projects}
         contacts={contacts}
+        addContact={addContact}
         addMeeting={addMeeting}
         updateMeeting={updateMeeting}
         deleteMeeting={deleteMeeting}

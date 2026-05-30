@@ -36,7 +36,7 @@ function MetaChip({ label, value, tone }) {
 }
 
 /* ---- Sidebar sections ---- */
-function SidebarSection({ title, count, children, collapsed }) {
+function SidebarSection({ title, count, children, collapsed, action }) {
   if (collapsed) return null;
   return (
     <div style={{ marginBottom: 18 }}>
@@ -44,8 +44,10 @@ function SidebarSection({ title, count, children, collapsed }) {
         fontFamily: MONO, fontSize: 9.5, color: C.textMuted,
         fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase",
         marginBottom: 8,
+        display: "flex", alignItems: "center", gap: 6,
       }}>
-        {title}{typeof count === "number" ? " (" + count + ")" : ""}
+        <span>{title}{typeof count === "number" ? " (" + count + ")" : ""}</span>
+        {action}
       </div>
       {children}
     </div>
@@ -122,6 +124,7 @@ export function CadenceMeetingMode({
   onSummarizeRequest,
   summarizing,
   summarizeErr,
+  onAddContact,
 }) {
   var isDesktop                         = useBreakpoint();
   var isMobile                          = !isDesktop;
@@ -141,6 +144,11 @@ export function CadenceMeetingMode({
   var [briefExpanded, setBriefExpanded] = useState(false);
   var [mobileTab, setMobileTab]         = useState("projects");
   var [quickItem, setQuickItem]         = useState("");
+  var [addContactOpen, setAddContactOpen]   = useState(false);
+  var [newContactName, setNewContactName]   = useState("");
+  var [newContactRole, setNewContactRole]   = useState("");
+  var [newContactEmail, setNewContactEmail] = useState("");
+  var [savingContact, setSavingContact]     = useState(false);
   var [attendees, setAttendees]         = useState(Array.isArray(draft.attendees) ? draft.attendees.slice() : []);
   var saveTimer = useRef(null);
   var attendeesTimer = useRef(null);
@@ -513,8 +521,105 @@ export function CadenceMeetingMode({
               <SidebarSection
                 title={"Contacts" + (attendees.length ? " · " + attendees.length + " attending" : "")}
                 count={(contacts || []).length}
+                action={onAddContact ? (
+                  <button
+                    type="button"
+                    onClick={function (e) { e.stopPropagation(); setAddContactOpen(function (v) { return !v; }); }}
+                    title="Add contact"
+                    aria-label="Add contact"
+                    style={{
+                      background: "none", border: "1px solid " + C.rule,
+                      borderRadius: 4, color: C.textMuted, cursor: "pointer",
+                      fontFamily: MONO, fontSize: 11, lineHeight: 1,
+                      padding: "1px 5px", flexShrink: 0,
+                    }}
+                  >+</button>
+                ) : null}
               >
-                {(contacts || []).length === 0 ? (
+                {addContactOpen && (
+                  <div style={{
+                    background: C.surface3, border: "1px solid " + C.rule,
+                    borderRadius: 6, padding: "8px 10px",
+                    marginBottom: 8,
+                    display: "flex", flexDirection: "column", gap: 6,
+                  }}>
+                    <input
+                      type="text"
+                      value={newContactName}
+                      onChange={function (e) { setNewContactName(e.target.value); }}
+                      placeholder="Name *"
+                      autoFocus
+                      style={{
+                        background: C.bg, border: "1px solid " + C.rule, borderRadius: 4,
+                        padding: "5px 8px", fontSize: 12, color: C.text,
+                        fontFamily: "'Inter', system-ui, sans-serif", outline: "none",
+                        width: "100%", boxSizing: "border-box",
+                      }}
+                    />
+                    <input
+                      type="text"
+                      value={newContactRole}
+                      onChange={function (e) { setNewContactRole(e.target.value); }}
+                      placeholder="Role / Title"
+                      style={{
+                        background: C.bg, border: "1px solid " + C.rule, borderRadius: 4,
+                        padding: "5px 8px", fontSize: 12, color: C.text,
+                        fontFamily: "'Inter', system-ui, sans-serif", outline: "none",
+                        width: "100%", boxSizing: "border-box",
+                      }}
+                    />
+                    <input
+                      type="email"
+                      value={newContactEmail}
+                      onChange={function (e) { setNewContactEmail(e.target.value); }}
+                      placeholder="Email"
+                      style={{
+                        background: C.bg, border: "1px solid " + C.rule, borderRadius: 4,
+                        padding: "5px 8px", fontSize: 12, color: C.text,
+                        fontFamily: "'Inter', system-ui, sans-serif", outline: "none",
+                        width: "100%", boxSizing: "border-box",
+                      }}
+                    />
+                    <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                      <button
+                        type="button"
+                        onClick={function () { setAddContactOpen(false); setNewContactName(""); setNewContactRole(""); setNewContactEmail(""); }}
+                        style={{
+                          background: "none", border: "1px solid " + C.rule, borderRadius: 4,
+                          padding: "4px 10px", fontSize: 11, color: C.textMuted,
+                          fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer",
+                        }}
+                      >Cancel</button>
+                      <button
+                        type="button"
+                        disabled={!newContactName.trim() || savingContact}
+                        onClick={function () {
+                          if (!newContactName.trim() || savingContact) return;
+                          setSavingContact(true);
+                          Promise.resolve(onAddContact({
+                            name:  newContactName.trim(),
+                            title: newContactRole.trim() || null,
+                            email: newContactEmail.trim() || null,
+                          })).then(function () {
+                            toggleAttendee(newContactName.trim());
+                            setAddContactOpen(false);
+                            setNewContactName(""); setNewContactRole(""); setNewContactEmail("");
+                          }).catch(function () {
+                          }).finally(function () { setSavingContact(false); });
+                        }}
+                        style={{
+                          background: !newContactName.trim() || savingContact ? C.accentFaint : C.accentDeep,
+                          border: "none", borderRadius: 4,
+                          padding: "4px 10px", fontSize: 11, fontWeight: 700,
+                          color: !newContactName.trim() || savingContact ? C.textMuted : C.bg,
+                          fontFamily: "'Inter', system-ui, sans-serif",
+                          cursor: !newContactName.trim() || savingContact ? "default" : "pointer",
+                        }}
+                      >{savingContact ? "Saving…" : "Add"}</button>
+                    </div>
+                  </div>
+                )}
+                {(contacts || []).length === 0 && !addContactOpen ? (
                   <div style={{ fontSize: 11, color: C.textMuted }}>No contacts.</div>
                 ) : (
                   (contacts || []).map(function (c) {
@@ -684,22 +789,125 @@ export function CadenceMeetingMode({
                     })}
                   </div>
                 ))}
-                {mobileTab === "contacts" && ((contacts || []).length === 0 ? (
-                  <div style={{ fontSize: 12, color: C.textMuted, padding: "4px 0" }}>No contacts.</div>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    {(contacts || []).map(function (c) {
-                      return (
-                        <ContactCard
-                          key={c.id}
-                          contact={c}
-                          selected={attendees.indexOf(c.name) >= 0}
-                          onToggle={toggleAttendee}
+                {mobileTab === "contacts" && (
+                  <>
+                    {onAddContact && (
+                      <div style={{ marginBottom: 8, display: "flex", justifyContent: "flex-end" }}>
+                        <button
+                          type="button"
+                          onClick={function (e) { e.stopPropagation(); setAddContactOpen(function (v) { return !v; }); }}
+                          title="Add contact"
+                          aria-label="Add contact"
+                          style={{
+                            background: "none", border: "1px solid " + C.rule,
+                            borderRadius: 4, color: C.textMuted, cursor: "pointer",
+                            fontFamily: MONO, fontSize: 11, lineHeight: 1,
+                            padding: "3px 8px", flexShrink: 0,
+                          }}
+                        >+ Add contact</button>
+                      </div>
+                    )}
+                    {addContactOpen && (
+                      <div style={{
+                        background: C.surface3, border: "1px solid " + C.rule,
+                        borderRadius: 6, padding: "8px 10px",
+                        marginBottom: 8,
+                        display: "flex", flexDirection: "column", gap: 6,
+                      }}>
+                        <input
+                          type="text"
+                          value={newContactName}
+                          onChange={function (e) { setNewContactName(e.target.value); }}
+                          placeholder="Name *"
+                          autoFocus
+                          style={{
+                            background: C.bg, border: "1px solid " + C.rule, borderRadius: 4,
+                            padding: "5px 8px", fontSize: 16, color: C.text,
+                            fontFamily: "'Inter', system-ui, sans-serif", outline: "none",
+                            width: "100%", boxSizing: "border-box",
+                          }}
                         />
-                      );
-                    })}
-                  </div>
-                ))}
+                        <input
+                          type="text"
+                          value={newContactRole}
+                          onChange={function (e) { setNewContactRole(e.target.value); }}
+                          placeholder="Role / Title"
+                          style={{
+                            background: C.bg, border: "1px solid " + C.rule, borderRadius: 4,
+                            padding: "5px 8px", fontSize: 16, color: C.text,
+                            fontFamily: "'Inter', system-ui, sans-serif", outline: "none",
+                            width: "100%", boxSizing: "border-box",
+                          }}
+                        />
+                        <input
+                          type="email"
+                          value={newContactEmail}
+                          onChange={function (e) { setNewContactEmail(e.target.value); }}
+                          placeholder="Email"
+                          style={{
+                            background: C.bg, border: "1px solid " + C.rule, borderRadius: 4,
+                            padding: "5px 8px", fontSize: 16, color: C.text,
+                            fontFamily: "'Inter', system-ui, sans-serif", outline: "none",
+                            width: "100%", boxSizing: "border-box",
+                          }}
+                        />
+                        <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                          <button
+                            type="button"
+                            onClick={function () { setAddContactOpen(false); setNewContactName(""); setNewContactRole(""); setNewContactEmail(""); }}
+                            style={{
+                              background: "none", border: "1px solid " + C.rule, borderRadius: 4,
+                              padding: "4px 10px", fontSize: 11, color: C.textMuted,
+                              fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer",
+                            }}
+                          >Cancel</button>
+                          <button
+                            type="button"
+                            disabled={!newContactName.trim() || savingContact}
+                            onClick={function () {
+                              if (!newContactName.trim() || savingContact) return;
+                              setSavingContact(true);
+                              Promise.resolve(onAddContact({
+                                name:  newContactName.trim(),
+                                title: newContactRole.trim() || null,
+                                email: newContactEmail.trim() || null,
+                              })).then(function () {
+                                toggleAttendee(newContactName.trim());
+                                setAddContactOpen(false);
+                                setNewContactName(""); setNewContactRole(""); setNewContactEmail("");
+                              }).catch(function () {
+                              }).finally(function () { setSavingContact(false); });
+                            }}
+                            style={{
+                              background: !newContactName.trim() || savingContact ? C.accentFaint : C.accentDeep,
+                              border: "none", borderRadius: 4,
+                              padding: "4px 10px", fontSize: 11, fontWeight: 700,
+                              color: !newContactName.trim() || savingContact ? C.textMuted : C.bg,
+                              fontFamily: "'Inter', system-ui, sans-serif",
+                              cursor: !newContactName.trim() || savingContact ? "default" : "pointer",
+                            }}
+                          >{savingContact ? "Saving…" : "Add"}</button>
+                        </div>
+                      </div>
+                    )}
+                    {(contacts || []).length === 0 && !addContactOpen ? (
+                      <div style={{ fontSize: 12, color: C.textMuted, padding: "4px 0" }}>No contacts.</div>
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        {(contacts || []).map(function (c) {
+                          return (
+                            <ContactCard
+                              key={c.id}
+                              contact={c}
+                              selected={attendees.indexOf(c.name) >= 0}
+                              onToggle={toggleAttendee}
+                            />
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </>
           )}

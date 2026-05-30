@@ -216,16 +216,17 @@ export function AccountsView({ accounts, allAccounts, loading, onSelect, onAddAc
   }, [loading, accounts, todayStr, in7DaysStr]);
 
   var accountIdsWithContactMatch = useMemo(function () {
-    var set = {};
+    var map = {};
     var q = deferredSearch.trim().toLowerCase();
-    if (!q || !contacts) return set;
+    if (!q || !contacts) return map;
     contacts.forEach(function (c) {
+      if (map[c.account_id]) return; // keep only first match per account
       var match = (c.name && c.name.toLowerCase().includes(q))
         || (c.email && c.email.toLowerCase().includes(q))
         || (c.title && c.title.toLowerCase().includes(q));
-      if (match) set[c.account_id] = true;
+      if (match) map[c.account_id] = { name: c.name || "", title: c.title || "" };
     });
-    return set;
+    return map;
   }, [deferredSearch, contacts]);
 
   // Pre-compute health for every account once (feeds both filter and card render).
@@ -894,6 +895,24 @@ export function AccountsView({ accounts, allAccounts, loading, onSelect, onAddAc
                       {health.reason.toUpperCase()}
                     </div>
                   )}
+
+                  {/* Contact search match indicator */}
+                  {(function () {
+                    var q = deferredSearch.trim().toLowerCase();
+                    var cm = accountIdsWithContactMatch[a.id];
+                    if (!cm || !q) return null;
+                    var nameMatch = a.name.toLowerCase().includes(q);
+                    if (nameMatch) return null;
+                    return (
+                      <div style={{
+                        fontFamily: MONO, fontSize: 9, color: C.accent,
+                        textTransform: "uppercase", letterSpacing: "0.08em",
+                        marginBottom: 2, lineHeight: 1,
+                      }}>
+                        Contact: {cm.name}{cm.title ? " · " + cm.title : ""}
+                      </div>
+                    );
+                  })()}
 
                   {/* Compact mode hides the meta row but tier is color-only on
                       the left stripe — show a small tier label so color-blind

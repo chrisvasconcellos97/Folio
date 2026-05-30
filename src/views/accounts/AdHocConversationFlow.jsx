@@ -40,7 +40,7 @@ export function AdHocConversationFlow({
 }) {
   var { meetings, addMeeting, updateMeeting } = useMeetings(userId, account.id, orgId);
   var { items, addItem, updateItem, closeItem } = useItems(userId, account.id, orgId);
-  var { contacts } = useContacts(userId, account.id, orgId);
+  var { contacts, addContact } = useContacts(userId, account.id, orgId);
   var childAccountIds = useMemo(function () {
     return (accounts || [])
       .filter(function (a) { return a.parent_account_id === account.id; })
@@ -193,6 +193,7 @@ export function AdHocConversationFlow({
           onSummarizeRequest={handleSummarize}
           summarizing={summarizing}
           summarizeErr={summarizeErr}
+          onAddContact={addContact || undefined}
         />
       )}
       {previewPlan && (
