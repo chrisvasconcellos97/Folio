@@ -151,6 +151,13 @@ When in doubt: it's better to over-update than to let docs go stale.
 A reader who finds stale docs loses trust in everything else in the
 suite.
 
+**PDF regeneration:** the docs suite generates styled PDFs into
+`docs/pdf/` via `npm run docs:pdf` (script: `scripts/build-docs-pdf.js`,
+stylesheet: `docs/pdf-style.css`, Pip-orb header in `docs/assets/pip-logo.svg`).
+After any meaningful markdown edit in `docs/`, regenerate the PDFs in
+the same commit so the committed PDFs never lag the markdown source.
+The script handles all 9 docs at once (skips `README.md`); takes ~5s.
+
 ## Patch — Background Build Agent
 
 **Patch** is the name for the background agent used to execute large batch builds. When a batch of queued items is ready to ship, spawn Patch via the Agent tool with `isolation: "worktree"` so it works in a clean copy of the repo without disrupting the main conversation.

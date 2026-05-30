@@ -31,6 +31,22 @@ actual questions rather than guesses.
 | use-cases/leader.md | Leader visibility & team-rollup story. |
 | use-cases/admin.md | Admin task-executor flow. |
 
+## PDF versions
+
+Every doc is also committed as a styled PDF in [`pdf/`](./pdf/) —
+Folios serif headers, Pip-orb branded header, page-numbered footer.
+These are what you send when someone wants a "real document" instead
+of raw markdown.
+
+To regenerate after a doc edit:
+
+```bash
+npm run docs:pdf
+```
+
+Script lives at `scripts/build-docs-pdf.js`; stylesheet at
+`docs/pdf-style.css`; Pip logo at `docs/assets/pip-logo.svg`.
+
 ## Conventions
 
 - **No marketing fluff.** Every line earns its place. Substance is the wow.

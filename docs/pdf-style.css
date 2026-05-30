@@ -1,0 +1,211 @@
+/* Folios PDF stylesheet — applied to every doc by scripts/build-docs-pdf.js
+   Styling is intentionally restrained: serif Fraunces for headings,
+   Inter for body, Folios teal as the only accent. Print-safe colors.
+   @font-face declarations are injected at build time by the script using
+   file:// paths to node_modules/@fontsource-variable. No CDN dependency
+   (per CLAUDE.md font rule). */
+
+:root {
+  --accent: #4db896;
+  --accent-deep: #2d8f70;
+  --ink:   #1a1f1d;
+  --body:  #2c3431;
+  --mute:  #6b7670;
+  --faint: #9aa39e;
+  --rule:  #e2e7e4;
+  --soft:  #f4f6f5;
+  --paper: #ffffff;
+}
+
+@page {
+  size: letter;
+  margin: 0.85in 0.9in 1.0in 0.9in;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--paper);
+  color: var(--body);
+  font-family: 'Inter', -apple-system, system-ui, sans-serif;
+  font-size: 11pt;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Cover header — first thing on every doc. The script injects a
+   .doc-header block above the markdown content. */
+.doc-header {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding-bottom: 18px;
+  margin-bottom: 28px;
+  border-bottom: 1px solid var(--rule);
+}
+.doc-header img {
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+}
+.doc-header .brand {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 26pt;
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  line-height: 1;
+}
+.doc-header .tag {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 8.5pt;
+  color: var(--mute);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-top: 6px;
+}
+
+/* Headings */
+h1, h2, h3, h4 {
+  font-family: 'Fraunces', Georgia, serif;
+  color: var(--ink);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  page-break-after: avoid;
+}
+h1 {
+  font-size: 22pt;
+  line-height: 1.15;
+  margin: 0 0 14pt 0;
+}
+h2 {
+  font-size: 16pt;
+  line-height: 1.2;
+  margin: 28pt 0 10pt 0;
+  border-top: 1px solid var(--rule);
+  padding-top: 18pt;
+}
+h2:first-of-type { border-top: none; padding-top: 0; }
+h3 {
+  font-size: 12.5pt;
+  font-weight: 500;
+  margin: 18pt 0 6pt 0;
+  color: var(--accent-deep);
+}
+h4 {
+  font-family: 'Inter', sans-serif;
+  font-size: 11pt;
+  font-weight: 700;
+  margin: 14pt 0 4pt 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--mute);
+}
+
+/* Body text */
+p { margin: 0 0 10pt 0; }
+
+/* Emphasis */
+strong { color: var(--ink); font-weight: 600; }
+em     { font-style: italic; color: var(--body); }
+
+/* Italic header subline (the *Last updated* convention) */
+p > em:only-child {
+  display: inline-block;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-style: normal;
+  font-size: 9pt;
+  color: var(--faint);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 14pt;
+}
+
+/* Lists */
+ul, ol {
+  margin: 0 0 12pt 0;
+  padding-left: 22pt;
+}
+li { margin-bottom: 4pt; }
+li > p { margin: 0; }
+li > ul, li > ol { margin-top: 4pt; }
+
+/* Links */
+a {
+  color: var(--accent-deep);
+  text-decoration: none;
+  border-bottom: 1px solid #b6e0d0;
+}
+
+/* Code */
+code {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 9.5pt;
+  background: var(--soft);
+  padding: 1.5pt 4pt;
+  border-radius: 3pt;
+  color: var(--ink);
+}
+pre {
+  background: var(--soft);
+  border: 1px solid var(--rule);
+  border-radius: 5pt;
+  padding: 10pt 12pt;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 9pt;
+  line-height: 1.5;
+  overflow-x: auto;
+  page-break-inside: avoid;
+  margin: 0 0 12pt 0;
+}
+pre > code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+}
+
+/* Blockquotes */
+blockquote {
+  margin: 0 0 12pt 0;
+  padding: 6pt 0 6pt 14pt;
+  border-left: 3px solid var(--accent);
+  color: var(--mute);
+  font-style: italic;
+}
+
+/* Tables — common in security / data-handling docs */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 14pt 0;
+  font-size: 10pt;
+  page-break-inside: avoid;
+}
+th {
+  background: var(--soft);
+  border-bottom: 1.5px solid var(--accent-deep);
+  text-align: left;
+  padding: 7pt 9pt;
+  font-weight: 600;
+  color: var(--ink);
+  font-family: 'Inter', sans-serif;
+}
+td {
+  padding: 6pt 9pt;
+  border-bottom: 1px solid var(--rule);
+  color: var(--body);
+  vertical-align: top;
+}
+tr:last-child td { border-bottom: none; }
+
+/* Horizontal rule */
+hr {
+  border: none;
+  border-top: 1px solid var(--rule);
+  margin: 18pt 0;
+}
+
+/* Page break utility (used between major sections if needed) */
+.page-break { page-break-before: always; }
