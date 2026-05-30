@@ -29,7 +29,7 @@ var SUBFILTERS = [
   { id: "all",      label: "All"      },
 ];
 
-export function MyQueueView({ projects, accounts, members, userEmail, onUpdate, onOpenProject }) {
+export function MyQueueView({ projects, accounts, members, userEmail, onUpdate, onOpenProject, logCorrection }) {
   var [subFilter, setSubFilter] = useState("live");
   var [groupByProject, setGroupBy] = useState(false);
   var [panelOpen, setPanelOpen] = useState(false);
@@ -312,6 +312,7 @@ export function MyQueueView({ projects, accounts, members, userEmail, onUpdate, 
           accounts={accounts}
           members={members}
           userEmail={userEmail}
+          logCorrection={logCorrection}
           onSave={commitTask}
           onDelete={deleteTask}
           onClose={function () { setPanelOpen(false); setPanelTask(null); setPanelIndex(null); setPanelProject(null); }}

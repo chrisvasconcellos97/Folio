@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { C } from "../../lib/colors";
+import { usePipCorrections } from "../../hooks/usePipCorrections";
 import { GaugeIcon } from "../../components/GaugeIcon";
 import { useProjects } from "../../hooks/useProjects";
 import { ErrorBanner } from "../../components/ErrorBanner";
@@ -154,6 +155,8 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId, lens })
   var { projects, loading, error: projectsError, refetch: refetchProjects, addProject, updateProject, deleteProject, templates, addTemplate, updateTemplate, deleteTemplate } = useProjects(userId, null, orgId);
   // Phase 3 — flat task queue. Defaults to Tasks tab for Admin lens, Projects for everyone else.
   var { tasks: flatTasks } = useTasks(userId);
+  // Phase 6 — V2 brain correction log for task edits that go through Gauge.
+  var { logCorrection } = usePipCorrections(userId, null);
   var [primaryView, setPrimaryView] = useState(
     lens === "leader" ? "leader" :
     lens === "admin"  ? "tasks"  :
@@ -215,6 +218,28 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId, lens })
     (accounts || []).forEach(function (a) { map[a.id] = a; });
     return map;
   }, [accounts]);
+
+  // Phase 6 — "Projects I own" rollup for AM lens.
+  // Filters to projects on accounts where the current user is the owner.
+  var ownedAccountIds = useMemo(function () {
+    var ids = new Set();
+    (accounts || []).forEach(function (a) {
+      if (a.owner_user_id && a.owner_user_id === userId) ids.add(a.id);
+    });
+    return ids;
+  }, [accounts, userId]);
+
+  var ownedAccountProjects = useMemo(function () {
+    if (lens !== "am" || ownedAccountIds.size === 0) return [];
+    return (projects || []).filter(function (p) {
+      if (p.status === "complete" || p.status === "draft") return false;
+      if (p.account_id && ownedAccountIds.has(p.account_id)) return true;
+      if (Array.isArray(p.account_ids)) {
+        return p.account_ids.some(function (id) { return ownedAccountIds.has(id); });
+      }
+      return false;
+    });
+  }, [projects, ownedAccountIds, lens]);
   var gaugeHandlers = {
     onClickOverdue: function () { setStatusFilter("all"); setScopeFilter("all"); setOverdueOnly(true); },
     onClickBlocked: function () { setOverdueOnly(false); setStatusFilter("blocked"); },
@@ -544,6 +569,95 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId, lens })
         </div>
       )}
 
+      {/* Phase 6 — AM "Projects I own" rollup. Shepherd view: compact progress
+          bars for all active projects on accounts this user owns. Clicking
+          scrolls to + expands the project row in the list below. */}
+      {lens === "am" && ownedAccountProjects.length > 0 && scopeFilter !== "my_queue" && (
+        <div style={{ marginBottom: 20 }}>
+          <div style={{
+            fontFamily: MONO, fontSize: 9.5, color: C.textMuted,
+            textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8,
+          }}>
+            My Accounts · Projects
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {ownedAccountProjects.map(function (p) {
+              var steps = countSteps(p.stages);
+              var pct   = steps.total > 0 ? Math.round((steps.done / steps.total) * 100) : 0;
+              var acct  = p.account_id ? accountsById[p.account_id] : null;
+              var statusKey = p.status.split("_").map(function(w) { return w.charAt(0).toUpperCase() + w.slice(1); }).join("");
+              var statusStyle = C["status" + statusKey] || C.statusPlanned;
+              var overdue = p.status === "in_progress" && isOverdue(p.due_date);
+              return (
+                <div
+                  key={p.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={function () {
+                    setScopeFilter("all"); setStatusFilter("all"); setOverdueOnly(false);
+                    setExpandedRows(function (prev) { return Object.assign({}, prev, { [p.id]: true }); });
+                    setTimeout(function () {
+                      var el = document.querySelector('[data-project-id="' + p.id + '"]');
+                      if (el && el.scrollIntoView) el.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }, 80);
+                  }}
+                  onKeyDown={function (e) {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setScopeFilter("all"); setStatusFilter("all"); setOverdueOnly(false);
+                      setExpandedRows(function (prev) { return Object.assign({}, prev, { [p.id]: true }); });
+                      setTimeout(function () {
+                        var el = document.querySelector('[data-project-id="' + p.id + '"]');
+                        if (el && el.scrollIntoView) el.scrollIntoView({ behavior: "smooth", block: "center" });
+                      }, 80);
+                    }
+                  }}
+                  style={{
+                    background: C.surface,
+                    border: "1px solid " + C.rule,
+                    borderRadius: 6,
+                    padding: "8px 12px",
+                    cursor: "pointer",
+                    display: "grid",
+                    gridTemplateColumns: "1fr auto auto 90px",
+                    gap: 10,
+                    alignItems: "center",
+                  }}
+                >
+                  <div style={{ fontFamily: SERIF, fontSize: 14, color: overdue ? C.red : C.text, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {p.title}
+                  </div>
+                  {acct && (
+                    <div style={{ fontFamily: MONO, fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>
+                      {acct.name}
+                    </div>
+                  )}
+                  <div style={{
+                    background: statusStyle ? statusStyle.bg : "transparent",
+                    border: "1px solid " + (statusStyle ? statusStyle.border : C.rule),
+                    borderRadius: 999,
+                    padding: "1px 7px",
+                    fontFamily: MONO, fontSize: 9,
+                    color: statusStyle ? statusStyle.text : C.textMuted,
+                    whiteSpace: "nowrap",
+                  }}>
+                    {STATUS_LABELS[p.status] || p.status}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                    <div style={{ flex: 1, height: 3, background: C.surface3, borderRadius: 2, overflow: "hidden" }}>
+                      <div style={{ height: "100%", width: pct + "%", background: overdue ? C.red : C.accent, borderRadius: 2 }} />
+                    </div>
+                    <div style={{ fontFamily: MONO, fontSize: 9, color: C.textMuted, whiteSpace: "nowrap", fontFeatureSettings: '"tnum"' }}>
+                      {steps.done}/{steps.total}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* My Queue — task-level rollup, replaces the project list while active */}
       {!loading && scopeFilter === "my_queue" && (
         <MyQueueView
@@ -552,6 +666,7 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId, lens })
           members={members}
           userEmail={userEmail}
           onUpdate={updateProject}
+          logCorrection={logCorrection}
           onOpenProject={function (id) {
             setScopeFilter("all");
             setStatusFilter("all");
@@ -908,6 +1023,7 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId, lens })
                     members={members}
                     userEmail={userEmail}
                     onUpdate={updateProject}
+                    logCorrection={logCorrection}
                   />
                 ) : (
                   <ProjectStageEditor
@@ -916,6 +1032,7 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId, lens })
                     accounts={accounts}
                     members={members}
                     userEmail={userEmail}
+                    logCorrection={logCorrection}
                   />
                 )}
               </div>

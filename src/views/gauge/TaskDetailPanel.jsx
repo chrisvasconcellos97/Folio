@@ -79,24 +79,37 @@ export function TaskDetailPanel({
       is_external:    task && task.is_external ? task.is_external : false,
       blocked_reason: task && task.blocked_reason !== undefined ? task.blocked_reason : null,
     });
+    var originalAccountId = task ? (task.account_id || "") : "";
     Promise.resolve(onSave(taskShape, taskIndex))
       .then(function () {
         setSaving(false);
-        if (
-          logCorrection &&
-          task &&
-          task.pip_created_at &&
-          (Date.now() - new Date(task.pip_created_at).getTime()) < SEVEN_DAYS_MS &&
-          newTitle !== (task.title || "").trim()
-        ) {
-          logCorrection({
-            correction_type: 'task_text_edit',
-            account_id:      accountId || task.account_id || null,
-            meeting_id:      null,
-            original_value:  { kind: 'task', original: task.title, pip_created_at: task.pip_created_at },
-            corrected_value: { text: newTitle },
-            reason:          null,
-          });
+        if (logCorrection && task) {
+          // Correction: task text edited within 7 days of Pip creation.
+          if (
+            task.pip_created_at &&
+            (Date.now() - new Date(task.pip_created_at).getTime()) < SEVEN_DAYS_MS &&
+            newTitle !== (task.title || "").trim()
+          ) {
+            logCorrection({
+              correction_type: 'task_text_edit',
+              account_id:      accountId || task.account_id || null,
+              meeting_id:      null,
+              original_value:  { kind: 'task', original: task.title, pip_created_at: task.pip_created_at },
+              corrected_value: { text: newTitle },
+              reason:          null,
+            });
+          }
+          // Correction: account re-routed after the fact.
+          if (accountId !== originalAccountId) {
+            logCorrection({
+              correction_type: 'routed_account_changed',
+              account_id:      accountId || null,
+              meeting_id:      null,
+              original_value:  { kind: 'task', original_account_id: originalAccountId || null, title: task.title },
+              corrected_value: { account_id: accountId || null },
+              reason:          null,
+            });
+          }
         }
         onClose();
       })

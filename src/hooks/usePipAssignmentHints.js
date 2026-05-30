@@ -51,8 +51,49 @@ export function usePipAssignmentHints(userId, accountId) {
       .select()
       .then(function (result) {
         if (result.error) throw result.error;
+        var inserted = result.data[0];
+        // Auto-promote to org-wide hint (account_id=null) once 3+ account-
+        // specific hints share the same pattern + assignee. This lets Pip
+        // route the same kind of work to the right person across any account
+        // without needing a per-account hint.
+        if (targetAccountId) {
+          supabase
+            .from("pip_assignment_hints")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", userId)
+            .eq("task_pattern", normalized)
+            .eq("assignee_email", assigneeEmail)
+            .not("account_id", "is", null)
+            .then(function (countResult) {
+              if (countResult.error || (countResult.count || 0) < 3) return;
+              // Only insert if no org-wide hint exists yet.
+              supabase
+                .from("pip_assignment_hints")
+                .select("id")
+                .eq("user_id", userId)
+                .eq("task_pattern", normalized)
+                .eq("assignee_email", assigneeEmail)
+                .is("account_id", null)
+                .maybeSingle()
+                .then(function (existResult) {
+                  if (existResult.data) return; // already exists
+                  supabase
+                    .from("pip_assignment_hints")
+                    .insert([{
+                      user_id:        userId,
+                      account_id:     null,
+                      task_pattern:   normalized,
+                      assignee_email: assigneeEmail,
+                    }])
+                    .then(function () { fetch(); })
+                    .catch(function () {});
+                })
+                .catch(function () {});
+            })
+            .catch(function () {});
+        }
         fetch();
-        return result.data[0];
+        return inserted;
       });
   }
 

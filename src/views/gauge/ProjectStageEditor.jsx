@@ -60,7 +60,7 @@ function SubStageIcon({ sub, onClick }) {
   );
 }
 
-export function ProjectStageEditor({ project, onUpdate, accounts, members, userEmail }) {
+export function ProjectStageEditor({ project, onUpdate, accounts, members, userEmail, logCorrection }) {
   var [expanded, setExpanded] = useState({});
   var [newStageTitle, setNewStageTitle] = useState("");
   var [addingSub, setAddingSub] = useState({}); // { stageIdx: "title text" }
@@ -340,6 +340,7 @@ export function ProjectStageEditor({ project, onUpdate, accounts, members, userE
           accounts={accounts}
           members={members}
           userEmail={userEmail}
+          logCorrection={logCorrection}
           onSave={function (taskShape) {
             var next = stages.concat([taskShape]);
             return commitStages(next).then(function () { setShowNewDetail(false); });
@@ -356,6 +357,7 @@ export function ProjectStageEditor({ project, onUpdate, accounts, members, userE
           accounts={accounts}
           members={members}
           userEmail={userEmail}
+          logCorrection={logCorrection}
           onSave={function (taskShape) {
             var next = stages.map(function (s, i) { return i === detailIdx ? taskShape : s; });
             return commitStages(next).then(function () { setDetailIdx(null); });
