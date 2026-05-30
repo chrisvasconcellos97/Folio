@@ -9,6 +9,7 @@ import App from "./App";
 import { showToast } from "./components/Toast";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { installGlobalErrorHandlers } from "./lib/errorLog";
+import { PipStateProvider } from "./lib/pipState";
 
 // Wire window.onerror + unhandledrejection handlers immediately so we catch
 // anything that explodes during initial render. Idempotent.
@@ -103,7 +104,9 @@ var updateSW = registerSW({
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <ErrorBoundary label="app">
-      <App />
+      <PipStateProvider>
+        <App />
+      </PipStateProvider>
     </ErrorBoundary>
   </StrictMode>
 );

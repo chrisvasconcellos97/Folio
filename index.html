@@ -423,6 +423,53 @@
       .pip.xxl { width: 132px; height: 132px; box-shadow: 0 0 48px var(--accent-shadow); }
       .pip.static > svg { animation: none; }
 
+      /* Pip state variants — drive color + cadence based on what Pip is doing.
+         Set via PipStateProvider; cascades into every <PipOrb> on the page.
+         Priority: speaking > thinking > alert > idle (default). */
+      .pip.thinking {
+        --accent: var(--c-yellow);
+        --accent-border: var(--c-yellow);
+        --accent-shadow: var(--c-yellow-faint);
+        --accent-glow:   var(--c-yellow-faint);
+      }
+      .pip.thinking > svg { animation: pip-breathe-fast 0.9s ease-in-out infinite; }
+      @keyframes pip-breathe-fast {
+        0%,100% { transform: scale(1);    opacity: 1; }
+        50%     { transform: scale(1.18); opacity: 0.65; }
+      }
+
+      .pip.speaking > svg { animation: none; }
+      .pip.speaking .head,
+      .pip.speaking .tail {
+        transform-box: fill-box;
+        transform-origin: center;
+      }
+      .pip.speaking .head { animation: pip-talk 0.42s ease-in-out infinite; }
+      .pip.speaking .tail { animation: pip-talk 0.42s ease-in-out infinite 0.21s; }
+      @keyframes pip-talk {
+        0%,100% { transform: scale(1);    }
+        50%     { transform: scale(1.35); }
+      }
+
+      .pip.alert {
+        --accent: var(--c-red);
+        --accent-border: var(--c-red);
+        --accent-shadow: var(--c-red-faint);
+        --accent-glow:   var(--c-red-faint);
+      }
+      .pip.alert > svg { animation: pip-breathe-slow 4s ease-in-out infinite; }
+      @keyframes pip-breathe-slow {
+        0%,100% { transform: scale(1);    opacity: 0.92; }
+        50%     { transform: scale(1.04); opacity: 1;    }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .pip.thinking > svg,
+        .pip.speaking .head,
+        .pip.speaking .tail,
+        .pip.alert > svg { animation: none; }
+      }
+
       /* Folio folder mark */
       .folio-mark { display: inline-block; position: relative; line-height: 0; }
       .folio-mark svg { display: block; }

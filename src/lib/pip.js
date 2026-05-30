@@ -3,6 +3,7 @@ import { streamPip } from "./pipStream";
 import { classifyIntent } from "./pipIntent";
 import { logError } from "./errorLog";
 import { timed } from "./net";
+import { pipBusyStart, pipBusyEnd } from "./pipBusy";
 
 var PROXY_URL    = import.meta.env.VITE_PIP_PROXY_URL || "/api/pip";
 var ASK_PIP_URL  = "/api/ask-pip";
@@ -222,6 +223,7 @@ export function callPipApi(messages, context, opts) {
   if (opts.userContentBlocks && opts.userContentBlocks.length) {
     body.userContentBlocks = opts.userContentBlocks;
   }
+  pipBusyStart();
   return timed("pip." + (opts.mode || "chat"), function () {
     return authHeaders().then(function (headers) {
       if (body.stream) {
@@ -247,7 +249,7 @@ export function callPipApi(messages, context, opts) {
         return { content: j.content || "", toolCalls: j.tool_calls || [], meta: j.meta || null };
       });
     });
-  });
+  }).then(function (out) { pipBusyEnd(); return out; }, function (err) { pipBusyEnd(); throw err; });
 }
 
 // --- Brief Me & Ask-Pip-on-meeting --------------------------------------

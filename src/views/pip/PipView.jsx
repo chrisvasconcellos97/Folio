@@ -16,6 +16,7 @@ import { routeToolCall, planToolCalls, describeToolCall, classifyTool, CONFIRM_T
 // (CONFIRM_THRESHOLD re-export below; routeToolCall still used by executeTools.)
 import { usePipFacts } from "../../hooks/usePipFacts";
 import { usePipAccountState, findStaleAccountIds } from "../../hooks/usePipAccountState";
+import { usePipState } from "../../lib/pipState";
 
 var STARTERS = [
   "Which accounts need my attention this week?",
@@ -88,6 +89,11 @@ export function PipView(props) {
   var [input, setInput]           = useState("");
   var [loading, setLoading]       = useState(false);
   var [listening, setListening]   = useState(false);
+  var pipMood                     = usePipState();
+  useEffect(function () {
+    pipMood.setSpeaking(loading);
+    return function () { pipMood.setSpeaking(false); };
+  }, [loading, pipMood]);
   var [audioEnabled, setAudio]    = useState(false);
   var bottomRef                   = useRef(null);
   var taskMsgSet                  = useRef(false);

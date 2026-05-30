@@ -1,11 +1,18 @@
 // Canonical Pip orb — uses CSS classes from index.html for sizing and sonar.
 // size: "xs"|"sm"|"md"|"lg"|"xl"|"xxl" (default "lg")
 // sonar: bool — adds expanding rings
-// isStatic: bool — disables animation
+// isStatic: bool — disables animation (kept literal — no state class applied)
+// state: optional override; otherwise reads from PipStateProvider context
+//        ("idle" | "thinking" | "speaking" | "alert")
 // extra className and style props passed through
 
-export function PipOrb({ size = "lg", sonar = false, isStatic = false, className = "", style, onClick }) {
-  var cls = ["pip", size, sonar ? "sonar" : "", isStatic ? "static" : "", className].filter(Boolean).join(" ");
+import { usePipState } from "../lib/pipState";
+
+export function PipOrb({ size = "lg", sonar = false, isStatic = false, state, className = "", style, onClick }) {
+  var ctx = usePipState();
+  var liveState = isStatic ? "idle" : (state || ctx.state || "idle");
+  var stateCls = liveState && liveState !== "idle" ? liveState : "";
+  var cls = ["pip", size, sonar ? "sonar" : "", isStatic ? "static" : "", stateCls, className].filter(Boolean).join(" ");
   return (
     <div className={cls} style={style} onClick={onClick} role={onClick ? "button" : undefined}>
       <svg viewBox="-10 -10 20 20" aria-hidden="true">

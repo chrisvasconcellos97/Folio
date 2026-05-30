@@ -41,6 +41,7 @@ import { MeetingReminderBanner } from "./components/MeetingReminderBanner";
 import { Toast, showToast } from "./components/Toast";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useErrors } from "./hooks/useErrors";
+import { usePipState } from "./lib/pipState";
 import { compressCorrectionsPip } from "./lib/pip";
 import { C } from "./lib/colors";
 
@@ -298,6 +299,10 @@ export default function App() {
   // the last 7 days. Hook fails soft if the phase6 SQL hasn't been run yet
   // (returns unresolvedRecent=0, so the nav stays hidden).
   var { unresolvedRecent: diagnosticsCount } = useErrors(userId, { limit: 50 });
+
+  // Ambient Pip mood — turn the orb red when there's an unresolved error.
+  var pipStateCtx = usePipState();
+  useEffect(function () { pipStateCtx.setAlert(diagnosticsCount > 0); }, [diagnosticsCount, pipStateCtx]);
 
   // Top-level write helpers used by Pip's native tool calls.
   // These mirror the hook-level addItem/setFollowUp paths so RLS still applies
