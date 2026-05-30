@@ -1,6 +1,6 @@
 import React from "react";
 import { C } from "../lib/colors";
-import { logError, appendErrorNote } from "../lib/errorLog";
+import { logError, appendErrorNote, looksLikeChunkReload } from "../lib/errorLog";
 import { PipOrb } from "./PipMark";
 
 var SERIF = "'Fraunces', Georgia, serif";
@@ -62,12 +62,24 @@ export class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, info) {
     var stack = (error && error.stack) || (info && info.componentStack) || null;
+    var msg = error && error.message ? error.message : "react render error";
     var context = {
       componentStack: info && info.componentStack ? String(info.componentStack).slice(0, 4000) : null,
       boundary: this.props.label || "app",
     };
+
+    // Stale-chunk Lazy/Suspense failure — known, self-healing. Log it as
+    // auto-recovered and signal main.jsx to reload immediately instead of
+    // making the user stare at the fallback waiting for the 3-min poll.
+    if (looksLikeChunkReload(msg, stack)) {
+      context.auto_recovered = true;
+      logError("chunk_reload", msg, { stack: stack, resolved: true, context: context });
+      try { window.dispatchEvent(new CustomEvent("folio:chunk-reload-detected")); } catch (e) { /* swallow */ }
+      return;
+    }
+
     var self = this;
-    logError("react", error && error.message ? error.message : "react render error", { stack: stack, context: context })
+    logError("react", msg, { stack: stack, context: context })
       .then(function (row) {
         if (row && row.id) self.setState({ errorId: row.id });
       })

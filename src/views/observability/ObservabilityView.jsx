@@ -10,17 +10,19 @@ var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var SANS  = "'Inter', system-ui, sans-serif";
 
 var TYPE_LABELS = {
-  react:      "React",
-  network:    "Network",
-  pip:        "Pip",
-  unhandled:  "Unhandled",
-  rejection:  "Rejection",
+  react:        "React",
+  network:      "Network",
+  pip:          "Pip",
+  unhandled:    "Unhandled",
+  rejection:    "Rejection",
+  chunk_reload: "Auto-recovered",
 };
 
 var TYPE_COLOR = function (type) {
-  if (type === "react")    return { fg: C.red,    bg: C.redFaint    };
-  if (type === "network")  return { fg: C.yellow, bg: C.yellowFaint };
-  if (type === "pip")      return { fg: C.blue,   bg: C.blueFaint   };
+  if (type === "react")        return { fg: C.red,     bg: C.redFaint    };
+  if (type === "network")      return { fg: C.yellow,  bg: C.yellowFaint };
+  if (type === "pip")          return { fg: C.blue,    bg: C.blueFaint   };
+  if (type === "chunk_reload") return { fg: C.textSub, bg: "transparent" };
   return { fg: C.textSub, bg: "transparent" };
 };
 

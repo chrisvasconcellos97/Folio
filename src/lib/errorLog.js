@@ -104,6 +104,7 @@ export function logError(type, message, opts) {
       user_agent: userAgent || null,
       context:    safeStringify(opts.context),
     };
+    if (opts.resolved) row.resolved = true;
 
     return getSupabase().then(function (supabase) {
       return supabase.auth.getSession()
@@ -131,6 +132,28 @@ export function logError(type, message, opts) {
  * Wires window.onerror and unhandledrejection handlers. Idempotent — safe to
  * call once at app startup.
  */
+// Stale-chunk detection. After a deploy, the SW (or HTTP cache) can hand the
+// browser an index.html whose hashed JS chunks no longer exist on the CDN —
+// Vercel returns the SPA fallback HTML for those 404s, and the browser tries
+// to import HTML as JS. Symptoms across browsers:
+//   - "'text/html' is not a valid JavaScript MIME type" (Firefox/Safari)
+//   - "Failed to fetch dynamically imported module" (Chrome)
+//   - "Importing a module script failed" / "ChunkLoadError"
+// All self-heal with a reload onto the fresh shell.
+export function looksLikeChunkReload(message, stack) {
+  var blob = String((message || "") + " " + (stack || ""));
+  if (/not a valid JavaScript MIME type/i.test(blob)) return true;
+  if (/Failed to fetch dynamically imported module/i.test(blob)) return true;
+  if (/Importing a module script failed/i.test(blob)) return true;
+  if (/ChunkLoadError/.test(blob)) return true;
+  if (/Loading chunk \d+ failed/i.test(blob)) return true;
+  return false;
+}
+
+function dispatchChunkReload() {
+  try { window.dispatchEvent(new CustomEvent("folio:chunk-reload-detected")); } catch (e) { /* swallow */ }
+}
+
 export function installGlobalErrorHandlers() {
   if (typeof window === "undefined") return;
   if (window.__folioErrorHandlersInstalled) return;
@@ -139,6 +162,11 @@ export function installGlobalErrorHandlers() {
   window.addEventListener("error", function (e) {
     var msg = e && e.message ? e.message : "Unhandled error";
     var stack = e && e.error && e.error.stack ? e.error.stack : null;
+    if (looksLikeChunkReload(msg, stack)) {
+      logError("chunk_reload", msg, { stack: stack, resolved: true, context: { auto_recovered: true, filename: e && e.filename } });
+      dispatchChunkReload();
+      return;
+    }
     logError("unhandled", msg, { stack: stack, context: { filename: e && e.filename, line: e && e.lineno } });
   });
 
@@ -150,6 +178,11 @@ export function installGlobalErrorHandlers() {
       if (typeof reason === "string") msg = reason;
       else if (reason.message) msg = reason.message;
       stack = reason.stack || null;
+    }
+    if (looksLikeChunkReload(msg, stack)) {
+      logError("chunk_reload", msg, { stack: stack, resolved: true, context: { auto_recovered: true, source: "rejection" } });
+      dispatchChunkReload();
+      return;
     }
     logError("rejection", msg, { stack: stack });
   });

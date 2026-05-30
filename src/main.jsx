@@ -78,6 +78,14 @@ document.addEventListener("visibilitychange", function () {
   if (document.visibilityState === "visible") checkVersion();
 });
 
+// === Update path 3: stale-chunk reactive trigger ===
+// errorLog.js and ErrorBoundary.jsx detect the chunk-load failure pattern
+// (text/html MIME, ChunkLoadError, "Failed to fetch dynamically imported
+// module") and fire this event. We reload immediately rather than waiting
+// for the next 3-min poll, with the existing cooldown guarding against
+// reload loops during a mid-deploy flip-flop.
+window.addEventListener("folio:chunk-reload-detected", function () { triggerReload(); });
+
 // === Standard PWA registration (idempotent — SW handles offline + caching) ===
 var updateSW = registerSW({
   immediate: true,
