@@ -82,6 +82,41 @@ export function ObservabilityView({ userId }) {
     });
   }
 
+  function buildErrorReport(e) {
+    var lines = [];
+    lines.push("=== " + (TYPE_LABELS[e.error_type] || e.error_type) + " error ===");
+    lines.push("Time: " + new Date(e.created_at).toLocaleString());
+    if (e.source_url) lines.push("URL: " + e.source_url);
+    lines.push("");
+    lines.push("Message:");
+    lines.push(e.message || "(none)");
+    if (e.stack) {
+      lines.push("");
+      lines.push("Stack:");
+      lines.push(e.stack);
+    }
+    if (e.context && Object.keys(e.context).length > 0) {
+      lines.push("");
+      lines.push("Context:");
+      lines.push(JSON.stringify(e.context, null, 2));
+    }
+    return lines.join("\n");
+  }
+
+  function handleCopy(e, ev) {
+    if (ev) ev.stopPropagation();
+    var text = buildErrorReport(e);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        showToast("Copied — paste to Claude");
+      }).catch(function () {
+        showToast("Couldn't copy", "error");
+      });
+    } else {
+      showToast("Clipboard not available", "error");
+    }
+  }
+
   return (
     <div style={{ maxWidth: 760, margin: "0 auto", padding: "8px 0 40px" }}>
       <div style={{ marginBottom: 24, display: "flex", alignItems: "center", gap: 14 }}>
@@ -246,6 +281,19 @@ export function ObservabilityView({ userId }) {
                   lineHeight: 1.55,
                   color: C.textSub,
                 }}>
+                  <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+                    <button
+                      onClick={function (ev) { handleCopy(e, ev); }}
+                      style={{
+                        background: C.accentFaint, border: "1px solid " + C.accentBorder,
+                        color: C.accent, borderRadius: 6, padding: "5px 12px",
+                        fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: SANS,
+                        letterSpacing: "0.04em",
+                      }}
+                    >
+                      Copy all
+                    </button>
+                  </div>
                   <div style={{ marginBottom: 8 }}>
                     <span style={{ color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", fontSize: 10 }}>Message</span>
                     <div style={{ color: C.text, marginTop: 2, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{e.message}</div>
