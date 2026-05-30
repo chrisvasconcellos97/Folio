@@ -113,6 +113,44 @@ if (authLoading) {
 
 If you ever need a hook that legitimately depends on post-auth data (e.g. it reads `userId`), pass `userId` as a dep and let the hook no-op when null. Never gate the hook itself behind an `if`.
 
+## Documentation Discipline Rule (presentation docs stay in sync)
+
+Folios ships with a presentation-ready documentation suite at `docs/`
+(see `docs/README.md` for the index). These are the files Chris pulls
+up when someone asks "got documentation?" — they're not internal notes,
+they're the leave-behinds that go to VPs / IT / compliance reviewers.
+
+**The rule:** every code change that affects a documented capability
+triggers a `docs/*.md` update in the **same commit**. No drift.
+
+Practical guide:
+1. **Before shipping a feature**, scan `docs/` for any file that
+   references the surface you're changing. Grep for the feature name,
+   the table name, the user-facing label.
+2. **If a doc mentions the thing you're changing**, update that doc in
+   the same commit. Use the Edit tool — surgical changes only, don't
+   rewrite whole files.
+3. **If a doc claims a security/data property you're about to change**
+   (e.g. "RLS-scoped per user"), update it BEFORE shipping the change.
+   Never let docs lie about security posture even briefly.
+4. **If a brand-new capability lands** with no existing doc home, add
+   it to the right file (usually `product-overview.md` for features
+   or `security.md` / `data-handling.md` for security-relevant ones).
+5. **Update the `Last updated:` date** in the file's header on every
+   edit. Readers use that to gauge freshness.
+
+What NOT to do:
+- Don't update docs for every micro-tweak. Bug fixes, styling polish,
+  refactors that don't change capability — skip the doc update.
+- Don't write marketing fluff. These docs are credibility artifacts;
+  every claim must be true and verifiable.
+- Don't duplicate facts across files. Each capability lives in ONE
+  canonical place; other files reference it.
+
+When in doubt: it's better to over-update than to let docs go stale.
+A reader who finds stale docs loses trust in everything else in the
+suite.
+
 ## Patch — Background Build Agent
 
 **Patch** is the name for the background agent used to execute large batch builds. When a batch of queued items is ready to ship, spawn Patch via the Agent tool with `isolation: "worktree"` so it works in a clean copy of the repo without disrupting the main conversation.
