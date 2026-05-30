@@ -193,6 +193,7 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
   var blockedCount    = projects.filter(function (p) { return p.status === "blocked"; }).length;
   var onHoldCount     = projects.filter(function (p) { return p.status === "on_hold"; }).length;
   var overdueCount    = projects.filter(function (p) { return p.status === "in_progress" && isOverdue(p.due_date); }).length;
+  var completedCount  = projects.filter(function (p) { return p.status === "complete"; }).length;
 
   var accountsById = useMemo(function () {
     var map = {};
@@ -304,7 +305,7 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(5, 1fr)",
+          gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(6, 1fr)",
           gap: 1,
           marginBottom: 20,
           background: C.rule,
@@ -319,6 +320,7 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
           { label: "Blocked",     value: blockedCount,    color: C.red,      isZero: blockedCount === 0,    statusId: "blocked"     },
           { label: "On Hold",     value: onHoldCount,     color: C.yellow,   isZero: onHoldCount === 0,     statusId: "on_hold"     },
           { label: "Past Due",    value: overdueCount,    color: C.red,      isZero: overdueCount === 0,    statusId: "overdue"     },
+          { label: "Complete",    value: completedCount,  color: C.statusComplete.text, isZero: completedCount === 0, statusId: "complete" },
         ].map(function (s) {
           var active = s.statusId === "overdue"
             ? overdueOnly
