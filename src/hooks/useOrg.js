@@ -5,6 +5,7 @@ import { fetchWithTimeout } from "../lib/net";
 export function useOrg(userId, userEmail) {
   var [org, setOrg]                   = useState(null);
   var [role, setRole]                 = useState(null);
+  var [lens, setLens]                 = useState("am"); // Gauge V3 — AM | leader | admin
   var [members, setMembers]           = useState([]);
   var [pendingInvites, setPending]    = useState([]);
   var [myInvite, setMyInvite]         = useState(null); // invite waiting for this user to accept
@@ -33,6 +34,7 @@ export function useOrg(userId, userEmail) {
           var membership = result.data;
           setOrg(membership.folio_orgs);
           setRole(membership.role);
+          setLens(membership.default_lens || "am");
 
           // Load all members + pending invites in this org
           supabase
@@ -86,7 +88,7 @@ export function useOrg(userId, userEmail) {
         var newOrg = result.data[0];
         return supabase
           .from("folio_org_members")
-          .insert([{ org_id: newOrg.id, user_id: userId, role: "owner", invited_email: userEmail || null, accepted: true }])
+          .insert([{ org_id: newOrg.id, user_id: userId, role: "owner", default_lens: "leader", invited_email: userEmail || null, accepted: true }])
           .then(function (r) {
             if (r.error) throw r.error;
             fetch();
@@ -95,12 +97,18 @@ export function useOrg(userId, userEmail) {
       });
   }
 
-  function inviteMember(email, memberRole) {
+  function inviteMember(email, memberRole, memberLens) {
     if (!org) return Promise.reject(new Error("No org"));
     var trimmedEmail = email.trim().toLowerCase();
+    var lensValue = memberLens === "leader" || memberLens === "admin" || memberLens === "am"
+      ? memberLens
+      : "am";
     return supabase
       .from("folio_org_members")
-      .insert([{ org_id: org.id, user_id: null, role: memberRole, invited_email: trimmedEmail, accepted: false }])
+      .insert([{
+        org_id: org.id, user_id: null, role: memberRole,
+        default_lens: lensValue, invited_email: trimmedEmail, accepted: false,
+      }])
       .then(function (result) {
         if (result.error) throw result.error;
         fetch();
@@ -186,6 +194,7 @@ export function useOrg(userId, userEmail) {
     org,
     orgId:         org ? org.id : null,
     role,
+    lens,
     members,
     pendingInvites,
     myInvite,

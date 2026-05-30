@@ -215,6 +215,10 @@ export function callPipApi(messages, context, opts) {
   if (opts.facts && opts.facts.length) {
     body.facts = opts.facts;
   }
+  // Gauge V3 — pass the user's lens so api/pip.js can frame Pip per-view.
+  if (opts.lens) {
+    body.lens = opts.lens;
+  }
   // summary-mode structured caching — passes pre-built content blocks and
   // static system blocks so api/pip.js can apply cache_control at each layer.
   if (opts.summarySystemBlocks && opts.summarySystemBlocks.length) {

@@ -73,7 +73,7 @@ export default function App() {
   }
 
   var { accounts, loading: acctLoading, error: acctError, refetch: refetchAccounts, addAccount, updateAccount, deleteAccount, archiveAccount, reactivateAccount, mergeAccounts } = useAccounts(userId);
-  var { org, orgId, role, members, pendingInvites, myInvite, createOrg, inviteMember, revokeMember, archiveMember, reactivateMember, acceptInvite, dismissInvite } = useOrg(userId, userEmail);
+  var { org, orgId, role, lens, members, pendingInvites, myInvite, createOrg, inviteMember, revokeMember, archiveMember, reactivateMember, acceptInvite, dismissInvite } = useOrg(userId, userEmail);
 
   // Surface read-path errors from the top-level hooks. Show once per error
   // transition (string identity in the ref guards against the effect retoasting
@@ -686,6 +686,7 @@ export default function App() {
       updateAccount={updateAccount}
       setFollowUp={pipSetFollowUp}
       onNavigate={handleSetView}
+      lens={lens}
     />;
   }
 

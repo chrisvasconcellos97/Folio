@@ -215,6 +215,19 @@ function trimHistory(messages) {
 // User memory comes first so it's prepended fresh on every call — facts
 // change, so caching them defeats the purpose. The static block stays
 // byte-stable for prompt caching to actually trigger.
+// Gauge V3 — frames Pip's answers based on which lens the user works in.
+// Plain instruction, short — kept in ephemeralNotes so it's dynamic but cheap.
+function renderLensNote(lens) {
+  if (lens === "leader") {
+    return "VIEW: This user works in the Leader lens. Frame answers around team-wide patterns — who on their team is hitting marks, who is dropping balls, which accounts are going cold across the portfolio. Lead with the cross-team rollup, not individual account detail.";
+  }
+  if (lens === "admin") {
+    return "VIEW: This user works in the Admin lens. They execute tasks reactively from a queue. Frame answers around what is on their personal plate right now — what is due, what is overdue, what to knock out next. Skip strategic framing; go straight to the doing.";
+  }
+  // 'am' (default)
+  return "VIEW: This user works in the AM lens. Frame answers around their own accounts — what is at stake on each, what is open, what is at risk. Treat them as the relationship owner for their portfolio.";
+}
+
 function buildSystem(facts, staticBlock, contextProse, ephemeralNotes) {
   var blocks = [];
   if (facts && facts.length) {
@@ -283,6 +296,10 @@ export default async function handler(req, res) {
   // summary mode. Each entry is { type: "text", text: "...", cache_control? }.
   // When present, these replace the default PIP_STATIC_SYSTEM for summary mode
   // so the schema spec (not the Pip persona) is what gets cached at BP1.
+  // Gauge V3 — user's lens shapes Pip's framing (AM / leader / admin).
+  // Goes into ephemeralNotes (tail) so it doesn't break PIP_STATIC_SYSTEM caching.
+  var userLens = (body.lens === "leader" || body.lens === "admin") ? body.lens : "am";
+
   var summarySystemBlocks = (mode === "summary" && Array.isArray(body.summarySystemBlocks))
     ? body.summarySystemBlocks : null;
 
@@ -338,7 +355,10 @@ export default async function handler(req, res) {
     systemBlocks = sysArr;
   } else {
     // Build system as array of blocks (static gets cache_control, dynamic doesn't).
-    systemBlocks = buildSystem(facts, PIP_STATIC_SYSTEM, contextProse, null);
+    // Lens framing rides in ephemeralNotes so it cascades through chat/brief/extract
+    // without invalidating the static cache.
+    var lensNote = renderLensNote(userLens);
+    systemBlocks = buildSystem(facts, PIP_STATIC_SYSTEM, contextProse, lensNote);
   }
 
   var client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });

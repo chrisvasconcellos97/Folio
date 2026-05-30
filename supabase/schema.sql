@@ -335,6 +335,7 @@ create table if not exists folio_org_members (
   org_id         uuid references folio_orgs on delete cascade not null,
   user_id        uuid references auth.users on delete cascade,
   role           text check (role in ('owner','member','leadership')) not null,
+  default_lens   text check (default_lens in ('am','leader','admin')) not null default 'am',
   invited_email  text,
   accepted       boolean default false,
   is_inactive    boolean default false,

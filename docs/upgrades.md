@@ -1,6 +1,6 @@
 # Folios — Upgrade Log
 
-*Last updated: 2026-05-30*
+*Last updated: 2026-05-30 (Gauge V3 Phase 2 — lens system)*
 
 Plain-English log of major upgrades shipped to Folios. Date, time, and
 a short explanation written in terms anyone can read — not technical
@@ -14,6 +14,42 @@ For the technical changelog with full release detail, see
 architectural changes, anything that meaningfully changes what Folios
 *does* or *is*. Not bug fixes, styling tweaks, or doc-only updates —
 those live in git history.
+
+---
+
+## 2026-05-30, late evening — Gauge V3 Phase 2: lens system
+
+**What I built:** The plumbing for the three role-based views Folios
+will use going forward — **AM**, **Leader**, and **Admin**. Each
+member of a team now has a default view assigned at invite time.
+
+**The problem it solves:** Different people in the org care about
+different things. An account manager wants to see *their accounts*.
+A leader wants to see *what the team is up to*. An admin wants to
+see *what they need to finish*. One UI showing all three at once
+would be cluttered for everyone.
+
+**What changed:**
+- New `default_lens` column on team members in the database (AM /
+  leader / admin). Existing members were backfilled — owners and
+  admins got Leader, everyone else got AM.
+- The invite modal now has a "Default view" dropdown next to role.
+  It smart-prefills based on the role you pick (Leadership → Leader,
+  Member → AM) but you can override.
+- Pip now knows what view each user lives in and frames his answers
+  accordingly — strategic team rollup for Leaders, account-focused
+  for AMs, execution-mode for Admins. Same Pip personality, different
+  altitude.
+
+**What you see today:** A "Default view" dropdown when you invite a
+new team member. Pip's answers in chat already feel slightly
+different per lens. No new UI surfaces yet for Leader or Admin views
+— those land in Phases 3-5.
+
+**Why it matters:** Pip's tone now adapts to who's asking, which is
+the first real lens-aware behavior in the product. Phase 3 builds
+the actual queue UI; Phase 5 builds the Leader rollup. Phase 2 is
+the data foundation that makes both possible.
 
 ---
 

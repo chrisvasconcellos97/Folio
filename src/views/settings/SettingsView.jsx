@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { C } from "../../lib/colors";
 import { Card } from "../../components/Card";
 import { FL } from "../../components/FieldLabel";
@@ -105,6 +105,12 @@ export function CreateOrgSection({ onCreateOrg }) {
 export function TeamSection({ org, role, members, pendingInvites, onInvite, onRevoke, onArchiveMember, onReactivateMember }) {
   var [email, setEmail]         = useState("");
   var [inviteRole, setInviteRole] = useState("member");
+  // Gauge V3 — default lens picked at invite time.
+  //   owner/admin role → 'leader' (high-altitude rollup default)
+  //   member role      → 'am'     (account-centric default)
+  //   'admin' lens     → manual pick only
+  var [inviteLens, setInviteLens] = useState("am");
+  var lensTouched = useRef(false);
   var [inviting, setInviting]   = useState(false);
   var [revoking, setRevoking]   = useState(null);
   var [confirmArchive, setConfirmArchive] = useState(null); // member id mid-confirm
@@ -138,14 +144,30 @@ export function TeamSection({ org, role, members, pendingInvites, onInvite, onRe
     });
   }
 
+  // Smart lens prefill — owner/admin role suggests Leader, member suggests AM.
+  // Only auto-fills until the user manually picks a lens (lensTouched ref).
+  function handleRoleChange(nextRole) {
+    setInviteRole(nextRole);
+    if (lensTouched.current) return;
+    if (nextRole === "leadership") setInviteLens("leader");
+    else                            setInviteLens("am");
+  }
+
+  function handleLensChange(nextLens) {
+    lensTouched.current = true;
+    setInviteLens(nextLens);
+  }
+
   function handleInvite() {
     if (!email.trim() || inviting) return;
     var sentTo = email.trim();
     setInviting(true);
-    onInvite(email, inviteRole)
+    onInvite(email, inviteRole, inviteLens)
       .then(function (result) {
         setInviting(false);
         setEmail("");
+        setInviteLens("am");
+        lensTouched.current = false;
         if (result && result.emailSent) {
           showToast("Invite sent to " + sentTo);
         } else {
@@ -375,7 +397,7 @@ export function TeamSection({ org, role, members, pendingInvites, onInvite, onRe
               <FL>Role</FL>
               <select
                 value={inviteRole}
-                onChange={function (e) { setInviteRole(e.target.value); }}
+                onChange={function (e) { handleRoleChange(e.target.value); }}
                 style={{
                   width: "100%", background: C.bgDropdown, border: "1px solid " + C.border,
                   borderRadius: 8, padding: "9px 12px", fontSize: 13, color: C.text,
@@ -386,12 +408,30 @@ export function TeamSection({ org, role, members, pendingInvites, onInvite, onRe
                 <option value="leadership">Leadership (read-only)</option>
               </select>
             </div>
+            <div style={{ minWidth: 130 }}>
+              <FL>Default view</FL>
+              <select
+                value={inviteLens}
+                onChange={function (e) { handleLensChange(e.target.value); }}
+                style={{
+                  width: "100%", background: C.bgDropdown, border: "1px solid " + C.border,
+                  borderRadius: 8, padding: "9px 12px", fontSize: 13, color: C.text,
+                  fontFamily: "'Inter', system-ui, sans-serif", outline: "none", cursor: "pointer",
+                }}
+              >
+                <option value="am">AM — accounts</option>
+                <option value="leader">Leader — team</option>
+                <option value="admin">Admin — tasks</option>
+              </select>
+            </div>
             <AmberBtn onClick={handleInvite} disabled={!email.trim() || inviting} style={{ fontSize: 12, flexShrink: 0 }}>
               {inviting ? "Sending…" : "Send Invite"}
             </AmberBtn>
           </div>
           <div style={{ fontSize: 11, color: C.textMuted, marginTop: 8, lineHeight: 1.5 }}>
             Members can log meetings and manage accounts. Leadership gets a read-only portfolio view.
+            The Default view sets which lens they land in — AM for account-centric work, Leader for
+            team rollup, Admin for task execution.
           </div>
         </div>
       )}

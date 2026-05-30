@@ -59,6 +59,8 @@ export function PipView(props) {
   var updateAccount   = props.updateAccount;
   var setFollowUp     = props.setFollowUp;
   var onNavigate      = props.onNavigate;
+  // Gauge V3 — caller passes the user's lens so Pip's framing branches per-view.
+  var lens            = props.lens || "am";
 
   var pipFacts        = usePipFacts(userId);
   var pipAcctState    = usePipAccountState(userId);
@@ -455,6 +457,7 @@ export function PipView(props) {
       onDelta: onDelta,
       mode: intent.mode,
       facts: pipFacts.activeFactStrings,
+      lens: lens,
     };
 
     askPip(apiMessages, ctxForIntent, opts)

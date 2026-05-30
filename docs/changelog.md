@@ -11,6 +11,29 @@ branch.
 
 ## May 2026
 
+### Gauge V3 — Phase 2: lens system
+Foundation for the three role-based views (AM / Leader / Admin) that
+will reshape Gauge and the homepage. Adds `default_lens` column to
+`folio_org_members` (check-constrained to 'am'|'leader'|'admin',
+default 'am'). Migration backfills owners/admins to 'leader' and
+everyone else to 'am'.
+
+Invite modal grows a "Default view" dropdown next to role with smart
+pre-fill (Leadership role → Leader lens; Member role → AM lens) and
+a `lensTouched` ref so manual picks aren't overwritten by subsequent
+role changes. `useOrg` exposes the current user's lens; `inviteMember`
+accepts an optional lens arg; `createOrg` defaults the owner row to
+'leader'.
+
+Pip's prompt branches per lens via a new `renderLensNote(lens)` helper
+on the API proxy. Lens framing rides in ephemeralNotes (tail block)
+so it doesn't break PIP_STATIC_SYSTEM caching. `callPipApi` accepts
+`opts.lens`; PipView reads `props.lens` and forwards it to every
+askPip call. App.jsx threads `lens` from useOrg through to PipView.
+
+SQL: `supabase/gauge_v3_default_lens.sql` (run in production) +
+canonical `schema.sql` updated.
+
 ### Gauge V3 — Phase 1: folio_tasks foundation
 The first phase of the unified-tasks rewrite. Creates the `folio_tasks`
 table that will eventually replace `folio_items` and absorb the
