@@ -241,6 +241,33 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
     setShowAdd(true);
   }
 
+  // Desktop right-sidebar derivations. Cheap one-pass scans, memo-eligible.
+  // Stuck = in_progress projects whose updated_at is > 7 days old.
+  var sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  var stuckProjects = (projects || []).filter(function (p) {
+    if (p.status !== "in_progress") return false;
+    var updated = p.updated_at ? new Date(p.updated_at).getTime() : 0;
+    return updated > 0 && updated < sevenDaysAgo;
+  });
+
+  // Team load = count open stages per assignee across in_progress projects.
+  var teamLoad = (function () {
+    var counts = {};
+    (projects || []).forEach(function (p) {
+      if (p.status !== "in_progress") return;
+      (p.stages || []).forEach(function (s) {
+        if (!s || s.completed_at) return;
+        var who = (s.assignee || "").trim();
+        if (!who) return;
+        counts[who] = (counts[who] || 0) + 1;
+      });
+    });
+    return Object.keys(counts)
+      .map(function (k) { return { name: k, count: counts[k] }; })
+      .sort(function (a, b) { return b.count - a.count; })
+      .slice(0, 4);
+  })();
+
   return (
     <div>
       {/* Header */}
@@ -463,15 +490,25 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
         </div>
       )}
 
-      {projects && projects.length > 0 && (
-        <div style={{ marginBottom: 10 }}>
-          <ErrorBanner message={projectsError ? "Couldn't load projects — check your connection" : null} onRetry={refetchProjects} />
-          <PipInsightCard segments={[gaugeInsight]} />
-        </div>
-      )}
+      {/* Desktop: two-column layout — narrow scannable project list on the
+          left, Pip + insights sidebar on the right. Mobile collapses to a
+          single column with the Pip card above the list as before. */}
+      <div style={{
+        display: scopeFilter === "my_queue" ? "block" : (isDesktop ? "grid" : "block"),
+        gridTemplateColumns: isDesktop ? "minmax(0, 1fr) 300px" : undefined,
+        gap: isDesktop ? 24 : 0,
+        alignItems: "flex-start",
+      }}>
+        <div style={{ maxWidth: isDesktop ? 720 : "100%", minWidth: 0 }}>
+          {projects && projects.length > 0 && (
+            <div style={{ marginBottom: 10 }}>
+              <ErrorBanner message={projectsError ? "Couldn't load projects — check your connection" : null} onRetry={refetchProjects} />
+              {!isDesktop && <PipInsightCard segments={[gaugeInsight]} />}
+            </div>
+          )}
 
-      <div style={{ display: scopeFilter === "my_queue" ? "none" : "flex", flexDirection: "column", gap: 6 }}>
-        {sortedFiltered.map(function (p) {
+          <div style={{ display: scopeFilter === "my_queue" ? "none" : "flex", flexDirection: "column", gap: 6 }}>
+            {sortedFiltered.map(function (p) {
           var isComplete  = p.status === "complete";
           var isDraft     = p.status === "draft";
           var overdue     = p.status === "in_progress" && isOverdue(p.due_date);
@@ -787,6 +824,82 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
             </div>
           );
         })}
+          </div>
+        </div>
+
+        {/* Desktop right sidebar — Pip + derived insights */}
+        {isDesktop && scopeFilter !== "my_queue" && projects && projects.length > 0 && (
+          <div style={{
+            position: "sticky", top: 16, alignSelf: "start",
+            display: "flex", flexDirection: "column", gap: 12,
+            maxWidth: 300,
+          }}>
+            <PipInsightCard segments={[gaugeInsight]} />
+
+            {/* Stuck block */}
+            {stuckProjects.length > 0 && (
+              <div style={{
+                background: C.surface, border: "1px solid " + C.rule,
+                borderRadius: 8, padding: "12px 14px",
+              }}>
+                <div style={{ fontFamily: MONO, fontSize: 9.5, color: C.textMuted,
+                  textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
+                  Stuck · {stuckProjects.length}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {stuckProjects.slice(0, 4).map(function (p) {
+                    return (
+                      <div key={p.id} style={{
+                        fontFamily: "'Inter', system-ui, sans-serif",
+                        fontSize: 12, color: C.textSoft, lineHeight: 1.35,
+                      }}>
+                        <span style={{ color: C.text }}>{p.name}</span>
+                        <span style={{ color: C.textFaint, marginLeft: 6 }}>
+                          no update 7d+
+                        </span>
+                      </div>
+                    );
+                  })}
+                  {stuckProjects.length > 4 && (
+                    <div style={{ fontFamily: MONO, fontSize: 10, color: C.textFaint, marginTop: 2 }}>
+                      + {stuckProjects.length - 4} more
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Team load block */}
+            {teamLoad.length > 0 && (
+              <div style={{
+                background: C.surface, border: "1px solid " + C.rule,
+                borderRadius: 8, padding: "12px 14px",
+              }}>
+                <div style={{ fontFamily: MONO, fontSize: 9.5, color: C.textMuted,
+                  textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
+                  Team load
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {teamLoad.map(function (t) {
+                    return (
+                      <div key={t.name} style={{
+                        display: "flex", justifyContent: "space-between", alignItems: "baseline",
+                        fontFamily: "'Inter', system-ui, sans-serif", fontSize: 12,
+                      }}>
+                        <span style={{ color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginRight: 8 }}>
+                          {t.name}
+                        </span>
+                        <span style={{ fontFamily: MONO, fontSize: 11, color: C.accent, fontFeatureSettings: '"tnum"' }}>
+                          {t.count} open
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Template picker */}

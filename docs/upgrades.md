@@ -17,6 +17,40 @@ those live in git history.
 
 ---
 
+## 2026-05-30, late evening — Gauge desktop polish: capped list + insights sidebar
+
+**What I built:** Capped the desktop project list width so cards stay
+scannable, and put a "Pip + insights" panel in the right margin so the
+empty space turns into a steering wheel.
+
+**The problem it solves:** On a wide monitor, project cards stretched
+edge-to-edge. Your eye had to scan from left to right to read one row —
+the same content felt harder to read than on mobile, where the narrow
+cards stacked cleanly.
+
+**What changed:**
+- Project list is now capped at 720px wide on desktop, single column,
+  left-aligned. Matches the cohesive feel of the mobile view.
+- Right sidebar (desktop only) shows three blocks: Pip's notice
+  (moved from above the list), a "Stuck" list of in-progress
+  projects whose updated_at is more than 7 days old, and a "Team
+  load" tally of who has the most open task items across all live
+  projects.
+- Mobile view is unchanged.
+
+**What you see today:** A cleaner, narrower project list on desktop
+with a steady sidebar to the right showing what's stuck and who's
+loaded up. Numbers and names are derived live — no new data to
+maintain.
+
+**Why it matters:** Same data, way easier to scan. The same pattern
+(capped content column + sidebar of derived insights) will land on
+Accounts and other list views over time. Phase 3 of Gauge V3 (the
+real flat task queue) will inherit this layout instead of relearning
+it later.
+
+---
+
 ## 2026-05-30, late evening — Gauge V3 Phase 2: lens system
 
 **What I built:** The plumbing for the three role-based views Folios
