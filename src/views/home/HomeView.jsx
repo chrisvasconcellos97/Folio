@@ -533,14 +533,11 @@ export function HomeView({ userName, accounts, meetings, items, cadences, projec
         <div style={{
           position: "fixed",
           left: 0,
-          right: 88, /* clear the 52px Pip orb floating at right:20 */
+          right: 0,
           bottom: "calc(env(safe-area-inset-bottom, 0px) + 78px)",
           padding: "10px 12px 12px",
           background: C.bg,
           borderTop: "1px solid " + C.rule,
-          borderRight: "1px solid " + C.rule,
-          borderTopRightRadius: 12,
-          borderBottomRightRadius: 12,
           boxShadow: "0 -8px 18px -10px rgba(0,0,0,0.5)",
           display: "flex", gap: 8, zIndex: 49,
         }}>

@@ -1032,8 +1032,8 @@ export default function App() {
       {addAccountModal}
       {startConvModal}
       {adHocFlowOverlay}
-      {/* Floating Pip (mobile) */}
-      {view !== "pip" && (
+      {/* Floating Pip (mobile) — hidden on home (home has its own centerpiece orb) and pip itself */}
+      {view !== "pip" && view !== "home" && (
         <div
           style={{
             position: "fixed",

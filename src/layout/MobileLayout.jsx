@@ -199,10 +199,7 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
         <div
           style={{
             display: "flex",
-            background: "rgba(0,0,0,0.2)",
-            borderRadius: 10,
-            padding: 3,
-            gap: 2,
+            gap: 0,
           }}
         >
           {NAV_ITEMS.map(function (item) {
@@ -231,16 +228,16 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
                   flex: 1,
                   height: 52,
                   padding: "6px 6px",
-                  borderRadius: 8,
                   cursor: "pointer",
                   userSelect: "none",
                   fontFamily: MONO,
                   fontSize: 9,
                   fontWeight: 600,
                   letterSpacing: "0.04em",
-                  background: active ? C.surface2 : "transparent",
+                  background: "transparent",
                   color: active ? (isGauge ? C.blue : C.accent) : C.textMuted,
-                  border: "1px solid " + (active ? C.rule : "transparent"),
+                  border: "none",
+                  borderTop: "2px solid " + (active ? (isGauge ? C.blue : C.accent) : "transparent"),
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
