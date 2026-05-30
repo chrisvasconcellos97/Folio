@@ -359,7 +359,7 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId, lens })
       {primaryView === "tasks" ? (
         <div style={{
           display: isDesktop ? "grid" : "block",
-          gridTemplateColumns: isDesktop ? "minmax(0, 1fr) 300px" : undefined,
+          gridTemplateColumns: isDesktop ? "minmax(0, 1fr) 340px" : undefined,
           gap: isDesktop ? 24 : 0,
           alignItems: "flex-start",
         }}>
@@ -377,7 +377,7 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId, lens })
             <div style={{
               position: "sticky", top: 16, alignSelf: "start",
               display: "flex", flexDirection: "column", gap: 12,
-              maxWidth: 300,
+              maxWidth: 340,
             }}>
               <PipGaugeCard
                 projects={projects}
@@ -557,7 +557,7 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId, lens })
           single column with the Pip card above the list as before. */}
       <div style={{
         display: scopeFilter === "my_queue" ? "block" : (isDesktop ? "grid" : "block"),
-        gridTemplateColumns: isDesktop ? "minmax(0, 1fr) 300px" : undefined,
+        gridTemplateColumns: isDesktop ? "minmax(0, 1fr) 340px" : undefined,
         gap: isDesktop ? 24 : 0,
         alignItems: "flex-start",
       }}>
@@ -894,7 +894,7 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId, lens })
           <div style={{
             position: "sticky", top: 16, alignSelf: "start",
             display: "flex", flexDirection: "column", gap: 12,
-            maxWidth: 300,
+            maxWidth: 340,
           }}>
             <PipGaugeCard
               projects={projects}

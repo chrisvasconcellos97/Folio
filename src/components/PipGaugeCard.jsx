@@ -57,6 +57,35 @@ export function PipGaugeCard({ projects, accountsById, handlers }) {
     return d !== null && d <= 7;
   });
 
+  // Up Next — active projects due in next 14 days, soonest first.
+  var upNext = active
+    .filter(function (p) {
+      var d = daysUntil(p.due_date);
+      return d !== null && d >= 0 && d <= 14;
+    })
+    .slice()
+    .sort(function (a, b) {
+      var ad = daysUntil(a.due_date), bd = daysUntil(b.due_date);
+      return ad - bd;
+    })
+    .slice(0, 5);
+
+  // Recent activity — last 5 completed stages across active+complete projects.
+  var recent = [];
+  prjs.forEach(function (p) {
+    (p.stages || []).forEach(function (s) {
+      if (!s || !s.completed_at) return;
+      recent.push({
+        projectId:   p.id,
+        projectTitle: p.title,
+        stageTitle:  s.title,
+        completedAt: s.completed_at,
+      });
+    });
+  });
+  recent.sort(function (a, b) { return a.completedAt < b.completedAt ? 1 : -1; });
+  recent = recent.slice(0, 5);
+
   // Watchlist — overdue first, then blocked, then high-pri. Dedupe, cap 3.
   var seen = {};
   var watchlist = [];
@@ -189,6 +218,52 @@ export function PipGaugeCard({ projects, accountsById, handlers }) {
         })}
       </div>
 
+      {/* Up Next — next 14 days */}
+      {upNext.length > 0 && (
+        <div>
+          <div style={{
+            fontFamily: MONO, fontSize: 9.5, color: C.textMuted,
+            textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8,
+          }}>
+            Up Next · 14d
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {upNext.map(function (p) {
+              var d = daysUntil(p.due_date);
+              var label = d === 0 ? "today" : d === 1 ? "tomorrow" : "in " + d + "d";
+              return (
+                <div
+                  key={p.id}
+                  onClick={function () { if (h.onClickProject) h.onClickProject(p.id); }}
+                  role={h.onClickProject ? "button" : undefined}
+                  tabIndex={h.onClickProject ? 0 : undefined}
+                  style={{
+                    cursor: h.onClickProject ? "pointer" : "default",
+                    display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8,
+                    fontFamily: INTER, fontSize: 12,
+                  }}
+                >
+                  <span style={{
+                    color: C.textSoft,
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  }}>
+                    {p.title}
+                  </span>
+                  <span style={{
+                    fontFamily: MONO, fontSize: 10,
+                    color: d <= 1 ? C.accent : C.textMuted,
+                    fontFeatureSettings: '"tnum"', whiteSpace: "nowrap",
+                    fontWeight: d <= 1 ? 700 : 500,
+                  }}>
+                    {label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Watchlist */}
       {watchlist.length > 0 && (
         <div>
@@ -294,6 +369,51 @@ export function PipGaugeCard({ projects, accountsById, handlers }) {
                 + {stuck.length - 3} more
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Recent activity — last stage completions */}
+      {recent.length > 0 && (
+        <div>
+          <div style={{
+            fontFamily: MONO, fontSize: 9.5, color: C.textMuted,
+            textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8,
+          }}>
+            Recent activity
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {recent.map(function (r, i) {
+              var d = daysSince(r.completedAt);
+              var when = d === 0 ? "today" : d === 1 ? "1d ago" : d + "d ago";
+              return (
+                <div
+                  key={r.projectId + "-" + i}
+                  onClick={function () { if (h.onClickProject) h.onClickProject(r.projectId); }}
+                  role={h.onClickProject ? "button" : undefined}
+                  tabIndex={h.onClickProject ? 0 : undefined}
+                  style={{
+                    cursor: h.onClickProject ? "pointer" : "default",
+                    fontFamily: INTER, fontSize: 12, lineHeight: 1.35,
+                  }}
+                >
+                  <div style={{
+                    color: C.textSoft,
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  }}>
+                    <span style={{ color: C.accent, marginRight: 6 }}>✓</span>
+                    {r.stageTitle}
+                  </div>
+                  <div style={{
+                    fontFamily: MONO, fontSize: 9.5, color: C.textFaint,
+                    marginTop: 2, paddingLeft: 14,
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  }}>
+                    {r.projectTitle} · {when}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
