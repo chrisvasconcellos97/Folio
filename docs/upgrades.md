@@ -1,6 +1,6 @@
 # Folios — Upgrade Log
 
-*Last updated: 2026-05-30 (Gauge V3 Phase 5 — Leader view)*
+*Last updated: 2026-05-30 (Gauge V3 Phase 6 — polish + V2 brain wiring)*
 
 Plain-English log of major upgrades shipped to Folios. Date, time, and
 a short explanation written in terms anyone can read — not technical
@@ -14,6 +14,53 @@ For the technical changelog with full release detail, see
 architectural changes, anything that meaningfully changes what Folios
 *does* or *is*. Not bug fixes, styling tweaks, or doc-only updates —
 those live in git history.
+
+---
+
+## 2026-05-30 — Gauge V3 Phase 6: polish + V2 brain wiring
+
+**What I built:** Four cleanup items that tie the whole Gauge V3 build
+together and finish wiring Pip's learning loop into every Gauge
+surface that touches a task.
+
+**The problem it solves:** Phases 1–5 left a few corners loose: edits
+made directly in the project stage editor or the kanban board weren't
+feeding Pip's correction log, the wrong-account-from-Pip case had no
+fix path after the plan had already been applied, AMs had no place
+on the home page to see "my projects" at a glance, and assignment
+hints only applied per-account so Pip couldn't generalize "Sara owns
+invoice work" across the org.
+
+**What changed:**
+- Corrections wiring — task-text edits made through the project
+  stage editor, the standing-projects kanban, or the My Queue panel
+  now all log to Pip's correction log the same way edits through the
+  task detail panel always did. The V2 brain learning loop is now
+  closed on every Gauge entry point.
+- Post-apply account override — if Pip routes a task to the wrong
+  account and you only notice after the fact, you can change the
+  Linked Account field on the task and Pip logs that as a
+  `routed_account_changed` correction so it learns the right home
+  for next time.
+- "Projects I own" rollup on Gauge home — for AM-lens users, a
+  compact section appears above the stats row showing every active
+  project on accounts they own (progress bars, status pills, account
+  chips). Click any row to scroll to it in the list below.
+- Org-wide assignment hints auto-promotion — once 3 different
+  accounts have logged the same kind of work going to the same
+  person (e.g. invoice tasks → Sara), the system promotes that into
+  a cross-account hint so Pip routes future invoice work to Sara on
+  any account, not just the three she's been doing it on.
+
+**What you see today:** Same Gauge layout, but Pip is now learning
+from every edit and the AM view has a cleaner home rollup. The
+assignment-hint promotion is silent — you just notice over time that
+Pip starts routing the right work to the right person without you
+having to correct him every time.
+
+**Why it matters:** This closes out Gauge V3. The V2 brain is now
+fully wired through Gauge (Phases 5 + 6 together), and the system
+is set up to actually get smarter the longer you use it.
 
 ---
 
