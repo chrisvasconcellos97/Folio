@@ -229,7 +229,8 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
                 }}
                 style={{
                   flex: 1,
-                  padding: "10px 6px",
+                  height: 52,
+                  padding: "6px 6px",
                   borderRadius: 8,
                   cursor: "pointer",
                   userSelect: "none",
@@ -243,6 +244,7 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
+                  justifyContent: "center",
                   gap: 3,
                 }}
                 aria-expanded={isWorkspaces ? wsOpen : undefined}
@@ -255,10 +257,12 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
                 }}>
                   <Mark tab={item.id} size={22} active={active} />
                 </span>
-                {displayLabel}
-                {isWorkspaces && (
-                  <span style={{ fontSize: 7, marginTop: -1, opacity: 0.7 }}>{wsOpen ? "▾" : "▴"}</span>
-                )}
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 3, lineHeight: 1 }}>
+                  {displayLabel}
+                  {isWorkspaces && (
+                    <span style={{ fontSize: 7, opacity: 0.7 }}>{wsOpen ? "▾" : "▴"}</span>
+                  )}
+                </span>
               </button>
             );
             if (TOOLTIP_TIPS[item.id]) {
