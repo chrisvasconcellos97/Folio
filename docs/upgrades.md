@@ -17,7 +17,45 @@ those live in git history.
 
 ---
 
-## 2026-05-30, late evening — Gauge desktop polish: capped list + insights sidebar
+## 2026-05-30 — Gauge V3 Phase 3: flat task queue
+
+**What I built:** The new flat task queue — every task and action item
+across every account and project in one scannable list. Toggle between
+Projects and Tasks at the top of Gauge.
+
+**The problem it solves:** Before today you could see projects, but you
+couldn't see "everything on my plate right now" without bouncing
+between accounts. Tasks lived inside projects, which were inside
+accounts, which were inside workspaces. Too many layers of indirection
+for the simple question "what am I supposed to do?"
+
+**What changed:**
+- New "Tasks" tab at the top of Gauge, alongside "Projects." Renders a
+  flat queue of every task and item, sorted by due date.
+- Cards show the task title big, with account chip + project chip +
+  due date underneath. Discrete projects get a "Step 3 of 7" badge so
+  admins know where they are in the larger thing.
+- Three sub-filters: Open (default), Mine (filters to tasks assigned
+  to you), All (everything).
+- "Group by project" toggle clusters tasks by their parent project.
+- Admin lens lands directly on Tasks tab by default. AM and Leader land
+  on Projects (current behavior preserved).
+- A one-time SQL backfill brings existing items and project stages
+  into the new unified table so the queue isn't empty on first load.
+
+**What you see today:** A Projects | Tasks toggle at the top of Gauge.
+Click Tasks to see the new flat queue. Pip's plan-apply path has been
+dual-writing since this morning, so newly-created tasks land
+immediately; existing tasks land after running the backfill SQL.
+
+**Why it matters:** This is the first user-facing surface of Gauge V3.
+The lens system from Phase 2 quietly defaults Admin users to the
+queue. Phases 4-6 add project templates, the Leader rollup, and the
+polish layer that ties the system together.
+
+---
+
+## 2026-05-30 — Gauge desktop polish: capped list + insights sidebar
 
 **What I built:** Capped the desktop project list width so cards stay
 scannable, and put a "Pip + insights" panel in the right margin so the
@@ -51,7 +89,7 @@ it later.
 
 ---
 
-## 2026-05-30, late evening — Gauge V3 Phase 2: lens system
+## 2026-05-30 — Gauge V3 Phase 2: lens system
 
 **What I built:** The plumbing for the three role-based views Folios
 will use going forward — **AM**, **Leader**, and **Admin**. Each
@@ -87,7 +125,7 @@ the data foundation that makes both possible.
 
 ---
 
-## 2026-05-30, evening — Gauge V3 Phase 1: unified task home
+## 2026-05-30 — Gauge V3 Phase 1: unified task home
 
 **What I built:** A single new database table called `folio_tasks` that
 will eventually hold every task and action item in Folios.

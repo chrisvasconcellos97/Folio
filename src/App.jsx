@@ -698,6 +698,7 @@ export default function App() {
         accounts={accounts}
         members={members}
         orgId={orgId}
+        lens={lens}
       />
     );
   }

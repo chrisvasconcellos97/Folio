@@ -15,6 +15,8 @@ import { Glow } from "../../components/Glow";
 import { Mark } from "../../components/Mark";
 import { pickV } from "../../lib/metricsUtils";
 import { useBreakpoint } from "../../hooks/useBreakpoint";
+import { useTasks } from "../../hooks/useTasks";
+import { FlatTaskQueue } from "./FlatTaskQueue";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
@@ -145,8 +147,11 @@ function buildGaugeInsight(projects, accountsById, handlers) {
   ]);
 }
 
-export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
+export function GaugeView({ userId, userEmail, accounts, members, orgId, lens }) {
   var { projects, loading, error: projectsError, refetch: refetchProjects, addProject, updateProject, deleteProject, templates, addTemplate, updateTemplate, deleteTemplate } = useProjects(userId, null, orgId);
+  // Phase 3 — flat task queue. Defaults to Tasks tab for Admin lens, Projects for everyone else.
+  var { tasks: flatTasks } = useTasks(userId);
+  var [primaryView, setPrimaryView] = useState(lens === "admin" ? "tasks" : "projects");
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
 
@@ -327,6 +332,65 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
           </button>
         </div>
       </div>
+
+      {/* Phase 3 — Projects | Tasks toggle. Defaults per lens. */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+        {[
+          { id: "projects", label: "Projects" },
+          { id: "tasks",    label: "Tasks"    },
+        ].map(function (v) {
+          var active = primaryView === v.id;
+          return (
+            <button
+              key={v.id}
+              onClick={function () { setPrimaryView(v.id); }}
+              style={{
+                background: active ? C.accentFaint : "transparent",
+                color: active ? C.accent : C.textMuted,
+                border: "1px solid " + (active ? C.accentLine : C.rule),
+                borderRadius: 8,
+                padding: "7px 16px",
+                fontFamily: "'Inter', system-ui, sans-serif",
+                fontSize: 13, fontWeight: active ? 600 : 500,
+                cursor: "pointer",
+                letterSpacing: "0.02em",
+              }}
+            >
+              {v.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {primaryView === "tasks" ? (
+        <div style={{
+          display: isDesktop ? "grid" : "block",
+          gridTemplateColumns: isDesktop ? "minmax(0, 1fr) 300px" : undefined,
+          gap: isDesktop ? 24 : 0,
+          alignItems: "flex-start",
+        }}>
+          <div style={{ maxWidth: isDesktop ? 720 : "100%", minWidth: 0 }}>
+            <FlatTaskQueue
+              tasks={flatTasks}
+              accounts={accounts}
+              projects={projects}
+              userEmail={userEmail}
+              onOpenProject={null}
+              showAssigneeChip={lens !== "admin"}
+            />
+          </div>
+          {isDesktop && (flatTasks && flatTasks.length > 0) && (
+            <div style={{
+              position: "sticky", top: 16, alignSelf: "start",
+              display: "flex", flexDirection: "column", gap: 12,
+              maxWidth: 300,
+            }}>
+              <PipInsightCard segments={[gaugeInsight]} />
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
 
       {/* Stats row */}
       <div
@@ -901,6 +965,9 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId }) {
           </div>
         )}
       </div>
+
+        </>
+      )}
 
       {/* Template picker */}
       {showPicker && (
