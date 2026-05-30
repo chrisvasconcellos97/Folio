@@ -268,7 +268,7 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId, lens })
   }
 
   return (
-    <div>
+    <div style={{ maxWidth: 1100, margin: "0 auto" }}>
       {/* Header */}
       <div
         style={{
