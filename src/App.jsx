@@ -649,6 +649,15 @@ export default function App() {
             handleSetView(target);
           }
         }}
+        onOpenAccountTab={function (accountId, tab) {
+          var a = (accounts || []).find(function (x) { return x.id === accountId; });
+          if (a) {
+            pendingNavAccountRef.current = a;
+            setPipPrefill({ tab: tab });
+            var target = a.account_type === "internal_team" ? "departments" : a.account_type === "partner" ? "partners" : "accounts";
+            handleSetView(target);
+          }
+        }}
         onOpenCadenceHub={function (accountId, cadenceId) {
           var a = (accounts || []).find(function (x) { return x.id === accountId; });
           if (a) {

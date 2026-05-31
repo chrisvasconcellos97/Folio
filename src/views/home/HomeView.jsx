@@ -128,7 +128,7 @@ function renderBriefWithGlows(text, accounts, onOpenAccount) {
   return segments;
 }
 
-export function HomeView({ userName, userId, accounts, meetings, items, cadences, projects, onOpenAccount, onOpenCadenceHub, onOpenConversation }) {
+export function HomeView({ userName, userId, accounts, meetings, items, cadences, projects, onOpenAccount, onOpenAccountTab, onOpenCadenceHub, onOpenConversation }) {
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
   var [mounted, setMounted] = useState(false);
@@ -439,6 +439,12 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
     );
   }
 
+  function kindTab(kind) {
+    if (kind === "item")    return "tasks";
+    if (kind === "project") return "projects";
+    return "overview";
+  }
+
   function burningBrief() {
     if (burningRows.length === 0) return <span>Nothing on fire. Clean board.</span>;
     var r1 = burningRows[0];
@@ -447,7 +453,7 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
       return (
         <span>
           One thing needs eyes —{" "}
-          <Glow onClick={function () { onOpenAccount(r1.accountId); }}>
+          <Glow onClick={function () { onOpenAccountTab(r1.accountId, kindTab(r1.kind)); }}>
             {r1.left}
           </Glow>{" "}
           on {r1Name}, {r1.right}.
@@ -460,11 +466,11 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
       return (
         <span>
           Two things to handle —{" "}
-          <Glow onClick={function () { onOpenAccount(r1.accountId); }}>
+          <Glow onClick={function () { onOpenAccountTab(r1.accountId, kindTab(r1.kind)); }}>
             {r1.left}
           </Glow>{" "}
           ({r1Name}, {r1.right}) and{" "}
-          <Glow onClick={function () { onOpenAccount(r2.accountId); }}>
+          <Glow onClick={function () { onOpenAccountTab(r2.accountId, kindTab(r2.kind)); }}>
             {r2.left}
           </Glow>{" "}
           ({r2Name}).
@@ -474,7 +480,7 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
     return (
       <span>
         {burningRows.length} things piling up. Worst is{" "}
-        <Glow onClick={function () { onOpenAccount(r1.accountId); }}>
+        <Glow onClick={function () { onOpenAccountTab(r1.accountId, kindTab(r1.kind)); }}>
           {r1.left}
         </Glow>{" "}
         on {r1Name} — {r1.right}. {burningRows.length - 1} more behind it.
