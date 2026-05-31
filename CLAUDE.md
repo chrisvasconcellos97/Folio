@@ -316,7 +316,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 8. **Copy & tone:** *(no open items)*
 
-9. **Search & discoverability:** *(no open items)*
+9. **Search & discoverability:** Cross-account full-text search on meeting notes + open item text. "Find all mentions of 'integration delay'" across all accounts in one query. Supabase full-text search on `folio_meetings.notes` + `folio_tasks.title`. Results view shows account, date, and excerpt. Lives in the existing global search (⌘K) as a second result section below account matches.
 
 10. **Onboarding & contextual help:** *(no open items)*
 
@@ -324,7 +324,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 12. **Personalization:** *(no open items)*
 
-13. **Data visualization:** *(no open items)*
+13. **Data visualization:** Account health history — 30-day health sparkline on account Overview tab. Data comes from `folio_account_snapshots` (already accumulating). Shows health_status per day (green/yellow/red dots or a simple line). "Parts Authority was at-risk in March, recovered in April" becomes visible instead of just felt. Use the same sparkline component pattern as the meeting frequency bars in the account header.
 
 14. **Gauge + account change log:** *(no open items — Gauge V3 all 6 phases shipped; see Already shipped: Gauge V3)*
 
@@ -334,7 +334,9 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 17. *(shipped — see Already shipped)*
 
-18. **Internal / people cadences + 1:1 mode** — Phases 1 + 2 shipped — see Already shipped. Remaining Phase 3: post-meeting Pip action item routing to specific accounts (already built in PipSummarizePreview cross-account routing, just needs wiring for the person-cadence context). Leadership tasks (items with cadence_id + null account_id) persisted as a dedicated "leadership task" type — deferred until usage patterns emerge.
+18. **Internal / people cadences + 1:1 mode** — Phases 1–3 shipped — see Already shipped. Leadership tasks (items with cadence_id + null account_id) persisted as a dedicated "leadership task" type — deferred until usage patterns emerge.
+
+18b. **Commitment auto-suggestion in plan modal** — When Pip returns the summarize plan, rows that sound like commitments ("I'll get you...", "we'll have X by...", "I'll follow up on...", "we'll send...") should arrive pre-flagged with `is_commitment: true`. Pip already returns structured rows — just add `"is_commitment": true/false` to the plan schema and instruct Pip to set it based on first-person promise language. The checkbox in PipSummarizePreview renders it as pre-toggled. The user can un-toggle before applying. No schema changes needed beyond what's already on folio_tasks.
 
 19. **Pip portfolio intelligence upgrade (chief of staff mode)** — Pip gains cross-portfolio awareness so it can reason about work state across all accounts simultaneously. Four tiers of increasing sophistication — build Tier A first since it's the foundation everything else runs on.
 
