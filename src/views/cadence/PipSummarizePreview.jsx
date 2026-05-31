@@ -413,6 +413,8 @@ export function PipSummarizePreview({
         initialExcerpt: r.source_excerpt || "",
         targetAccountId: r.target_account_id || null,
         initialTargetAccountId: r.target_account_id || null,
+        isCommitment: r.is_commitment === true,
+        pipFlaggedCommitment: r.is_commitment === true,
       };
     });
   }, [plan]);
@@ -534,6 +536,7 @@ export function PipSummarizePreview({
       merged.source_excerpt_edited = typedExcerpt || null;
       if (row.kind === "new_item" || row.kind === "new_task") {
         merged.target_account_id = state[idx].targetAccountId || null;
+        merged.is_commitment = state[idx].isCommitment || false;
       }
       selected.push({ idx: idx, row: merged });
 
@@ -732,16 +735,36 @@ export function PipSummarizePreview({
               edited={excerptEdited}
             />
           )}
-          {(row.kind === "new_item" || row.kind === "new_task") && rosterOptions.length > 0 && (
-            <div>
-              <TargetAccountChip
-                targetAccountId={s.targetAccountId || null}
-                currentAccountName={currentAccountName}
-                hasNoCurrentAccount={!currentAccountId}
-                rosterOptions={rosterOptions}
-                rosterLookup={rosterLookup}
-                onChange={function (v) { patch(idx, { targetAccountId: v }); }}
-              />
+          {(row.kind === "new_item" || row.kind === "new_task") && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+              {rosterOptions.length > 0 && (
+                <TargetAccountChip
+                  targetAccountId={s.targetAccountId || null}
+                  currentAccountName={currentAccountName}
+                  hasNoCurrentAccount={!currentAccountId}
+                  rosterOptions={rosterOptions}
+                  rosterLookup={rosterLookup}
+                  onChange={function (v) { patch(idx, { targetAccountId: v }); }}
+                />
+              )}
+              <button
+                type="button"
+                onClick={function () { patch(idx, { isCommitment: !s.isCommitment }); }}
+                title={s.isCommitment ? "Unmark as commitment" : "Mark as commitment"}
+                style={{
+                  background: s.isCommitment ? C.accentFaint : "transparent",
+                  border: "1px solid " + (s.isCommitment ? C.accentLine : C.border),
+                  borderRadius: 6,
+                  padding: "3px 8px",
+                  fontSize: 10,
+                  color: s.isCommitment ? C.accent : C.textMuted,
+                  cursor: "pointer",
+                  fontFamily: MONO,
+                  display: "inline-flex", alignItems: "center", gap: 4,
+                }}
+              >
+                {s.isCommitment ? "✦ Commitment" : "◇ Commitment"}
+              </button>
             </div>
           )}
           {(hasAssignee(row.kind) || hasDueEdit(row.kind)) && row.kind !== "skip" && (

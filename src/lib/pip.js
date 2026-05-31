@@ -554,10 +554,10 @@ export function summarizeDraftPip(payload) {
     "  \"follow_up_date\": \"YYYY-MM-DD or null\",\n" +
     "  \"tone\": \"positive|neutral|mixed|negative — based on the meeting's overall energy. Customer pushback or blocker frustration = negative. Smooth check-in with no issues = neutral or positive. Both positive progress and some friction = mixed.\",\n" +
     "  \"plan\": [\n" +
-    "    { \"kind\": \"new_item\",    \"text\": \"...\", \"due_date\": \"YYYY-MM-DD or null\", \"suggested_assignee\": \"email or null\", \"target_account_id\": \"id from YOUR ACCOUNTS list, or null if this belongs to the current account\", \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim 1-3 line slice of the draft notes that triggered this row\" },\n" +
+    "    { \"kind\": \"new_item\",    \"text\": \"...\", \"due_date\": \"YYYY-MM-DD or null\", \"suggested_assignee\": \"email or null\", \"target_account_id\": \"id from YOUR ACCOUNTS list, or null if this belongs to the current account\", \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim 1-3 line slice of the draft notes that triggered this row\", \"is_commitment\": true },\n" +
     "    { \"kind\": \"update_item\", \"target_id\": \"I-...\", \"fields\": { \"due_date\": \"...\", \"text\": \"...\" }, \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim slice from notes\" },\n" +
     "    { \"kind\": \"close_item\",  \"target_id\": \"I-...\", \"reason\": \"...\", \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim slice from notes\" },\n" +
-    "    { \"kind\": \"new_task\",    \"project_id\": \"uuid\", \"title\": \"...\", \"due_date\": \"YYYY-MM-DD or null\", \"suggested_assignee\": \"email or null\", \"target_account_id\": \"id or null\", \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim slice from notes\" },\n" +
+    "    { \"kind\": \"new_task\",    \"project_id\": \"uuid\", \"title\": \"...\", \"due_date\": \"YYYY-MM-DD or null\", \"suggested_assignee\": \"email or null\", \"target_account_id\": \"id or null\", \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim slice from notes\", \"is_commitment\": false },\n" +
     "    { \"kind\": \"update_task\", \"project_id\": \"uuid\", \"task_id\": \"T-...\", \"fields\": { \"due_date\": \"...\", \"task_status\": \"...\" }, \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim slice from notes\" },\n" +
     "    { \"kind\": \"skip\",        \"reason\": \"duplicate of T-... or I-...\", \"confidence\": \"high\" }\n" +
     "  ]\n" +
@@ -592,7 +592,8 @@ export function summarizeDraftPip(payload) {
     "to 'low' so the user can pick.\n" +
     "- target_account_id = null means \"the current account\" (the one this meeting belongs to).\n" +
     "- Don't aggressively route — when an item is clearly about the current account or no other " +
-    "account is mentioned, leave target_account_id null.\n";
+    "account is mentioned, leave target_account_id null.\n" +
+    "- is_commitment: set true when this row represents a first-person promise or deliverable you are committing to — language like \"I'll get you...\", \"we'll have X by...\", \"I'll follow up on...\", \"we'll send...\", \"I'll loop in...\". Default false for tasks, observations, or things the customer will do.\n";
 
   // BP1 — system: static schema + rules, cached globally
   var summarySystemBlocks = [

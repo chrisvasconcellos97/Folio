@@ -1047,6 +1047,7 @@ export default function App() {
           <CommandPalette
             accounts={accounts}
             contacts={allContacts}
+            userId={userId}
             onSelectAccount={function(a) { setSelected(a); setView("accounts"); setShowPalette(false); }}
             onSelectContact={function(c) {
               var acct = accounts.find(function(a) { return a.id === c.account_id; });

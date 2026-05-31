@@ -68,6 +68,7 @@ export function applyPipPlan(selected, ctx) {
           owner:             row.assignee || null,
           account_id:        targetAcct,
           source_meeting_id: meetingId,
+          is_commitment:     row.is_commitment || false,
         };
         if (pipStampedAt) addPayload.pip_created_at = pipStampedAt;
         return addItem(addPayload)

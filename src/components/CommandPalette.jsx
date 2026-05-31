@@ -1,10 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import { C } from "../lib/colors";
+import { supabase } from "../lib/supabase";
 
-export function CommandPalette({ accounts, contacts, onSelectAccount, onSelectContact, onNavigate, onClose }) {
+export function CommandPalette({ accounts, contacts, userId, onSelectAccount, onSelectContact, onNavigate, onClose }) {
   var [query, setQuery] = useState("");
   var [idx, setIdx] = useState(0);
+  var [contentResults, setContentResults] = useState([]);
   var inputRef = useRef(null);
+  var searchTimerRef = useRef(null);
 
   useEffect(function() { if (inputRef.current) inputRef.current.focus(); }, []);
 
@@ -45,7 +48,72 @@ export function CommandPalette({ accounts, contacts, onSelectAccount, onSelectCo
     : [];
   var navResults = NAV_ITEMS.filter(function(n) { return !q || n.label.toLowerCase().includes(q); })
     .map(function(n) { return Object.assign({}, n, { group: "Navigate" }); });
-  var results = accountResults.concat(contactResults).concat(navResults);
+  var results = accountResults.concat(contactResults).concat(navResults).concat(contentResults);
+
+  // Debounced async full-text search across meeting notes and open items
+  useEffect(function () {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    if (!userId || !q || q.length < 3) {
+      setContentResults([]);
+      return;
+    }
+    searchTimerRef.current = setTimeout(function () {
+      var accountById = {};
+      (accounts || []).forEach(function (a) { accountById[a.id] = a; });
+
+      var meetingSearch = supabase
+        .from("folio_meetings")
+        .select("id, account_id, date, notes, pip_short_title")
+        .eq("user_id", userId)
+        .ilike("notes", "%" + q + "%")
+        .limit(3);
+
+      var itemSearch = supabase
+        .from("folio_tasks")
+        .select("id, account_id, title, created_at")
+        .eq("user_id", userId)
+        .is("project_id", null)
+        .eq("done", false)
+        .ilike("title", "%" + q + "%")
+        .limit(3);
+
+      Promise.all([meetingSearch, itemSearch]).then(function (results) {
+        var rows = [];
+        var meetings = results[0].data || [];
+        var items = results[1].data || [];
+
+        meetings.forEach(function (m) {
+          var acct = accountById[m.account_id];
+          if (!acct) return;
+          // Extract excerpt around the match
+          var notes = m.notes || "";
+          var matchIdx = notes.toLowerCase().indexOf(q);
+          var start = Math.max(0, matchIdx - 40);
+          var end = Math.min(notes.length, matchIdx + q.length + 60);
+          var excerpt = (start > 0 ? "…" : "") + notes.slice(start, end).trim() + (end < notes.length ? "…" : "");
+          rows.push({
+            label: acct.name,
+            sub: (m.pip_short_title || (m.date ? m.date.slice(0, 10) : "Meeting")) + " · " + excerpt.slice(0, 80),
+            group: "Notes",
+            action: function () { onSelectAccount(acct); },
+          });
+        });
+
+        items.forEach(function (item) {
+          var acct = accountById[item.account_id];
+          if (!acct) return;
+          rows.push({
+            label: acct.name,
+            sub: "Open item · " + (item.title || "").slice(0, 80),
+            group: "Items",
+            action: function () { onSelectAccount(acct); },
+          });
+        });
+
+        setContentResults(rows);
+      });
+    }, 300);
+  }, [q, userId, accounts]);
 
   useEffect(function() { setIdx(0); }, [query]);
 

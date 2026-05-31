@@ -9,6 +9,41 @@ import { useAccountNotes } from "../../../hooks/useAccountNotes";
 import { supabase } from "../../../lib/supabase";
 import { buildPipInsight } from "../../../lib/accountInsights.jsx";
 import { UPDATE_TYPE_LABELS, UPDATE_TYPE_COLORS } from "../../../lib/accountUpdateTypes";
+import { useAccountHealthHistory } from "../../../hooks/useAccountHealthHistory";
+
+function HealthSparkline({ history }) {
+  if (!history || history.length < 2) return null;
+  var today = new Date();
+  var days = [];
+  for (var i = 29; i >= 0; i--) {
+    var d = new Date(today.getTime() - i * 86400000);
+    var dateStr = d.toISOString().slice(0, 10);
+    var snap = history.find(function (h) { return h.snapshot_date === dateStr; });
+    days.push({ date: dateStr, snap: snap || null });
+  }
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+      {days.map(function (day, idx) {
+        var color = !day.snap ? C.rule
+          : day.snap.health_status === "healthy" ? C.green
+          : day.snap.health_status === "watching" ? C.yellow
+          : C.red;
+        return (
+          <div
+            key={idx}
+            title={day.date + (day.snap ? " · " + day.snap.health_status : " · no data")}
+            style={{
+              width: 7, height: 7, borderRadius: "50%",
+              background: color,
+              opacity: day.snap ? 1 : 0.2,
+              flexShrink: 0,
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
 
 var RANGES = [
   { label: "30 Days",  days: 30 },
@@ -28,6 +63,7 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
 
   var { notes: savedNotes, saveNotes } = useAccountNotes(userId, account.id, orgId, account.objective, onUpdateAccount);
   var [notesDraft, setNotesDraft] = useState(savedNotes || account.objective || "");
+  var healthHistory = useAccountHealthHistory(userId, account.id);
   var [externalStages, setExternalStages] = useState([]);
 
   useEffect(function () { setNotesDraft(savedNotes || account.objective || ""); }, [account.id, savedNotes]);
@@ -388,6 +424,18 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
               {healthScore === "green" ? "Healthy" : healthScore === "yellow" ? "Watch" : "At Risk"}
             </span>
           </div>
+          {healthHistory.length >= 2 && (
+            <div style={{ marginTop: 10 }}>
+              <div style={{ fontSize: 10, color: C.textMuted, fontFamily: "var(--font-mono, monospace)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 4 }}>
+                30-day health
+              </div>
+              <HealthSparkline history={healthHistory} />
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3 }}>
+                <span style={{ fontSize: 9, color: C.textMuted }}>30d ago</span>
+                <span style={{ fontSize: 9, color: C.textMuted }}>today</span>
+              </div>
+            </div>
+          )}
         </Card>
         {isPartner && (
           <Card>
