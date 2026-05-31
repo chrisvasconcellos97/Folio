@@ -17,7 +17,7 @@ import { Glow } from "../../components/Glow";
 import { Mark } from "../../components/Mark";
 import { pickV } from "../../lib/metricsUtils";
 import { useBreakpoint } from "../../hooks/useBreakpoint";
-import { useTasks } from "../../hooks/useTasks";
+import { useTasks, updateTask } from "../../hooks/useTasks";
 import { FlatTaskQueue } from "./FlatTaskQueue";
 import { LeaderProjectsView } from "./LeaderProjectsView";
 import { TeammateDetailView } from "./TeammateDetailView";
@@ -154,7 +154,13 @@ function buildGaugeInsight(projects, accountsById, handlers) {
 export function GaugeView({ userId, userEmail, accounts, members, orgId, lens }) {
   var { projects, loading, error: projectsError, refetch: refetchProjects, addProject, updateProject, deleteProject, templates, addTemplate, updateTemplate, deleteTemplate } = useProjects(userId, null, orgId);
   // Phase 3 — flat task queue. Defaults to Tasks tab for Admin lens, Projects for everyone else.
-  var { tasks: flatTasks } = useTasks(userId);
+  var { tasks: flatTasks, refetch: refetchTasks } = useTasks(userId);
+  function handleToggleDone(task) {
+    var nowDone = !task.done;
+    updateTask(userId, task.id, { done: nowDone, done_at: nowDone ? new Date().toISOString() : null })
+      .then(function () { refetchTasks(); })
+      .catch(function () {});
+  }
   // Phase 6 — V2 brain correction log for task edits that go through Gauge.
   var { logCorrection } = usePipCorrections(userId, null);
   var [primaryView, setPrimaryView] = useState(
@@ -433,6 +439,7 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId, lens })
               userEmail={userEmail}
               onOpenProject={null}
               showAssigneeChip={lens !== "admin"}
+              onToggleDone={handleToggleDone}
             />
           </div>
           {isDesktop && (flatTasks && flatTasks.length > 0) && (

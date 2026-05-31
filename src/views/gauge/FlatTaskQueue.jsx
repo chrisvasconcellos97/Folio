@@ -45,7 +45,7 @@ function initial(email) {
   return (clean.charAt(0) || "?").toUpperCase();
 }
 
-export function FlatTaskQueue({ tasks, accounts, projects, userEmail, onOpenProject, showAssigneeChip }) {
+export function FlatTaskQueue({ tasks, accounts, projects, userEmail, onOpenProject, showAssigneeChip, onToggleDone }) {
   var [subFilter, setSubFilter] = useState("open");
   var [groupByProject, setGroupBy] = useState(false);
 
@@ -134,6 +134,24 @@ export function FlatTaskQueue({ tasks, accounts, projects, userEmail, onOpenProj
           opacity: t.done ? 0.55 : 1,
         }}
       >
+        {onToggleDone && (
+          <button
+            onClick={function (e) { e.stopPropagation(); onToggleDone(t); }}
+            aria-label={t.done ? "Mark incomplete" : "Mark complete"}
+            style={{
+              flexShrink: 0, marginTop: 2,
+              width: 22, height: 22, borderRadius: "50%",
+              border: "2px solid " + (t.done ? C.accent : C.rule),
+              background: t.done ? C.accent : "transparent",
+              cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: C.bg, fontSize: 12, fontWeight: 700,
+              transition: "border-color 0.15s, background 0.15s",
+            }}
+          >
+            {t.done ? "✓" : ""}
+          </button>
+        )}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
             fontFamily: SERIF, fontSize: 15, color: C.text,
