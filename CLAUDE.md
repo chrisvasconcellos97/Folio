@@ -304,7 +304,8 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 2. **Code quality:** *(no open items)*
 
-3. **Feature completeness:** *(no open items)*
+3. **Feature completeness:**
+   - **Gauge template total turnaround time** — Add a `total_duration_days` field to project templates. Shows as "Estimated: X days" when browsing templates before applying. When a project is created from a template, sets an `expected_complete_date` = today + duration on the project. Auto-derives from max stage `due_offset_days` if not set manually. Pip can then flag projects approaching or past their expected completion date.
 
 4. **Native feel:** *(no open items)*
 
