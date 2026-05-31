@@ -97,11 +97,43 @@ function acctName(accountById, accountId) {
   return a ? a.name : "an account";
 }
 
+// Split brief prose and wrap known account names in Glow components.
+function renderBriefWithGlows(text, accounts, onOpenAccount) {
+  if (!text) return null;
+  if (!accounts || !accounts.length || !onOpenAccount) return text;
+  var named = accounts
+    .filter(function (a) { return a.name && a.name.length > 3; })
+    .sort(function (a, b) { return b.name.length - a.name.length; });
+  var segments = [text];
+  named.forEach(function (account) {
+    var next = [];
+    segments.forEach(function (seg) {
+      if (typeof seg !== "string") { next.push(seg); return; }
+      var parts = seg.split(account.name);
+      if (parts.length === 1) { next.push(seg); return; }
+      parts.forEach(function (part, i) {
+        if (part) next.push(part);
+        if (i < parts.length - 1) {
+          var id = account.id + "-" + i;
+          next.push(
+            <Glow key={id} onClick={function () { onOpenAccount(account.id); }}>
+              {account.name}
+            </Glow>
+          );
+        }
+      });
+    });
+    segments = next;
+  });
+  return segments;
+}
+
 export function HomeView({ userName, userId, accounts, meetings, items, cadences, projects, onOpenAccount, onOpenCadenceHub, onOpenConversation }) {
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
   var [mounted, setMounted] = useState(false);
   var [dailyBrief, setDailyBrief] = useState("");
+  var [briefCallouts, setBriefCallouts] = useState([]);
   var [briefLoading, setBriefLoading] = useState(false);
 
   var { snapshots } = useAccountSnapshots(userId);
@@ -117,7 +149,7 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
     if (!snapshots || snapshots.length === 0) return;
 
     var todayStr = new Date().toISOString().slice(0, 10);
-    var cacheKey = "folio_daily_brief_" + todayStr;
+    var cacheKey = "folio_daily_brief_v2_" + todayStr;
 
     // Check localStorage cache first — if we have a brief for today, use it.
     try {
@@ -126,6 +158,7 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
         var parsed = JSON.parse(cached);
         if (parsed && parsed.brief) {
           setDailyBrief(parsed.brief);
+          setBriefCallouts(parsed.callouts || []);
           return;
         }
       }
@@ -135,9 +168,21 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
     setBriefLoading(function (already) {
       if (already) return already;
 
-      var snapshotsWithNames = snapshots.map(function (s) {
+      // Build overdue item text per account so Pip can name them specifically
+      var overdueByAccount = {};
+      (items || []).forEach(function (item) {
+        if (!item.done && item.due_date && item.due_date < todayStr) {
+          if (!overdueByAccount[item.account_id]) overdueByAccount[item.account_id] = [];
+          overdueByAccount[item.account_id].push(item.text || item.title || item.description || "Unnamed item");
+        }
+      });
+
+      var snapshotsWithDetails = snapshots.map(function (s) {
         var acc = (accounts || []).find(function (a) { return a.id === s.account_id; });
-        return Object.assign({}, s, { account_name: acc ? acc.name : "Unknown" });
+        return Object.assign({}, s, {
+          account_name: acc ? acc.name : "Unknown",
+          overdue_items: (overdueByAccount[s.account_id] || []).slice(0, 3),
+        });
       });
 
       var sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
@@ -154,15 +199,15 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
       }).map(function (p) { return Object.assign({}, p, { completed_recently: true }); });
 
       callPortfolioBriefPip({
-        snapshots: snapshotsWithNames,
+        snapshots: snapshotsWithDetails,
         projects: activeProjects.concat(recentWins),
-        cadencesToday: [],
       }).then(function (result) {
         setBriefLoading(false);
         if (result && result.brief) {
           setDailyBrief(result.brief);
+          setBriefCallouts(result.callouts || []);
           try {
-            localStorage.setItem(cacheKey, JSON.stringify({ brief: result.brief, date: todayStr }));
+            localStorage.setItem(cacheKey, JSON.stringify({ brief: result.brief, callouts: result.callouts || [], date: todayStr }));
           } catch (_) { /* ignore */ }
         }
       }).catch(function (err) {
@@ -601,7 +646,35 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
             </div>
             {briefLoading
               ? <div style={{ fontFamily: INTER, fontSize: 14, color: C.textMuted, lineHeight: 1.6 }}>Pip is thinking…</div>
-              : <div style={{ fontFamily: INTER, fontSize: 14, color: C.textSoft, lineHeight: 1.6 }}>{dailyBrief}</div>
+              : (
+                <div>
+                  <div style={{ fontFamily: INTER, fontSize: 14, color: C.textSoft, lineHeight: 1.7 }}>
+                    {renderBriefWithGlows(dailyBrief, accounts, onOpenAccount)}
+                  </div>
+                  {briefCallouts && briefCallouts.length > 0 && (
+                    <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 6 }}>
+                      {briefCallouts.map(function (c, i) {
+                        var acc = (accounts || []).find(function (a) { return a.name === c.account_name; });
+                        return (
+                          <div key={i} style={{ display: "flex", alignItems: "baseline", gap: 6, flexWrap: "wrap" }}>
+                            <span style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.07em", flexShrink: 0 }}>↳</span>
+                            {acc
+                              ? <Glow onClick={function () { onOpenAccount(acc.id); }}>{c.account_name}</Glow>
+                              : <span style={{ fontFamily: INTER, fontSize: 13, color: C.accent }}>{c.account_name}</span>
+                            }
+                            {c.reason && (
+                              <span style={{ fontFamily: INTER, fontSize: 13, color: C.textMuted }}>— {c.reason}</span>
+                            )}
+                            {c.item && (
+                              <span style={{ fontFamily: INTER, fontSize: 13, color: C.textMuted, fontStyle: "italic" }}>· "{c.item}"</span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )
             }
           </div>
         </div>
