@@ -163,7 +163,7 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId, lens })
   // Phase 6 — V2 brain correction log for task edits that go through Gauge.
   var { logCorrection } = usePipCorrections(userId, null);
   var [primaryView, setPrimaryView] = useState(
-    lens === "leader" ? "leader" :
+    (members || []).length >= 2 && lens === "leader" ? "leader" :
     lens === "admin"  ? "tasks"  :
                         "projects"
   );
@@ -371,7 +371,7 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId, lens })
           hides the toggle while the detail view is up. */}
       <div style={{ display: scopeFilter === "my_queue" || viewingMember ? "none" : "flex", gap: 6, marginBottom: 14 }}>
         {[
-          lens === "leader" ? { id: "leader",   label: "Leader"   } : null,
+          (members || []).length >= 2 ? { id: "leader",   label: "Leader"   } : null,
           { id: "projects", label: "Projects" },
           { id: "tasks",    label: "Tasks"    },
         ].filter(Boolean).map(function (v) {
