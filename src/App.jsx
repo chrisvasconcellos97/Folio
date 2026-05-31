@@ -635,13 +635,14 @@ export default function App() {
         projects={allProjects}
         onOpenAccount={function (accountId) {
           var a = (accounts || []).find(function (x) { return x.id === accountId; });
-          if (a) setSelected(a);
+          if (a) { setSelected(a); handleSetView("accounts"); }
         }}
         onOpenCadenceHub={function (accountId, cadenceId) {
           var a = (accounts || []).find(function (x) { return x.id === accountId; });
           if (a) {
             setSelected(a);
             setPendingHubCadenceId(cadenceId);
+            handleSetView("accounts");
           }
         }}
         onOpenConversation={function () { setShowStartConv(true); }}

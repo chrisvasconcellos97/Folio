@@ -149,7 +149,7 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
     if (!snapshots || snapshots.length === 0) return;
 
     var todayStr = new Date().toISOString().slice(0, 10);
-    var cacheKey = "folio_daily_brief_v2_" + todayStr;
+    var cacheKey = "folio_daily_brief_v3_" + todayStr;
 
     // Check localStorage cache first — if we have a brief for today, use it.
     try {
