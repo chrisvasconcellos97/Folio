@@ -13,6 +13,7 @@ import { useProjects } from "../../hooks/useProjects";
 import { useAccountUpdates } from "../../hooks/useAccountUpdates";
 import { callBriefMePip } from "../../lib/pip";
 import { BusinessReviewModal } from "./BusinessReviewModal";
+import { PipMemoryPanel } from "./PipMemoryPanel";
 import { usePipAccountState } from "../../hooks/usePipAccountState";
 import { AccountDetailHeader } from "./AccountDetailHeader";
 import { AccountDetailTabs } from "./AccountDetailTabs";
@@ -89,6 +90,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
   var [showReviewModal, setShowReviewModal] = useState(false);
 
   var [showHealthOverride, setShowHealthOverride] = useState(false);
+  var [showPipMemory, setShowPipMemory] = useState(false);
   var [showAdd1on1Modal, setShowAdd1on1Modal] = useState(false);
   var [hubPersonCadence, setHubPersonCadence] = useState(null); // { cadence, contact }
 
@@ -458,6 +460,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
         onBusinessReview={handleBusinessReview}
         onResyncPipMemory={handleRefreshPipMemory}
         resyncingPip={refreshingState}
+        onPipMemory={function () { setShowPipMemory(true); }}
         onEdit={onEdit}
         onPrint={function () { window.print(); }}
         onExport={handleExport}
@@ -828,6 +831,14 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
           projects={projects || []}
           updates={updates || []}
           onClose={function () { setShowReviewModal(false); }}
+        />
+      )}
+
+      {showPipMemory && (
+        <PipMemoryPanel
+          account={account}
+          userId={userId}
+          onClose={function () { setShowPipMemory(false); }}
         />
       )}
 

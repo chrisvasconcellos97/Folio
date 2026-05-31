@@ -43,6 +43,7 @@ export function AccountDetailHeader({
   onBusinessReview,
   onResyncPipMemory,
   resyncingPip,
+  onPipMemory,
   onEdit,
   onPrint,
   onExport,
@@ -314,6 +315,21 @@ export function AccountDetailHeader({
             }}
           >
             {resyncingPip ? "Resyncing…" : "Resync Pip memory"}
+          </button>
+          <button
+            onClick={onPipMemory}
+            title="See everything Pip has learned about this account — lessons, corrections, and tone history."
+            style={{
+              background: "transparent",
+              border: "1px solid " + C.accentLine,
+              borderRadius: 6, padding: "6px 12px",
+              fontFamily: "'Inter', system-ui, sans-serif",
+              fontSize: 11, fontWeight: 500,
+              color: C.accent, cursor: "pointer",
+              marginTop: 8, marginLeft: 6, display: "inline-flex", alignItems: "center", gap: 5,
+            }}
+          >
+            <span style={{ fontSize: 11 }}>✦</span> What Pip knows
           </button>
         </div>
 
