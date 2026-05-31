@@ -67,6 +67,9 @@ export default function App() {
   var [showPalette, setShowPalette]     = useState(false);
   var [showStartConv, setShowStartConv] = useState(false);
   var [adHocFlow, setAdHocFlow]         = useState(null); // { accountId, draftId }
+  // Ref so handleSetView's setTimeout can pick up the intended account without
+  // the setSelected(null) inside the delay wiping it out.
+  var pendingNavAccountRef = useRef(null);
   var welcomeShown = useRef(false);
 
   function replayTour() {
@@ -364,7 +367,12 @@ export default function App() {
     setPipTransition("out");
     setTimeout(function () {
       setView(v);
-      setSelected(null);
+      if (pendingNavAccountRef.current) {
+        setSelected(pendingNavAccountRef.current);
+        pendingNavAccountRef.current = null;
+      } else {
+        setSelected(null);
+      }
       setPipTransition("in");
       setTimeout(function () { setPipTransition("idle"); }, 400);
     }, 200);
@@ -635,14 +643,19 @@ export default function App() {
         projects={allProjects}
         onOpenAccount={function (accountId) {
           var a = (accounts || []).find(function (x) { return x.id === accountId; });
-          if (a) { setSelected(a); handleSetView("accounts"); }
+          if (a) {
+            pendingNavAccountRef.current = a;
+            var target = a.account_type === "internal_team" ? "departments" : a.account_type === "partner" ? "partners" : "accounts";
+            handleSetView(target);
+          }
         }}
         onOpenCadenceHub={function (accountId, cadenceId) {
           var a = (accounts || []).find(function (x) { return x.id === accountId; });
           if (a) {
-            setSelected(a);
+            pendingNavAccountRef.current = a;
             setPendingHubCadenceId(cadenceId);
-            handleSetView("accounts");
+            var target = a.account_type === "internal_team" ? "departments" : a.account_type === "partner" ? "partners" : "accounts";
+            handleSetView(target);
           }
         }}
         onOpenConversation={function () { setShowStartConv(true); }}
