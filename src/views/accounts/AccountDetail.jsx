@@ -571,6 +571,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
           <ErrorBanner message={contactsError ? "Couldn't load contacts — check your connection" : null} onRetry={refetchContacts} />
         <ContactsTab
           contacts={contacts}
+          meetings={meetings}
           accountId={account.id}
           accountName={account.name}
           onAdd={function () { setContactModal(true); }}

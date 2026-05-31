@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { C } from "../../../lib/colors";
+import { computeContactEngagement } from "../../../lib/contactEngagement";
 
 var CT_SERIF = "'Fraunces', Georgia, serif";
 var CT_MONO  = "'JetBrains Mono', ui-monospace, monospace";
@@ -123,10 +124,15 @@ function exportContacts(contacts, accountName) {
   URL.revokeObjectURL(url);
 }
 
-export function ContactsTab({ contacts, accountId, accountName, onAdd, onDelete, onAddContact, onUpdate }) {
+export function ContactsTab({ contacts, meetings, accountId, accountName, onAdd, onDelete, onAddContact, onUpdate }) {
   var [confirmDeleteId, setConfirmDeleteId] = useState(null);
   var [editingContact, setEditingContact]   = useState(null);
   var [selected, setSelected]               = useState({});
+
+  // Pip Tier B — derive last-seen engagement from meeting attendees
+  var engagement = useMemo(function () {
+    return computeContactEngagement(contacts, meetings || []);
+  }, [contacts, meetings]);
 
   useEffect(function () { setSelected({}); }, [contacts.length]);
 
@@ -227,6 +233,28 @@ export function ContactsTab({ contacts, accountId, accountName, onAdd, onDelete,
                 {c.notes && (
                   <div style={{ fontSize: 11, color: C.textSub, lineHeight: 1.5 }}>{c.notes}</div>
                 )}
+
+                {(function () {
+                  var e = c.name ? engagement[c.name] : null;
+                  if (!e) return null;
+                  if (e.daysSince === null && e.meetingCount === 0) {
+                    return (
+                      <div style={{ fontFamily: CT_MONO, fontSize: 11, color: C.textMuted, marginTop: 5 }}>
+                        Not yet in a meeting
+                      </div>
+                    );
+                  }
+                  if (e.daysSince === null) return null;
+                  var isStale = e.daysSince > 60;
+                  return (
+                    <div style={{ fontFamily: CT_MONO, fontSize: 11, color: isStale ? C.yellow : C.textMuted, marginTop: 5 }}>
+                      {"Last seen: " + e.daysSince + "d ago"}
+                      {e.meetingCount > 0 && (
+                        <span style={{ marginLeft: 8, color: C.textMuted }}>{"· " + e.meetingCount + " meeting" + (e.meetingCount !== 1 ? "s" : "")}</span>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
               <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>

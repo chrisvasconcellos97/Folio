@@ -8,6 +8,8 @@
 //
 // Both functions are pure; safe to call on either client or server.
 
+import { computeContactEngagement } from "./contactEngagement";
+
 // Resolve account names mentioned in the message + the prior assistant message
 // (for follow-up context). Returns array of account objects, deduped.
 function resolveMentionedAccounts(accounts, messageText) {
@@ -228,6 +230,21 @@ function renderAccountFull(a) {
     });
   }
 
+  // Pip Tier B — commitments section
+  var allOpenItems = a.openItems || [];
+  var commitments = allOpenItems.filter(function (i) { return i.is_commitment; });
+  var todayStr = new Date().toISOString().slice(0, 10);
+  if (commitments.length > 0) {
+    lines.push("");
+    lines.push("COMMITMENTS (promised deliverables, " + commitments.length + "):");
+    commitments.slice(0, 5).forEach(function (c) {
+      var isOverdue = c.due && c.due < todayStr;
+      var due = c.due ? " (due " + c.due + (isOverdue ? " — OVERDUE" : "") + ")" : "";
+      var tail = c.owner ? " · owner: " + c.owner : "";
+      lines.push("- " + (c.text || "—") + due + tail);
+    });
+  }
+
   var contacts = take(a.contacts, 6);
   if (contacts.length) {
     lines.push("");
@@ -239,6 +256,23 @@ function renderAccountFull(a) {
       if (c.is_poc) line += " [POC]";
       lines.push(line);
     });
+  }
+
+  // Pip Tier B — cold contacts from engagement analysis
+  if (contacts.length > 0 && (a.meetings || []).length > 0) {
+    var engagement = computeContactEngagement(contacts, a.meetings);
+    var coldContacts = contacts.filter(function (c) {
+      var e = engagement[c.name];
+      return e && e.daysSince !== null && e.daysSince > 30;
+    });
+    if (coldContacts.length > 0) {
+      lines.push("");
+      lines.push("CONTACTS NOT SEEN IN 30+ DAYS:");
+      coldContacts.forEach(function (c) {
+        var e = engagement[c.name];
+        lines.push("- " + c.name + (c.title ? " (" + c.title + ")" : "") + " — last seen " + e.daysSince + " days ago");
+      });
+    }
   }
 
   var projects = take(a.activeProjects, 5);

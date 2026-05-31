@@ -15,6 +15,7 @@ import { Pill } from "../../components/Pill";
 import { SecBtn, DangerBtn } from "../../components/Buttons";
 import { ownerInitials, findOwner } from "../../lib/ownerLabel";
 import { useBreakpoint } from "../../hooks/useBreakpoint";
+import { useToneTrend } from "../../hooks/useToneTrend";
 
 var MONO = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
@@ -61,6 +62,9 @@ export function AccountDetailHeader({
   // Use computed health if provided, fall back to account.status
   var computedHealth  = health || { status: account.status || "green", reason: null, pinned: false };
   var statusColor     = STATUS_COLORS[computedHealth.status] || C.textSub;
+
+  // Pip Tier B — tone temperature trend
+  var toneTrend = useToneTrend(userId, account.id);
 
   var meetingBars = (function () {
     if (!meetings || meetings.length === 0) return null;
@@ -203,6 +207,26 @@ export function AccountDetailHeader({
                   </span>
                 )}
               </button>
+            )}
+            {toneTrend.trend === "cooling" && (
+              <span style={{
+                fontFamily: MONO, fontSize: 9, letterSpacing: "0.07em",
+                textTransform: "uppercase", color: C.warning || C.statusWatching || C.yellow,
+                background: "rgba(251,191,36,0.10)", border: "1px solid rgba(251,191,36,0.25)",
+                borderRadius: 999, padding: "2px 7px", userSelect: "none",
+              }}>
+                Cooling ↘
+              </span>
+            )}
+            {toneTrend.trend === "warming" && (
+              <span style={{
+                fontFamily: MONO, fontSize: 9, letterSpacing: "0.07em",
+                textTransform: "uppercase", color: C.accent,
+                background: C.accentFaint, border: "1px solid " + C.accentLine,
+                borderRadius: 999, padding: "2px 7px", userSelect: "none",
+              }}>
+                Warming ↗
+              </span>
             )}
             {openCount > 0 && (
               <Pill

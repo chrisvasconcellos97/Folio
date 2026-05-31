@@ -192,7 +192,20 @@ export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAd
                   </button>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontFamily: IT_SERIF, fontSize: 15.5, fontWeight: 400, color: C.text, lineHeight: 1.2, letterSpacing: "-0.005em" }}>{item.text}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+                    <div style={{ fontFamily: IT_SERIF, fontSize: 15.5, fontWeight: 400, color: C.text, lineHeight: 1.2, letterSpacing: "-0.005em" }}>{item.text}</div>
+                    {item.is_commitment && (
+                      <span style={{
+                        fontFamily: IT_MONO, fontSize: 9, letterSpacing: "0.06em",
+                        textTransform: "uppercase", fontWeight: 600,
+                        color: C.accent, background: C.accentFaint,
+                        border: "1px solid " + C.accentLine,
+                        borderRadius: 999, padding: "2px 7px", flexShrink: 0,
+                      }}>
+                        Commitment
+                      </span>
+                    )}
+                  </div>
                   <div style={{ display: "flex", gap: 12, marginTop: 4, flexWrap: "wrap" }}>
                     {item.due_date && (
                       <div style={{ fontFamily: IT_MONO, fontSize: 10, color: C.yellow, letterSpacing: "0.04em", fontFeatureSettings: '"tnum"' }}>
@@ -204,6 +217,24 @@ export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAd
                     )}
                   </div>
                 </div>
+                {onUpdate && (
+                  <button
+                    type="button"
+                    onClick={function () { onUpdate(item.id, { is_commitment: !item.is_commitment }); }}
+                    title={item.is_commitment ? "Unmark as commitment" : "Mark as commitment"}
+                    aria-label={item.is_commitment ? "Unmark as commitment" : "Mark as commitment"}
+                    style={{
+                      background: item.is_commitment ? C.accentFaint : "transparent",
+                      border: "1px solid " + (item.is_commitment ? C.accentLine : C.border),
+                      borderRadius: 6, padding: "4px 8px",
+                      fontFamily: IT_MONO, fontSize: 10,
+                      color: item.is_commitment ? C.accent : C.textMuted,
+                      cursor: "pointer", flexShrink: 0,
+                    }}
+                  >
+                    {item.is_commitment ? "✦" : "◇"}
+                  </button>
+                )}
                 {onUpdate && (
                   <SecBtn
                     onClick={function () { setEditingItem(item); }}

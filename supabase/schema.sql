@@ -198,6 +198,7 @@ create table if not exists folio_items (
   owner          text,
   done           boolean default false,
   closed_at      timestamptz,
+  is_commitment  boolean not null default false,
   created_at     timestamptz default now(),
   pip_created_at    timestamptz,
   source_meeting_id uuid references folio_meetings on delete set null
