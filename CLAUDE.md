@@ -330,7 +330,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 15. *(shipped — see Already shipped)*
 
-16. **Route Builder:** *(no open items)*
+16. *(ripped — Route Builder removed, not needed)*
 
 17. *(shipped — see Already shipped)*
 
@@ -369,7 +369,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
 - ✅ **Demo data seed script** — `scripts/seed-demo-data.js` populates a Supabase Auth user with ~50 accounts (mixed tiers/types, ~4 inactive), ~150 contacts, ~400 meetings, ~300 items, ~25 cadences, ~20 Gauge projects, 25 quick tasks. Idempotent (wipes prior demo data first). Requires `DEMO_USER_EMAIL` / `DEMO_USER_PASSWORD` in `.env`.
 - ✅ Data Visualization — 8-point sparklines + MoM trend arrows on account cards (later ripped — see "Ripped" section); 6-month meeting frequency bars on account detail header (KEPT)
 - ✅ Gauge + Account Change Log — deliveries in Brief Me, active projects fed into Pip context, Recent Deliveries on Overview (already shipped)
-- ✅ Route Builder — TSP optimizer, Nominatim geocoding, schedule sidebar with arrival times and drive estimates, Google Maps handoff, save routes to DB
+- 🪓 **Route Builder (ripped)** — TSP optimizer, Nominatim geocoding, schedule sidebar, Google Maps handoff. Removed — not used in practice. Nav item gone, `src/views/routes/` deleted, lazy import removed from App.jsx. DB columns intact if needed later.
 - ✅ Team/Org Layer + Leadership View — `folio_orgs`, `folio_org_members`, `folio_account_notes`, `folio_activity` tables + migration SQL (`supabase/team_org_layer.sql`). `useOrg` hook, `useAccountNotes` hook (migrates from `account.objective`), fire-and-forget `logActivity` in all write hooks. Settings view with create-team + invite/revoke UI. Leadership view (full-width read-only portfolio dashboard). Invite banner on login. Role-aware rendering: leadership gets LeadershipView; everyone else gets normal app. "Team" nav item on desktop sidebar. "Settings" in UserMenu (mobile).
 - ✅ **Gauge — Standing Projects + Custom Columns + Admin Queue** — `is_standing`, `custom_field_schema`, `task_status_columns` columns on `gauge_projects` (migration in `supabase/gauge_standing_projects.sql`). Per-task `custom_fields`, `account_id`, `task_status`, `created_at` inside the existing `stages` jsonb array. `src/lib/gaugeFields.js` defines field types (text/longtext/number/date/dropdown/person/checkbox/url) and seeds "bones" defaults (Priority, Owner, Submission Date, Due Date, Description, Related Link). `ProjectModal` now has a Discrete/Standing mode toggle + inline `CustomFieldSchemaEditor` for managing columns. Unified `TaskDetailPanel` handles both new-task and edit-from-queue flows with every custom field rendered by type. `StandingBoardView` renders the kanban (one column per `task_status_columns` id) inside the expanded project row. `MyQueueView` flattens tasks across all projects assigned to the current user with Live / Planning / All sub-filters and an optional group-by-project toggle. Project status bubbles into task display via `PLANNING` / `ON HOLD` chips on planned/on_hold projects. "Stages" renamed to "Tasks" everywhere user-facing; DB column name stays `stages` for backwards compat.
 - ✅ Gauge V2 — stages, requested_by, assignee multi-user RLS, My Queue filter, New Request from Folios, status values fixed (planned/in_progress/blocked/complete/on_hold)

@@ -28,7 +28,6 @@ var CalendarView   = lazy(function () { return import("./views/calendar/Calendar
 var PipView        = lazy(function () { return import("./views/pip/PipView").then(function (m) { return { default: m.PipView }; }); });
 var CadenceView    = lazy(function () { return import("./views/cadence/CadenceView").then(function (m) { return { default: m.CadenceView }; }); });
 var GaugeView      = lazy(function () { return import("./views/gauge/GaugeView").then(function (m) { return { default: m.GaugeView }; }); });
-var RouteBuilder   = lazy(function () { return import("./views/routes/RouteBuilder").then(function (m) { return { default: m.RouteBuilder }; }); });
 var SettingsView   = lazy(function () { return import("./views/settings/SettingsView").then(function (m) { return { default: m.SettingsView }; }); });
 var TeamView       = lazy(function () { return import("./views/team/TeamView").then(function (m) { return { default: m.TeamView }; }); });
 var LeadershipView = lazy(function () { return import("./views/leadership/LeadershipView").then(function (m) { return { default: m.LeadershipView }; }); });
@@ -742,9 +741,6 @@ export default function App() {
     );
   }
 
-  if (view === "routes") {
-    mainContent = <RouteBuilder accounts={accounts} userId={userId} />;
-  }
 
   if (view === "diagnostics") {
     mainContent = <ObservabilityView userId={userId} />;
