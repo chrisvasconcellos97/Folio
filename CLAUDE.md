@@ -336,14 +336,37 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 18. **Internal / people cadences + 1:1 mode** — Phase 1 (My Department flag + Pip context injection) shipped — see Already shipped. Remaining: Cadences tied to a person (boss, mentor, cross-functional partner) rather than a customer account. Pre-meeting brief pulls from the full portfolio (not one account) so Pip surfaces what's most important to bring up. Same note-taking experience as CadenceMeetingMode. Post-meeting Pip routes action items back to the appropriate accounts automatically (cross-account routing already built in PipSummarizePreview). First use case: weekly 1:1 with manager. Requires portfolio-aware Pip context (item 19).
 
-19. **Pip portfolio intelligence upgrade (chief of staff mode)** — Pip gains cross-portfolio awareness so it can reason about work state across all accounts simultaneously, not just one at a time. Seven specific upgrades to build together or incrementally:
-    - **Portfolio work state** — All active Gauge projects + completion state + stuck detection passed to Pip in a compressed format. Powers "4 audits in flight, here's where each stands" style synthesis.
-    - **Momentum scoring** — Health trend over time, not just current snapshot. "Parts Authority was at-risk, now recovering" vs "All Star drifting despite healthy score."
-    - **Commitment tracking** — Pip knows what you promised to deliver to whom and when, pulled from Gauge projects + meeting notes. Flags at-risk commitments before they miss.
-    - **Pattern recognition** — When the same theme surfaces across 3+ accounts, Pip flags it as a portfolio signal worth raising to leadership.
-    - **Capacity awareness** — Pip knows your current load (open projects, cadences this week, QBRs due) so it can factor in bandwidth when briefing your boss or making suggestions.
+19. **Pip portfolio intelligence upgrade (chief of staff mode)** — Pip gains cross-portfolio awareness so it can reason about work state across all accounts simultaneously. Four tiers of increasing sophistication — build Tier A first since it's the foundation everything else runs on.
+
+    **Tier A — Account state snapshots + daily brief (build first, ~80% from existing data)**
+    - **`folio_account_snapshots` table** — one row per account per day, computed nightly: health score, days since last contact, open item count, overdue count, active Gauge project count, stuck project count. Zero LLM cost; pure DB derivation. This is the foundation for everything in Tiers B–D.
+    - **Portfolio work state** — All active Gauge projects + completion state + stuck detection passed to Pip in a compressed format. Powers "4 audits in flight, here's where each stands" synthesis.
+    - **Daily brief** — One Haiku call per day (cached), cross-portfolio morning summary: what's due, what's at risk, what needs your attention. Estimated cost: ~$0.07/month.
     - **Win surfacing** — Recently delivered/closed work surfaced automatically for 1:1s and QBRs. Easy to forget wins when heads-down.
-    - **Proactive meeting agenda** — Before any meeting, Pip suggests talking points based on unresolved items, time elapsed, and outstanding commitments — not just for 1:1s.
+    - **Momentum scoring** — Health trend over time from snapshots, not just current state. "Parts Authority was at-risk, now recovering" vs "All Star drifting despite healthy score."
+
+    **Tier B — People modeling + commitment tracking (requires new light-weight data structures)**
+    - **Contact engagement history** — Log last contacted date per contact, response speed inferred from meeting frequency. "Sarah responds within 48h" vs "Mike goes quiet before renewals." Stored in `folio_contacts` or a thin engagement log table.
+    - **Client-side commitment ledger** — What you promised to deliver to whom and when, pulled from Gauge projects + meeting notes. Flags at-risk commitments before they miss. Requires extracting commitments from meeting notes via a lightweight Haiku pass at summarize time, stored as structured rows.
+    - **Relationship temperature from tone** — `pip_tone` already written on every summarize. Trend it over time per account: consistently positive → stable; recently cooling → flag. No extra LLM calls needed, just reading the existing field over snapshots.
+
+    **Tier C — Pattern detection + anomaly detection (most powerful, highest leverage)**
+    - **Cross-account pattern recognition** — When the same theme surfaces across 3+ accounts (e.g. "pricing concern", "integration delay"), Pip flags it as a portfolio signal worth raising to leadership. Requires meeting theme extraction (one tag per meeting via Haiku at summarize time).
+    - **Anomaly detection vs own baseline** — "This account is 3× more active than your usual cadence for its tier" or "No meeting in 45 days, typically you meet every 3 weeks." Personal baseline, not industry benchmark.
+    - **Capacity triage reasoning** — Pip knows your current load (open projects, cadences this week, QBRs due) so it can factor in bandwidth when briefing your boss or making suggestions. Built on Tier A snapshot data.
+
+    **Tier D — Proactive outputs (build last, requires Tiers A–C as foundation)**
+    - **Proactive standing agendas** — Before any meeting, Pip suggests talking points based on unresolved items, time elapsed, outstanding commitments, and relationship temperature. Not just for 1:1s.
+    - **Draft-ahead offers** — Pip drafts a follow-up email, a status update, or a QBR slide outline *before* you ask. Triggered by: meeting completed with no follow-up logged in 48h, project milestone hit, account health drop.
+    - **Boss-ready rollup** — Pip generates a 30-second spoken summary of portfolio state, formatted for your weekly 1:1 with your manager. What's strong, what needs attention, what you're asking for.
+
+    **Data Pip needs that it's not getting today:**
+    - *Feed today:* detailed meeting notes (already there), attendees (already there), account updates (already there), Gauge for all commitments (already there), contacts with roles (already there)
+    - *New structures needed:* `folio_account_snapshots` (daily computed, Tier A foundation); contact engagement log (last contacted per person, thin); meeting theme tags (one tag extracted at summarize time, stored on `folio_meetings`); commitment rows extracted from notes (structured `folio_commitments` table or piggyback onto `folio_items` with a `commitment_type` flag)
+
+    **Cost analysis:** Tier A (daily brief) ≈ $0.07/month. Tiers B–C add marginal cost only at summarize time (one extra tag extraction). Tier D adds one Haiku call per triggered draft. Total at full build: ~$0.50–1.00/month. The expensive path (querying Pip on every page load) is explicitly avoided — all intelligence is computed once, cached, and read cheaply.
+
+20. **Pip memory transparency panel** — Per-account view of everything Pip has learned so far. Shows: corrections history (what you've edited, rejected, or added), `lessons_learned` from compressed correction log, contact classifications (who responds fast, who goes quiet before renewals), tone trend over last N meetings, pattern matches flagged across accounts. Goal: Chris can see exactly what Pip "knows" about each account and correct it if something is wrong. Lives as a collapsible panel or a "What Pip knows" button in the account detail header or CadenceHub sidebar. Reads from `pip_correction_log`, `pip_account_state.lessons_learned`, `folio_contacts`, and (once built) `folio_account_snapshots`.
 
 **Already shipped (drop from list):**
 - ✅ **My Department flag** — `is_my_department` boolean on `folio_accounts` with partial unique index (one per user). Department card gets "MY TEAM" badge + teal left border. Toggle in AddAccountModal when creating/editing a department. Pip context includes "MY TEAM: [name]" so Pip knows which team is the user's own.
