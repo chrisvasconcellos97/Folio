@@ -436,7 +436,14 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId, lens })
               accounts={accounts}
               projects={projects}
               userEmail={userEmail}
-              onOpenProject={null}
+              onOpenProject={function (id) {
+                setPrimaryView("projects");
+                setExpandedRows(function (prev) { return Object.assign({}, prev, { [id]: true }); });
+                setTimeout(function () {
+                  var el = document.querySelector('[data-project-id="' + id + '"]');
+                  if (el && el.scrollIntoView) el.scrollIntoView({ behavior: "smooth", block: "center" });
+                }, 80);
+              }}
               showAssigneeChip={lens !== "admin"}
               onToggleDone={handleToggleDone}
             />

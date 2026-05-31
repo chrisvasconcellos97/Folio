@@ -10,12 +10,10 @@
 //              user's assignee_email
 //   - "all"    sub-filter shows everything the user has access to
 //   - "open"   hides completed tasks
-//
-// This view is the new Gauge entry experience for Admin lens users and an
-// optional secondary view for everyone else (toggle in GaugeView header).
 
 import { useState, useMemo } from "react";
 import { C } from "../../lib/colors";
+import { Modal } from "../../components/Modal";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
@@ -48,6 +46,7 @@ function initial(email) {
 export function FlatTaskQueue({ tasks, accounts, projects, userEmail, onOpenProject, showAssigneeChip, onToggleDone }) {
   var [subFilter, setSubFilter] = useState("open");
   var [groupByProject, setGroupBy] = useState(false);
+  var [detailTask, setDetailTask] = useState(null);
 
   var accountsById = useMemo(function () {
     var m = {};
@@ -61,15 +60,11 @@ export function FlatTaskQueue({ tasks, accounts, projects, userEmail, onOpenProj
     return m;
   }, [projects]);
 
-  // Per-project step total used for "Step 3 of 7" badges on discrete projects.
-  // Standing projects (is_standing=true) skip the badge — they have no fixed
-  // sequence.
   var projectStepTotals = useMemo(function () {
     var m = {};
     (projects || []).forEach(function (p) {
       if (p.is_standing) return;
-      var stages = p.stages || [];
-      m[p.id] = stages.length;
+      m[p.id] = (p.stages || []).length;
     });
     return m;
   }, [projects]);
@@ -81,7 +76,6 @@ export function FlatTaskQueue({ tasks, accounts, projects, userEmail, onOpenProj
     } else if (subFilter === "mine") {
       rows = rows.filter(function (t) { return t.assignee_email === userEmail; });
     }
-    // Sort: due date asc (nulls last), then created_at desc
     rows = rows.slice().sort(function (a, b) {
       var ad = a.due_date || null;
       var bd = b.due_date || null;
@@ -134,13 +128,14 @@ export function FlatTaskQueue({ tasks, accounts, projects, userEmail, onOpenProj
           opacity: t.done ? 0.55 : 1,
         }}
       >
+        {/* Completion circle */}
         {onToggleDone && (
           <button
             onClick={function (e) { e.stopPropagation(); onToggleDone(t); }}
             aria-label={t.done ? "Mark incomplete" : "Mark complete"}
             style={{
-              flexShrink: 0, marginTop: 2,
-              width: 22, height: 22, borderRadius: "50%",
+              flexShrink: 0, marginTop: 3,
+              width: 24, height: 24, borderRadius: "50%",
               border: "2px solid " + (t.done ? C.accent : C.rule),
               background: t.done ? C.accent : "transparent",
               cursor: "pointer",
@@ -152,7 +147,15 @@ export function FlatTaskQueue({ tasks, accounts, projects, userEmail, onOpenProj
             {t.done ? "✓" : ""}
           </button>
         )}
-        <div style={{ flex: 1, minWidth: 0 }}>
+
+        {/* Tappable body → opens detail modal */}
+        <div
+          onClick={function () { setDetailTask(t); }}
+          role="button"
+          tabIndex={0}
+          onKeyDown={function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setDetailTask(t); } }}
+          style={{ flex: 1, minWidth: 0, cursor: "pointer" }}
+        >
           <div style={{
             fontFamily: SERIF, fontSize: 15, color: C.text,
             lineHeight: 1.3, fontWeight: 400,
@@ -178,18 +181,13 @@ export function FlatTaskQueue({ tasks, accounts, projects, userEmail, onOpenProj
               </span>
             )}
             {proj && (
-              <span
-                onClick={function () { if (onOpenProject) onOpenProject(proj.id); }}
-                role={onOpenProject ? "button" : undefined}
-                style={{
-                  color: C.textMuted, background: "transparent",
-                  border: "1px solid " + C.rule,
-                  padding: "2px 7px", borderRadius: 4,
-                  textTransform: "uppercase", letterSpacing: "0.06em",
-                  fontWeight: 600,
-                  cursor: onOpenProject ? "pointer" : "default",
-                }}
-              >
+              <span style={{
+                color: C.textMuted, background: "transparent",
+                border: "1px solid " + C.rule,
+                padding: "2px 7px", borderRadius: 4,
+                textTransform: "uppercase", letterSpacing: "0.06em",
+                fontWeight: 600,
+              }}>
                 {proj.name}
               </span>
             )}
@@ -214,6 +212,7 @@ export function FlatTaskQueue({ tasks, accounts, projects, userEmail, onOpenProj
             )}
           </div>
         </div>
+
         {showAssigneeChip && t.assignee_email && (
           <div
             title={t.assignee_email}
@@ -231,6 +230,12 @@ export function FlatTaskQueue({ tasks, accounts, projects, userEmail, onOpenProj
       </div>
     );
   }
+
+  // Detail modal for a selected task
+  var dt = detailTask;
+  var dtAcct = dt && dt.account_id ? accountsById[dt.account_id] : null;
+  var dtProj = dt && dt.project_id ? projectsById[dt.project_id] : null;
+  var dtOverdue = dt && !dt.done && isOverdue(dt.due_date);
 
   return (
     <div>
@@ -301,6 +306,133 @@ export function FlatTaskQueue({ tasks, accounts, projects, userEmail, onOpenProj
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {filtered.map(function (t) { return renderCard(t); })}
         </div>
+      )}
+
+      {/* Task detail modal */}
+      {detailTask && (
+        <Modal title="Task" onClose={function () { setDetailTask(null); }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+            {/* Title */}
+            <div style={{ fontFamily: SERIF, fontSize: 18, color: C.text, lineHeight: 1.4 }}>
+              {dt.title}
+            </div>
+
+            {/* Fields grid */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+
+              {dtAcct && (
+                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                  <span style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", width: 72, flexShrink: 0 }}>Account</span>
+                  <span style={{
+                    fontFamily: MONO, fontSize: 11, color: C.textSoft,
+                    background: C.accentFaint, border: "1px solid " + C.accentLine,
+                    padding: "3px 9px", borderRadius: 4,
+                    textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600,
+                  }}>
+                    {dtAcct.name}
+                  </span>
+                </div>
+              )}
+
+              {dtProj && (
+                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                  <span style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", width: 72, flexShrink: 0 }}>Project</span>
+                  <span style={{
+                    fontFamily: MONO, fontSize: 11, color: C.textMuted,
+                    background: "transparent", border: "1px solid " + C.rule,
+                    padding: "3px 9px", borderRadius: 4,
+                    textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600,
+                  }}>
+                    {dtProj.name || dtProj.title}
+                  </span>
+                </div>
+              )}
+
+              {dt.due_date && (
+                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                  <span style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", width: 72, flexShrink: 0 }}>Due</span>
+                  <span style={{
+                    fontFamily: MONO, fontSize: 12,
+                    color: dtOverdue ? C.red : C.text,
+                    fontWeight: dtOverdue ? 700 : 400,
+                    fontFeatureSettings: '"tnum"',
+                  }}>
+                    {dtOverdue ? "OVERDUE · " : ""}{fmtDue(dt.due_date)}
+                  </span>
+                </div>
+              )}
+
+              {dt.assignee_email && (
+                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                  <span style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", width: 72, flexShrink: 0 }}>Assigned</span>
+                  <span style={{ fontFamily: MONO, fontSize: 12, color: C.text }}>{dt.assignee_email}</span>
+                </div>
+              )}
+
+              {dt.task_status && (
+                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                  <span style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", width: 72, flexShrink: 0 }}>Status</span>
+                  <span style={{ fontFamily: MONO, fontSize: 12, color: C.text, textTransform: "capitalize" }}>{dt.task_status.replace(/_/g, " ")}</span>
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                <span style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", width: 72, flexShrink: 0 }}>Done</span>
+                <span style={{ fontFamily: MONO, fontSize: 12, color: dt.done ? C.accent : C.textMuted }}>{dt.done ? "Yes" : "No"}</span>
+              </div>
+
+              {dt.source_meeting_id && (
+                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                  <span style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", width: 72, flexShrink: 0 }}>Source</span>
+                  <span style={{ fontFamily: MONO, fontSize: 12, color: C.textFaint, fontStyle: "italic" }}>From meeting</span>
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", paddingTop: 4 }}>
+              {onToggleDone && (
+                <button
+                  onClick={function () {
+                    onToggleDone(dt);
+                    // Optimistically update the detailTask view so Done row flips
+                    setDetailTask(Object.assign({}, dt, { done: !dt.done }));
+                  }}
+                  style={{
+                    flex: 1, minWidth: 120,
+                    padding: "10px 16px", borderRadius: 8, cursor: "pointer",
+                    fontFamily: INTER, fontSize: 13, fontWeight: 600,
+                    background: dt.done ? C.surface : C.accent,
+                    color: dt.done ? C.text : C.bg,
+                    border: "1px solid " + (dt.done ? C.rule : C.accent),
+                  }}
+                >
+                  {dt.done ? "Mark incomplete" : "Mark complete"}
+                </button>
+              )}
+
+              {dtProj && onOpenProject && (
+                <button
+                  onClick={function () {
+                    setDetailTask(null);
+                    onOpenProject(dtProj.id);
+                  }}
+                  style={{
+                    flex: 1, minWidth: 120,
+                    padding: "10px 16px", borderRadius: 8, cursor: "pointer",
+                    fontFamily: INTER, fontSize: 13, fontWeight: 500,
+                    background: "transparent",
+                    color: C.accent,
+                    border: "1px solid " + C.accentLine,
+                  }}
+                >
+                  View project →
+                </button>
+              )}
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );
