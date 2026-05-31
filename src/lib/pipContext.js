@@ -350,3 +350,33 @@ export function renderContextProse(curated) {
 
   return sections.join("\n\n");
 }
+
+// ──────────────────────────────────────────────────────────────────────
+// Pip Tier A — portfolio state compression.
+// Compress portfolio state into a short text block for Pip context.
+// Used by portfolio-brief.js and (future) 1:1 meeting mode.
+// ──────────────────────────────────────────────────────────────────────
+export function buildPortfolioState(accounts, snapshots, projects) {
+  if (!accounts || accounts.length === 0) return "";
+
+  var atRisk   = (snapshots || []).filter(function (s) { return s.health_status === "at_risk"; });
+  var watching = (snapshots || []).filter(function (s) { return s.health_status === "watching"; });
+  var active   = (projects || []).filter(function (p) { return p.status === "in_progress"; });
+  var sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+  var stuck    = (projects || []).filter(function (p) {
+    if (p.status !== "in_progress") return false;
+    var stages = p.stages || [];
+    return !stages.some(function (s) { return s.done && s.done_at && s.done_at > sevenDaysAgo; });
+  });
+
+  var lines = ["PORTFOLIO STATE — " + accounts.length + " accounts"];
+  if (atRisk.length)   lines.push("At Risk: " + atRisk.map(function (s) { return findAccountName(accounts, s.account_id); }).join(", "));
+  if (watching.length) lines.push("Watching: " + watching.map(function (s) { return findAccountName(accounts, s.account_id); }).join(", "));
+  if (active.length)   lines.push("Active projects: " + active.length + (stuck.length ? " (" + stuck.length + " stuck)" : ""));
+  return lines.join("\n");
+}
+
+function findAccountName(accounts, id) {
+  var a = accounts.find(function (x) { return x.id === id; });
+  return a ? a.name : "Unknown";
+}

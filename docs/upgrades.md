@@ -271,6 +271,52 @@ Without one home for tasks, none of that could exist.
 
 ---
 
+---
+
+## 2026-05-31 — Pip Tier A: portfolio intelligence + daily brief
+
+**What I built:** Pip can now see your whole portfolio at once. Every
+morning it takes a snapshot of every account's health — how cold each
+one is, how many items are overdue, which projects are moving and
+which are stuck — and then writes you a plain-English brief on the
+home screen.
+
+**The problem it solves:** Before today Pip only knew about one
+account at a time. If you opened ACME's cadence hub, Pip knew
+everything about ACME. But it had no idea that Parts Authority was
+45 days cold, or that three accounts had overdue items piling up.
+You had to hold the full picture in your head. Pip now holds it for
+you.
+
+**What changed:**
+- New `folio_account_snapshots` database table. One row per account
+  per day, computed from real signals: health status, days since last
+  contact, open/overdue item counts, active/stuck Gauge project
+  counts. Zero AI cost — pure arithmetic.
+- Snapshots are computed once per calendar day on app load, silently,
+  in the background. They never block the UI.
+- Daily brief card on the home screen. One Haiku call, cached for
+  the whole day (not re-run until tomorrow). Pip reads the snapshot
+  table and writes a 3-5 sentence morning read: what needs attention,
+  biggest risk, any wins worth noting.
+- `buildPortfolioState()` utility that compresses the portfolio into a
+  short text block — the building block for the 1:1 mode and boss-ready
+  rollup coming in Tiers B-D.
+
+**What you see today:** A "Pip · Daily Brief" card at the top of the
+home screen, just above the four panels. It loads a few seconds after
+the home screen appears (while Pip is thinking). The next day it shows
+instantly from cache. If there are no snapshots yet (first app load
+after this upgrade), the card stays hidden.
+
+**Why it matters:** This is the Tier A foundation for Pip's "chief of
+staff" mode. Every more sophisticated portfolio feature — people
+modeling, pattern detection, proactive briefings for your boss — runs
+on top of these daily snapshots. The snapshots are free to compute and
+cheap to query. The brief costs roughly $0.07/month at Haiku pricing.
+
+---
+
 ## Earlier upgrades
 
 Pre-2026-05-30 upgrades happened before this log existed. They're

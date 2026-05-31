@@ -1,6 +1,6 @@
 # Folios — Product Overview
 
-*Last updated: 2026-05-30*
+*Last updated: 2026-05-31*
 
 This is the substantive product read after the [one-pager](./one-pager.md).
 Covers what Folios does, how it's structured, and what makes the Pip
@@ -269,6 +269,23 @@ preserves the summarized meeting but applies nothing.
 - Text-to-speech via browser SpeechSynthesis today (free, but the
   voice quality is poor).
 - Premium voice (OpenAI / Cartesia / ElevenLabs) on the wishlist.
+
+### Pip — portfolio intelligence (Tier A)
+
+Pip now sees your entire portfolio at once, not just one account at a time.
+
+- **Daily account state snapshots** (`folio_account_snapshots`): computed
+  once per day, client-side, from real signals — health status, days since
+  last contact, open and overdue item counts, active and stuck Gauge project
+  counts. Zero LLM cost; pure data derivation.
+- **Daily brief card on the Home screen**: a single Haiku call, cached in
+  localStorage for the full calendar day. Pip synthesises a 3-5 sentence
+  morning read across the whole portfolio — what needs attention, what's at
+  risk, any recent wins. Cost estimate: ~$0.07/month.
+- **Portfolio state utility (`buildPortfolioState`)**: a compact text block
+  summarising at-risk / watching accounts and stuck projects. Ready to be
+  injected into any future Pip context that needs cross-portfolio awareness
+  (1:1 mode, boss-ready rollup, etc.).
 
 ---
 

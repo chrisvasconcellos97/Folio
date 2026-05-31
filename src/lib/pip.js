@@ -1001,3 +1001,14 @@ export function callBusinessReviewPip(payload) {
     return r.json();
   });
 }
+
+export function callPortfolioBriefPip(payload) {
+  return fetch("/api/portfolio-brief", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }).then(function (r) {
+    if (!r.ok) throw new Error("Portfolio brief failed");
+    return r.json();
+  });
+}

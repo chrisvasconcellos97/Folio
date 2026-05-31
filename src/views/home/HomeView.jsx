@@ -5,6 +5,8 @@ import { LitPill } from "../../components/LitPill";
 import { Glow } from "../../components/Glow";
 import { useBreakpoint } from "../../hooks/useBreakpoint";
 import { getNextOccurrence, formatTime } from "../../lib/cadenceUtils";
+import { useAccountSnapshots } from "../../hooks/useAccountSnapshots";
+import { callPortfolioBriefPip } from "../../lib/pip";
 
 var SERIF = "'Fraunces', Georgia, serif";
 var INTER = "'Inter', system-ui, sans-serif";
@@ -95,15 +97,85 @@ function acctName(accountById, accountId) {
   return a ? a.name : "an account";
 }
 
-export function HomeView({ userName, accounts, meetings, items, cadences, projects, onOpenAccount, onOpenCadenceHub, onOpenConversation }) {
+export function HomeView({ userName, userId, accounts, meetings, items, cadences, projects, onOpenAccount, onOpenCadenceHub, onOpenConversation }) {
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
   var [mounted, setMounted] = useState(false);
+  var [dailyBrief, setDailyBrief] = useState("");
+  var [briefLoading, setBriefLoading] = useState(false);
+
+  var { snapshots } = useAccountSnapshots(userId);
 
   useEffect(function () {
     var t = setTimeout(function () { setMounted(true); }, 60);
     return function () { clearTimeout(t); };
   }, []);
+
+  // Daily brief — generated once per calendar day, cached in localStorage.
+  // Only fires when snapshots are ready and the brief hasn't been generated today.
+  useEffect(function () {
+    if (!snapshots || snapshots.length === 0) return;
+
+    var todayStr = new Date().toISOString().slice(0, 10);
+    var cacheKey = "folio_daily_brief_" + todayStr;
+
+    // Check localStorage cache first — if we have a brief for today, use it.
+    try {
+      var cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        var parsed = JSON.parse(cached);
+        if (parsed && parsed.brief) {
+          setDailyBrief(parsed.brief);
+          return;
+        }
+      }
+    } catch (_) { /* ignore localStorage parse errors */ }
+
+    // Not cached — generate via Pip API. Guard against double-fire.
+    setBriefLoading(function (already) {
+      if (already) return already;
+
+      var snapshotsWithNames = snapshots.map(function (s) {
+        var acc = (accounts || []).find(function (a) { return a.id === s.account_id; });
+        return Object.assign({}, s, { account_name: acc ? acc.name : "Unknown" });
+      });
+
+      var sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+      var activeProjects = (projects || []).filter(function (p) {
+        return p.status === "in_progress";
+      }).map(function (p) {
+        var stages = p.stages || [];
+        var hasRecent = stages.some(function (s) { return s.done && s.done_at && s.done_at > sevenDaysAgo; });
+        return Object.assign({}, p, { is_stuck: !hasRecent });
+      });
+
+      var recentWins = (projects || []).filter(function (p) {
+        return p.status === "complete" && p.updated_at && p.updated_at > sevenDaysAgo;
+      }).map(function (p) { return Object.assign({}, p, { completed_recently: true }); });
+
+      callPortfolioBriefPip({
+        snapshots: snapshotsWithNames,
+        projects: activeProjects.concat(recentWins),
+        cadencesToday: [],
+      }).then(function (result) {
+        setBriefLoading(false);
+        if (result && result.brief) {
+          setDailyBrief(result.brief);
+          try {
+            localStorage.setItem(cacheKey, JSON.stringify({ brief: result.brief, date: todayStr }));
+          } catch (_) { /* ignore */ }
+        }
+      }).catch(function (err) {
+        setBriefLoading(false);
+        console.warn("[HomeView] daily brief failed:", err && err.message);
+      });
+
+      return true; // mark loading
+    });
+  // Trigger only when snapshot count changes (i.e., when they first arrive).
+  // accounts/projects are stable refs from parent hooks.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snapshots.length]);
 
   var accountById = useMemo(function () {
     var m = {};
@@ -505,6 +577,35 @@ export function HomeView({ userName, accounts, meetings, items, cadences, projec
           </LitPill>
         </div>
       </div>
+
+      {(dailyBrief || briefLoading) && (
+        <div style={{
+          padding: isMobile ? "0 12px 12px" : "0 32px 12px",
+          maxWidth: 980, margin: "0 auto",
+          opacity: mounted ? 1 : 0,
+          transition: "opacity 0.4s ease 0.4s",
+        }}>
+          <div style={{
+            background: C.surface,
+            border: "1px solid " + C.rule,
+            borderLeft: "2px solid " + C.accent,
+            borderRadius: 12,
+            padding: "14px 16px 16px",
+          }}>
+            <div style={{
+              fontFamily: MONO, fontSize: 10, color: C.accent,
+              fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em",
+              marginBottom: 8,
+            }}>
+              Pip · Daily Brief
+            </div>
+            {briefLoading
+              ? <div style={{ fontFamily: INTER, fontSize: 14, color: C.textMuted, lineHeight: 1.6 }}>Pip is thinking…</div>
+              : <div style={{ fontFamily: INTER, fontSize: 14, color: C.textSoft, lineHeight: 1.6 }}>{dailyBrief}</div>
+            }
+          </div>
+        </div>
+      )}
 
       <div style={{
         padding: isMobile ? "0 12px 16px" : "0 32px 24px",

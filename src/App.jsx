@@ -42,6 +42,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useErrors } from "./hooks/useErrors";
 import { usePipState } from "./lib/pipState";
 import { compressCorrectionsPip } from "./lib/pip";
+import { computeAndSaveSnapshots } from "./lib/accountSnapshots";
 import { C } from "./lib/colors";
 
 export default function App() {
@@ -302,6 +303,12 @@ export default function App() {
   // Ambient Pip mood — turn the orb red when there's an unresolved error.
   var pipStateCtx = usePipState();
   useEffect(function () { pipStateCtx.setAlert(diagnosticsCount > 0); }, [diagnosticsCount, pipStateCtx]);
+
+  // Pip Tier A — daily snapshot compute. Fire-and-forget once per day after
+  // auth resolves. No-ops if already computed today (localStorage gate).
+  useEffect(function () {
+    if (userId) computeAndSaveSnapshots(userId);
+  }, [userId]);
 
   // Top-level write helpers used by Pip's native tool calls.
   // These mirror the hook-level addItem/setFollowUp paths so RLS still applies
@@ -617,6 +624,7 @@ export default function App() {
     mainContent = (
       <HomeView
         userName={(userMeta && userMeta.full_name) ? String(userMeta.full_name).split(" ")[0] : ""}
+        userId={userId}
         accounts={accounts}
         meetings={meetings}
         items={allItems}
