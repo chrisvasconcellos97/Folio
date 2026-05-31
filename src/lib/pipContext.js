@@ -288,6 +288,13 @@ export function renderContextProse(curated) {
   if (!curated || !curated.accounts) return "";
   var sections = [];
 
+  // Surface the user's own department at the very top so Pip knows which team
+  // is "us" vs. external accounts/customers.
+  var myDept = (curated.accounts || []).find(function (a) { return a.is_my_department; });
+  if (myDept) {
+    sections.push("MY TEAM: " + myDept.name + " — the user's own department. Internal meetings and team members here are the user's direct colleagues, not customers.");
+  }
+
   if (curated.mode === "list") {
     sections.push("ACCOUNTS (list view — " + curated.accounts.length + " total):");
     sections.push(curated.accounts.map(renderAccountListItem).join("\n"));

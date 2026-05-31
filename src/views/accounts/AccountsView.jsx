@@ -838,9 +838,11 @@ export function AccountsView({ accounts, allAccounts, loading, onSelect, onAddAc
                 flex: isChild ? 1 : undefined,
                 background: C.surface,
                 border: "1px solid " + C.rule,
-                borderLeft: !isInactive && health.status !== "green" && health.status !== "new"
-                  ? "3px solid " + (STATUS_COLORS[health.status] || C.rule)
-                  : TIER_COLORS[a.tier] && !isInactive ? "3px solid " + TIER_COLORS[a.tier] : "1px solid " + C.rule,
+                borderLeft: a.is_my_department && !isInactive
+                  ? "3px solid " + C.accent
+                  : !isInactive && health.status !== "green" && health.status !== "new"
+                    ? "3px solid " + (STATUS_COLORS[health.status] || C.rule)
+                    : TIER_COLORS[a.tier] && !isInactive ? "3px solid " + TIER_COLORS[a.tier] : "1px solid " + C.rule,
                 borderRadius: 6,
                 padding: isChild ? (isCompact ? "6px 10px" : "10px 12px") : (isCompact ? "8px 12px" : "11px 12px"),
                 cursor: "pointer",
@@ -930,6 +932,7 @@ export function AccountsView({ accounts, allAccounts, loading, onSelect, onAddAc
 
                   {!isCompact && (function () {
                     var bits = [];
+                    if (a.is_my_department) bits.unshift({ text: "MY TEAM", color: C.accent });
                     if (a.tier)    bits.push({ text: a.tier, color: TIER_COLORS[a.tier] || C.textSoft });
                     if (a.region)  bits.push({ text: a.region, color: C.textMuted });
                     if (a.account_type === 'mso')  bits.push({ text: "MSO", color: C.accent });

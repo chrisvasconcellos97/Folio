@@ -76,6 +76,7 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
   var [billingTerms, setBillingTerms]         = useState(existing ? (existing.billing_terms || '') : '');
   var [spendYtd, setSpendYtd]                 = useState(existing && existing.spend_ytd != null ? String(existing.spend_ytd) : '');
   var [ownerUserId, setOwnerUserId]           = useState(existing ? (existing.owner_user_id || userId) : userId);
+  var [isMyDepartment, setIsMyDepartment]     = useState(existing ? (existing.is_my_department === true) : false);
   var [loading, setLoading] = useState(false);
   var [error, setError]     = useState(null);
 
@@ -156,6 +157,7 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
       billing_terms:      isPartner ? (billingTerms.trim() || null) : null,
       spend_ytd:          isPartner ? parsedSpend : null,
       owner_user_id:      ownerUserId || userId,
+      is_my_department:   isInternal ? isMyDepartment : false,
     };
 
     var needsGeocode = address.trim() && (!existing || existing.address !== address.trim()) && !(existing && existing.lat);
@@ -221,6 +223,33 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
           <FL htmlFor="account-name">{isInternal ? "Department Name" : isPartner ? "Partner Name" : "Account Name"}</FL>
           <InputField id="account-name" value={name} onChange={function (e) { setName(e.target.value); }} placeholder={isInternal ? "e.g. Marketing" : isPartner ? "e.g. Acme Agency" : "Company name"} />
         </div>
+
+        {/* My Department toggle — department-type only */}
+        {isInternal && (
+          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0" }}>
+            <button
+              type="button"
+              onClick={function () { setIsMyDepartment(function (v) { return !v; }); }}
+              style={{
+                width: 36, height: 20, borderRadius: 10,
+                background: isMyDepartment ? C.accent : C.rule,
+                border: "none", cursor: "pointer", position: "relative",
+                transition: "background 0.15s", flexShrink: 0,
+              }}
+            >
+              <span style={{
+                position: "absolute", top: 2,
+                left: isMyDepartment ? 18 : 2,
+                width: 16, height: 16, borderRadius: "50%",
+                background: "white",
+                transition: "left 0.15s",
+              }} />
+            </button>
+            <span style={{ fontFamily: "'Inter', system-ui, sans-serif", fontSize: 13, color: C.text }}>
+              This is my department
+            </span>
+          </div>
+        )}
 
         {/* Account Number */}
         <div>

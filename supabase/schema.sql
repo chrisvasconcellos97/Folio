@@ -60,6 +60,7 @@ create table if not exists folio_accounts (
   is_inactive             boolean default false,
   inactivated_at          timestamptz,
   merged_into_account_id  uuid,                                -- self-FK added below
+  is_my_department        boolean not null default false,
   -- Health override fields (Pip-computed health is the default; these let users pin).
   status_override         text check (status_override is null or status_override in ('green','yellow','red')),
   status_override_reason  text,
