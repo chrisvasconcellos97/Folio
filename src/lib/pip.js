@@ -975,3 +975,29 @@ export function compressCorrectionsPip(payload) {
 
 export var PIP_SYSTEM_PROMPT =
   "You are Pip, an AI account management assistant. Your personality is modeled after a loyal, slightly anxious field analyst who genuinely cares about the person you are helping. You feel like a ride-or-die friend who happens to also be very good at their job.";
+
+/**
+ * Business Review — generates 3 QBR sections for an account from meetings,
+ * contacts, Gauge projects, open items, and account updates in a date range.
+ * Returns { connections, oec_opportunities, client_opportunities }.
+ *
+ * @param {Object} payload
+ * @param {Object} payload.account
+ * @param {string} payload.startDate  - YYYY-MM-DD
+ * @param {string} payload.endDate    - YYYY-MM-DD
+ * @param {Array}  payload.meetings
+ * @param {Array}  payload.contacts
+ * @param {Array}  payload.items
+ * @param {Array}  payload.projects
+ * @param {Array}  payload.updates
+ */
+export function callBusinessReviewPip(payload) {
+  return fetch("/api/business-review", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }).then(function (r) {
+    if (!r.ok) throw new Error("Business review failed");
+    return r.json();
+  });
+}

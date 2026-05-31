@@ -12,6 +12,7 @@ import { useCadences } from "../../hooks/useCadences";
 import { useProjects } from "../../hooks/useProjects";
 import { useAccountUpdates } from "../../hooks/useAccountUpdates";
 import { callBriefMePip } from "../../lib/pip";
+import { BusinessReviewModal } from "./BusinessReviewModal";
 import { usePipAccountState } from "../../hooks/usePipAccountState";
 import { AccountDetailHeader } from "./AccountDetailHeader";
 import { AccountDetailTabs } from "./AccountDetailTabs";
@@ -84,6 +85,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
   var [briefText, setBriefText]         = useState(null);
   var [briefLoading, setBriefLoading]   = useState(false);
   var [briefError, setBriefError]       = useState(null);
+  var [showReviewModal, setShowReviewModal] = useState(false);
 
   var [showHealthOverride, setShowHealthOverride] = useState(false);
 
@@ -323,6 +325,10 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
     });
   }
 
+  function handleBusinessReview() {
+    setShowReviewModal(true);
+  }
+
   if (hubCadence) {
     return (
       <CadenceHub
@@ -380,6 +386,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
         onUpdate={onUpdate}
         onOpenTasksTab={function () { setTab("tasks"); }}
         onBriefMe={handleBriefMe}
+        onBusinessReview={handleBusinessReview}
         onResyncPipMemory={handleRefreshPipMemory}
         resyncingPip={refreshingState}
         onEdit={onEdit}
@@ -685,6 +692,18 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
             <MarkdownText text={briefText} style={{ fontSize: 14, color: C.textSub, lineHeight: 1.75 }} />
           )}
         </Modal>
+      )}
+
+      {showReviewModal && (
+        <BusinessReviewModal
+          account={account}
+          meetings={meetings}
+          contacts={contacts}
+          items={items}
+          projects={projects || []}
+          updates={updates || []}
+          onClose={function () { setShowReviewModal(false); }}
+        />
       )}
 
       <PrintAccountSheet

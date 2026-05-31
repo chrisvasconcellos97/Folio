@@ -40,6 +40,7 @@ export function AccountDetailHeader({
   onUpdate,
   onOpenTasksTab,
   onBriefMe,
+  onBusinessReview,
   onResyncPipMemory,
   resyncingPip,
   onEdit,
@@ -282,6 +283,20 @@ export function AccountDetailHeader({
             }}
           >
             <span style={{ fontSize: 13 }}>✦</span> Brief Me
+          </button>
+          <button
+            onClick={onBusinessReview}
+            style={{
+              background: "transparent",
+              border: "1px solid " + C.accentLine,
+              borderRadius: 6, padding: "6px 14px",
+              fontFamily: "'Inter', system-ui, sans-serif",
+              fontSize: 12, fontWeight: 500,
+              color: C.accent, cursor: "pointer",
+              marginTop: 6, display: "flex", alignItems: "center", gap: 5,
+            }}
+          >
+            <span style={{ fontSize: 11 }}>◈</span> Business Review
           </button>
           <button
             onClick={onResyncPipMemory}
