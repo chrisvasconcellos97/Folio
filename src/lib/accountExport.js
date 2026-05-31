@@ -10,7 +10,7 @@
 //     app: "Folios",
 //     account: { ...folio_accounts row... },
 //     meetings: [ ...folio_meetings rows... ],
-//     items:    [ ...folio_items rows... ],
+//     items:    [ ...folio_tasks rows (action items)... ],
 //     contacts: [ ...folio_contacts rows... ],
 //     cadences: [ ...folio_cadences rows... ],
 //     projects: [ ...gauge_projects rows... ],

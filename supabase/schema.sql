@@ -235,6 +235,7 @@ create table if not exists folio_tasks (
   due_date            date,
   done                boolean not null default false,
   closed_at           timestamptz,
+  is_commitment       boolean not null default false,
   custom_fields       jsonb not null default '{}'::jsonb,
   source_meeting_id   uuid references folio_meetings(id) on delete set null,
   pip_created_at      timestamptz,
@@ -248,6 +249,7 @@ create index if not exists folio_tasks_account_idx       on folio_tasks (account
 create index if not exists folio_tasks_project_idx       on folio_tasks (project_id) where project_id is not null;
 create index if not exists folio_tasks_assignee_due_idx  on folio_tasks (assignee_email, due_date) where done = false;
 create index if not exists folio_tasks_open_idx          on folio_tasks (user_id, done, due_date);
+create index if not exists folio_tasks_commitment_idx    on folio_tasks (user_id, is_commitment) where is_commitment = true;
 
 create or replace function folio_tasks_touch_updated_at()
 returns trigger language plpgsql as $$

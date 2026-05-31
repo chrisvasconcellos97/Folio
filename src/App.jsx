@@ -137,8 +137,8 @@ export default function App() {
   var [allUpdates, setAllUpdates]   = useState([]);
   useEffect(function () {
     if (!userId) return;
-    supabase.from("folio_items").select("*").eq("user_id", userId).then(function (r) {
-      if (!r.error) setAllItems(r.data || []);
+    supabase.from("folio_tasks").select("*").eq("user_id", userId).is("project_id", null).then(function (r) {
+      if (!r.error) setAllItems((r.data || []).map(function (row) { return Object.assign({}, row, { text: row.title, owner: row.assignee_email }); }));
     });
     supabase.from("folio_contacts").select("*").eq("user_id", userId).then(function (r) {
       if (!r.error) setAllContacts(r.data || []);
@@ -318,17 +318,23 @@ export default function App() {
   // These mirror the hook-level addItem/setFollowUp paths so RLS still applies
   // through the user's Supabase session.
   function pipAddItem(data) {
+    // Map consumer-facing field names (text, owner) to folio_tasks column names.
+    var payload = Object.assign({}, data, { user_id: userId });
+    if ("text"  in payload) { payload.title          = payload.text;  delete payload.text;  }
+    if ("owner" in payload) { payload.assignee_email = payload.owner; delete payload.owner; }
     return supabase
-      .from("folio_items")
-      .insert([Object.assign({}, data, { user_id: userId })])
+      .from("folio_tasks")
+      .insert([payload])
       .select()
       .then(function (r) {
         if (r.error) throw r.error;
         if (data.account_id) {
           touchAccount(data.account_id);
         }
-        setAllItems(function (prev) { return prev.concat(r.data || []); });
-        return r.data && r.data[0];
+        // Map returned rows back to consumer shape before appending to allItems.
+        var mapped = (r.data || []).map(function (row) { return Object.assign({}, row, { text: row.title, owner: row.assignee_email }); });
+        setAllItems(function (prev) { return prev.concat(mapped); });
+        return mapped[0];
       });
   }
 
@@ -778,8 +784,8 @@ export default function App() {
         onCreateItem={function (cadence) {
           var today = new Date().toISOString().slice(0, 10);
           var acct = accounts.find(function (a) { return a.id === cadence.account_id; });
-          supabase.from("folio_items")
-            .insert([{ user_id: userId, account_id: cadence.account_id, text: cadence.task_title || "Cadence task", due_date: today }])
+          supabase.from("folio_tasks")
+            .insert([{ user_id: userId, account_id: cadence.account_id, title: cadence.task_title || "Cadence task", due_date: today }])
             .then(function (r) {
               if (r && r.error) { showToast(r.error.message || "Couldn't create task", "error"); return; }
               showToast("Task logged" + (acct ? " for " + acct.name : ""));

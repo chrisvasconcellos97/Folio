@@ -1,15 +1,4 @@
 import { taskPattern } from "../hooks/usePipAssignmentHints";
-import { insertTask } from "../hooks/useTasks";
-
-// Gauge V3 Phase 1 — dual-write helper. Every Pip-created item and task
-// also lands in folio_tasks so the new queue UI (Phase 3) sees the work
-// immediately. Failures are swallowed so the canonical write path
-// (folio_items / gauge_projects.stages) is never blocked by a folio_tasks
-// hiccup during the migration window.
-function dualWriteToTasks(userId, payload) {
-  if (!userId) return Promise.resolve();
-  return insertTask(userId, payload).catch(function () { /* best-effort */ });
-}
 
 function firstStatusColumn(project) {
   var cols = project && project.task_status_columns;
@@ -23,7 +12,7 @@ function firstStatusColumn(project) {
 
 /**
  * Apply a selected subset of Pip's structured plan against the existing
- * folio_items + Gauge project hooks. Returns { errors: { idx: msg } } so
+ * folio_tasks + Gauge project hooks. Returns { errors: { idx: msg } } so
  * the preview can light up failing rows.
  *
  * Idempotency: the preview disables Apply during the in-flight call, and
@@ -42,8 +31,6 @@ export function applyPipPlan(selected, ctx) {
   var accountId      = ctx.accountId;
   var meetingId      = ctx.meetingId || null;
   var activeProjects = ctx.activeProjects || [];
-  var userId         = ctx.userId || null;  // Phase 1: needed for folio_tasks dual-write
-  var orgId          = ctx.orgId  || null;
 
   // Snapshot projects so multiple new_task / update_task rows on the same
   // project accumulate into one updateProject call (faster + idempotent).
@@ -85,19 +72,6 @@ export function applyPipPlan(selected, ctx) {
         if (pipStampedAt) addPayload.pip_created_at = pipStampedAt;
         return addItem(addPayload)
           .then(function () {
-            // Phase 1 dual-write: also land in folio_tasks (project_id null
-            // for loose action items). Best-effort; doesn't block the row.
-            dualWriteToTasks(userId, {
-              org_id:            orgId,
-              account_id:        targetAcct,
-              project_id:        null,
-              title:             row.text,
-              assignee_email:    row.assignee || null,
-              due_date:          row.due_date || null,
-              source_meeting_id: meetingId,
-              pip_created_at:    pipStampedAt,
-              user_added:        !!row._userAdded,
-            });
             return maybeLearnHint(row.text);
           })
           .catch(function (e) { fail(e && e.message ? e.message : "Add failed"); });
@@ -133,19 +107,6 @@ export function applyPipPlan(selected, ctx) {
         };
         if (!row._userAdded) taskEntry.pip_created_at = pipCreatedAt;
         newStage.stages.push(taskEntry);
-        // Phase 1 dual-write: mirror this task into folio_tasks. Best-effort.
-        dualWriteToTasks(userId, {
-          org_id:            orgId,
-          account_id:        taskAcct,
-          project_id:        row.project_id,
-          title:             row.title,
-          assignee_email:    row.assignee || null,
-          due_date:          row.due_date || null,
-          task_status:       firstStatus,
-          source_meeting_id: meetingId,
-          pip_created_at:    row._userAdded ? null : pipCreatedAt,
-          user_added:        !!row._userAdded,
-        });
         // Defer the actual updateProject call until after all rows have
         // mutated the snapshot — see flushStages below.
         return maybeLearnHint(row.title);

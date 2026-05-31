@@ -3,7 +3,7 @@
 // Mirrors useItems' shape (loading / error / refetch / RLS-scoped fetch)
 // but reads from the new unified folio_tasks table. Used by the new queue
 // UI built in Phase 3 and the Leader rollup in Phase 5. Existing surfaces
-// continue using useItems against folio_items during the transition.
+// useItems also reads folio_tasks now; this hook is the lower-level read path.
 //
 // Filtering: pass {accountId, projectId, assigneeEmail} as needed. Omit
 // to get the user's full task list.

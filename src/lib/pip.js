@@ -415,7 +415,7 @@ export function callAskPip(payload) {
 /**
  * Summarize a conversation draft. Returns a structured plan: summary,
  * follow_up_date, plus a `plan` array describing each intended mutation
- * against existing folio_items + Gauge tasks. Callers must run the plan
+ * against existing folio_tasks + Gauge project tasks. Callers must run the plan
  * through PipSummarizePreview before applying.
  *
  * Backwards-compat: if Pip returns the old flat shape (summary +
@@ -427,7 +427,7 @@ export function callAskPip(payload) {
  * @param {string} payload.accountName       - parent account name
  * @param {string} payload.cadenceLabel      - cadence label for context
  * @param {string} [payload.accountId]       - the account id (for hints)
- * @param {Array}  [payload.existingItems]   - open folio_items on the account
+ * @param {Array}  [payload.existingItems]   - open folio_tasks on the account (action items)
  * @param {Array}  [payload.activeProjects]  - gauge projects (with .stages tasks)
  * @param {Array}  [payload.orgMembers]      - org members (for assignee options)
  * @param {Array}  [payload.assignmentHints] - learned hints rows

@@ -4,8 +4,25 @@ import { logActivity } from "../lib/activity";
 import { touchAccount } from "../lib/touchAccount";
 import { useRealtimeSync } from "./useRealtimeSync";
 
+// Map a folio_tasks row to the shape consumers expect (item.text, item.owner).
+function mapRow(row) {
+  if (!row) return row;
+  return Object.assign({}, row, {
+    text:  row.title,
+    owner: row.assignee_email,
+  });
+}
+
+// Map consumer-facing field names back to folio_tasks column names for writes.
+function mapFields(data) {
+  var out = Object.assign({}, data);
+  if ("text" in out)  { out.title = out.text;  delete out.text;  }
+  if ("owner" in out) { out.assignee_email = out.owner; delete out.owner; }
+  return out;
+}
+
 export function useItems(userId, accountId, orgId) {
-  var [items, setItems]   = useState([]);
+  var [items, setItems]     = useState([]);
   var [loading, setLoading] = useState(false);
   var [error, setError]     = useState(null);
 
@@ -13,9 +30,11 @@ export function useItems(userId, accountId, orgId) {
     if (!userId) return;
     setLoading(true);
     var query = supabase
-      .from("folio_items")
+      .from("folio_tasks")
       .select("*")
       .eq("user_id", userId)
+      .is("project_id", null)   // loose action items only — not Gauge project tasks
+      .eq("done", false)
       .order("created_at", { ascending: false });
     if (accountId) query = query.eq("account_id", accountId);
     query.then(function (result) {
@@ -24,36 +43,36 @@ export function useItems(userId, accountId, orgId) {
         setError(result.error.message);
       } else {
         setError(null);
-        setItems(result.data || []);
+        setItems((result.data || []).map(mapRow));
       }
     });
   }, [userId, accountId]);
 
   useEffect(function () { fetch(); }, [fetch]);
 
-  // Phase 8 — multi-device realtime sync. See useRealtimeSync.js.
-  useRealtimeSync("folio_items", userId, fetch);
+  useRealtimeSync("folio_tasks", userId, fetch);
 
   function addItem(data) {
+    var payload = mapFields(Object.assign({}, data, { user_id: userId }));
     return supabase
-      .from("folio_items")
-      .insert([Object.assign({}, data, { user_id: userId })])
+      .from("folio_tasks")
+      .insert([payload])
       .select()
       .then(function (result) {
         if (result.error) throw result.error;
         if (data.account_id) {
           touchAccount(data.account_id);
         }
-        logActivity(orgId, userId, data.account_id, "item_added", { text: data.text });
+        logActivity(orgId, userId, data.account_id, "item_added", { text: data.text || data.title });
         fetch();
-        return result.data[0];
+        return mapRow(result.data[0]);
       });
   }
 
   function closeItem(id) {
     var closedAt = new Date().toISOString();
     return supabase
-      .from("folio_items")
+      .from("folio_tasks")
       .update({ done: true, closed_at: closedAt })
       .eq("id", id)
       .then(function (result) {
@@ -62,7 +81,7 @@ export function useItems(userId, accountId, orgId) {
         fetch();
         // Fire-and-forget promise completion ledger entry for V2 brain.
         supabase
-          .from("folio_items")
+          .from("folio_tasks")
           .select("*")
           .eq("id", id)
           .single()
@@ -76,7 +95,7 @@ export function useItems(userId, accountId, orgId) {
               user_id:          userId,
               account_id:       item.account_id,
               item_id:          item.id,
-              item_text:        item.text,
+              item_text:        item.title,
               due_date:         item.due_date || null,
               days_to_complete: days,
               closed_at:        closedAt,
@@ -87,19 +106,23 @@ export function useItems(userId, accountId, orgId) {
   }
 
   function updateItem(id, data) {
+    var payload = mapFields(data);
     return supabase
-      .from("folio_items")
-      .update(data)
+      .from("folio_tasks")
+      .update(payload)
       .eq("id", id)
       .then(function (result) {
         if (result.error) throw result.error;
-        setItems(function (prev) { return prev.map(function (i) { return i.id === id ? Object.assign({}, i, data) : i; }); });
+        // Keep local state in consumer shape (text/owner not title/assignee_email).
+        setItems(function (prev) {
+          return prev.map(function (i) { return i.id === id ? Object.assign({}, i, data) : i; });
+        });
       });
   }
 
   function deleteItem(id) {
     return supabase
-      .from("folio_items")
+      .from("folio_tasks")
       .delete()
       .eq("id", id)
       .then(function (result) {

@@ -37,7 +37,7 @@ export function useCadenceSync(userId, cadences, cadencesLoading) {
         itemsToCreate.push({
           account_id: cadence.account_id,
           user_id:    userId,
-          text:       cadence.task_title || "Recurring task",
+          title:      cadence.task_title || "Recurring task",
           done:       false,
         });
       });
@@ -48,7 +48,7 @@ export function useCadenceSync(userId, cadences, cadencesLoading) {
     if (itemsToCreate.length === 0) return;
 
     supabase
-      .from("folio_items")
+      .from("folio_tasks")
       .insert(itemsToCreate)
       .then(function (result) {
         if (result.error) return;

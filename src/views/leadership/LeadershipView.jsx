@@ -103,7 +103,7 @@ export function LeadershipView({ org, orgId, userMeta, onSignOut }) {
       .then(function (r) { return r.data || []; });
 
     var p2 = supabase
-      .from("folio_items")
+      .from("folio_tasks")
       .select("account_id")
       .eq("done", false)
       .then(function (r) { return r.data || []; });

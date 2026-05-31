@@ -130,10 +130,10 @@ export function ProjectsTab({ projects, accounts, accountId, userId, addProject,
     var isNowComplete  = data.status === "complete";
     return updateProject(editing.id, data).then(function (result) {
       if (wasNotComplete && isNowComplete && accountId && userId) {
-        supabase.from("folio_items").insert([{
+        supabase.from("folio_tasks").insert([{
           account_id: accountId,
           user_id:    userId,
-          text:       "✓ Delivered: " + (data.title || editing.title),
+          title:      "✓ Delivered: " + (data.title || editing.title),
           done:       true,
           closed_at:  new Date().toISOString(),
         }]).then();

@@ -46,7 +46,7 @@ export async function computeAndSaveSnapshots(userId) {
     // Fetch everything we need in parallel
     var [accR, itemR, projR] = await Promise.all([
       supabase.from("folio_accounts").select("*").eq("user_id", userId).eq("is_inactive", false),
-      supabase.from("folio_items").select("id, account_id, done, due_date").eq("user_id", userId),
+      supabase.from("folio_tasks").select("id, account_id, done, due_date").eq("user_id", userId).is("project_id", null),
       supabase.from("gauge_projects").select("id, account_id, status, stages").eq("user_id", userId),
     ]);
 
