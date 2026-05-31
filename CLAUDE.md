@@ -334,6 +334,17 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 17. *(shipped — see Already shipped)*
 
+18. **Internal / people cadences + 1:1 mode** — Cadences tied to a person (boss, mentor, cross-functional partner) rather than a customer account. Pre-meeting brief pulls from the full portfolio (not one account) so Pip surfaces what's most important to bring up. Same note-taking experience as CadenceMeetingMode. Post-meeting Pip routes action items back to the appropriate accounts automatically (cross-account routing already built in PipSummarizePreview). First use case: weekly 1:1 with manager. Requires portfolio-aware Pip context (item 19).
+
+19. **Pip portfolio intelligence upgrade (chief of staff mode)** — Pip gains cross-portfolio awareness so it can reason about work state across all accounts simultaneously, not just one at a time. Seven specific upgrades to build together or incrementally:
+    - **Portfolio work state** — All active Gauge projects + completion state + stuck detection passed to Pip in a compressed format. Powers "4 audits in flight, here's where each stands" style synthesis.
+    - **Momentum scoring** — Health trend over time, not just current snapshot. "Parts Authority was at-risk, now recovering" vs "All Star drifting despite healthy score."
+    - **Commitment tracking** — Pip knows what you promised to deliver to whom and when, pulled from Gauge projects + meeting notes. Flags at-risk commitments before they miss.
+    - **Pattern recognition** — When the same theme surfaces across 3+ accounts, Pip flags it as a portfolio signal worth raising to leadership.
+    - **Capacity awareness** — Pip knows your current load (open projects, cadences this week, QBRs due) so it can factor in bandwidth when briefing your boss or making suggestions.
+    - **Win surfacing** — Recently delivered/closed work surfaced automatically for 1:1s and QBRs. Easy to forget wins when heads-down.
+    - **Proactive meeting agenda** — Before any meeting, Pip suggests talking points based on unresolved items, time elapsed, and outstanding commitments — not just for 1:1s.
+
 **Already shipped (drop from list):**
 - ✅ **Business Review mode** — per-account QBR generator. Date range picker + Pip synthesizes Account Connections, OEC Opportunities, and Client Opportunities sections from meetings/contacts/projects/items in range. Static Sales Metrics placeholder for user to fill from corporate systems. Copy per section + "Copy all for Claude" button for pasting into work Claude alongside revenue numbers. Lives in account detail header next to Brief Me.
 - ✅ **In-app notification banner** — covered by `HomeView`, which is the entry point after login. Surfaces overdue items (count + Glow clickable), cold accounts (>45d, sorted longest-cold first), and today's cadences in a Pip narrative. Richer and more interactive than a static banner; no separate banner needed.
