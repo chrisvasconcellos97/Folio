@@ -166,6 +166,57 @@ function renderPersonCadenceBlock(contactName) {
     "rather than leaving it floating — the user can reassign it.\n\n";
 }
 
+// Renders the contacts block for summarize prompts.
+function renderContactsBlock(contacts) {
+  if (!Array.isArray(contacts) || contacts.length === 0) return "";
+  var lines = contacts.slice(0, 8).map(function (c) {
+    var line = "- " + (c.name || "—");
+    if (c.title) line += " · " + c.title;
+    if (c.email) line += " · " + c.email;
+    var flags = [];
+    if (c.is_poc)     flags.push("POC");
+    if (c.is_primary) flags.push("Primary");
+    if (c.is_leader)  flags.push("Leader");
+    if (flags.length) line += " [" + flags.join(", ") + "]";
+    if (c.notes) line += " — " + c.notes.slice(0, 120);
+    return line;
+  });
+  return "── CONTACTS ──\n" + lines.join("\n") + "\n\n";
+}
+
+// Renders recent meeting history (with Pip summaries) for summarize prompts.
+function renderMeetingHistoryBlock(meetings) {
+  if (!Array.isArray(meetings) || meetings.length === 0) return "";
+  var recent = meetings.slice(0, 5);
+  var lines = recent.map(function (m) {
+    var head = "- " + (m.date || m.meeting_date || "?") + " — \"" + (m.title || m.pip_short_title || "Meeting") + "\"";
+    if (m.attendees && m.attendees.length) head += " · attendees: " + m.attendees.join(", ");
+    if (m.method) head += " · via " + m.method;
+    var body = (m.pip_summary || m.notes || "").slice(0, 220);
+    return head + (body ? "\n  " + body : "");
+  });
+  return "── RECENT MEETING HISTORY ──\n" + lines.join("\n") + "\n\n";
+}
+
+// Renders the cadence schedule block for summarize prompts.
+function renderCadenceScheduleBlock(cadence) {
+  if (!cadence) return "";
+  var parts = [];
+  if (cadence.type)      parts.push("Type: " + cadence.type);
+  if (cadence.frequency) parts.push("Frequency: " + cadence.frequency);
+  if (cadence.meeting_time) parts.push("Time: " + cadence.meeting_time);
+  if (cadence.notes)     parts.push("Notes: " + cadence.notes.slice(0, 120));
+  if (!parts.length) return "";
+  return "── CADENCE SCHEDULE ──\n" + parts.join(" · ") + "\n\n";
+}
+
+// Renders the Pip facts block for summarize prompts.
+function renderPipFactsBlock(facts) {
+  if (!Array.isArray(facts) || facts.length === 0) return "";
+  return "── THINGS PIP SHOULD REMEMBER ──\n" +
+    facts.slice(0, 20).map(function (f) { return "- " + f; }).join("\n") + "\n\n";
+}
+
 // Renders the account context block for system prompts.
 function renderAccountObjectiveBlock(objective) {
   var text = (objective || "").trim();
@@ -451,6 +502,10 @@ export function summarizeDraftPip(payload) {
   var pipAccountState  = payload.pipAccountState || null;
   var isPersonCadence  = !!payload.isPersonCadence;
   var contactName      = payload.contactName || null;
+  var contacts         = Array.isArray(payload.contacts)       ? payload.contacts       : [];
+  var meetingHistory   = Array.isArray(payload.meetingHistory) ? payload.meetingHistory : [];
+  var cadence          = payload.cadence        || null;
+  var facts            = Array.isArray(payload.facts)          ? payload.facts          : [];
 
   // #5 — skip Pip on trivial drafts (< 100 chars of notes + action_items).
   // Returns immediately with an empty plan so the caller still shows the
@@ -600,18 +655,21 @@ export function summarizeDraftPip(payload) {
     { type: "text", text: SUMMARIZE_SCHEMA_RULES, cache_control: { type: "ephemeral" } },
   ];
 
-  // BP2 — glossary + org members (stable per user, changes infrequently)
-  var bp2Text = renderGlossaryBlock(glossary) + "Org members (valid assignee emails):\n" + memberLines;
+  // BP2 — pip facts + glossary + org members (stable per user, changes infrequently)
+  var bp2Text = renderPipFactsBlock(facts) + renderGlossaryBlock(glossary) + "Org members (valid assignee emails):\n" + memberLines;
 
-  // BP3 — account roster + objective + learned patterns (stable per account)
+  // BP3 — account roster + objective + contacts + cadence + learned patterns (stable per account)
   var bp3Text =
     renderAccountRosterBlock(accountRoster, payload.accountId || null) +
     (isPersonCadence ? renderPersonCadenceBlock(contactName) : (accountType === "internal_team" ? renderInternalMeetingBlock() : "")) +
     renderAccountObjectiveBlock(accountObjective) +
+    renderContactsBlock(contacts) +
+    renderCadenceScheduleBlock(cadence) +
     correctionBlock;
 
-  // BP4 — existing items + tasks + projects + hints (changes per meeting session)
+  // BP4 — meeting history + existing items + tasks + projects + hints (changes per meeting session)
   var bp4Text =
+    renderMeetingHistoryBlock(meetingHistory) +
     "Existing open items on this account:\n" + itemLines + "\n\n" +
     "Existing in-flight Gauge tasks on this account (incl. child accounts):\n" + taskBlock + "\n\n" +
     "Active Gauge projects (use these ids for project_id):\n" +

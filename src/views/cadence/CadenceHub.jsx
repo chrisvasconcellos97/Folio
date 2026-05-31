@@ -15,6 +15,7 @@ import { StandingBoardView } from "../gauge/StandingBoardView";
 import { ProjectNotesEditor } from "../gauge/ProjectNotesEditor";
 import { usePipAssignmentHints } from "../../hooks/usePipAssignmentHints";
 import { usePipCorrections } from "../../hooks/usePipCorrections";
+import { usePipFacts } from "../../hooks/usePipFacts";
 import { useGlossary } from "../../hooks/useGlossary";
 import { useAccountSnapshots } from "../../hooks/useAccountSnapshots";
 import { applyPipPlan } from "../../lib/pipPlanApply";
@@ -675,6 +676,7 @@ export function CadenceHub({
   var accountId = account ? account.id : null;
   var hintsApi       = usePipAssignmentHints(userId, accountId);
   var correctionsApi = usePipCorrections(userId, accountId);
+  var pipFactsApi    = usePipFacts(userId);
   var glossaryApi    = useGlossary(userId, null, accountId);
   var snapshotsApi   = useAccountSnapshots(userId);
 
@@ -902,6 +904,12 @@ export function CadenceHub({
       pipAccountState:   pipAccountStateRow || null,
       isPersonCadence:   isPersonCadence,
       contactName:       contact ? contact.name : null,
+      contacts:          contacts || [],
+      meetingHistory:    (meetings || [])
+        .filter(function (m) { return m.status === "summarized" || m.pip_summary; })
+        .slice(0, 5),
+      cadence:           cadence || null,
+      facts:             pipFactsApi.activeFactStrings || [],
     }).then(function (out) {
       var followUp = out.follow_up_date || null;
       return updateMeeting(draftId, {
