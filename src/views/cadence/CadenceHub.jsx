@@ -900,6 +900,8 @@ export function CadenceHub({
       accountRoster:     accountRoster,
       accountType:       account ? (account.account_type || "standard") : "internal_team",
       pipAccountState:   pipAccountStateRow || null,
+      isPersonCadence:   isPersonCadence,
+      contactName:       contact ? contact.name : null,
     }).then(function (out) {
       var followUp = out.follow_up_date || null;
       return updateMeeting(draftId, {
@@ -1237,6 +1239,7 @@ export function CadenceHub({
       accountRoster={accountRoster}
       currentAccountId={accountId}
       skippedByPip={!!previewPlan.skippedByPip}
+      isPersonCadence={isPersonCadence}
     />
   ) : null;
 

@@ -182,25 +182,26 @@ function DueInput({ value, onChange }) {
   );
 }
 
-function TargetAccountChip({ targetAccountId, currentAccountName, rosterOptions, rosterLookup, onChange }) {
+function TargetAccountChip({ targetAccountId, currentAccountName, hasNoCurrentAccount, rosterOptions, rosterLookup, onChange }) {
   var [open, setOpen] = useState(false);
   var targetName = targetAccountId
     ? ((rosterLookup[targetAccountId] && rosterLookup[targetAccountId].name) || targetAccountId)
     : null;
-  var label = targetName ? ("→ on " + targetName) : ("→ on " + currentAccountName);
   var isRouted = !!targetAccountId;
+  var needsRoute = hasNoCurrentAccount && !isRouted;
+  var label = targetName ? ("→ on " + targetName) : (needsRoute ? "→ Route to account…" : ("→ on " + currentAccountName));
   return (
     <div style={{ position: "relative", display: "inline-block" }}>
       <button
         type="button"
         onClick={function () { setOpen(function (v) { return !v; }); }}
         style={{
-          background: isRouted ? C.accentFaint : "none",
-          border: "1px solid " + (isRouted ? C.accentLine : C.rule),
+          background: isRouted ? C.accentFaint : (needsRoute ? "rgba(220,160,0,0.08)" : "none"),
+          border: "1px solid " + (isRouted ? C.accentLine : (needsRoute ? C.yellow : C.rule)),
           borderRadius: 6,
           padding: "3px 8px",
           fontSize: 10,
-          color: isRouted ? C.accent : C.textMuted,
+          color: isRouted ? C.accent : (needsRoute ? C.yellow : C.textMuted),
           cursor: "pointer",
           fontFamily: INTER,
           display: "flex", alignItems: "center", gap: 4,
@@ -226,10 +227,10 @@ function TargetAccountChip({ targetAccountId, currentAccountName, rosterOptions,
               display: "block", width: "100%", textAlign: "left",
               background: !targetAccountId ? C.accentFaint : "none",
               border: "none", padding: "6px 12px",
-              fontSize: 11, color: C.text, cursor: "pointer", fontFamily: INTER,
+              fontSize: 11, color: hasNoCurrentAccount ? C.textMuted : C.text, cursor: "pointer", fontFamily: INTER,
             }}
           >
-            {currentAccountName} (current)
+            {currentAccountName}{hasNoCurrentAccount ? "" : " (current)"}
           </button>
           {rosterOptions.map(function (a) {
             return (
@@ -368,8 +369,9 @@ export function PipSummarizePreview({
   onLogCorrections,  // (entries[]) => Promise — fire-and-forget V2-brain capture
   meetingId,         // optional; tags corrections with the draft they came from
   accountRoster,     // [{ id, name, account_type }] — for cross-account routing
-  currentAccountId,  // the account this meeting belongs to
+  currentAccountId,  // the account this meeting belongs to (null for person 1:1s)
   skippedByPip,      // true when notes were too short for Pip to extract anything
+  isPersonCadence,   // true when this is a person 1:1 — items need account routing
 }) {
   var memberEmails = useMemo(function () {
     return (orgMembers || [])
@@ -384,10 +386,10 @@ export function PipSummarizePreview({
   }, [accountRoster]);
 
   var currentAccountName = useMemo(function () {
-    if (!currentAccountId) return "Current Account";
+    if (!currentAccountId) return isPersonCadence ? "Personal / No account" : "Current Account";
     var a = rosterLookup[currentAccountId];
     return (a && a.name) ? a.name : "Current Account";
-  }, [currentAccountId, rosterLookup]);
+  }, [currentAccountId, rosterLookup, isPersonCadence]);
 
   var rosterOptions = useMemo(function () {
     return (accountRoster || [])
@@ -735,6 +737,7 @@ export function PipSummarizePreview({
               <TargetAccountChip
                 targetAccountId={s.targetAccountId || null}
                 currentAccountName={currentAccountName}
+                hasNoCurrentAccount={!currentAccountId}
                 rosterOptions={rosterOptions}
                 rosterLookup={rosterLookup}
                 onChange={function (v) { patch(idx, { targetAccountId: v }); }}
@@ -830,6 +833,7 @@ export function PipSummarizePreview({
               <TargetAccountChip
                 targetAccountId={ur.targetAccountId || null}
                 currentAccountName={currentAccountName}
+                hasNoCurrentAccount={!currentAccountId}
                 rosterOptions={rosterOptions}
                 rosterLookup={rosterLookup}
                 onChange={function (v) { patchUserRow(ur.id, { targetAccountId: v }); }}

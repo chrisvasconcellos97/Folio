@@ -154,6 +154,18 @@ function renderInternalMeetingBlock() {
     "\"schedule team meeting\", \"review process\") — not delivery work or customer follow-ups.\n\n";
 }
 
+// Renders a block injected for person 1:1 cadences (scope='person', no current account).
+function renderPersonCadenceBlock(contactName) {
+  return "── PERSON 1:1 MEETING ──\n" +
+    "This meeting is a leadership or peer 1:1 with " + (contactName || "a colleague") + ". " +
+    "There is NO current account — this meeting is not tied to any customer. " +
+    "Almost every action item discussed in a 1:1 concerns a specific customer account — look hard for " +
+    "account names in the notes and route each item via target_account_id using the YOUR ACCOUNTS list. " +
+    "Items that are purely internal or personal (e.g. 'schedule next 1:1', 'update my status deck') have " +
+    "no account — leave target_account_id null for those only. When unsure, suggest a route (low confidence) " +
+    "rather than leaving it floating — the user can reassign it.\n\n";
+}
+
 // Renders the account context block for system prompts.
 function renderAccountObjectiveBlock(objective) {
   var text = (objective || "").trim();
@@ -437,6 +449,8 @@ export function summarizeDraftPip(payload) {
   var accountRoster    = Array.isArray(payload.accountRoster) ? payload.accountRoster : [];
   var accountType      = payload.accountType || "standard";
   var pipAccountState  = payload.pipAccountState || null;
+  var isPersonCadence  = !!payload.isPersonCadence;
+  var contactName      = payload.contactName || null;
 
   // #5 — skip Pip on trivial drafts (< 100 chars of notes + action_items).
   // Returns immediately with an empty plan so the caller still shows the
@@ -591,7 +605,7 @@ export function summarizeDraftPip(payload) {
   // BP3 — account roster + objective + learned patterns (stable per account)
   var bp3Text =
     renderAccountRosterBlock(accountRoster, payload.accountId || null) +
-    (accountType === "internal_team" ? renderInternalMeetingBlock() : "") +
+    (isPersonCadence ? renderPersonCadenceBlock(contactName) : (accountType === "internal_team" ? renderInternalMeetingBlock() : "")) +
     renderAccountObjectiveBlock(accountObjective) +
     correctionBlock;
 
