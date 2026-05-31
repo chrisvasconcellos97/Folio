@@ -9,16 +9,18 @@ var SERIF = "'Fraunces', Georgia, serif";
 var INTER = "'Inter', system-ui, sans-serif";
 
 export function TemplatePickerModal({ templates, onUse, onUpdate, onDelete, onClose }) {
-  var [editingId, setEditingId]   = useState(null);
-  var [editTitle, setEditTitle]   = useState("");
-  var [editDesc, setEditDesc]     = useState("");
-  var [saving, setSaving]         = useState(false);
-  var [confirmDelete, setConfirm] = useState(null);
+  var [editingId, setEditingId]       = useState(null);
+  var [editTitle, setEditTitle]       = useState("");
+  var [editDesc, setEditDesc]         = useState("");
+  var [editDuration, setEditDuration] = useState("");
+  var [saving, setSaving]             = useState(false);
+  var [confirmDelete, setConfirm]     = useState(null);
 
   function startEdit(tpl) {
     setEditingId(tpl.id);
     setEditTitle(tpl.title || "");
     setEditDesc(tpl.description || "");
+    setEditDuration(tpl.total_duration_days != null ? String(tpl.total_duration_days) : "");
     setConfirm(null);
   }
 
@@ -26,12 +28,18 @@ export function TemplatePickerModal({ templates, onUse, onUpdate, onDelete, onCl
     setEditingId(null);
     setEditTitle("");
     setEditDesc("");
+    setEditDuration("");
   }
 
   function handleSave(tpl) {
     if (!editTitle.trim() || saving) return;
     setSaving(true);
-    onUpdate(tpl.id, { title: editTitle.trim(), description: editDesc.trim() || null })
+    var dur = parseInt(editDuration, 10);
+    onUpdate(tpl.id, {
+      title: editTitle.trim(),
+      description: editDesc.trim() || null,
+      total_duration_days: (!isNaN(dur) && dur > 0) ? dur : null,
+    })
       .then(function () {
         setSaving(false);
         cancelEdit();
@@ -78,8 +86,25 @@ export function TemplatePickerModal({ templates, onUse, onUpdate, onDelete, onCl
                 {/* Top row */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontFamily: SERIF, fontSize: 15, color: C.text, lineHeight: 1.3, marginBottom: 3 }}>
-                      {tpl.title}
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 3 }}>
+                      <div style={{ fontFamily: SERIF, fontSize: 15, color: C.text, lineHeight: 1.3 }}>
+                        {tpl.title}
+                      </div>
+                      {tpl.total_duration_days != null && (
+                        <div style={{
+                          fontFamily: MONO,
+                          fontSize: 10,
+                          color: C.textMuted,
+                          background: C.surface,
+                          border: "1px solid " + C.rule,
+                          borderRadius: 4,
+                          padding: "1px 6px",
+                          whiteSpace: "nowrap",
+                          flexShrink: 0,
+                        }}>
+                          Est. {tpl.total_duration_days}d
+                        </div>
+                      )}
                     </div>
                     <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted }}>
                       {stageCount} stage{stageCount !== 1 ? "s" : ""}
@@ -191,6 +216,16 @@ export function TemplatePickerModal({ templates, onUse, onUpdate, onDelete, onCl
                         value={editDesc}
                         onChange={function (e) { setEditDesc(e.target.value); }}
                         placeholder="Optional note about this template"
+                      />
+                    </div>
+                    <div>
+                      <FL>Estimated Duration (days)</FL>
+                      <InputField
+                        type="number"
+                        min="1"
+                        value={editDuration}
+                        onChange={function (e) { setEditDuration(e.target.value); }}
+                        placeholder="Auto-derives from stage offsets if blank"
                       />
                     </div>
                     <div style={{ fontSize: 11, color: C.textMuted, lineHeight: 1.5 }}>

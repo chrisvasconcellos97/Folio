@@ -434,6 +434,8 @@ create table if not exists gauge_projects (
   is_standing    boolean default false,
   custom_field_schema  jsonb default '[]',
   task_status_columns  jsonb default '["intake","in_progress","done"]',
+  total_duration_days  integer,
+  expected_complete_date date,
   created_at     timestamptz default now(),
   updated_at     timestamptz default now()
 );
@@ -469,6 +471,7 @@ create table if not exists gauge_templates (
   is_standing         boolean default false,
   custom_field_schema jsonb default '[]',
   task_status_columns jsonb default '["intake","in_progress","done"]',
+  total_duration_days integer,
   created_at          timestamptz default now()
 );
 

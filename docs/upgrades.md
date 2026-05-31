@@ -1,6 +1,6 @@
 # Folios — Upgrade Log
 
-*Last updated: 2026-05-30 (Gauge V3 Phase 6 — polish + V2 brain wiring)*
+*Last updated: 2026-05-31 (Gauge template total turnaround time)*
 
 Plain-English log of major upgrades shipped to Folios. Date, time, and
 a short explanation written in terms anyone can read — not technical
@@ -14,6 +14,40 @@ For the technical changelog with full release detail, see
 architectural changes, anything that meaningfully changes what Folios
 *does* or *is*. Not bug fixes, styling tweaks, or doc-only updates —
 those live in git history.
+
+---
+
+## 2026-05-31 — Gauge template total turnaround time
+
+**What I built:** Templates in Gauge now carry an "Estimated Duration"
+field that tells you upfront how long a project type typically takes.
+When you create a project from a template, Gauge automatically sets an
+expected completion date so you always know roughly when the work should
+wrap.
+
+**The problem it solves:** Until now, templates were a list of tasks
+with no sense of time. You'd pick a template and have no idea if it
+represented a 2-day task or a 6-week project. The expected completion
+date also gives Pip something concrete to flag — it can surface projects
+approaching or past their estimated finish.
+
+**What changed:**
+- Templates have a `total_duration_days` field. The TemplatePickerModal
+  shows "Est. Xd" next to each template name when it's set.
+- Templates with stage `due_offset_days` values auto-derive the duration
+  as a placeholder (max offset across all stages). Manual override wins.
+- When you create a project from a template with a known duration,
+  `expected_complete_date` = today + duration days is set automatically.
+- Project cards show the expected complete date in the meta row.
+  Past-due expected dates show in amber so they're easy to spot.
+
+**What you see today:** The "Est. Xd" chip on templates in the picker,
+and an "Est. complete · [date]" line on project cards built from
+timed templates.
+
+**Why it matters:** Gives Chris an instant sanity check when picking a
+template ("this is normally a 14-day project") and surfaces an early
+warning when work is running long.
 
 ---
 

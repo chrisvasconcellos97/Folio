@@ -275,7 +275,15 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId, lens })
   }
 
   function handleSaveNew(data) {
-    return addProject(data);
+    // If this project was created from a template with a known duration,
+    // set expected_complete_date = today + duration days.
+    var withExpected = Object.assign({}, data);
+    if (!withExpected.expected_complete_date && prefillTemplate && prefillTemplate.total_duration_days) {
+      withExpected.expected_complete_date = new Date(
+        Date.now() + prefillTemplate.total_duration_days * 86400000
+      ).toISOString().slice(0, 10);
+    }
+    return addProject(withExpected);
   }
 
   function handleSaveEdit(data) {
@@ -898,6 +906,25 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId, lens })
                       {overdue ? "Overdue · " : "Due · "}{fmt(p.due_date)}
                     </div>
                   )}
+                  {p.expected_complete_date && !p.due_date && (function () {
+                    var expMs   = new Date(p.expected_complete_date + "T00:00:00").getTime();
+                    var nowMs   = new Date(new Date().toDateString()).getTime();
+                    var isPast  = expMs < nowMs;
+                    var isClose = !isPast && (expMs - nowMs) <= 7 * 86400000;
+                    if (isPast || isClose) {
+                      return (
+                        <div style={{ fontFamily: MONO, fontSize: 10, color: isPast ? C.yellow : C.textMuted, fontFeatureSettings: '"tnum"' }}>
+                          {isPast ? "Est. complete · " : "Est. complete · "}{fmt(p.expected_complete_date)}
+                          {isPast && " · overdue"}
+                        </div>
+                      );
+                    }
+                    return (
+                      <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, fontFeatureSettings: '"tnum"' }}>
+                        Est. complete · {fmt(p.expected_complete_date)}
+                      </div>
+                    );
+                  })()}
                   {/* External stages badge */}
                   {extCount > 0 && (
                     <div style={{ fontFamily: MONO, fontSize: 10, color: C.yellow }}>
@@ -1015,6 +1042,17 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId, lens })
                     <div style={{ color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", fontSize: 9.5 }}>Due</div>
                     <div style={{ color: overdue ? C.red : C.text, fontFeatureSettings: '"tnum"' }}>{fmt(p.due_date)}</div>
                   </>)}
+                  {p.expected_complete_date && (function () {
+                    var expMs  = new Date(p.expected_complete_date + "T00:00:00").getTime();
+                    var nowMs  = new Date(new Date().toDateString()).getTime();
+                    var isPast = expMs < nowMs;
+                    return (<>
+                      <div style={{ color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", fontSize: 9.5 }}>Est. Complete</div>
+                      <div style={{ color: isPast ? C.yellow : C.text, fontFeatureSettings: '"tnum"' }}>
+                        {fmt(p.expected_complete_date)}{isPast ? " · overdue" : ""}
+                      </div>
+                    </>);
+                  })()}
                   {p.description && (<>
                     <div style={{ color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", fontSize: 9.5 }}>Scope</div>
                     <div style={{ color: C.textSoft, fontFamily: SERIF, fontSize: 13, lineHeight: 1.5 }}>{p.description}</div>

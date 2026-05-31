@@ -110,6 +110,9 @@ export function ProjectModal({
         ? prefillTemplate.task_status_columns
         : DEFAULT_TASK_STATUS_COLUMNS.slice())
   );
+  var [totalDurationDays, setTotalDurationDays] = useState(
+    existing ? (existing.total_duration_days != null ? String(existing.total_duration_days) : "") : ""
+  );
   var [showSchemaEditor, setShowSchemaEditor] = useState(false);
   var [newStageTitle, setNewStageTitle] = useState("");
   var [saving, setSaving]           = useState(false);
@@ -140,6 +143,7 @@ export function ProjectModal({
   function handleSaveAsDraft() {
     if (saving) return;
     setSaving(true);
+    var durDraft = parseInt(totalDurationDays, 10);
     onSave({
       title:         title.trim() || "Untitled Draft",
       description:   description.trim() || null,
@@ -157,6 +161,7 @@ export function ProjectModal({
       is_standing:   isStanding,
       custom_field_schema: customFieldSchema,
       task_status_columns: taskStatusColumns,
+      total_duration_days: (!isNaN(durDraft) && durDraft > 0) ? durDraft : null,
     }).then(function () {
       setSaving(false);
       showToast("Draft saved");
@@ -330,6 +335,7 @@ export function ProjectModal({
     setSaving(true);
     // If this is a draft being promoted via the Save button, bump to "planned"
     var saveStatus = status === "draft" ? "planned" : status;
+    var durSave = parseInt(totalDurationDays, 10);
     onSave({
       title:         title.trim(),
       description:   description.trim() || null,
@@ -347,6 +353,7 @@ export function ProjectModal({
       is_standing:   isStanding,
       custom_field_schema: customFieldSchema,
       task_status_columns: taskStatusColumns,
+      total_duration_days: (!isNaN(durSave) && durSave > 0) ? durSave : null,
     }).then(function () {
       setSaving(false);
       onClose();
@@ -383,6 +390,8 @@ export function ProjectModal({
         }),
       };
     });
+    var durVal = parseInt(totalDurationDays, 10);
+    var tplDuration = (!isNaN(durVal) && durVal > 0) ? durVal : (autoMaxOffset || null);
     addTemplate({
       title: tplTitle,
       description: description.trim() || null,
@@ -390,6 +399,7 @@ export function ProjectModal({
       is_standing: isStanding,
       custom_field_schema: customFieldSchema,
       task_status_columns: taskStatusColumns,
+      total_duration_days: tplDuration,
     }).then(function () {
       showToast("Template saved");
     }).catch(function () {
@@ -402,6 +412,16 @@ export function ProjectModal({
       onDelete(existing.id).then(onClose);
     }
   }
+
+  // Auto-derive max offset from stages for template duration placeholder
+  var autoMaxOffset = (function () {
+    if (!stages || stages.length === 0) return null;
+    var offsets = stages.flatMap(function (s) {
+      return [s.due_offset_days || 0].concat((s.sub_stages || []).map(function (ss) { return ss.due_offset_days || 0; }));
+    });
+    var max = Math.max.apply(null, offsets);
+    return max > 0 ? max : null;
+  })();
 
   // Has supplier/shop type accounts?
   var hasSuppliers = (accounts || []).some(function (a) { return a.account_type === "supplier"; });
@@ -983,6 +1003,25 @@ export function ProjectModal({
             This is a standing project — tasks are added on the board below as
             requests come in. Tasks landing here also surface in the assignee's
             queue.
+          </div>
+        )}
+
+        {/* Estimated Duration — shown when addTemplate is available so users can
+            set it before saving a project as a template. Also visible on existing
+            projects created from templates so the duration can be corrected. */}
+        {(addTemplate || (existing && existing.total_duration_days != null) || (existing && existing.expected_complete_date)) && (
+          <div>
+            <FL>Estimated Duration (days)</FL>
+            <InputField
+              type="number"
+              min="1"
+              value={totalDurationDays}
+              onChange={function (e) { setTotalDurationDays(e.target.value); }}
+              placeholder={autoMaxOffset ? "Auto: " + autoMaxOffset + " (from stage offsets)" : "e.g. 14"}
+            />
+            <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, marginTop: 4, lineHeight: 1.5 }}>
+              Auto-derives from stage offsets if left blank. Used when saving as a template.
+            </div>
           </div>
         )}
 

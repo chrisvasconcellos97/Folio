@@ -1,6 +1,6 @@
 # Folios — Changelog
 
-*Last updated: 2026-05-30*
+*Last updated: 2026-05-31*
 
 Notable releases and capability shipments. Reverse chronological.
 
@@ -10,6 +10,19 @@ branch.
 ---
 
 ## May 2026
+
+### Gauge template total turnaround time
+Templates now carry a `total_duration_days` field so you can see
+upfront how long a project type typically takes. The TemplatePickerModal
+shows "Est. Xd" next to each template name when set. When a project is
+created from a template with a known duration, `expected_complete_date`
+is automatically set to today + duration days. Project cards surface
+the expected completion date (amber when past due). The duration
+auto-derives from the max `due_offset_days` across stages as a
+placeholder if not set manually; manual override is always respected.
+
+SQL: `supabase/gauge_template_duration.sql` — run in production.
+
 
 ### Gauge V3 — Phase 2: lens system
 Foundation for the three role-based views (AM / Leader / Admin) that
