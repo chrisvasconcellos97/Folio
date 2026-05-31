@@ -8,7 +8,7 @@ import { PipMark } from "../../components/PipMark";
 import { useMeetings } from "../../hooks/useMeetings";
 import { useItems } from "../../hooks/useItems";
 import { useContacts } from "../../hooks/useContacts";
-import { useCadences } from "../../hooks/useCadences";
+import { useCadences, usePersonCadences } from "../../hooks/useCadences";
 import { useProjects } from "../../hooks/useProjects";
 import { useAccountUpdates } from "../../hooks/useAccountUpdates";
 import { callBriefMePip } from "../../lib/pip";
@@ -21,6 +21,7 @@ import { MeetingsTab } from "./tabs/MeetingsTab";
 import { ItemsTab } from "./tabs/ItemsTab";
 import { ContactsTab } from "./tabs/ContactsTab";
 import { CadenceTab } from "./tabs/CadenceTab";
+import { SetCadenceModal } from "../cadence/SetCadenceModal";
 import { ProjectsTab } from "./tabs/ProjectsTab";
 import { ShopsTab } from "./tabs/ShopsTab";
 import { UpdatesTab } from "./tabs/UpdatesTab";
@@ -52,7 +53,7 @@ function setDefaultTab(accountId, tab) {
   try { localStorage.setItem("folio_default_tab_" + accountId, tab); } catch(e) {}
 }
 
-export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, accounts, members, onBack, onEdit, onDelete, onReactivate, onMerge, onUpdate, onSelectAccount, pipPrefill, onPipPrefillHandled, initialHubCadenceId, onHubConsumed, autoOpenMeetingMode, onAutoOpenMeetingModeConsumed, onAddAccount }) {
+export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, accounts, members, onBack, onEdit, onDelete, onReactivate, onMerge, onUpdate, onSelectAccount, pipPrefill, onPipPrefillHandled, initialHubCadenceId, onHubConsumed, initialPersonHubCadenceId, onPersonHubConsumed, autoOpenMeetingMode, onAutoOpenMeetingModeConsumed, onAddAccount }) {
   var isInternalTeam = account.account_type === 'internal_team';
   var isPartner      = account.account_type === 'partner';
   var isCustomerType = !isInternalTeam && !isPartner;
@@ -88,6 +89,8 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
   var [showReviewModal, setShowReviewModal] = useState(false);
 
   var [showHealthOverride, setShowHealthOverride] = useState(false);
+  var [showAdd1on1Modal, setShowAdd1on1Modal] = useState(false);
+  var [hubPersonCadence, setHubPersonCadence] = useState(null); // { cadence, contact }
 
   var pipAcctState = usePipAccountState(userId);
   var [refreshingState, setRefreshingState] = useState(false);
@@ -155,8 +158,18 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
   var { items, addItem, closeItem, updateItem, deleteItem, error: itemsError, refetch: refetchItems }      = useItems(userId, account.id, orgId);
   var { contacts, addContact, updateContact, deleteContact, error: contactsError, refetch: refetchContacts } = useContacts(userId, account.id, orgId);
   var { cadences, addCadence, updateCadence, deleteCadence, error: cadencesError, refetch: refetchCadences } = useCadences(userId, account.id);
+  var { cadences: personCadencesAll, addCadence: addPersonCadence, refetch: refetchPersonCadences } = useCadences(userId);
   var { projects, addProject, updateProject, deleteProject, error: projectsError, refetch: refetchProjects } = useProjects(userId, account.id, orgId, childAccountIds);
   var { updates, addUpdate, updateUpdate, deleteUpdate, error: updatesError, refetch: refetchUpdates } = useAccountUpdates(userId, account.id, orgId);
+
+  // Filter person cadences to those whose contact_id belongs to this account's contacts
+  var personCadences = useMemo(function () {
+    if (!account.is_my_department) return [];
+    var contactIds = new Set((contacts || []).map(function (c) { return c.id; }));
+    return (personCadencesAll || []).filter(function (c) {
+      return c.cadence_scope === 'person' && c.contact_id && contactIds.has(c.contact_id);
+    });
+  }, [personCadencesAll, contacts, account.is_my_department]);
 
   useEffect(function () {
     if (!initialHubCadenceId || !cadences || cadences.length === 0) return;
@@ -166,6 +179,16 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
       if (onHubConsumed) onHubConsumed();
     }
   }, [initialHubCadenceId, cadences]);
+
+  useEffect(function () {
+    if (!initialPersonHubCadenceId || !personCadencesAll || personCadencesAll.length === 0) return;
+    var match = personCadencesAll.find(function (c) { return c.id === initialPersonHubCadenceId; });
+    if (match) {
+      var matchContact = (contacts || []).find(function (c) { return c.id === match.contact_id; });
+      setHubPersonCadence({ cadence: match, contact: matchContact || null });
+      if (onPersonHubConsumed) onPersonHubConsumed();
+    }
+  }, [initialPersonHubCadenceId, personCadencesAll, contacts]);
 
   var allAccounts   = accounts || [];
   var subAccounts   = allAccounts.filter(function (a) { return a.parent_account_id === account.id; });
@@ -367,6 +390,52 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
     );
   }
 
+  if (hubPersonCadence) {
+    var hpcContact = hubPersonCadence.contact;
+    var hpcCadence = hubPersonCadence.cadence;
+    // Fetch meetings for this person cadence (all meetings linked to this cadence)
+    // We pass the account-level meetings array; CadenceHub filters by cadence_id
+    return (
+      <CadenceHub
+        cadence={hpcCadence}
+        account={null}
+        contact={hpcContact}
+        userId={userId}
+        userEmail={userEmail}
+        members={members}
+        accounts={accounts}
+        meetings={meetings}
+        items={items}
+        cadences={personCadences}
+        projects={[]}
+        contacts={contacts}
+        addContact={addContact}
+        addMeeting={addMeeting}
+        updateMeeting={updateMeeting}
+        deleteMeeting={deleteMeeting}
+        updateProject={function () { return Promise.resolve(); }}
+        addItem={function (data) { return addItem(Object.assign({ account_id: account.id }, data)); }}
+        updateItem={updateItem}
+        closeItem={closeItem}
+        onUpdateCadence={function (id, data) {
+          return updateCadence(id, data).then(function () {
+            setHubPersonCadence(function (prev) {
+              if (!prev || prev.cadence.id !== id) return prev;
+              return Object.assign({}, prev, { cadence: Object.assign({}, prev.cadence, data) });
+            });
+          });
+        }}
+        onBack={function () { setHubPersonCadence(null); }}
+        onOpenAccount={null}
+        isMobile={!isDesktop}
+        autoOpenMeetingMode={false}
+        onAutoOpenMeetingModeConsumed={null}
+        pipLessonsLearned={null}
+        pipAccountStateRow={null}
+      />
+    );
+  }
+
   return (
     <div>
       <AccountDetailHeader
@@ -531,6 +600,62 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
           onPrefillHandled={function () { setCadencePrefill(null); }}
           onOpenHub={function (cad) { setHubCadence(cad); }}
         />
+        {account.is_my_department && (
+          <div style={{ padding: "0 16px 24px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, marginTop: 4 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.07em" }}>Leadership 1:1s</span>
+              <button
+                onClick={function () { setShowAdd1on1Modal(true); }}
+                style={{ background: "none", border: "1px solid " + C.accent, borderRadius: 6, color: C.accent, fontSize: 12, fontWeight: 600, padding: "3px 10px", cursor: "pointer" }}
+              >+ Add 1:1</button>
+            </div>
+            {personCadences.length === 0 && (
+              <div style={{ fontSize: 13, color: C.textMuted, padding: "10px 0" }}>No 1:1 cadences yet. Add one to track regular check-ins with your manager, mentor, or cross-functional partners.</div>
+            )}
+            {personCadences.map(function (pc) {
+              var pcContact = (contacts || []).find(function (c) { return c.id === pc.contact_id; });
+              return (
+                <div
+                  key={pc.id}
+                  onClick={function () { setHubPersonCadence({ cadence: pc, contact: pcContact || null }); }}
+                  style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", background: C.surface, borderRadius: 8, border: "1px solid " + C.border, marginBottom: 6, cursor: "pointer" }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 2 }}>
+                      {pcContact ? pcContact.name : "Unknown contact"}
+                    </div>
+                    <div style={{ fontSize: 12, color: C.textMuted }}>
+                      {pcContact && pcContact.title ? pcContact.title + " · " : ""}
+                      {pc.label || pc.frequency || "1:1"}
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 11, color: C.accent, fontWeight: 600, whiteSpace: "nowrap" }}>Open →</div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {showAdd1on1Modal && (
+          <SetCadenceModal
+            accountId={account.id}
+            userId={userId}
+            contacts={contacts}
+            initialScope="person"
+            onSave={function (data) {
+              return addPersonCadence(Object.assign({}, data, {
+                cadence_scope: 'person',
+                account_id: null,
+                user_id: userId,
+              })).then(function (c) {
+                showToast("1:1 cadence added");
+                setShowAdd1on1Modal(false);
+                refetchPersonCadences();
+                return c;
+              });
+            }}
+            onClose={function () { setShowAdd1on1Modal(false); }}
+          />
+        )}
         </>
       )}
 

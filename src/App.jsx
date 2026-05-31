@@ -55,6 +55,7 @@ export default function App() {
   var [view, setView]                   = useState("home");
   var [selectedAccount, setSelected]    = useState(null);
   var [pendingHubCadenceId, setPendingHubCadenceId] = useState(null);
+  var [pendingPersonHubCadenceId, setPendingPersonHubCadenceId] = useState(null);
   var [pendingAutoOpenMeetingMode, setPendingAutoOpenMeetingMode] = useState(false);
   var [bannerFilter, setBannerFilter]   = useState(null); // 'cold' | 'overdue' | null
   var [showAddAccount, setShowAddAccount] = useState(false);
@@ -592,6 +593,8 @@ export default function App() {
             onPipPrefillHandled={function () { setPipPrefill(null); }}
             initialHubCadenceId={pendingHubCadenceId}
             onHubConsumed={function () { setPendingHubCadenceId(null); }}
+            initialPersonHubCadenceId={pendingPersonHubCadenceId}
+            onPersonHubConsumed={function () { setPendingPersonHubCadenceId(null); }}
             autoOpenMeetingMode={pendingAutoOpenMeetingMode}
             onAutoOpenMeetingModeConsumed={function () { setPendingAutoOpenMeetingMode(false); }}
             onAddAccount={addAccount}
@@ -717,8 +720,23 @@ export default function App() {
         cadencesError={cadenceError}
         onRetryCadences={refetchCadencesApp}
         accounts={accounts}
+        contacts={allContacts}
         addCadence={addCadence}
         onOpenHub={function (cadence) {
+          if (cadence.cadence_scope === 'person' || !cadence.account_id) {
+            // Person 1:1 cadence — find the contact's parent account and navigate there
+            var contactId = cadence.contact_id;
+            var contact = (allContacts || []).find(function (c) { return c.id === contactId; });
+            var acctForContact = contact && contact.account_id
+              ? accounts.find(function (a) { return a.id === contact.account_id; })
+              : null;
+            if (acctForContact) {
+              setSelected(acctForContact);
+              setPendingPersonHubCadenceId(cadence.id);
+              setView("accounts");
+            }
+            return;
+          }
           var acct = accounts.find(function (a) { return a.id === cadence.account_id; });
           if (acct) {
             setSelected(acct);

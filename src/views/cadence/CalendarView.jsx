@@ -3,7 +3,7 @@ import { C } from "../../lib/colors";
 import { isSameDay, formatDateFull, getCalendarGrid, DAYS_SHORT, MONTHS } from "../../lib/cadenceUtils";
 import { CadenceEventCard, eventColor, navBtnStyle } from "./cadenceShared";
 
-export function CalendarView({ year, month, events, onPrev, onNext, onSelectAccount, onCreateItem, onOpenHub }) {
+export function CalendarView({ year, month, events, onPrev, onNext, onSelectAccount, onCreateItem, onOpenHub, contacts }) {
   var today = new Date();
   var grid  = getCalendarGrid(year, month);
   var [selectedDay, setSelectedDay] = useState(null);
@@ -75,9 +75,15 @@ export function CalendarView({ year, month, events, onPrev, onNext, onSelectAcco
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {evts.slice(0, 2).map(function (ev, j) {
                   var col  = eventColor(ev);
+                  var isPerson = ev.cadence.cadence_scope === 'person' || (!ev.cadence.account_id && ev.cadence.contact_id);
+                  var personContact = isPerson && ev.cadence.contact_id && contacts
+                    ? (contacts.find(function (c) { return c.id === ev.cadence.contact_id; }) || null)
+                    : null;
                   var name = ev.cadence.type === 'task'
                     ? ('✓ ' + (ev.cadence.task_title || '?')).slice(0, 11)
-                    : (ev.account && ev.account.name ? ev.account.name.slice(0, 9) : '?');
+                    : isPerson
+                      ? ('1:1 · ' + (personContact ? personContact.name : 'Contact')).slice(0, 11)
+                      : (ev.account && ev.account.name ? ev.account.name.slice(0, 9) : '?');
                   return (
                     <div key={ev.cadence.id + "-" + j} style={{
                       background: col + '22', color: col,
@@ -106,7 +112,7 @@ export function CalendarView({ year, month, events, onPrev, onNext, onSelectAcco
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {dayEvents(selectedDay).map(function (ev, i) {
-              return <CadenceEventCard key={ev.cadence.id + "-sel-" + i} event={ev} onSelectAccount={onSelectAccount} onCreateItem={onCreateItem} onOpenHub={onOpenHub} />;
+              return <CadenceEventCard key={ev.cadence.id + "-sel-" + i} event={ev} onSelectAccount={onSelectAccount} onCreateItem={onCreateItem} onOpenHub={onOpenHub} contacts={contacts} />;
             })}
           </div>
         </div>

@@ -2,7 +2,7 @@ import { C } from "../../lib/colors";
 import { isSameDay, formatTime, DAYS_SHORT, MONTHS } from "../../lib/cadenceUtils";
 import { eventColor, navBtnStyle } from "./cadenceShared";
 
-export function WeekView({ weekStart, weekEnd, events, onPrev, onNext, onSelectAccount, onOpenHub }) {
+export function WeekView({ weekStart, weekEnd, events, onPrev, onNext, onSelectAccount, onOpenHub, contacts }) {
   var today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -57,9 +57,15 @@ export function WeekView({ weekStart, weekEnd, events, onPrev, onNext, onSelectA
               <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                 {evts.map(function (ev, j) {
                   var col  = eventColor(ev);
+                  var isPerson = ev.cadence.cadence_scope === 'person' || (!ev.cadence.account_id && ev.cadence.contact_id);
+                  var personContact = isPerson && ev.cadence.contact_id && contacts
+                    ? (contacts.find(function (c) { return c.id === ev.cadence.contact_id; }) || null)
+                    : null;
                   var name = ev.cadence.type === 'task'
                     ? '✓ ' + (ev.cadence.task_title || '?')
-                    : (ev.account && ev.account.name ? ev.account.name : '?');
+                    : isPerson
+                      ? '1:1 · ' + (personContact ? personContact.name : 'Contact')
+                      : (ev.account && ev.account.name ? ev.account.name : '?');
                   var time = ev.cadence.meeting_time ? formatTime(ev.cadence.meeting_time) : '';
                   return (
                     <div key={ev.cadence.id + "-" + j}

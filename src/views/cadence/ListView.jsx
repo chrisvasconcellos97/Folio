@@ -4,7 +4,7 @@ import { CadenceEventCard } from "./cadenceShared";
 
 var MONO = "'JetBrains Mono', ui-monospace, monospace";
 
-export function ListView({ cadences, onSelectAccount, onCreateItem, onOpenHub }) {
+export function ListView({ cadences, onSelectAccount, onCreateItem, onOpenHub, contacts }) {
   var today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -55,6 +55,7 @@ export function ListView({ cadences, onSelectAccount, onCreateItem, onOpenHub })
                     onCreateItem={onCreateItem}
                     onOpenHub={onOpenHub}
                     showDate
+                    contacts={contacts}
                   />
                 );
               })}

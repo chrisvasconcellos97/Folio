@@ -106,6 +106,7 @@ var METHOD_LABEL = {
 export function CadenceMeetingMode({
   draft,
   account,
+  contact,
   cadenceLabel,
   brief,
   briefAt,
@@ -317,7 +318,7 @@ export function CadenceMeetingMode({
             fontFamily: SERIF, fontSize: isMobile ? 14 : 16, color: C.text, lineHeight: 1.2,
             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
           }}>
-            {account.name}
+            {account ? account.name : (contact ? "1:1 · " + contact.name : "Meeting")}
           </div>
           <div style={{
             fontFamily: MONO, fontSize: isMobile ? 9 : 10, color: C.accent,

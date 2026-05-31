@@ -116,7 +116,9 @@ create policy "Users manage own contacts"
 create table if not exists folio_cadences (
   id            uuid default gen_random_uuid() primary key,
   user_id       uuid references auth.users(id) on delete cascade not null,
-  account_id    uuid references folio_accounts(id) on delete cascade not null,
+  account_id    uuid references folio_accounts(id) on delete cascade,
+  contact_id    uuid references folio_contacts(id) on delete set null,
+  cadence_scope text not null default 'account',
   type          text not null default 'meeting' check (type in ('meeting', 'task')),
   frequency     text not null check (frequency in ('weekly', 'biweekly', 'monthly', 'quarterly')),
   day_of_week   int check (day_of_week >= 0 and day_of_week <= 6),

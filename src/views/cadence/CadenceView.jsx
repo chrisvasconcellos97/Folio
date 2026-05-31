@@ -89,7 +89,7 @@ function buildGlobalCadenceInsight(allCadences, handlers, activeAccountIds) {
 }
 
 /* ---- Main CadenceView ---- */
-export function CadenceView({ cadences, cadencesError, onRetryCadences, accounts, onSelectAccount, addCadence, onCreateItem, onOpenHub }) {
+export function CadenceView({ cadences, cadencesError, onRetryCadences, accounts, contacts, onSelectAccount, addCadence, onCreateItem, onOpenHub }) {
   var [viewMode, setViewMode] = useState('list');
   var insightHandlers = {
     onClickToday:    function () { setViewMode('list'); setTimeout(function () { scrollToCadenceGroup('today'); }, 50); },
@@ -255,6 +255,7 @@ export function CadenceView({ cadences, cadencesError, onRetryCadences, accounts
           onSelectAccount={onSelectAccount}
           onCreateItem={onCreateItem}
           onOpenHub={onOpenHub}
+          contacts={contacts}
         />
       )}
 
@@ -265,11 +266,12 @@ export function CadenceView({ cadences, cadencesError, onRetryCadences, accounts
           onNext={function () { var d = new Date(weekDate); d.setDate(d.getDate() + 7); setWeekDate(d); }}
           onSelectAccount={onSelectAccount}
           onOpenHub={onOpenHub}
+          contacts={contacts}
         />
       )}
 
       {viewMode === 'list' && (
-        <ListView cadences={cadences} onSelectAccount={onSelectAccount} onCreateItem={onCreateItem} onOpenHub={onOpenHub} />
+        <ListView cadences={cadences} onSelectAccount={onSelectAccount} onCreateItem={onCreateItem} onOpenHub={onOpenHub} contacts={contacts} />
       )}
 
       {showAddModal && (

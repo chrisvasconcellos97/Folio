@@ -68,3 +68,36 @@ export function useCadences(userId, accountId) {
 
   return { cadences, loading, error, refetch: fetch, addCadence, updateCadence, deleteCadence };
 }
+
+// Hook for person-scoped (1:1) cadences — not tied to any account.
+export function usePersonCadences(userId) {
+  var [cadences, setCadences] = useState([]);
+  var [loading, setLoading]   = useState(false);
+  var [error, setError]       = useState(null);
+
+  var fetch = useCallback(function () {
+    if (!userId) return;
+    setLoading(true);
+    supabase
+      .from("folio_cadences")
+      .select("*, folio_contacts(id, name, title)")
+      .eq("user_id", userId)
+      .eq("cadence_scope", "person")
+      .order("created_at", { ascending: true })
+      .then(function (result) {
+        setLoading(false);
+        if (result.error) {
+          setError(result.error.message);
+        } else {
+          setError(null);
+          setCadences(result.data || []);
+        }
+      });
+  }, [userId]);
+
+  useEffect(function () { fetch(); }, [fetch]);
+
+  useRealtimeSync("folio_cadences", userId, fetch);
+
+  return { cadences, loading, error, refetch: fetch };
+}

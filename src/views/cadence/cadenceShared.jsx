@@ -44,15 +44,23 @@ export var navBtnStyle = {
   fontFamily: "'Inter', system-ui, sans-serif",
 };
 
-export function CadenceEventCard({ event, onSelectAccount, onCreateItem, onOpenHub, showDate }) {
+export function CadenceEventCard({ event, onSelectAccount, onCreateItem, onOpenHub, showDate, contacts }) {
   var cadence = event.cadence;
   var account = event.account;
   var col     = eventColor(event);
   var isGlobal = cadence.is_global;
   var isTask   = cadence.type === 'task';
+  var isPerson = cadence.cadence_scope === 'person' || (!cadence.account_id && cadence.contact_id);
+  var personContact = isPerson && cadence.contact_id && contacts
+    ? (contacts.find(function (c) { return c.id === cadence.contact_id; }) || null)
+    : null;
   var name = isTask
     ? '✓ ' + (cadence.task_title || '?')
-    : (account && account.name ? account.name : 'Unknown');
+    : isPerson
+      ? '1:1 · ' + (personContact ? personContact.name : 'Contact')
+      : (account && account.name ? account.name : 'Unknown');
+
+  var canOpenHub = !isTask && !isGlobal && onOpenHub;
 
   return (
     <div
@@ -66,23 +74,35 @@ export function CadenceEventCard({ event, onSelectAccount, onCreateItem, onOpenH
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: 12,
-        cursor: !isTask && !isGlobal && onOpenHub ? 'pointer' : 'default',
+        cursor: canOpenHub ? 'pointer' : 'default',
       })}
-      role={!isTask && !isGlobal && onOpenHub ? 'button' : undefined}
-      tabIndex={!isTask && !isGlobal && onOpenHub ? 0 : undefined}
-      onClick={function () { if (!isTask && !isGlobal && onOpenHub) onOpenHub(cadence); }}
+      role={canOpenHub ? 'button' : undefined}
+      tabIndex={canOpenHub ? 0 : undefined}
+      onClick={function () { if (canOpenHub) onOpenHub(cadence); }}
       onKeyDown={function (e) {
-        if (!isTask && !isGlobal && onOpenHub && (e.key === 'Enter' || e.key === ' ')) {
+        if (canOpenHub && (e.key === 'Enter' || e.key === ' ')) {
           e.preventDefault();
           onOpenHub(cadence);
         }
       }}
     >
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontFamily: SERIF, fontSize: 15.5, fontWeight: 400, color: C.text, letterSpacing: '-0.005em', lineHeight: 1.2 }}>{name}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+          <div style={{ fontFamily: SERIF, fontSize: 15.5, fontWeight: 400, color: C.text, letterSpacing: '-0.005em', lineHeight: 1.2 }}>{name}</div>
+          {isPerson && (
+            <span style={{ fontFamily: MONO, fontSize: 9, fontWeight: 700, color: C.accent, background: C.accentFaint, border: '1px solid ' + C.accentLine, borderRadius: 4, padding: '1px 5px', letterSpacing: '0.06em', textTransform: 'uppercase', flexShrink: 0 }}>
+              PERSON 1:1
+            </span>
+          )}
+        </div>
         {cadence.type === 'task' && (
           <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, marginTop: 3, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
             {isGlobal ? 'All Accounts' : (account && account.name ? account.name : '')}
+          </div>
+        )}
+        {isPerson && personContact && personContact.title && (
+          <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, marginTop: 3, letterSpacing: '0.04em' }}>
+            {personContact.title}
           </div>
         )}
         <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, marginTop: 4, letterSpacing: '0.04em' }}>
@@ -128,7 +148,7 @@ export function CadenceEventCard({ event, onSelectAccount, onCreateItem, onOpenH
               Open Hub →
             </button>
           )}
-          {onSelectAccount && (
+          {!isPerson && onSelectAccount && (
             <button
               onClick={function (e) { e.stopPropagation(); onSelectAccount(cadence.account_id); }}
               style={{

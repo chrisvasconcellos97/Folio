@@ -5,7 +5,7 @@ import { PipMark } from "../../components/PipMark";
 import { MarkdownText } from "../../components/MarkdownText";
 import { SecBtn, DangerBtn } from "../../components/Buttons";
 import { getFrequencyLabel, getNextOccurrence, daysUntil, formatTime } from "../../lib/cadenceUtils";
-import { summarizeDraftPip, callCadenceBriefPip } from "../../lib/pip";
+import { summarizeDraftPip, callCadenceBriefPip, callPortfolioBriefPip } from "../../lib/pip";
 import { CadenceBackfillBanner } from "./CadenceBackfillBanner";
 import { AddToTasksButton } from "../../components/AddToTasksButton";
 import { CadenceMeetingMode } from "./CadenceMeetingMode";
@@ -16,6 +16,7 @@ import { ProjectNotesEditor } from "../gauge/ProjectNotesEditor";
 import { usePipAssignmentHints } from "../../hooks/usePipAssignmentHints";
 import { usePipCorrections } from "../../hooks/usePipCorrections";
 import { useGlossary } from "../../hooks/useGlossary";
+import { useAccountSnapshots } from "../../hooks/useAccountSnapshots";
 import { applyPipPlan } from "../../lib/pipPlanApply";
 
 var INTER = "'Inter', system-ui, sans-serif";
@@ -583,10 +584,50 @@ export function HubProjectCard({ project, accounts, members, userEmail, onUpdate
   );
 }
 
+/* ---- Portfolio brief panel (for person 1:1 cadences) ---- */
+function PortfolioBriefPanel({ brief, loading, error, onRefresh }) {
+  return (
+    <div style={{
+      background: C.accentGlow, border: "1px solid " + C.accentLine,
+      borderRadius: 12, padding: "12px 14px",
+    }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+          <PipMark size={8} color={C.accent} glow pulse={loading} />
+          <div style={{ fontSize: 10, color: C.accent, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em", fontFamily: "'JetBrains Mono', ui-monospace, monospace" }}>
+            Pip · Portfolio Brief
+          </div>
+        </div>
+        <button
+          onClick={onRefresh}
+          disabled={loading}
+          style={{
+            background: "none", border: "1px solid " + C.accentSubtle, borderRadius: 6,
+            padding: "3px 9px", fontSize: 10, fontWeight: 600,
+            color: C.accent, fontFamily: "'Inter', system-ui, sans-serif", cursor: loading ? "default" : "pointer",
+            opacity: loading ? 0.5 : 1,
+          }}
+        >
+          {loading ? "Working…" : (brief ? "Refresh" : "Generate")}
+        </button>
+      </div>
+      {error && <div style={{ fontSize: 12, color: C.red }}>{error}</div>}
+      {brief ? (
+        <MarkdownText text={brief} style={{ fontSize: 14, color: C.textSub, lineHeight: 1.65 }} />
+      ) : (!loading && !error && (
+        <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.5 }}>
+          No portfolio brief yet. Hit Generate for a cross-account morning brief from Pip.
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /* ---- Main hub ---- */
 export function CadenceHub({
   cadence,
   account,
+  contact,
   userId,
   userEmail,
   members,
@@ -614,9 +655,14 @@ export function CadenceHub({
   pipLessonsLearned,
   pipAccountStateRow,
 }) {
+  var isPersonCadence = cadence.cadence_scope === 'person' || !account;
+
   var [briefLoading, setBriefLoading] = useState(false);
   var [briefError, setBriefError]     = useState(null);
   var [briefExpanded, setBriefExpanded] = useState(false);
+  var [portfolioBrief, setPortfolioBrief] = useState(null);
+  var [portfolioBriefLoading, setPortfolioBriefLoading] = useState(false);
+  var [portfolioBriefError, setPortfolioBriefError] = useState(null);
   var [tab, setTab] = useState("notes");
   var [meetingMode, setMeetingMode] = useState(null); // { draft } when active
   var [startingMeeting, setStartingMeeting] = useState(false);
@@ -626,9 +672,11 @@ export function CadenceHub({
   var [summarizeErrors, setSummarizeErrors] = useState({}); // { draftId: msg }
   var [previewPlan, setPreviewPlan]         = useState(null); // { plan, summary, draftId }
 
-  var hintsApi       = usePipAssignmentHints(userId, account.id);
-  var correctionsApi = usePipCorrections(userId, account.id);
-  var glossaryApi    = useGlossary(userId, null, account.id);
+  var accountId = account ? account.id : null;
+  var hintsApi       = usePipAssignmentHints(userId, accountId);
+  var correctionsApi = usePipCorrections(userId, accountId);
+  var glossaryApi    = useGlossary(userId, null, accountId);
+  var snapshotsApi   = useAccountSnapshots(userId);
 
   var cadenceMeetings = useMemo(function () {
     return (meetings || []).filter(function (m) { return m.cadence_id === cadence.id; });
@@ -667,12 +715,12 @@ export function CadenceHub({
     return (projects || [])
       .filter(function (p) { return p.status !== "complete"; })
       .map(function (p) {
-        var ownerName = p.account_id && p.account_id !== account.id
+        var ownerName = p.account_id && p.account_id !== accountId
           ? (accountNameById[p.account_id] || null)
           : null;
         return Object.assign({}, p, { _childAccountName: ownerName });
       });
-  }, [projects, accountNameById, account.id]);
+  }, [projects, accountNameById, accountId]);
 
   var scheduledFollowUps = useMemo(function () {
     var today = todayISO();
@@ -725,12 +773,12 @@ export function CadenceHub({
     setBriefError(null);
     callCadenceBriefPip({
       cadence:          cadence,
-      account:          account,
+      account:          account || {},
       cadenceLabel:     cadenceLabel,
       meetings:         history,
       openItems:        openItems,
       activeProjects:   activeProjects,
-      accountObjective: account.objective || "",
+      accountObjective: account ? (account.objective || "") : "",
       glossary:         glossaryApi.entries,
     }).then(function (out) {
       var brief = out.brief || "";
@@ -745,6 +793,46 @@ export function CadenceHub({
     });
   }
 
+  // Portfolio brief for person cadences — cached in localStorage per day
+  var PORTFOLIO_BRIEF_KEY = "folio_portfolio_brief_" + (userId || "");
+  function handleRefreshPortfolioBrief() {
+    // Check daily cache
+    try {
+      var cached = JSON.parse(localStorage.getItem(PORTFOLIO_BRIEF_KEY) || "null");
+      if (cached && cached.date === new Date().toISOString().slice(0, 10) && cached.brief) {
+        setPortfolioBrief(cached.brief);
+        return;
+      }
+    } catch (e) {}
+    setPortfolioBriefLoading(true);
+    setPortfolioBriefError(null);
+    var snapshots = snapshotsApi.snapshots || [];
+    callPortfolioBriefPip({ snapshots: snapshots, userId: userId })
+      .then(function (out) {
+        var brief = out.brief || out.content || "";
+        setPortfolioBrief(brief);
+        setPortfolioBriefLoading(false);
+        try {
+          localStorage.setItem(PORTFOLIO_BRIEF_KEY, JSON.stringify({ date: new Date().toISOString().slice(0, 10), brief: brief }));
+        } catch (e) {}
+      }).catch(function () {
+        setPortfolioBriefLoading(false);
+        setPortfolioBriefError("Pip is unavailable right now.");
+      });
+  }
+
+  // Load portfolio brief from cache on mount for person cadences
+  useEffect(function () {
+    if (!isPersonCadence) return;
+    try {
+      var cached = JSON.parse(localStorage.getItem(PORTFOLIO_BRIEF_KEY) || "null");
+      if (cached && cached.date === new Date().toISOString().slice(0, 10) && cached.brief) {
+        setPortfolioBrief(cached.brief);
+      }
+    } catch (e) {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPersonCadence]);
+
   function handleStartMeeting() {
     if (startingMeeting) return;
     // Reuse today's draft for this cadence if one exists
@@ -757,7 +845,7 @@ export function CadenceHub({
     setStartingMeeting(true);
     var title = cadenceLabel + " — " + formatTodayLong();
     addMeeting({
-      account_id:   account.id,
+      account_id:   accountId || null,
       user_id:      userId,
       cadence_id:   cadence.id,
       title:        title,
@@ -799,18 +887,18 @@ export function CadenceHub({
     setSummarizeErrors(function (prev) { var next = Object.assign({}, prev); delete next[draftId]; return next; });
     summarizeDraftPip({
       draft:             draftPayload,
-      accountName:       account.name,
+      accountName:       account ? account.name : (contact ? contact.name + " (1:1)" : "1:1 Meeting"),
       cadenceLabel:      cadenceLabel,
-      accountId:         account.id,
+      accountId:         accountId,
       existingItems:     openItems,
       activeProjects:    activeProjects,
       orgMembers:        members,
       assignmentHints:   hintsApi.hints,
       corrections:       correctionsApi.corrections,
-      accountObjective:  account.objective || "",
+      accountObjective:  account ? (account.objective || "") : "",
       glossary:          glossaryApi.entries,
       accountRoster:     accountRoster,
-      accountType:       account.account_type || "standard",
+      accountType:       account ? (account.account_type || "standard") : "internal_team",
       pipAccountState:   pipAccountStateRow || null,
     }).then(function (out) {
       var followUp = out.follow_up_date || null;
@@ -848,11 +936,11 @@ export function CadenceHub({
       closeItem:      closeItem,
       updateProject:  updateProject,
       addHint:        hintsApi.addHint,
-      accountId:      account.id,
+      accountId:      accountId,
       meetingId:      draftId || null,
       activeProjects: activeProjects,
       userId:         userId,
-      orgId:          orgId,
+      orgId:          null,
     }).then(function (result) {
       if (draftId) {
         updateMeeting(draftId, { plan_applied_at: new Date().toISOString() })
@@ -876,7 +964,14 @@ export function CadenceHub({
   }, [meetingMode, meetings]);
 
   /* ---- Sections ---- */
-  var briefSection = (
+  var briefSection = isPersonCadence ? (
+    <PortfolioBriefPanel
+      brief={portfolioBrief}
+      loading={portfolioBriefLoading}
+      error={portfolioBriefError}
+      onRefresh={handleRefreshPortfolioBrief}
+    />
+  ) : (
     <PipBriefPanel
       brief={cadence.pip_brief}
       briefAt={cadence.pip_brief_at}
@@ -933,7 +1028,7 @@ export function CadenceHub({
     </div>
   ) : null;
 
-  var projectsSection = (
+  var projectsSection = isPersonCadence ? null : (
     <div>
       <SectionHeader count={activeProjects.length}>Gauge Projects · Account</SectionHeader>
       {activeProjects.length === 0 ? (
@@ -959,7 +1054,14 @@ export function CadenceHub({
     </div>
   );
 
-  var tasksSection = (
+  var tasksSection = isPersonCadence ? (
+    <div>
+      <SectionHeader>Action Items</SectionHeader>
+      <div style={{ fontSize: 12, color: C.textMuted, padding: "6px 0", lineHeight: 1.5 }}>
+        Action items from this cadence will be routed to their accounts after each meeting via Pip.
+      </div>
+    </div>
+  ) : (
     <div>
       <SectionHeader count={openItems.length}>Open Items · Account</SectionHeader>
       {openItems.length === 0 ? (
@@ -1024,7 +1126,7 @@ export function CadenceHub({
                 meeting={m}
                 onEdit={onEditMeeting}
                 onDelete={deleteMeeting}
-                accountId={account.id}
+                accountId={accountId}
                 openItems={openItems}
                 addItem={addItem}
                 isCadenceTied={!!m.cadence_id}
@@ -1037,6 +1139,13 @@ export function CadenceHub({
   );
 
   /* ---- Header ---- */
+  var displayName = isPersonCadence
+    ? ("1:1 with " + (contact ? contact.name : "Unknown"))
+    : (account ? account.name : "Meeting");
+  var displaySubtitle = isPersonCadence
+    ? (contact && contact.title ? contact.title : "Person 1:1")
+    : null;
+
   var header = (
     <div style={{ marginBottom: 14 }}>
       {onBack && (
@@ -1055,8 +1164,13 @@ export function CadenceHub({
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontFamily: SERIF, fontSize: isMobile ? 22 : 28, fontWeight: 400, color: C.text, lineHeight: 1.1, letterSpacing: "-0.02em" }}>
-            {account.name}
+            {displayName}
           </div>
+          {isPersonCadence && displaySubtitle && (
+            <div style={{ fontSize: 12, color: C.textMuted, marginTop: 3 }}>
+              {displaySubtitle}
+            </div>
+          )}
           <div style={{ fontSize: 12, color: C.accent, marginTop: 4, fontWeight: 600 }}>
             {cadenceLabel}
             {cadence.meeting_time ? " · " + formatTime(cadence.meeting_time) : ""}
@@ -1066,7 +1180,7 @@ export function CadenceHub({
             {nextDue && <span>Next: {daysUntil(nextDue).toLowerCase()}</span>}
           </div>
         </div>
-        {onOpenAccount && (
+        {onOpenAccount && !isPersonCadence && (
           <button
             onClick={onOpenAccount}
             style={{
@@ -1086,10 +1200,11 @@ export function CadenceHub({
   var overlay = (meetingMode && currentMeetingModeDraft) ? (
     <CadenceMeetingMode
       draft={currentMeetingModeDraft}
-      account={account}
+      account={account || null}
+      contact={contact || null}
       cadenceLabel={cadenceLabel}
-      brief={cadence.pip_brief}
-      briefAt={cadence.pip_brief_at}
+      brief={isPersonCadence ? (portfolioBrief || null) : cadence.pip_brief}
+      briefAt={isPersonCadence ? null : cadence.pip_brief_at}
       projects={activeProjects}
       openItems={openItems}
       contacts={contacts || []}
@@ -1120,7 +1235,7 @@ export function CadenceHub({
       onLogCorrections={correctionsApi.logCorrections}
       meetingId={previewPlan.draftId}
       accountRoster={accountRoster}
-      currentAccountId={account.id}
+      currentAccountId={accountId}
       skippedByPip={!!previewPlan.skippedByPip}
     />
   ) : null;
@@ -1196,13 +1311,13 @@ export function CadenceHub({
   return (
     <div>
       {header}
-      <CadenceBackfillBanner
+      {account && <CadenceBackfillBanner
         account={account}
         cadences={cadences}
         meetings={meetings}
         onUpdateMeeting={updateMeeting}
         defaultCadenceId={cadence.id}
-      />
+      />}
       <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
         {briefSection}
         {startMeetingSection}
