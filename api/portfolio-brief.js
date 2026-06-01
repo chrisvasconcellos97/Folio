@@ -52,6 +52,7 @@ Voice rules:
 - 4-6 sentences. Enough to actually say something, not so much that it becomes a report.
 - No bullet points. No markdown bold (**like this**). Plain prose.
 - Don't start with "I" or "Here is" or "Daily Brief."
+- Major-tier accounts carry the most revenue and relationship weight. Lead with them when surfacing risks, wins, or items needing attention. Don't bury a Major account issue behind Mid or Growth items.
 
 Also return a JSON array called "callouts" — one object per specific account you mention. Each: { "account_name": exact name as given, "reason": one short phrase, "item": the specific overdue item text or null }.
 

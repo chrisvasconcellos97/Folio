@@ -360,6 +360,124 @@ function SourceExpander({ excerpt, onExcerptChange, edited }) {
   );
 }
 
+function UnknownPersonRow({ person, onAdd, onDismiss }) {
+  var [expanded, setExpanded] = useState(false);
+  var [name, setName]   = useState(person.name || "");
+  var [role, setRole]   = useState("");
+  var [email, setEmail] = useState("");
+  var [saving, setSaving] = useState(false);
+
+  function handleSave() {
+    if (saving || !name.trim()) return;
+    setSaving(true);
+    Promise.resolve(onAdd({ name: name.trim(), role: role.trim() || null, email: email.trim() || null }))
+      .then(function () { setSaving(false); })
+      .catch(function () { setSaving(false); });
+  }
+
+  return (
+    <div style={{
+      padding: "8px 10px",
+      background: C.surface,
+      border: "1px solid " + C.rule,
+      borderRadius: 8,
+      display: "flex", flexDirection: "column", gap: 6,
+    }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{person.name}</div>
+          {person.context_snippet && (
+            <div style={{ fontSize: 11, color: C.textMuted, lineHeight: 1.4, marginTop: 2, fontStyle: "italic" }}>
+              {person.context_snippet}
+            </div>
+          )}
+        </div>
+        <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
+          <button
+            type="button"
+            onClick={function () { setExpanded(function (v) { return !v; }); }}
+            style={{
+              background: expanded ? C.accentFaint : "none",
+              border: "1px solid " + (expanded ? C.accentLine : C.rule),
+              borderRadius: 6, padding: "3px 9px",
+              fontSize: 10, fontWeight: 600, color: expanded ? C.accent : C.textSoft,
+              cursor: "pointer", fontFamily: INTER,
+            }}
+          >
+            {expanded ? "Cancel" : "Add as contact"}
+          </button>
+          <button
+            type="button"
+            onClick={onDismiss}
+            aria-label="Dismiss"
+            style={{
+              background: "none", border: "none", color: C.textMuted,
+              cursor: "pointer", padding: "0 4px", fontSize: 16, lineHeight: 1,
+            }}
+          >×</button>
+        </div>
+      </div>
+      {expanded && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, paddingTop: 4 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <input
+              value={name}
+              onChange={function (e) { setName(e.target.value); }}
+              placeholder="Name"
+              style={{
+                flex: 1, minWidth: 120,
+                background: C.surface, border: "1px solid " + C.rule,
+                borderRadius: 6, padding: "6px 10px",
+                fontSize: 13, color: C.text, fontFamily: INTER,
+                boxSizing: "border-box",
+              }}
+            />
+            <input
+              value={role}
+              onChange={function (e) { setRole(e.target.value); }}
+              placeholder="Role (optional)"
+              style={{
+                flex: 1, minWidth: 120,
+                background: C.surface, border: "1px solid " + C.rule,
+                borderRadius: 6, padding: "6px 10px",
+                fontSize: 13, color: C.text, fontFamily: INTER,
+                boxSizing: "border-box",
+              }}
+            />
+            <input
+              value={email}
+              onChange={function (e) { setEmail(e.target.value); }}
+              placeholder="Email (optional)"
+              type="email"
+              style={{
+                flex: 1, minWidth: 140,
+                background: C.surface, border: "1px solid " + C.rule,
+                borderRadius: 6, padding: "6px 10px",
+                fontSize: 13, color: C.text, fontFamily: INTER,
+                boxSizing: "border-box",
+              }}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving || !name.trim()}
+            style={{
+              background: C.accentDeep, border: "none", borderRadius: 6,
+              padding: "6px 14px", fontSize: 12, fontWeight: 700, color: C.bg,
+              cursor: (saving || !name.trim()) ? "default" : "pointer",
+              opacity: (saving || !name.trim()) ? 0.5 : 1,
+              fontFamily: INTER, alignSelf: "flex-start",
+            }}
+          >
+            {saving ? "Saving…" : "Save contact"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function PipSummarizePreview({
   plan,
   existingItems,
@@ -373,6 +491,11 @@ export function PipSummarizePreview({
   currentAccountId,  // the account this meeting belongs to (null for person 1:1s)
   skippedByPip,      // true when notes were too short for Pip to extract anything
   isPersonCadence,   // true when this is a person 1:1 — items need account routing
+  suggestedTitle,    // from Pip's summarize response — proposed meeting title
+  meetingTitle,      // current meeting title (to detect system-default titles)
+  onTitleChange,     // (newTitle) => void — called when user edits the title
+  unknownPeople,     // [{ name, context_snippet }] — people Pip noticed but aren't contacts
+  onAddContact,      // ({ name, role, email }) => Promise — saves a new contact
 }) {
   var memberEmails = useMemo(function () {
     return (orgMembers || [])
@@ -427,6 +550,8 @@ export function PipSummarizePreview({
   var [touched, setTouched] = useState(false);
   var [confirmCancel, setConfirmCancel] = useState(false);
   var [userRows, setUserRows] = useState([]);
+  var [titleDraft, setTitleDraft] = useState(suggestedTitle || "");
+  var [dismissedPeople, setDismissedPeople] = useState([]);
 
   function patch(idx, fields) {
     setTouched(true);
@@ -904,6 +1029,13 @@ export function PipSummarizePreview({
     );
   }
 
+  var isDefaultTitle = !meetingTitle || /—\s*\w+\s+\d+$/.test(meetingTitle) || /—\s*\d{4}-\d{2}-\d{2}$/.test(meetingTitle);
+  var showTitleField = !!(suggestedTitle && isDefaultTitle);
+
+  var visibleUnknownPeople = (unknownPeople || []).filter(function (p) {
+    return dismissedPeople.indexOf(p.name) === -1;
+  });
+
   return (
     <Modal title="Pip's plan" onClose={handleCancelClick} width={620}>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -919,6 +1051,33 @@ export function PipSummarizePreview({
             note that triggered Pip.
           </div>
         </div>
+
+        {showTitleField && (
+          <div style={{ marginBottom: 4 }}>
+            <div style={{
+              fontSize: 10, color: C.textMuted, fontWeight: 600,
+              letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 5,
+              fontFamily: MONO,
+            }}>
+              Meeting title
+            </div>
+            <input
+              value={titleDraft}
+              onChange={function (e) {
+                setTitleDraft(e.target.value);
+                if (onTitleChange) onTitleChange(e.target.value);
+              }}
+              style={{
+                width: "100%",
+                background: C.surface,
+                border: "1px solid " + C.rule,
+                borderRadius: 8, padding: "8px 12px",
+                fontSize: 14, color: C.text,
+                fontFamily: INTER, boxSizing: "border-box",
+              }}
+            />
+          </div>
+        )}
 
         {(plan || []).length === 0 && (
           <div style={{ fontSize: 13, color: C.textMuted, padding: "8px 0" }}>
@@ -995,6 +1154,35 @@ export function PipSummarizePreview({
                 {grouped.skipped.map(renderRow)}
               </div>
             )}
+          </div>
+        )}
+
+        {visibleUnknownPeople.length > 0 && (
+          <div style={{ marginTop: 8, borderTop: "1px solid " + C.rule, paddingTop: 16 }}>
+            <div style={{
+              fontSize: 10, color: C.textMuted, fontWeight: 600,
+              letterSpacing: "0.06em", textTransform: "uppercase",
+              marginBottom: 10, fontFamily: MONO,
+            }}>
+              People Pip noticed
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {visibleUnknownPeople.map(function (person, i) {
+                return (
+                  <UnknownPersonRow
+                    key={i}
+                    person={person}
+                    onAdd={function (data) {
+                      if (onAddContact) return Promise.resolve(onAddContact(data));
+                      return Promise.resolve();
+                    }}
+                    onDismiss={function () {
+                      setDismissedPeople(function (prev) { return prev.concat([person.name]); });
+                    }}
+                  />
+                );
+              })}
+            </div>
           </div>
         )}
 

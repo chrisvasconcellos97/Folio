@@ -673,7 +673,8 @@ export function CadenceHub({
   // each track their own in-flight state without colliding.
   var [summarizingId, setSummarizingId]     = useState(null);
   var [summarizeErrors, setSummarizeErrors] = useState({}); // { draftId: msg }
-  var [previewPlan, setPreviewPlan]         = useState(null); // { plan, summary, draftId }
+  var [previewPlan, setPreviewPlan]         = useState(null); // { plan, summary, draftId, suggestedTitle, meetingTitle, unknownPeople }
+  var [previewTitleDraft, setPreviewTitleDraft] = useState(null); // edited title from preview modal
   var [readoutMeetingId, setReadoutMeetingId] = useState(null);
   var [readoutEmail, setReadoutEmail]         = useState("");
   var [readoutLoading, setReadoutLoading]     = useState(false);
@@ -935,7 +936,16 @@ export function CadenceHub({
       }).then(function () { return out; });
     }).then(function (out) {
       setSummarizingId(null);
-      setPreviewPlan({ plan: out.plan || [], summary: out.summary || "", draftId: draftId, skippedByPip: !!out.skippedByPip });
+      setPreviewTitleDraft(null);
+      setPreviewPlan({
+        plan:           out.plan || [],
+        summary:        out.summary || "",
+        draftId:        draftId,
+        skippedByPip:   !!out.skippedByPip,
+        suggestedTitle: out.suggested_title || null,
+        meetingTitle:   draftPayload.title || null,
+        unknownPeople:  out.unknown_people || [],
+      });
       // The meeting is already marked summarized; close meeting mode if it was open.
       if (meetingMode && meetingMode.draft && meetingMode.draft.id === draftId) {
         setMeetingMode(null);
@@ -967,15 +977,21 @@ export function CadenceHub({
       orgId:          orgId || null,
     }).then(function (result) {
       if (draftId) {
-        updateMeeting(draftId, { plan_applied_at: new Date().toISOString() })
+        var badge = { plan_applied_at: new Date().toISOString() };
+        var currentTitle = previewPlan && previewPlan.meetingTitle;
+        if (previewTitleDraft && previewTitleDraft.trim() && previewTitleDraft.trim() !== (currentTitle || "").trim()) {
+          badge.title = previewTitleDraft.trim();
+        }
+        updateMeeting(draftId, badge)
           .catch(function () { /* badge is nice-to-have; don't fail apply on it */ });
       }
       setPreviewPlan(null);
+      setPreviewTitleDraft(null);
       return result;
     });
   }
 
-  function handleCancelPlan() { setPreviewPlan(null); }
+  function handleCancelPlan() { setPreviewPlan(null); setPreviewTitleDraft(null); }
 
   function handleGenerateReadout(meeting) {
     if (readoutLoading) return;
@@ -1307,6 +1323,13 @@ export function CadenceHub({
       currentAccountId={accountId}
       skippedByPip={!!previewPlan.skippedByPip}
       isPersonCadence={isPersonCadence}
+      suggestedTitle={previewPlan.suggestedTitle || null}
+      meetingTitle={previewPlan.meetingTitle || null}
+      onTitleChange={function (v) { setPreviewTitleDraft(v); }}
+      unknownPeople={previewPlan.unknownPeople || []}
+      onAddContact={addContact ? function (data) {
+        return addContact(Object.assign({ account_id: accountId }, data));
+      } : undefined}
     />
   ) : null;
 

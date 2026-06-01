@@ -486,6 +486,12 @@ export function renderPortfolioThemesBlock(themes) {
 export function buildPortfolioState(accounts, snapshots, projects) {
   if (!accounts || accounts.length === 0) return "";
 
+  var TIER_ORDER = { "Major": 0, "Mid": 1, "Growth": 2 };
+  var sortedAccounts = (accounts || []).slice().sort(function (a, b) {
+    return ((TIER_ORDER[a.tier] != null ? TIER_ORDER[a.tier] : 3) -
+            (TIER_ORDER[b.tier] != null ? TIER_ORDER[b.tier] : 3));
+  });
+
   var atRisk   = (snapshots || []).filter(function (s) { return s.health_status === "at_risk"; });
   var watching = (snapshots || []).filter(function (s) { return s.health_status === "watching"; });
   var active   = (projects || []).filter(function (p) { return p.status === "in_progress"; });
@@ -496,9 +502,22 @@ export function buildPortfolioState(accounts, snapshots, projects) {
     return !stages.some(function (s) { return s.done && s.done_at && s.done_at > sevenDaysAgo; });
   });
 
-  var lines = ["PORTFOLIO STATE — " + accounts.length + " accounts"];
-  if (atRisk.length)   lines.push("At Risk: " + atRisk.map(function (s) { return findAccountName(accounts, s.account_id); }).join(", "));
-  if (watching.length) lines.push("Watching: " + watching.map(function (s) { return findAccountName(accounts, s.account_id); }).join(", "));
+  function sortedAccountNames(snapshotList) {
+    return snapshotList
+      .slice()
+      .sort(function (a, b) {
+        var ta = sortedAccounts.findIndex(function (x) { return x.id === a.account_id; });
+        var tb = sortedAccounts.findIndex(function (x) { return x.id === b.account_id; });
+        if (ta === -1) ta = 9999;
+        if (tb === -1) tb = 9999;
+        return ta - tb;
+      })
+      .map(function (s) { return findAccountName(sortedAccounts, s.account_id); });
+  }
+
+  var lines = ["PORTFOLIO STATE — " + sortedAccounts.length + " accounts"];
+  if (atRisk.length)   lines.push("At Risk: " + sortedAccountNames(atRisk).join(", "));
+  if (watching.length) lines.push("Watching: " + sortedAccountNames(watching).join(", "));
   if (active.length)   lines.push("Active projects: " + active.length + (stuck.length ? " (" + stuck.length + " stuck)" : ""));
   return lines.join("\n");
 }

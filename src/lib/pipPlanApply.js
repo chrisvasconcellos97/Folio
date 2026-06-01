@@ -88,7 +88,20 @@ export function applyPipPlan(selected, ctx) {
 
       case "new_task": {
         var newStage = ensureStage(row.project_id);
-        if (!newStage) { fail("Project not found"); return Promise.resolve(); }
+        if (!newStage) {
+          var fallbackAcct = row.target_account_id || accountId || null;
+          var fbStampedAt = !row._userAdded ? new Date().toISOString() : null;
+          var fbPayload = {
+            text:              row.title,
+            due_date:          row.due_date || null,
+            owner:             row.assignee || null,
+            account_id:        fallbackAcct,
+            source_meeting_id: meetingId,
+            is_commitment:     row.is_commitment || false,
+          };
+          if (fbStampedAt) fbPayload.pip_created_at = fbStampedAt;
+          return addItem(fbPayload).catch(function (e) { fail(e && e.message ? e.message : "Add failed"); });
+        }
         var newTaskId = (typeof crypto !== "undefined" && crypto.randomUUID)
           ? crypto.randomUUID()
           : ("t-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8));

@@ -692,15 +692,19 @@ export function summarizeDraftPip(payload) {
     "Return ONLY valid JSON with this exact shape (no preamble, no markdown):\n" +
     "{\n" +
     "  \"short_title\": \"3-4 word email-subject-style label, Title Case (e.g. 'Q3 Forecast Prep', 'Dan Integration Request'). Never include date or account name.\",\n" +
+    "  \"suggested_title\": \"Short 6-10 word meeting title based on what was actually discussed (email subject style, e.g. 'Parts Authority — invoice feed delay + integration update'). Format: [Account] — [key topic]. Keep under 60 chars. Omit (return null) if the meeting notes are too sparse to generate a meaningful title.\",\n" +
     "  \"summary\": \"2-3 sentence summary\",\n" +
     "  \"follow_up_date\": \"YYYY-MM-DD or null\",\n" +
     "  \"tone\": \"positive|neutral|mixed|negative — based on the meeting's overall energy. Customer pushback or blocker frustration = negative. Smooth check-in with no issues = neutral or positive. Both positive progress and some friction = mixed.\",\n" +
     "  \"theme\": \"One of: pricing | integration | staffing | product | escalation | planning | delivery | relationship — pick the single best label for the dominant topic of this meeting. 'pricing' for contract/cost discussions. 'integration' for technical/API/data work. 'staffing' for personnel/training. 'product' for feature requests or roadmap. 'escalation' for issues or complaints. 'planning' for strategy/QBR/forecast. 'delivery' for project/milestone/timeline updates. 'relationship' for general check-ins with no dominant other topic.\",\n" +
+    "  \"unknown_people\": [\n" +
+    "    { \"name\": \"Full name as it appeared in the notes\", \"context_snippet\": \"The sentence they appeared in (max 120 chars)\" }\n" +
+    "  ],\n" +
     "  \"plan\": [\n" +
     "    { \"kind\": \"new_item\",    \"text\": \"...\", \"due_date\": \"YYYY-MM-DD or null\", \"suggested_assignee\": \"email or null\", \"target_account_id\": \"id from YOUR ACCOUNTS list, or null if this belongs to the current account\", \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim 1-3 line slice of the draft notes that triggered this row\", \"is_commitment\": true },\n" +
     "    { \"kind\": \"update_item\", \"target_id\": \"I-...\", \"fields\": { \"due_date\": \"...\", \"text\": \"...\" }, \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim slice from notes\" },\n" +
     "    { \"kind\": \"close_item\",  \"target_id\": \"I-...\", \"reason\": \"...\", \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim slice from notes\" },\n" +
-    "    { \"kind\": \"new_task\",    \"project_id\": \"uuid\", \"title\": \"...\", \"due_date\": \"YYYY-MM-DD or null\", \"suggested_assignee\": \"email or null\", \"target_account_id\": \"id or null\", \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim slice from notes\", \"is_commitment\": false },\n" +
+    "    { \"kind\": \"new_task\",    \"project_id\": \"uuid — MUST be a UUID from the Active Gauge projects list below; only use new_task when you can match to a known project id, otherwise use new_item\", \"title\": \"...\", \"due_date\": \"YYYY-MM-DD or null\", \"suggested_assignee\": \"email or null\", \"target_account_id\": \"id or null\", \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim slice from notes\", \"is_commitment\": false },\n" +
     "    { \"kind\": \"update_task\", \"project_id\": \"uuid\", \"task_id\": \"T-...\", \"fields\": { \"due_date\": \"...\", \"task_status\": \"...\" }, \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim slice from notes\" },\n" +
     "    { \"kind\": \"skip\",        \"reason\": \"duplicate of T-... or I-...\", \"confidence\": \"high\" }\n" +
     "  ]\n" +
@@ -736,7 +740,9 @@ export function summarizeDraftPip(payload) {
     "- target_account_id = null means \"the current account\" (the one this meeting belongs to).\n" +
     "- Don't aggressively route — when an item is clearly about the current account or no other " +
     "account is mentioned, leave target_account_id null.\n" +
-    "- is_commitment: set true when this row represents a first-person promise or deliverable you are committing to — language like \"I'll get you...\", \"we'll have X by...\", \"I'll follow up on...\", \"we'll send...\", \"I'll loop in...\". Default false for tasks, observations, or things the customer will do.\n";
+    "- is_commitment: set true when this row represents a first-person promise or deliverable you are committing to — language like \"I'll get you...\", \"we'll have X by...\", \"I'll follow up on...\", \"we'll send...\", \"I'll loop in...\". Default false for tasks, observations, or things the customer will do.\n" +
+    "- new_task: ONLY use this kind when the project_id is a UUID that appears in the Active Gauge projects list. If no project matches, use new_item instead — never invent a project_id.\n" +
+    "- unknown_people: Scan the meeting notes for proper names (people, not companies or products) that do NOT appear in the CONTACTS list or attendees list provided. Include only names that seem to be real people relevant to the account. Omit the current user. Return empty array if no unknown people found.\n";
 
   // BP1 — system: static schema + rules, cached globally
   var summarySystemBlocks = [
@@ -827,21 +833,29 @@ export function summarizeDraftPip(payload) {
       var shortTitle = (parsed.short_title && typeof parsed.short_title === "string")
         ? String(parsed.short_title).trim().slice(0, 60)
         : "";
+      var suggestedTitle = (parsed.suggested_title && typeof parsed.suggested_title === "string")
+        ? String(parsed.suggested_title).trim().slice(0, 80)
+        : null;
       var tone = ["positive", "neutral", "mixed", "negative"].indexOf(parsed.tone) >= 0
         ? parsed.tone : null;
       var VALID_THEMES = ["pricing", "integration", "staffing", "product", "escalation", "planning", "delivery", "relationship"];
       var theme = parsed.theme && VALID_THEMES.indexOf(parsed.theme.toLowerCase()) >= 0
         ? parsed.theme.toLowerCase() : null;
+      var unknownPeople = Array.isArray(parsed.unknown_people)
+        ? parsed.unknown_people.filter(function (p) { return p && typeof p.name === "string" && p.name.trim(); })
+        : [];
 
       if (planRaw) {
         var plan = planRaw.map(normalizePlanRow).filter(Boolean);
         return {
-          summary:        summary,
-          short_title:    shortTitle,
-          follow_up_date: follow,
-          tone:           tone,
-          theme:          theme,
-          plan:           plan,
+          summary:         summary,
+          short_title:     shortTitle,
+          suggested_title: suggestedTitle,
+          follow_up_date:  follow,
+          tone:            tone,
+          theme:           theme,
+          unknown_people:  unknownPeople,
+          plan:            plan,
           // Keep legacy field populated from new_item rows for any caller
           // that hasn't migrated yet.
           action_items:   plan
@@ -866,13 +880,15 @@ export function summarizeDraftPip(payload) {
         })
         .filter(function (r) { return r && r.text; });
       return {
-        summary:        summary,
-        short_title:    shortTitle,
-        follow_up_date: follow,
-        tone:           tone,
-        theme:          theme,
-        plan:           synthPlan,
-        action_items:   legacyItems,
+        summary:         summary,
+        short_title:     shortTitle,
+        suggested_title: suggestedTitle,
+        follow_up_date:  follow,
+        tone:            tone,
+        theme:           theme,
+        unknown_people:  unknownPeople,
+        plan:            synthPlan,
+        action_items:    legacyItems,
       };
     } catch (e) {
       // JSON.parse failed mid-payload. If the response looks truncated,

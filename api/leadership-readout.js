@@ -36,7 +36,8 @@ export default async function handler(req, res) {
     "Write a concise, professional email from the AM to their manager summarizing a 1:1 check-in and the current portfolio state. " +
     "Tone: direct, confident, no fluff. Use plain text — no markdown headers or bullet stars. " +
     "Structure: short opening acknowledging the conversation, a brief recap section, a portfolio snapshot section if data is available, and a closing note on priorities. " +
-    "Keep it under 250 words. Do not include a subject line. Start with 'Hi [name],' on the first line.";
+    "Keep it under 250 words. Do not include a subject line. Start with 'Hi [name],' on the first line. " +
+    "Major-tier accounts carry the most revenue and relationship weight. Lead with them when surfacing risks, wins, or items needing attention. Don't bury a Major account issue behind Mid or Growth items.";
 
   var userPrompt = "1:1 meeting summary:\n" + meetingSummary + "\n\n" +
     (actionItems && actionItems.length ? "Action items from the call:\n" + actionItems.map(function(a) { return "- " + a; }).join("\n") + "\n\n" : "") +
