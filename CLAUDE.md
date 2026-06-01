@@ -359,7 +359,12 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
     **Design decisions locked:** soft-gate (route, skippable); gentle throttle (1/day, 3/week, 48h cooldown); global pause toggle in Settings; keep fully per-user in Phase 1 (org-shared profile slots deferred); never auto-route existing users — dismissible HomeView card instead.
 
-11. **Export & sharing:** *(no open items)*
+11. **Export & sharing:**
+
+    **Major-account prioritization in all Pip briefs** — Any Pip output that covers multiple accounts (daily portfolio brief, leadership readout, portfolio state passed to 1:1 cadence summaries, any future cross-account surface) should lead with and weight Major-tier accounts. Two changes:
+    1. **Context ordering** — In `buildPortfolioState()` (`pipContext.js`) and anywhere a compressed account list is assembled for a cross-portfolio Pip call, sort accounts: Major → Mid → Growth. Each account entry already includes tier; make it the first field so Pip sees it immediately.
+    2. **Prompt instruction** — In `/api/portfolio-brief`, `/api/leadership-readout`, and any future cross-portfolio endpoint, add an explicit system instruction: *"Major-tier accounts carry the most revenue and relationship weight. Lead with them when surfacing risks, wins, or items needing attention. Don't bury a Major account issue behind Mid or Growth items."*
+    No schema changes. Pure prompt + ordering change.
 
     **Pip unknown-person detection in summarize flow** — At the end of the `PipSummarizePreview` modal (after plan items but before Apply), Pip surfaces a "People Pip noticed" section listing names found in the meeting notes that don't match any existing contact on the account or the meeting's attendees list. For each unknown name, show a one-tap "Add as contact" button that opens an inline quick-add form pre-filled with the name and the sentence it appeared in as context. User can add (saves via `useContacts` / `addContact` to `folio_contacts` for that account) or dismiss each independently. If no unknown names are found, the section doesn't render at all.
 
