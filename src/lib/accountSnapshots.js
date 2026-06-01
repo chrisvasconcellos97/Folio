@@ -9,12 +9,12 @@ import { computeAccountHealth, gatherSignals } from "./accountHealth";
 
 var STORAGE_KEY_PREFIX = "folio_snapshots_computed_";
 
-function todayKey() {
-  return STORAGE_KEY_PREFIX + new Date().toISOString().slice(0, 10);
+function todayKey(userId) {
+  return STORAGE_KEY_PREFIX + (userId ? userId + "_" : "") + new Date().toISOString().slice(0, 10);
 }
 
-export function snapshotsComputedToday() {
-  return !!localStorage.getItem(todayKey());
+export function snapshotsComputedToday(userId) {
+  return !!localStorage.getItem(todayKey(userId));
 }
 
 // Map health status values to the canonical tokens used in snapshots.
@@ -54,7 +54,7 @@ function weightedHealthScore(signals, daysCold, tier) {
 // No-ops if already computed today.
 export async function computeAndSaveSnapshots(userId) {
   if (!userId) return;
-  if (snapshotsComputedToday()) return;
+  if (snapshotsComputedToday(userId)) return;
 
   try {
     // Fetch everything we need in parallel
@@ -131,7 +131,7 @@ export async function computeAndSaveSnapshots(userId) {
       .from("folio_account_snapshots")
       .upsert(rows, { onConflict: "user_id,account_id,snapshot_date" });
 
-    localStorage.setItem(todayKey(), "1");
+    localStorage.setItem(todayKey(userId), "1");
   } catch (e) {
     // Fire-and-forget — never block the app
     console.warn("[accountSnapshots] compute failed:", e);

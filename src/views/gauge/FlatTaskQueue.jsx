@@ -19,6 +19,17 @@ var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
 var INTER = "'Inter', system-ui, sans-serif";
 
+// Resolve assignee_email to a display name using org member records.
+// If no member matches (contact name stored directly), return as-is.
+function resolveAssignee(emailOrName, members) {
+  if (!emailOrName) return null;
+  var m = (members || []).find(function (x) {
+    return (x.invited_email || x.email || "") === emailOrName;
+  });
+  if (m) return m.full_name || (m.invited_email || "").split("@")[0] || emailOrName;
+  return emailOrName;
+}
+
 var SUBFILTERS = [
   { id: "open",  label: "Open" },
   { id: "mine",  label: "Mine" },
@@ -43,7 +54,7 @@ function initial(email) {
   return (clean.charAt(0) || "?").toUpperCase();
 }
 
-export function FlatTaskQueue({ tasks, accounts, projects, userEmail, onOpenProject, showAssigneeChip, onToggleDone }) {
+export function FlatTaskQueue({ tasks, accounts, projects, members, userEmail, onOpenProject, showAssigneeChip, onToggleDone }) {
   var [subFilter, setSubFilter] = useState("open");
   var [groupByProject, setGroupBy] = useState(false);
   var [detailTask, setDetailTask] = useState(null);
@@ -366,7 +377,7 @@ export function FlatTaskQueue({ tasks, accounts, projects, userEmail, onOpenProj
               {dt.assignee_email && (
                 <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                   <span style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", width: 72, flexShrink: 0 }}>Assigned</span>
-                  <span style={{ fontFamily: MONO, fontSize: 12, color: C.text }}>{dt.assignee_email}</span>
+                  <span style={{ fontFamily: MONO, fontSize: 12, color: C.text }}>{resolveAssignee(dt.assignee_email, members)}</span>
                 </div>
               )}
 

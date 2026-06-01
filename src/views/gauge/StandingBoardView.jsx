@@ -7,6 +7,19 @@ import { useBreakpoint } from "../../hooks/useBreakpoint";
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var INTER = "'Inter', system-ui, sans-serif";
 
+// Resolve an assignee_email (or contact name stored as text) to a
+// display-friendly string. If a member record matches the email, show
+// their full_name or email-local-part. Otherwise the stored value is
+// already a display-ready contact name — return it as-is.
+function resolveAssignee(emailOrName, members) {
+  if (!emailOrName) return null;
+  var m = (members || []).find(function (x) {
+    return (x.invited_email || x.email || "") === emailOrName;
+  });
+  if (m) return m.full_name || (m.invited_email || "").split("@")[0] || emailOrName;
+  return emailOrName;
+}
+
 // Standing project board — columns from project.task_status_columns,
 // cards from project.stages. Uses the same TaskDetailPanel for create
 // and edit. Tasks group into a "done" lane (or whichever the last column
@@ -190,7 +203,7 @@ export function StandingBoardView({ project, accounts, members, contacts, userEm
                         fontFamily: MONO, fontSize: 9.5, color: C.accent,
                         marginTop: 4,
                       }}>
-                        → {t.assignee_email}
+                        → {resolveAssignee(t.assignee_email, members)}
                       </div>
                     )}
                   </div>

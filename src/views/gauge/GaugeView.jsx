@@ -151,7 +151,7 @@ function buildGaugeInsight(projects, accountsById, handlers) {
   ]);
 }
 
-export function GaugeView({ userId, userEmail, accounts, members, orgId, lens }) {
+export function GaugeView({ userId, userEmail, accounts, members, contacts, orgId, lens }) {
   var { projects, loading, error: projectsError, refetch: refetchProjects, addProject, updateProject, deleteProject, templates, addTemplate, updateTemplate, deleteTemplate } = useProjects(userId, null, orgId);
   // Phase 3 — flat task queue. Defaults to Tasks tab for Admin lens, Projects for everyone else.
   var { tasks: flatTasks, refetch: refetchTasks } = useTasks(userId);
@@ -443,6 +443,7 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId, lens })
               tasks={flatTasks}
               accounts={accounts}
               projects={projects}
+              members={members}
               userEmail={userEmail}
               onOpenProject={function (id) {
                 setPrimaryView("projects");
@@ -1072,6 +1073,7 @@ export function GaugeView({ userId, userEmail, accounts, members, orgId, lens })
                     project={p}
                     accounts={accounts}
                     members={members}
+                    contacts={contacts}
                     userEmail={userEmail}
                     onUpdate={updateProject}
                     logCorrection={logCorrection}

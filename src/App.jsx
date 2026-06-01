@@ -82,8 +82,9 @@ export default function App() {
 
   var { accounts, loading: acctLoading, error: acctError, refetch: refetchAccounts, addAccount, updateAccount, deleteAccount, archiveAccount, reactivateAccount, mergeAccounts } = useAccounts(userId);
   var { org, orgId, role, lens, members, pendingInvites, myInvite, createOrg, inviteMember, revokeMember, archiveMember, reactivateMember, acceptInvite, dismissInvite } = useOrg(userId, userEmail);
-  var userProfileApi = useUserProfile(userId);
-  var userProfile    = userProfileApi.profile;
+  var userProfileApi  = useUserProfile(userId);
+  var userProfile     = userProfileApi.profile;
+  var profileLoading  = userProfileApi.loading;
 
   // Surface read-path errors from the top-level hooks. Show once per error
   // transition (string identity in the ref guards against the effect retoasting
@@ -152,7 +153,7 @@ export default function App() {
     supabase.from("folio_account_updates").select("*").eq("user_id", userId).order("update_date", { ascending: false }).then(function (r) {
       if (!r.error) setAllUpdates(r.data || []);
     });
-  }, [userId, accounts.length, meetings.length]);
+  }, [userId]);
   var { cadences, loading: cadenceLoading, addCadence, error: cadenceError, refetch: refetchCadencesApp } = useCadences(userId);
   useCadenceSync(userId, cadences, cadenceLoading);
   var reminderApi = useCadenceReminders(userId, cadences, accounts);
@@ -166,7 +167,9 @@ export default function App() {
   var [showGlobalQuickTask, setShowGlobalQuickTask] = useState(false);
   // Pip onboarding interview
   var [showInterview, setShowInterview]                     = useState(false);
-  var [dismissedOnboardingCard, setDismissedOnboardingCard] = useState(false);
+  var [dismissedOnboardingCard, setDismissedOnboardingCard] = useState(function () {
+    try { return localStorage.getItem("folio_onboarding_dismissed") === "1"; } catch (e) { return false; }
+  });
   // Persists the user's last-selected workspace pill (customer/internal_team/partner)
   // so the Accounts page reopens to whichever they were just viewing.
   var [pillWorkspaceType, setPillWorkspaceType] = useState(function () {
@@ -205,7 +208,7 @@ export default function App() {
   // stale-by-at-most-6h so V2 brain reads current baselines.
   useEffect(function () {
     if (!userId || !accounts || accounts.length === 0) return;
-    var key = 'folio_pip_state_refresh_last';
+    var key = 'folio_pip_state_refresh_last_' + userId;
     var last = 0;
     try { last = parseInt(localStorage.getItem(key) || '0', 10); } catch (e) {}
     if (Date.now() - last < 6 * 60 * 60 * 1000) return; // throttle: once per 6h
@@ -226,7 +229,7 @@ export default function App() {
   var compressionInFlightRef = useRef(new Set());
   useEffect(function () {
     if (!userId || !accounts || accounts.length === 0) return;
-    var key = 'folio_pip_compression_last';
+    var key = 'folio_pip_compression_last_' + userId;
     var last = 0;
     try { last = parseInt(localStorage.getItem(key) || '0', 10); } catch (e) {}
     if (Date.now() - last < 6 * 60 * 60 * 1000) return;
@@ -517,7 +520,11 @@ export default function App() {
   // Derive onboarding routing state (post-auth, post-session guards)
   var activeAccounts  = (accounts || []).filter(function (a) { return !a.is_inactive; });
   var hasNoAccounts   = activeAccounts.length === 0;
-  var profilePending  = userProfile && (userProfile.onboarding_status === "pending" || userProfile.onboarding_status === "in_progress");
+  // profilePending is true when the profile row signals an incomplete interview,
+  // OR when no row exists yet (new users who have never started). Guard with
+  // !profileLoading so we don't flash the interview during the initial fetch.
+  var profilePending  = (!profileLoading && userProfile === null) ||
+    (userProfile && (userProfile.onboarding_status === "pending" || userProfile.onboarding_status === "in_progress"));
   var isNewUserInterview = showInterview || (
     !dismissedOnboardingCard && profilePending && hasNoAccounts
   );
@@ -532,7 +539,11 @@ export default function App() {
           userId={userId}
           profileApi={userProfileApi}
           onDone={function () { setShowInterview(false); }}
-          onSkip={function () { setShowInterview(false); setDismissedOnboardingCard(true); }}
+          onSkip={function () {
+            setShowInterview(false);
+            setDismissedOnboardingCard(true);
+            try { localStorage.setItem("folio_onboarding_dismissed", "1"); } catch (e) {}
+          }}
         />
       </>
     );
@@ -712,7 +723,10 @@ export default function App() {
         onOpenQuickTask={function () { setShowGlobalQuickTask(true); }}
         showOnboardingCard={showOnboardingCard}
         onStartInterview={function () { setShowInterview(true); }}
-        onDismissOnboardingCard={function () { setDismissedOnboardingCard(true); }}
+        onDismissOnboardingCard={function () {
+          setDismissedOnboardingCard(true);
+          try { localStorage.setItem("folio_onboarding_dismissed", "1"); } catch (e) {}
+        }}
       />
     );
   }
@@ -775,6 +789,7 @@ export default function App() {
         userEmail={session && session.user ? session.user.email : null}
         accounts={accounts}
         members={members}
+        contacts={allContacts}
         orgId={orgId}
         lens={lens}
       />

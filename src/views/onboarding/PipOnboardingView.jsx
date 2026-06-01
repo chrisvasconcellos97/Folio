@@ -64,6 +64,7 @@ export function PipOnboardingView({ userId, profileApi, onDone, onSkip }) {
     if (currentIdx < questions.length - 1) {
       setCurrentIdx(currentIdx + 1);
     } else {
+      profileApi.upsertProfile({ onboarding_status: "skipped" }).catch(function () {});
       if (onSkip) onSkip();
     }
   }
@@ -109,6 +110,7 @@ export function PipOnboardingView({ userId, profileApi, onDone, onSkip }) {
   }
 
   function handleFinishLater() {
+    profileApi.upsertProfile({ onboarding_status: "skipped" }).catch(function () {});
     if (onSkip) onSkip();
   }
 
@@ -134,7 +136,7 @@ export function PipOnboardingView({ userId, profileApi, onDone, onSkip }) {
     );
   }
 
-  var progress = questions.length > 0 ? Math.round((currentIdx / questions.length) * 100) : 0;
+  var progress = questions.length > 0 ? Math.round(((currentIdx + 1) / questions.length) * 100) : 0;
   var answerIsFilled = (answer || "").trim().length > 0;
 
   return (
