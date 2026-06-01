@@ -1,12 +1,11 @@
 # Folios — Claude Development Context
 
 ## Deployment Rule
-**Vercel production branch is `claude/build-folio-desktop-app-XzvZ5`.** Always push to both `main` AND this branch on every commit:
+**Vercel production branch is `main`.** Every commit gets one push:
 ```
 git push origin HEAD:main
-git push origin HEAD:claude/build-folio-desktop-app-XzvZ5
 ```
-**Do NOT push to any other branches** — every branch push counts toward Vercel's deployment limit. Now on Pro plan so limit is much higher, but still avoid unnecessary branch pushes.
+**Do NOT push to any other branches** — every branch push triggers a Vercel deployment. Worktree agent branches are ephemeral and never pushed to remote directly; their commits are cherry-picked into `main`.
 
 ## API Module Import Rule (prevent FUNCTION_INVOCATION_FAILED)
 
