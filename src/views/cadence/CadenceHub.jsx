@@ -19,6 +19,7 @@ import { usePipFacts } from "../../hooks/usePipFacts";
 import { useGlossary } from "../../hooks/useGlossary";
 import { useAccountSnapshots } from "../../hooks/useAccountSnapshots";
 import { usePipPromiseLog } from "../../hooks/usePipPromiseLog";
+import { useUserProfile } from "../../hooks/useUserProfile";
 import { applyPipPlan } from "../../lib/pipPlanApply";
 
 var INTER = "'Inter', system-ui, sans-serif";
@@ -687,6 +688,8 @@ export function CadenceHub({
   var glossaryApi    = useGlossary(userId, null, accountId);
   var snapshotsApi   = useAccountSnapshots(userId);
   var promiseLog     = usePipPromiseLog(userId, accountId);
+  var userProfileApi = useUserProfile(userId);
+  var userProfile    = userProfileApi.profile;
 
   var cadenceMeetings = useMemo(function () {
     return (meetings || []).filter(function (m) { return m.cadence_id === cadence.id; });
@@ -927,6 +930,7 @@ export function CadenceHub({
       healthSnapshots:   (snapshotsApi.snapshots || []).filter(function (s) { return s.account_id === accountId; }),
       promiseStats:      promiseLog || null,
       openItems:         openItems,
+      profileProse:      userProfile && userProfile.profile_prose ? userProfile.profile_prose : null,
     }).then(function (out) {
       var followUp = out.follow_up_date || null;
       return updateMeeting(draftId, {

@@ -228,8 +228,11 @@ function renderLensNote(lens) {
   return "VIEW: This user works in the AM lens. Frame answers around their own accounts — what is at stake on each, what is open, what is at risk. Treat them as the relationship owner for their portfolio.";
 }
 
-function buildSystem(facts, staticBlock, contextProse, ephemeralNotes) {
+function buildSystem(facts, staticBlock, contextProse, ephemeralNotes, profileProse) {
   var blocks = [];
+  if (profileProse) {
+    blocks.push({ type: "text", text: "── WHO YOU ARE (about you) ──\n" + profileProse });
+  }
   if (facts && facts.length) {
     var lines = ["USER MEMORY (things this user has told Pip to remember):"];
     facts.slice(0, 20).forEach(function (f) {
@@ -320,6 +323,9 @@ export default async function handler(req, res) {
   var userContentBlocks = (mode === "summary" && Array.isArray(body.userContentBlocks) && body.userContentBlocks.length)
     ? body.userContentBlocks : null;
 
+  // Profile prose — injected into the WHO YOU ARE block of the system prompt.
+  var profileProse = (typeof body.profileProse === "string" && body.profileProse.trim()) ? body.profileProse.trim() : null;
+
   // Fail fast with a clear message if the API key isn't configured — prevents
   // an unhandled exception (FUNCTION_INVOCATION_FAILED) later in the handler.
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -374,7 +380,7 @@ export default async function handler(req, res) {
     // Lens framing rides in ephemeralNotes so it cascades through chat/brief/extract
     // without invalidating the static cache.
     var lensNote = renderLensNote(userLens);
-    systemBlocks = buildSystem(facts, PIP_STATIC_SYSTEM, contextProse, lensNote);
+    systemBlocks = buildSystem(facts, PIP_STATIC_SYSTEM, contextProse, lensNote, profileProse);
   }
 
   var client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });

@@ -18,6 +18,7 @@ import { usePipFacts } from "../../hooks/usePipFacts";
 import { usePipAccountState, findStaleAccountIds } from "../../hooks/usePipAccountState";
 import { usePipState } from "../../lib/pipState";
 import { useRecentThemes } from "../../hooks/useRecentThemes";
+import { useUserProfile } from "../../hooks/useUserProfile";
 
 var STARTERS = [
   "Which accounts need my attention this week?",
@@ -66,6 +67,8 @@ export function PipView(props) {
   var pipFacts        = usePipFacts(userId);
   var pipAcctState    = usePipAccountState(userId);
   var recentThemes    = useRecentThemes(userId);
+  var userProfileApi  = useUserProfile(userId);
+  var userProfile     = userProfileApi.profile;
 
   var openTasks = useMemo(function () {
     return (tasks || []).filter(function (t) { return !t.done; });
@@ -463,6 +466,7 @@ export function PipView(props) {
       mode: intent.mode,
       facts: pipFacts.activeFactStrings,
       lens: lens,
+      profileProse: userProfile && userProfile.profile_prose ? userProfile.profile_prose : undefined,
     };
 
     askPip(apiMessages, ctxForIntent, opts)

@@ -233,6 +233,12 @@ function renderCadenceScheduleBlock(cadence) {
   return "── CADENCE SCHEDULE ──\n" + parts.join(" · ") + "\n\n";
 }
 
+// Renders the user profile prose block for summarize prompts.
+function renderUserProfileBlock(profileProse) {
+  if (!profileProse) return "";
+  return "── WHO YOU ARE (about you) ──\n" + profileProse + "\n\n";
+}
+
 // Renders the Pip facts block for summarize prompts.
 function renderPipFactsBlock(facts) {
   if (!Array.isArray(facts) || facts.length === 0) return "";
@@ -388,6 +394,10 @@ export function callPipApi(messages, context, opts) {
   }
   if (opts.userContentBlocks && opts.userContentBlocks.length) {
     body.userContentBlocks = opts.userContentBlocks;
+  }
+  // User profile prose — injected into WHO YOU ARE block in api/pip.js.
+  if (opts.profileProse) {
+    body.profileProse = opts.profileProse;
   }
   pipBusyStart();
   return timed("pip." + (opts.mode || "chat"), function () {
@@ -768,8 +778,8 @@ export function summarizeDraftPip(payload) {
     { type: "text", text: SUMMARIZE_SCHEMA_RULES, cache_control: { type: "ephemeral" } },
   ];
 
-  // BP2 — pip facts + glossary + org members (stable per user, changes infrequently)
-  var bp2Text = renderPipFactsBlock(facts) + renderGlossaryBlock(glossary) + "Org members (valid assignee emails):\n" + memberLines;
+  // BP2 — user profile + pip facts + glossary + org members (stable per user, changes infrequently)
+  var bp2Text = renderUserProfileBlock(payload.profileProse || null) + renderPipFactsBlock(facts) + renderGlossaryBlock(glossary) + "Org members (valid assignee emails):\n" + memberLines;
 
   // BP3 — account roster + objective + contacts + cadence + learned patterns (stable per account)
   var todayISOForCommitments = new Date().toISOString().slice(0, 10);

@@ -17,6 +17,7 @@ var handlers = [
   "api/portfolio-brief.js",
   "api/business-review.js",
   "api/leadership-readout.js",
+  "api/profile-synthesis.js",
 ];
 
 var failed = false;

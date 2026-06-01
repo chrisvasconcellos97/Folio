@@ -12,6 +12,7 @@ import { useQuickTasks } from "./hooks/useQuickTasks";
 import { useProjects } from "./hooks/useProjects";
 import { useOrg } from "./hooks/useOrg";
 import { usePipAccountState } from "./hooks/usePipAccountState";
+import { useUserProfile } from "./hooks/useUserProfile";
 import { AuthView } from "./views/auth/AuthView";
 import { AccountsView } from "./views/accounts/AccountsView";
 import { AccountDetail } from "./views/accounts/AccountDetail";
@@ -43,6 +44,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useErrors } from "./hooks/useErrors";
 import { usePipState } from "./lib/pipState";
 import { compressCorrectionsPip } from "./lib/pip";
+import { PipOnboardingView } from "./views/onboarding/PipOnboardingView";
 import { computeAndSaveSnapshots } from "./lib/accountSnapshots";
 import { C } from "./lib/colors";
 import { QuickTaskModal } from "./views/quicktasks/QuickTaskModal";
@@ -80,6 +82,8 @@ export default function App() {
 
   var { accounts, loading: acctLoading, error: acctError, refetch: refetchAccounts, addAccount, updateAccount, deleteAccount, archiveAccount, reactivateAccount, mergeAccounts } = useAccounts(userId);
   var { org, orgId, role, lens, members, pendingInvites, myInvite, createOrg, inviteMember, revokeMember, archiveMember, reactivateMember, acceptInvite, dismissInvite } = useOrg(userId, userEmail);
+  var userProfileApi = useUserProfile(userId);
+  var userProfile    = userProfileApi.profile;
 
   // Surface read-path errors from the top-level hooks. Show once per error
   // transition (string identity in the ref guards against the effect retoasting
@@ -160,6 +164,9 @@ export default function App() {
   var [showNotifPrompt, setShowNotifPrompt] = useState(false);
   // Global Quick Task modal — triggered from HomeView "Quick capture +" popover
   var [showGlobalQuickTask, setShowGlobalQuickTask] = useState(false);
+  // Pip onboarding interview
+  var [showInterview, setShowInterview]                     = useState(false);
+  var [dismissedOnboardingCard, setDismissedOnboardingCard] = useState(false);
   // Persists the user's last-selected workspace pill (customer/internal_team/partner)
   // so the Accounts page reopens to whichever they were just viewing.
   var [pillWorkspaceType, setPillWorkspaceType] = useState(function () {
@@ -507,6 +514,30 @@ export default function App() {
     );
   }
 
+  // Derive onboarding routing state (post-auth, post-session guards)
+  var activeAccounts  = (accounts || []).filter(function (a) { return !a.is_inactive; });
+  var hasNoAccounts   = activeAccounts.length === 0;
+  var profilePending  = userProfile && (userProfile.onboarding_status === "pending" || userProfile.onboarding_status === "in_progress");
+  var isNewUserInterview = showInterview || (
+    !dismissedOnboardingCard && profilePending && hasNoAccounts
+  );
+  var showOnboardingCard = !dismissedOnboardingCard && !isNewUserInterview && profilePending && !hasNoAccounts;
+
+  // Show the full-page interview screen for new users (no accounts yet)
+  if (isNewUserInterview && userId) {
+    return (
+      <>
+        <Toast />
+        <PipOnboardingView
+          userId={userId}
+          profileApi={userProfileApi}
+          onDone={function () { setShowInterview(false); }}
+          onSkip={function () { setShowInterview(false); setDismissedOnboardingCard(true); }}
+        />
+      </>
+    );
+  }
+
   if (role === "leadership") {
     return (
       <>
@@ -679,6 +710,9 @@ export default function App() {
         }}
         onOpenConversation={function () { setShowStartConv(true); }}
         onOpenQuickTask={function () { setShowGlobalQuickTask(true); }}
+        showOnboardingCard={showOnboardingCard}
+        onStartInterview={function () { setShowInterview(true); }}
+        onDismissOnboardingCard={function () { setDismissedOnboardingCard(true); }}
       />
     );
   }

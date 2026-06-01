@@ -128,7 +128,7 @@ function renderBriefWithGlows(text, accounts, onOpenAccount) {
   return segments;
 }
 
-export function HomeView({ userName, userId, accounts, meetings, items, cadences, projects, onOpenAccount, onOpenAccountTab, onOpenCadenceHub, onOpenConversation, onOpenQuickTask }) {
+export function HomeView({ userName, userId, accounts, meetings, items, cadences, projects, onOpenAccount, onOpenAccountTab, onOpenCadenceHub, onOpenConversation, onOpenQuickTask, showOnboardingCard, onStartInterview, onDismissOnboardingCard }) {
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
   var [mounted, setMounted] = useState(false);
@@ -598,6 +598,59 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
           {dateLabel()}
         </div>
       </div>
+
+      {showOnboardingCard && (
+        <div style={{
+          maxWidth: 600,
+          margin: isMobile ? "12px 16px 0" : "16px auto 0",
+          padding: "14px 16px",
+          background: C.surface,
+          border: "1px solid " + C.rule,
+          borderLeft: "3px solid " + C.accent,
+          borderRadius: 10,
+        }}>
+          <div style={{ fontFamily: MONO, fontSize: 10, color: C.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>
+            Pip · Just for you
+          </div>
+          <div style={{ fontFamily: INTER, fontSize: 14, color: C.text, lineHeight: 1.55, marginBottom: 12 }}>
+            Pip would love to learn a bit about you and your world — it makes every brief, summary, and suggestion sharper.
+          </div>
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <button
+              type="button"
+              onClick={onStartInterview}
+              style={{
+                background: C.accentDeep,
+                border: "1px solid " + C.accent,
+                borderRadius: 7,
+                padding: "7px 16px",
+                fontSize: 13,
+                fontWeight: 600,
+                color: C.bg,
+                fontFamily: INTER,
+                cursor: "pointer",
+              }}
+            >
+              {"Let's go →"}
+            </button>
+            <button
+              type="button"
+              onClick={onDismissOnboardingCard}
+              style={{
+                background: "none",
+                border: "none",
+                color: C.textMuted,
+                fontSize: 12,
+                fontFamily: INTER,
+                cursor: "pointer",
+                padding: "4px 0",
+              }}
+            >
+              Maybe later
+            </button>
+          </div>
+        </div>
+      )}
 
       <div style={{
         display: "flex", flexDirection: "column", alignItems: "center",

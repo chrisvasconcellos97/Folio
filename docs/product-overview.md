@@ -1,6 +1,6 @@
 # Folios — Product Overview
 
-*Last updated: 2026-05-31*
+*Last updated: 2026-06-01*
 
 This is the substantive product read after the [one-pager](./one-pager.md).
 Covers what Folios does, how it's structured, and what makes the Pip
@@ -192,6 +192,14 @@ just generate text; Pip *learns* from how the user reacts to its
 output.
 
 **Four learning surfaces:**
+
+0. **User profile (`folio_user_profile` + `profile_prose`).** At first
+   login, Pip interviews the user with 5 questions (role, company, portfolio,
+   goals, communication style). Answers are synthesized into a 4–8 sentence
+   `profile_prose` narrative injected into every Pip response — chat and
+   summarize equally. Pip now knows who it's talking to, not just what
+   accounts they have. Soft-gated: interview is skippable and resumable.
+   Existing users see a dismissible HomeView card. Cost: ~$0.002 once.
 
 1. **Correction log (`pip_correction_log`).** Every time the user
    declines a proposed action, edits the text of a Pip-created item,

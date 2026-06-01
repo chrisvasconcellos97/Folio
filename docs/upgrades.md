@@ -1,6 +1,6 @@
 # Folios — Upgrade Log
 
-*Last updated: 2026-05-31 (Gauge template total turnaround time)*
+*Last updated: 2026-06-01 (Pip onboarding interview Phase 1)*
 
 Plain-English log of major upgrades shipped to Folios. Date, time, and
 a short explanation written in terms anyone can read — not technical
@@ -14,6 +14,49 @@ For the technical changelog with full release detail, see
 architectural changes, anything that meaningfully changes what Folios
 *does* or *is*. Not bug fixes, styling tweaks, or doc-only updates —
 those live in git history.
+
+---
+
+## 2026-06-01 — Pip onboarding interview + profile prose injection (Phase 1)
+
+**What I built:** When you first sign in to Folios with no accounts yet, Pip now
+walks you through a short 5-question interview to learn who you are and how your
+business works. Your answers get synthesized into a short profile narrative that
+Pip reads before every response — briefings, meeting summaries, chat answers —
+so everything Pip says is grounded in your actual world, not generic advice.
+
+**The problem it solves:** Pip is only as useful as the context it has. Without
+knowing your role, your company, how many accounts you carry, or what a good
+quarter looks like for you, Pip's outputs were technically correct but sometimes
+oddly generic. Now Pip knows the basics from the start.
+
+**What changed:**
+- Two new tables: `folio_user_profile` (one row per user, stores structured
+  profile fields and a 4–8 sentence `profile_prose` narrative) and
+  `folio_pip_questions` (the question queue and answer log). Both have RLS
+  scoped to your user ID. SQL: `supabase/folio_user_profile.sql`.
+- New full-page `PipOnboardingView`: 5 questions, one at a time, in Pip's voice.
+  Resumable — if you close and come back, Pip picks up where you left off.
+  Skippable at any point via "Finish later".
+- New `/api/profile-synthesis` endpoint: takes your Q&A pairs, runs a single
+  cheap Haiku call (~$0.002 once), and compresses them into a structured profile
+  + a narrative paragraph that Pip reads going forward.
+- New `useUserProfile` hook — reads and writes your profile row.
+- `profile_prose` injected into both Pip entrypoints: meeting summarize
+  (`pip.js`) and Ask Pip chat (`api/pip.js`). Both paths now prepend a
+  "WHO YOU ARE" block to Pip's context so the same grounding applies everywhere.
+
+**What you see today:** New users (no accounts) are routed directly to the
+interview screen on first login. Existing users (who already have accounts when
+this shipped) see a dismissible "Pip · Just for you" card on the Home screen
+with "Let's go →" and "Maybe later" options. The interview is soft-gated — you
+can always skip or finish later, and Pip still works fine without it.
+
+**Why it matters:** This is the foundation for everything else in the "Pip knows
+my world" roadmap. Once Pip knows who you are, every brief, summary, and
+suggestion can be grounded in your specific role, industry, portfolio shape, and
+goals rather than generic account management advice. Phase 2 (the gentle weekly
+drip of gap-filling questions) builds on this base.
 
 ---
 
