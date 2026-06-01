@@ -980,12 +980,7 @@ export function CadenceHub({
       orgId:          orgId || null,
     }).then(function (result) {
       if (draftId) {
-        var badge = { plan_applied_at: new Date().toISOString() };
-        var currentTitle = previewPlan && previewPlan.meetingTitle;
-        if (previewTitleDraft && previewTitleDraft.trim() && previewTitleDraft.trim() !== (currentTitle || "").trim()) {
-          badge.title = previewTitleDraft.trim();
-        }
-        updateMeeting(draftId, badge)
+        updateMeeting(draftId, { plan_applied_at: new Date().toISOString() })
           .catch(function () { /* badge is nice-to-have; don't fail apply on it */ });
       }
       setPreviewPlan(null);
@@ -1329,6 +1324,12 @@ export function CadenceHub({
       suggestedTitle={previewPlan.suggestedTitle || null}
       meetingTitle={previewPlan.meetingTitle || null}
       onTitleChange={function (v) { setPreviewTitleDraft(v); }}
+      onTitleSave={function (title) {
+        var draftId = previewPlan && previewPlan.draftId;
+        if (!draftId) return;
+        updateMeeting(draftId, { title: title })
+          .catch(function () { /* title save is nice-to-have */ });
+      }}
       unknownPeople={previewPlan.unknownPeople || []}
       onAddContact={addContact ? function (data) {
         return addContact(Object.assign({ account_id: accountId }, data));

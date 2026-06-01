@@ -494,6 +494,7 @@ export function PipSummarizePreview({
   suggestedTitle,    // from Pip's summarize response — proposed meeting title
   meetingTitle,      // current meeting title (to detect system-default titles)
   onTitleChange,     // (newTitle) => void — called when user edits the title
+  onTitleSave,       // (title: string) => void — called after successful Apply when title was set
   unknownPeople,     // [{ name, context_snippet }] — people Pip noticed but aren't contacts
   onAddContact,      // ({ name, role, email }) => Promise — saves a new contact
   onCreateProject,   // (accountId, { title }) => Promise<project> — optional; creates a Gauge project
@@ -766,6 +767,10 @@ export function PipSummarizePreview({
           setRowErrors(result.errors);
           showToast("Applied with some errors — check rows below", "warn");
           return;
+        }
+        // Save the proposed title after a clean apply, if the user kept/edited it.
+        if (showTitleField && titleDraft && titleDraft.trim() && onTitleSave) {
+          onTitleSave(titleDraft.trim());
         }
         var n = selected.length;
         showToast("Applied " + n + " change" + (n === 1 ? "" : "s"));
@@ -1123,7 +1128,10 @@ export function PipSummarizePreview({
     );
   }
 
-  var isDefaultTitle = !meetingTitle || /—\s*\w+\s+\d+$/.test(meetingTitle) || /—\s*\d{4}-\d{2}-\d{2}$/.test(meetingTitle);
+  var isDefaultTitle = !meetingTitle
+    || /—\s*\w+\s+\d+$/.test(meetingTitle)
+    || /—\s*\d{4}-\d{2}-\d{2}$/.test(meetingTitle)
+    || /^(Email|Phone|In Person|Video|Conversation) — /.test(meetingTitle);
   var showTitleField = !!(suggestedTitle && isDefaultTitle);
 
   var visibleUnknownPeople = (unknownPeople || []).filter(function (p) {
@@ -1267,8 +1275,10 @@ export function PipSummarizePreview({
                     key={i}
                     person={person}
                     onAdd={function (data) {
-                      if (onAddContact) return Promise.resolve(onAddContact(data));
-                      return Promise.resolve();
+                      return Promise.resolve(onAddContact ? onAddContact(data) : null)
+                        .then(function () {
+                          setDismissedPeople(function (prev) { return prev.concat([person.name]); });
+                        });
                     }}
                     onDismiss={function () {
                       setDismissedPeople(function (prev) { return prev.concat([person.name]); });

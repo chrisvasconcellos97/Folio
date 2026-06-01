@@ -74,6 +74,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
   var [adHocSummarizing, setAdHocSummarizing] = useState(false);
   var [adHocSummarizeErr, setAdHocSummarizeErr] = useState(null);
   var [adHocPreviewPlan, setAdHocPreviewPlan] = useState(null);
+  var [adHocTitleDraft, setAdHocTitleDraft]   = useState(null);
   var [showItemModal, setItemModal]       = useState(false);
   var [showContactModal, setContactModal] = useState(false);
   var [showAddShopModal, setAddShopModal] = useState(false);
@@ -283,7 +284,8 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
       }).then(function () { return out; });
     }).then(function (out) {
       setAdHocSummarizing(false);
-      setAdHocPreviewPlan({ plan: out.plan || [], summary: out.summary || "", draftId: draftPayload.id, skippedByPip: !!out.skippedByPip });
+      setAdHocTitleDraft(out.suggested_title || null);
+      setAdHocPreviewPlan({ plan: out.plan || [], summary: out.summary || "", draftId: draftPayload.id, skippedByPip: !!out.skippedByPip, suggestedTitle: out.suggested_title || null, meetingTitle: draftPayload.title || null, unknownPeople: out.unknown_people || [] });
     }).catch(function (err) {
       setAdHocSummarizing(false);
       setAdHocSummarizeErr((err && err.message) || "Pip couldn't summarize.");
@@ -309,6 +311,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
           .catch(function () { /* badge-only failure */ });
       }
       setAdHocPreviewPlan(null);
+      setAdHocTitleDraft(null);
       setAdHocDraftId(null);
       showToast("Conversation summarized");
       return result;
@@ -317,6 +320,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
 
   function handleAdHocCancelPlan() {
     setAdHocPreviewPlan(null);
+    setAdHocTitleDraft(null);
     setAdHocDraftId(null);
   }
 
@@ -757,6 +761,19 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
           accountRoster={accountRoster}
           currentAccountId={account.id}
           skippedByPip={!!adHocPreviewPlan.skippedByPip}
+          suggestedTitle={adHocPreviewPlan.suggestedTitle || null}
+          meetingTitle={adHocPreviewPlan.meetingTitle || null}
+          onTitleChange={function (v) { setAdHocTitleDraft(v); }}
+          onTitleSave={function (title) {
+            var draftId = adHocPreviewPlan && adHocPreviewPlan.draftId;
+            if (!draftId) return;
+            updateMeeting(draftId, { title: title })
+              .catch(function () { /* title save is nice-to-have */ });
+          }}
+          unknownPeople={adHocPreviewPlan.unknownPeople || []}
+          onAddContact={addContact ? function (data) {
+            return addContact(Object.assign({ account_id: account.id }, data));
+          } : undefined}
           onCreateProject={addProject ? function (acctId, data) {
             return addProject(Object.assign({}, data, {
               account_id: acctId || account.id,
