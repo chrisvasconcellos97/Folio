@@ -565,6 +565,11 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
           onDelete={deleteItem}
           onGoToCadence={function () { setTab("cadence"); }}
           logCorrection={adHocCorrectionsApi.logCorrection}
+          projects={activeProjects}
+          accounts={[account]}
+          members={members}
+          onUpdateProject={updateProject}
+          onCreateProject={addProject}
         />
         </>
       )}

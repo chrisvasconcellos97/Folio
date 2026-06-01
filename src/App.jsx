@@ -45,6 +45,7 @@ import { usePipState } from "./lib/pipState";
 import { compressCorrectionsPip } from "./lib/pip";
 import { computeAndSaveSnapshots } from "./lib/accountSnapshots";
 import { C } from "./lib/colors";
+import { QuickTaskModal } from "./views/quicktasks/QuickTaskModal";
 
 export default function App() {
   var { session, loading: authLoading, signIn, signUp, signOut, inactiveBlock, dismissInactiveBlock } = useAuth();
@@ -157,6 +158,8 @@ export default function App() {
   // browser supports Notifications. Persist "asked" so the prompt never
   // re-appears regardless of grant/deny outcome.
   var [showNotifPrompt, setShowNotifPrompt] = useState(false);
+  // Global Quick Task modal — triggered from HomeView "Quick capture +" popover
+  var [showGlobalQuickTask, setShowGlobalQuickTask] = useState(false);
   // Persists the user's last-selected workspace pill (customer/internal_team/partner)
   // so the Accounts page reopens to whichever they were just viewing.
   var [pillWorkspaceType, setPillWorkspaceType] = useState(function () {
@@ -675,6 +678,7 @@ export default function App() {
           }
         }}
         onOpenConversation={function () { setShowStartConv(true); }}
+        onOpenQuickTask={function () { setShowGlobalQuickTask(true); }}
       />
     );
   }
@@ -859,6 +863,15 @@ export default function App() {
     />
   );
 
+  // Global Quick Task modal — fired from HomeView "Quick capture +" popover
+  var globalQuickTaskModal = showGlobalQuickTask && (
+    <QuickTaskModal
+      accounts={accounts}
+      onSave={addTask}
+      onClose={function () { setShowGlobalQuickTask(false); }}
+    />
+  );
+
   // Global Log Conversation flow — fired by the "+ Conversation" pill in the
   // workspace quick-action bar. The modal collects account/method/date, drops
   // a draft meeting, then mounts AdHocConversationFlow to host the full-screen
@@ -1032,6 +1045,7 @@ export default function App() {
         {addAccountModal}
         {startConvModal}
         {adHocFlowOverlay}
+        {globalQuickTaskModal}
         {/* Floating Pip (desktop) */}
         {view !== "pip" && (
           <div
@@ -1106,6 +1120,7 @@ export default function App() {
       {addAccountModal}
       {startConvModal}
       {adHocFlowOverlay}
+      {globalQuickTaskModal}
       {/* Floating Pip (mobile) — hidden on home (home has its own centerpiece orb) and pip itself */}
       {view !== "pip" && view !== "home" && (
         <div

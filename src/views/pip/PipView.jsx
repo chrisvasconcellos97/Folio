@@ -223,6 +223,7 @@ export function PipView(props) {
           last_interaction_at: a.last_interaction_at,
           region:  a.region,
           tags:    a.tags,
+          owner_user_id: a.owner_user_id || null,
           meetings:       acctMeetings,
           openItems:      openItems,
           contacts:       acctContacts,
@@ -284,6 +285,7 @@ export function PipView(props) {
             account: acct ? acct.name : null,
           };
         }),
+      userId: userId || null,
     };
   }
 

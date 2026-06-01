@@ -64,6 +64,8 @@ export function ProjectModal({
   onClose,
   addTemplate,
   prefillTemplate,
+  prefillTitle,
+  prefillAccountId,
 }) {
   // Determine initial account_ids from existing or prefill
   var initAccountIds = (function () {
@@ -72,10 +74,11 @@ export function ProjectModal({
       if (existing.account_id) return [existing.account_id];
       return [];
     }
+    if (prefillAccountId) return [prefillAccountId];
     return [];
   })();
 
-  var [title, setTitle]             = useState(prefillTemplate ? prefillTemplate.title : (existing ? existing.title : ""));
+  var [title, setTitle]             = useState(prefillTitle || (prefillTemplate ? prefillTemplate.title : (existing ? existing.title : "")));
   var [description, setDesc]        = useState(existing ? existing.description || "" : "");
   var [status, setStatus]           = useState(existing ? existing.status : "planned");
   var [priority, setPriority]       = useState(existing ? existing.priority : "medium");

@@ -754,7 +754,12 @@ export function summarizeDraftPip(payload) {
 
   // BP3 — account roster + objective + contacts + cadence + learned patterns (stable per account)
   var todayISOForCommitments = new Date().toISOString().slice(0, 10);
+  var ownershipNote = "";
+  if (payload.ownerUserId && payload.userId && payload.ownerUserId !== payload.userId) {
+    ownershipNote = "NOTE: This account is not assigned to you (owned by another team member). When summarizing, mention who is responsible and avoid assuming you have taken action on it.\n\n";
+  }
   var bp3Text =
+    ownershipNote +
     renderAccountRosterBlock(accountRoster, payload.accountId || null) +
     (isPersonCadence ? renderPersonCadenceBlock(contactName) : (accountType === "internal_team" ? renderInternalMeetingBlock() : "")) +
     renderServicedStatesBlock(servicedStates) +

@@ -638,7 +638,7 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
           />
         </div>
 
-        {members && members.length > 1 && (
+        {members && members.length > 0 && (
           <div>
             <FL>Owner</FL>
             <ChipDropdown

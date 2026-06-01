@@ -78,6 +78,7 @@ export function curateContext(raw, message, focusedAccountIds, opts) {
       upcomingTaskCadences: raw.upcomingTaskCadences || [],
       activeGaugeProjects: raw.activeGaugeProjects || [],
       recentDeliveries: raw.recentDeliveries || [],
+      userId: raw.userId || null,
     };
   }
 
@@ -101,6 +102,7 @@ export function curateContext(raw, message, focusedAccountIds, opts) {
     upcomingTaskCadences: raw.upcomingTaskCadences || [],
     activeGaugeProjects: raw.activeGaugeProjects || [],
     recentDeliveries: raw.recentDeliveries || [],
+    userId: raw.userId || null,
   };
 }
 
@@ -186,7 +188,7 @@ function renderPromiseLogBlock(promiseStats) {
   return lines.join("\n");
 }
 
-function renderAccountFull(a) {
+function renderAccountFull(a, userId) {
   var lines = [];
   var headerSuffix = "";
   if (a.account_type && a.account_type !== "standard" && a.account_type !== "mso" && a.account_type !== "shop") {
@@ -204,6 +206,11 @@ function renderAccountFull(a) {
   var isCustomerType = a.account_type !== "internal_team" && a.account_type !== "partner";
   if (a.tier && isCustomerType) statusLine += " · Tier: " + a.tier;
   lines.push(statusLine);
+  // Ownership note — when this account is owned by someone else on the team,
+  // Pip should not assume the logged-in user is responsible for it.
+  if (a.owner_user_id && userId && a.owner_user_id !== userId) {
+    lines.push("NOTE: This account is owned by someone else on the team (not by the logged-in user). When briefing, mention who is responsible and avoid assuming the user has taken action on it.");
+  }
   // Status override — surface to Pip so it can reference the manual pin in briefs.
   if (a.status_override) {
     var overrideLine = "Status override: " + a.status_override
@@ -408,6 +415,7 @@ export function renderContextProse(curated) {
     sections.push("ACCOUNTS (list view — " + curated.accounts.length + " total):");
     sections.push(curated.accounts.map(renderAccountListItem).join("\n"));
   } else if (curated.mode === "focused" && curated.accounts.length > 0) {
+    var curatedUserId = curated.userId || null;
     curated.accounts.forEach(function (a) {
       // Phase 2: prefer the rolling cached state when it's fresh and the
       // caller did NOT mark this as a brief-mode request. Brief mode wants
@@ -415,7 +423,7 @@ export function renderContextProse(curated) {
       if (a.cachedState && !curated.briefMode) {
         sections.push(renderAccountCached(a));
       } else {
-        sections.push(renderAccountFull(a));
+        sections.push(renderAccountFull(a, curatedUserId));
       }
     });
   }

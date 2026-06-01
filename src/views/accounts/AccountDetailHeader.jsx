@@ -258,7 +258,7 @@ export function AccountDetailHeader({
                 ↑ {parentAccount.name}
               </button>
             )}
-            {members && members.length > 1 && (function () {
+            {members && members.length > 0 && (function () {
               // Compute owner display — falls back to current user if unset.
               // (Result unused directly; the <select> below shows initials per option.)
               findOwner(members, account.owner_user_id) || findOwner(members, userId);

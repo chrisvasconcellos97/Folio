@@ -909,6 +909,8 @@ export function CadenceHub({
       assignmentHints:   hintsApi.hints,
       corrections:       correctionsApi.corrections,
       accountObjective:  account ? (account.objective || "") : "",
+      ownerUserId:       account ? (account.owner_user_id || null) : null,
+      userId:            userId || null,
       glossary:          glossaryApi.entries,
       accountRoster:     accountRoster,
       accountType:       account ? (account.account_type || "standard") : "internal_team",

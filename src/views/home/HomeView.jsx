@@ -128,11 +128,12 @@ function renderBriefWithGlows(text, accounts, onOpenAccount) {
   return segments;
 }
 
-export function HomeView({ userName, userId, accounts, meetings, items, cadences, projects, onOpenAccount, onOpenAccountTab, onOpenCadenceHub, onOpenConversation }) {
+export function HomeView({ userName, userId, accounts, meetings, items, cadences, projects, onOpenAccount, onOpenAccountTab, onOpenCadenceHub, onOpenConversation, onOpenQuickTask }) {
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
   var [mounted, setMounted] = useState(false);
   var [dailyBrief, setDailyBrief] = useState("");
+  var [captureMenuOpen, setCaptureMenuOpen] = useState(false);
   var [briefCallouts, setBriefCallouts] = useState([]);
   var [briefLoading, setBriefLoading] = useState(false);
 
@@ -623,9 +624,53 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
           }}>
             {todaysCalls.length > 0 ? "Open brief →" : "No brief today"}
           </LitPill>
-          <LitPill onClick={function () { if (onOpenConversation) onOpenConversation(); }}>
-            Quick capture +
-          </LitPill>
+          <div style={{ position: "relative" }}>
+            <LitPill onClick={function () { setCaptureMenuOpen(function (prev) { return !prev; }); }}>
+              Quick capture +
+            </LitPill>
+            {captureMenuOpen && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "calc(100% + 6px)",
+                  left: 0,
+                  background: C.surface,
+                  border: "1px solid " + C.rule,
+                  borderRadius: 8,
+                  boxShadow: "var(--c-overlay-shadow, 0 4px 16px rgba(0,0,0,0.3))",
+                  zIndex: 120,
+                  minWidth: 160,
+                  overflow: "hidden",
+                }}
+              >
+                <button
+                  onClick={function () { setCaptureMenuOpen(false); if (onOpenConversation) onOpenConversation(); }}
+                  style={{
+                    display: "block", width: "100%", textAlign: "left",
+                    padding: "10px 14px", fontSize: 13,
+                    fontFamily: "'Inter', system-ui, sans-serif",
+                    color: C.text, background: "transparent",
+                    border: "none", cursor: "pointer",
+                    borderBottom: "1px solid " + C.rule,
+                  }}
+                >
+                  Log conversation
+                </button>
+                <button
+                  onClick={function () { setCaptureMenuOpen(false); if (onOpenQuickTask) onOpenQuickTask(); }}
+                  style={{
+                    display: "block", width: "100%", textAlign: "left",
+                    padding: "10px 14px", fontSize: 13,
+                    fontFamily: "'Inter', system-ui, sans-serif",
+                    color: C.text, background: "transparent",
+                    border: "none", cursor: "pointer",
+                  }}
+                >
+                  Quick task
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -734,7 +779,7 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
             + Touchpoint
           </button>
           <button
-            onClick={function () {}}
+            onClick={function () { if (onOpenQuickTask) onOpenQuickTask(); }}
             style={{
               flex: 1, background: C.surface,
               border: "1px solid " + C.rule, borderRadius: 8,

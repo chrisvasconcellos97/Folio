@@ -396,30 +396,6 @@ export function AccountsView({ accounts, allAccounts, loading, onSelect, onAddAc
         </div>
       )}
 
-      {/* Quick Task button (legacy - keep for direct task modal access) */}
-      <button
-        onClick={function () { setShowAddTask(true); }}
-        style={{
-          background: "transparent",
-          border: "1px dashed " + C.rule,
-          borderRadius: 6,
-          padding: "7px 14px",
-          marginBottom: openTasks.length > 0 ? 10 : 16,
-          width: "100%",
-          textAlign: "left",
-          fontSize: 11,
-          color: C.textMuted,
-          fontFamily: "'Inter', system-ui, sans-serif",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-        }}
-      >
-        <span style={{ fontSize: 14, lineHeight: 1 }}>+</span>
-        Quick Task
-      </button>
-
       {/* Quick Tasks tray */}
       {openTasks.length > 0 && (
         <div style={{ marginBottom: 16 }}>

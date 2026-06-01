@@ -9,6 +9,8 @@ import { pickV } from "../../../lib/metricsUtils";
 import { getNextOccurrence, getFrequencyLabel, daysUntil, formatDateFull } from "../../../lib/cadenceUtils";
 import { showToast } from "../../../components/Toast";
 import { AddItemModal } from "../AddItemModal";
+import { Modal } from "../../../components/Modal";
+import { ProjectModal } from "../../gauge/ProjectModal";
 
 function buildItemsInsight(items, taskCadences, accountId) {
   var seed    = (accountId || "x") + new Date().getDate().toString();
@@ -81,12 +83,34 @@ function buildItemsInsight(items, taskCadences, accountId) {
 
 var SEVEN_DAYS_MS = 7 * 86400 * 1000;
 
-export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAdd, onUpdate, onDelete, onGoToCadence, logCorrection }) {
+export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAdd, onUpdate, onDelete, onGoToCadence, logCorrection, projects, accounts, members, onUpdateProject, onCreateProject }) {
   var [editingItem, setEditingItem] = useState(null);
   // Track in-flight close requests so rapid taps on the same checkbox don't
   // fire closeItem twice (would log two activity entries + race the refetch).
   var [closingIds, setClosingIds] = useState({});
   var [confirmDelete, setConfirmDelete] = useState(null); // item id mid-confirm
+  var [escalatingItem, setEscalatingItem] = useState(null); // item being escalated to new project
+  var [pickerItem, setPickerItem] = useState(null); // item for "add to project" picker
+  var TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+
+  function addTaskToProject(projectId, item) {
+    var project = (projects || []).find(function (p) { return p.id === projectId; });
+    if (!project) return;
+    var newEntry = {
+      id: (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).slice(2),
+      title: item.text,
+      status: "planned",
+      assignee: item.owner || null,
+      due_date: item.due_date || null,
+      is_commitment: item.is_commitment || false,
+    };
+    var updatedStages = (project.stages || []).concat([newEntry]);
+    onUpdateProject(projectId, { stages: updatedStages }).then(function () {
+      showToast("Added to " + project.title);
+    }).catch(function (err) {
+      showToast(err.message || "Couldn't add to project", "error");
+    });
+  }
 
   function handleDelete(id) {
     if (!onDelete) return;
@@ -243,6 +267,22 @@ export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAd
                     Edit
                   </SecBtn>
                 )}
+                {onUpdateProject && (projects || []).filter(function (p) { return p.status !== "complete" && p.status !== "draft"; }).length > 0 && (
+                  <SecBtn
+                    onClick={function () { setPickerItem(item); }}
+                    style={{ fontSize: 9, padding: "3px 7px", flexShrink: 0 }}
+                  >
+                    → Project
+                  </SecBtn>
+                )}
+                {onCreateProject && (
+                  <SecBtn
+                    onClick={function () { setEscalatingItem(item); }}
+                    style={{ fontSize: 9, padding: "3px 7px", flexShrink: 0 }}
+                  >
+                    → New project
+                  </SecBtn>
+                )}
                 {onDelete && confirmDelete !== item.id && (
                   <button
                     onClick={function () { setConfirmDelete(item.id); }}
@@ -343,6 +383,75 @@ export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAd
             });
           }}
           onClose={function () { setEditingItem(null); }}
+        />
+      )}
+
+      {/* Project picker modal — "→ Project" button */}
+      {pickerItem && (
+        <Modal title="Add to project" onClose={function () { setPickerItem(null); }} width={400}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {(projects || [])
+              .filter(function (p) { return p.status !== "complete" && p.status !== "draft"; })
+              .sort(function (a, b) {
+                var now = Date.now();
+                var aNew = a.created_at && (now - new Date(a.created_at).getTime()) < TWO_HOURS_MS;
+                var bNew = b.created_at && (now - new Date(b.created_at).getTime()) < TWO_HOURS_MS;
+                if (aNew && !bNew) return -1;
+                if (bNew && !aNew) return 1;
+                return (b.created_at || "") > (a.created_at || "") ? 1 : -1;
+              })
+              .map(function (p) {
+                var isSessionNew = p.created_at && (Date.now() - new Date(p.created_at).getTime()) < TWO_HOURS_MS;
+                return (
+                  <div
+                    key={p.id}
+                    onClick={function () { addTaskToProject(p.id, pickerItem); setPickerItem(null); }}
+                    style={{
+                      padding: "10px 12px",
+                      background: C.surface,
+                      border: "1px solid " + C.rule,
+                      borderRadius: 8,
+                      cursor: "pointer",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 3,
+                    }}
+                  >
+                    <div style={{ fontSize: 13, color: C.text, fontFamily: "'Inter', system-ui, sans-serif" }}>{p.title}</div>
+                    {isSessionNew && (
+                      <div style={{ fontFamily: IT_MONO, fontSize: 9, color: C.textMuted }}>From this meeting</div>
+                    )}
+                    <div style={{
+                      fontFamily: IT_MONO, fontSize: 9, color: C.textMuted,
+                      textTransform: "uppercase", letterSpacing: "0.06em",
+                    }}>
+                      {(p.status || "planned").replace("_", " ")}
+                    </div>
+                  </div>
+                );
+              })}
+            {(projects || []).filter(function (p) { return p.status !== "complete" && p.status !== "draft"; }).length === 0 && (
+              <div style={{ fontSize: 13, color: C.textMuted, padding: "8px 0" }}>No active projects yet.</div>
+            )}
+          </div>
+        </Modal>
+      )}
+
+      {/* New project modal — "→ New project" button */}
+      {escalatingItem && onCreateProject && (
+        <ProjectModal
+          accounts={accounts}
+          members={members}
+          userId={userId}
+          prefillTitle={escalatingItem.text}
+          prefillAccountId={accountId}
+          onSave={function (data) {
+            return onCreateProject(data).then(function () {
+              showToast("Project created");
+              setEscalatingItem(null);
+            });
+          }}
+          onClose={function () { setEscalatingItem(null); }}
         />
       )}
     </div>
