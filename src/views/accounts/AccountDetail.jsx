@@ -41,6 +41,8 @@ import { applyPipPlan } from "../../lib/pipPlanApply";
 import { usePipAssignmentHints } from "../../hooks/usePipAssignmentHints";
 import { usePipCorrections } from "../../hooks/usePipCorrections";
 import { useGlossary } from "../../hooks/useGlossary";
+import { useUserProfile } from "../../hooks/useUserProfile";
+import { usePipFacts } from "../../hooks/usePipFacts";
 import { ErrorBanner } from "../../components/ErrorBanner";
 import { supabase } from "../../lib/supabase";
 import { buildAccountExport, downloadAccountExport } from "../../lib/accountExport";
@@ -217,6 +219,9 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
   var adHocHintsApi       = usePipAssignmentHints(userId, account.id);
   var adHocCorrectionsApi = usePipCorrections(userId, account.id);
   var glossaryApi         = useGlossary(userId, orgId, account.id);
+  var userProfileApi      = useUserProfile(userId);
+  var profileProse        = userProfileApi.profile && userProfileApi.profile.profile_prose ? userProfileApi.profile.profile_prose : null;
+  var pipFactsApi         = usePipFacts(userId);
 
   var accountRoster = useMemo(function () {
     var glossaryEntries = glossaryApi.entries || [];
@@ -273,6 +278,13 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
       accountRoster:    accountRoster,
       accountType:      account.account_type || "standard",
       pipAccountState:  pipAcctState.getStateRow(account.id) || null,
+      contacts:         contacts || [],
+      meetingHistory:   (meetings || []).filter(function(m) { return m.id !== draftPayload.id; }).slice(0, 5),
+      ownerUserId:      account.owner_user_id || null,
+      userId:           userId,
+      isPersonCadence:  false,
+      profileProse:     profileProse,
+      facts:            pipFactsApi.activeFactStrings || [],
     }).then(function (out) {
       var followUp = out.follow_up_date || null;
       return updateMeeting(draftPayload.id, {
@@ -281,6 +293,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
         pip_tone:        out.tone || null,
         follow_up_date:  followUp,
         status:          "summarized",
+        theme:           out.theme || null,
       }).then(function () { return out; });
     }).then(function (out) {
       setAdHocSummarizing(false);

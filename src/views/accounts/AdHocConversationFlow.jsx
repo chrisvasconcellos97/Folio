@@ -6,6 +6,8 @@ import { useProjects } from "../../hooks/useProjects";
 import { usePipAssignmentHints } from "../../hooks/usePipAssignmentHints";
 import { usePipCorrections } from "../../hooks/usePipCorrections";
 import { useGlossary } from "../../hooks/useGlossary";
+import { useUserProfile } from "../../hooks/useUserProfile";
+import { usePipFacts } from "../../hooks/usePipFacts";
 import { summarizeDraftPip } from "../../lib/pip";
 import { applyPipPlan } from "../../lib/pipPlanApply";
 import { CadenceMeetingMode } from "../cadence/CadenceMeetingMode";
@@ -50,6 +52,9 @@ export function AdHocConversationFlow({
   var hintsApi       = usePipAssignmentHints(userId, account.id);
   var correctionsApi = usePipCorrections(userId, account.id);
   var glossaryApi    = useGlossary(userId, orgId, account.id);
+  var userProfileApi = useUserProfile(userId);
+  var profileProse   = userProfileApi.profile && userProfileApi.profile.profile_prose ? userProfileApi.profile.profile_prose : null;
+  var pipFactsApi    = usePipFacts(userId);
 
   var accountRoster = useMemo(function () {
     var glossaryEntries = glossaryApi.entries || [];
@@ -116,6 +121,13 @@ export function AdHocConversationFlow({
       accountRoster:    accountRoster,
       accountType:      account.account_type || "standard",
       pipAccountState:  pipAccountStateRow || null,
+      contacts:         (contacts || []),
+      meetingHistory:   (meetings || []).filter(function(m) { return m.id !== draftPayload.id; }).slice(0, 5),
+      ownerUserId:      account.owner_user_id || null,
+      userId:           userId,
+      isPersonCadence:  false,
+      profileProse:     profileProse,
+      facts:            pipFactsApi.activeFactStrings || [],
     }).then(function (out) {
       var followUp = out.follow_up_date || null;
       return updateMeeting(draftPayload.id, {
@@ -124,10 +136,19 @@ export function AdHocConversationFlow({
         pip_tone:        out.tone || null,
         follow_up_date:  followUp,
         status:          "summarized",
+        theme:           out.theme || null,
       }).then(function () { return out; });
     }).then(function (out) {
       setSummarizing(false);
-      setPreviewPlan({ plan: out.plan || [], summary: out.summary || "", draftId: draftPayload.id, skippedByPip: !!out.skippedByPip });
+      setPreviewPlan({
+        plan:           out.plan || [],
+        summary:        out.summary || "",
+        draftId:        draftPayload.id,
+        skippedByPip:   !!out.skippedByPip,
+        suggestedTitle: out.suggested_title || null,
+        meetingTitle:   draftPayload.title || null,
+        unknownPeople:  out.unknown_people || [],
+      });
     }).catch(function (err) {
       setSummarizing(false);
       setSummarizeErr((err && err.message) || "Pip couldn't summarize.");
@@ -209,6 +230,10 @@ export function AdHocConversationFlow({
           accountRoster={accountRoster}
           currentAccountId={account.id}
           skippedByPip={!!previewPlan.skippedByPip}
+          suggestedTitle={previewPlan.suggestedTitle || null}
+          meetingTitle={previewPlan.meetingTitle || null}
+          unknownPeople={previewPlan.unknownPeople || []}
+          accountContacts={contacts || []}
         />
       )}
     </>

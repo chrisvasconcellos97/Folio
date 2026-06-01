@@ -1,7 +1,25 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { createClient } from "@supabase/supabase-js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.status(500).json({ error: "ANTHROPIC_API_KEY is not configured on this deployment." });
+  }
+
+  try {
+    var authHeader = req.headers.authorization || "";
+    var token      = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+    var supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
+    var { data: authData, error: authError } = await supabase.auth.getUser(token);
+    var user = authData && authData.user ? authData.user : null;
+    if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
+  } catch (authErr) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
 
   var { snapshots, projects } = req.body || {};
   if (!snapshots || snapshots.length === 0) {
@@ -56,10 +74,6 @@ Also return a JSON array called "callouts" — one object per specific account y
 
 Return ONLY valid JSON:
 { "brief": "...", "callouts": [...] }`;
-
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return res.status(500).json({ error: "ANTHROPIC_API_KEY is not configured on this deployment." });
-  }
 
   try {
     var client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });

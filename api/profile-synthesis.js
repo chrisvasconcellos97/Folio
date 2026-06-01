@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { createClient } from "@supabase/supabase-js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
@@ -6,6 +7,15 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "ANTHROPIC_API_KEY not configured." });
   }
   try {
+    var authHeader = req.headers.authorization || "";
+    var token      = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+    var supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
+    var { data: authData, error: authError } = await supabase.auth.getUser(token);
+    var user = authData && authData.user ? authData.user : null;
+    if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
+
     var client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     var body   = req.body || {};
     var pairs  = Array.isArray(body.pairs) ? body.pairs : [];

@@ -278,7 +278,7 @@ function renderSnapshotMetricsBlock(healthSnapshots) {
   if (latestSnap.health_score != null)       snapParts.push("Score: " + Math.round(latestSnap.health_score));
   if (latestSnap.days_since_contact != null) snapParts.push("Days since contact: " + latestSnap.days_since_contact);
   if (latestSnap.open_item_count != null)    snapParts.push("Open items: " + latestSnap.open_item_count);
-  if (latestSnap.overdue_count != null)      snapParts.push("Overdue: " + latestSnap.overdue_count);
+  if (latestSnap.overdue_item_count != null)  snapParts.push("Overdue: " + latestSnap.overdue_item_count);
   if (latestSnap.active_project_count != null) snapParts.push("Active projects: " + latestSnap.active_project_count);
   if (!snapParts.length) return "";
   return "Account metrics: " + snapParts.join(" · ") + "\n\n";
@@ -952,6 +952,7 @@ function normalizePlanRow(r) {
       out.text = String(r.text);
       out.due_date = r.due_date || null;
       out.suggested_assignee = r.suggested_assignee || null;
+      out.is_commitment = !!r.is_commitment;
       if (r.target_account_id && typeof r.target_account_id === "string" && r.target_account_id.trim()) {
         out.target_account_id = r.target_account_id.trim();
       }
@@ -973,6 +974,7 @@ function normalizePlanRow(r) {
       out.title = String(r.title);
       out.due_date = r.due_date || null;
       out.suggested_assignee = r.suggested_assignee || null;
+      out.is_commitment = !!r.is_commitment;
       if (r.target_account_id && typeof r.target_account_id === "string" && r.target_account_id.trim()) {
         out.target_account_id = r.target_account_id.trim();
       }

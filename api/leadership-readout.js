@@ -1,15 +1,31 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { createClient } from "@supabase/supabase-js";
 
 var RATE_MAP = new Map();
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
-  var userId = req.body && req.body.userId;
-  if (userId) {
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.status(500).json({ error: "ANTHROPIC_API_KEY is not configured on this deployment." });
+  }
+
+  try {
+    var authHeader = req.headers.authorization || "";
+    var token      = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+    var supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
+    var { data: authData, error: authError } = await supabase.auth.getUser(token);
+    var user = authData && authData.user ? authData.user : null;
+    if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
+
     var now = Date.now();
-    var last = RATE_MAP.get(userId) || 0;
+    var last = RATE_MAP.get(user.id) || 0;
     if (now - last < 10000) return res.status(429).json({ error: "rate_limited" });
-    RATE_MAP.set(userId, now);
+    RATE_MAP.set(user.id, now);
+  } catch (authErr) {
+    return res.status(401).json({ error: "Unauthorized" });
   }
 
   var { meetingSummary, actionItems, contactName, portfolioState } = req.body || {};
@@ -26,7 +42,7 @@ export default async function handler(req, res) {
       healthy + " healthy, " + watching + " watching, " + atRisk + " at risk.\n" +
       portfolioState.slice(0, 8).map(function (s) {
         return "- " + s.account_name + ": " + (s.health_status || "?") +
-          (s.overdue_count > 0 ? " · " + s.overdue_count + " overdue" : "") +
+          (s.overdue_item_count > 0 ? " · " + s.overdue_item_count + " overdue" : "") +
           (s.stuck_project_count > 0 ? " · " + s.stuck_project_count + " stuck" : "");
       }).join("\n");
   }
@@ -42,10 +58,6 @@ export default async function handler(req, res) {
     (actionItems && actionItems.length ? "Action items from the call:\n" + actionItems.map(function(a) { return "- " + a; }).join("\n") + "\n\n" : "") +
     (portfolioSection ? "Portfolio state:\n" + portfolioSection + "\n\n" : "") +
     "Write the email to " + bossName + ".";
-
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return res.status(500).json({ error: "ANTHROPIC_API_KEY is not configured on this deployment." });
-  }
 
   try {
     var client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });

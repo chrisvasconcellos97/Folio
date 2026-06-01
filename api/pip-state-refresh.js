@@ -117,7 +117,7 @@ function buildPrompt(account, meetings, items, contacts, projects) {
     lines.push("Open items (" + items.length + "):");
     var today = new Date(); today.setHours(0, 0, 0, 0);
     items.slice(0, 8).forEach(function (i) {
-      var line = "- " + (i.text || "—");
+      var line = "- " + (i.title || i.text || "—");
       if (i.due_date) {
         var due = new Date(i.due_date);
         var diff = Math.round((due - today) / 86400000);
@@ -211,10 +211,11 @@ export default async function handler(req, res) {
       .in("account_id", accountIds)
       .order("meeting_date", { ascending: false })
       .limit(200);
-    var pItems  = userClient.from("folio_items")
-      .select("account_id, text, due_date, done, owner")
+    var pItems  = userClient.from("folio_tasks")
+      .select("account_id, title, due_date, done, assignee_email")
       .in("account_id", accountIds)
-      .eq("done", false);
+      .eq("done", false)
+      .is("project_id", null);
     var pConts  = userClient.from("folio_contacts")
       .select("account_id, name, title, is_poc")
       .in("account_id", accountIds);
@@ -230,8 +231,8 @@ export default async function handler(req, res) {
     // be tolerant of error.
     var projects = [];
     try {
-      var pj = await userClient.from("folio_projects")
-        .select("account_id, title, status, due_date")
+      var pj = await userClient.from("gauge_projects")
+        .select("account_id, title, status, expected_complete_date")
         .in("account_id", accountIds)
         .neq("status", "complete")
         .neq("status", "on_hold");

@@ -363,7 +363,7 @@ function renderAccountFull(a, userId) {
     if (latestSnap.health_score != null) snapParts.push("Score: " + Math.round(latestSnap.health_score));
     if (latestSnap.days_since_contact != null) snapParts.push("Days since contact: " + latestSnap.days_since_contact);
     if (latestSnap.open_item_count != null) snapParts.push("Open items: " + latestSnap.open_item_count);
-    if (latestSnap.overdue_count != null) snapParts.push("Overdue: " + latestSnap.overdue_count);
+    if (latestSnap.overdue_item_count != null) snapParts.push("Overdue: " + latestSnap.overdue_item_count);
     if (latestSnap.active_project_count != null) snapParts.push("Active projects: " + latestSnap.active_project_count);
     if (snapParts.length) {
       lines.push("");
