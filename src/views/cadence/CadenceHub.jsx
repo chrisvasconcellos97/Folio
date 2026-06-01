@@ -18,6 +18,7 @@ import { usePipCorrections } from "../../hooks/usePipCorrections";
 import { usePipFacts } from "../../hooks/usePipFacts";
 import { useGlossary } from "../../hooks/useGlossary";
 import { useAccountSnapshots } from "../../hooks/useAccountSnapshots";
+import { usePipPromiseLog } from "../../hooks/usePipPromiseLog";
 import { applyPipPlan } from "../../lib/pipPlanApply";
 
 var INTER = "'Inter', system-ui, sans-serif";
@@ -680,6 +681,7 @@ export function CadenceHub({
   var pipFactsApi    = usePipFacts(userId);
   var glossaryApi    = useGlossary(userId, null, accountId);
   var snapshotsApi   = useAccountSnapshots(userId);
+  var promiseLog     = usePipPromiseLog(userId, accountId);
 
   var cadenceMeetings = useMemo(function () {
     return (meetings || []).filter(function (m) { return m.cadence_id === cadence.id; });
@@ -809,8 +811,12 @@ export function CadenceHub({
     } catch (e) {}
     setPortfolioBriefLoading(true);
     setPortfolioBriefError(null);
-    var snapshots = snapshotsApi.snapshots || [];
-    callPortfolioBriefPip({ snapshots: snapshots, userId: userId })
+    var rawSnapshots = snapshotsApi.snapshots || [];
+    var enrichedSnapshots = rawSnapshots.map(function (s) {
+      var acct = (accounts || []).find(function (a) { return a.id === s.account_id; });
+      return Object.assign({}, s, { account_name: acct ? acct.name : s.account_id });
+    });
+    callPortfolioBriefPip({ snapshots: enrichedSnapshots, userId: userId })
       .then(function (out) {
         var brief = out.brief || out.content || "";
         setPortfolioBrief(brief);
@@ -911,6 +917,9 @@ export function CadenceHub({
         .slice(0, 5),
       cadence:           cadence || null,
       facts:             pipFactsApi.activeFactStrings || [],
+      healthSnapshots:   (snapshotsApi.snapshots || []).filter(function (s) { return s.account_id === accountId; }),
+      promiseStats:      promiseLog || null,
+      openItems:         openItems,
     }).then(function (out) {
       var followUp = out.follow_up_date || null;
       return updateMeeting(draftId, {

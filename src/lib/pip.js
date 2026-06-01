@@ -225,6 +225,55 @@ function renderAccountObjectiveBlock(objective) {
     "\n\n";
 }
 
+// Renders a one-line health trend string from snapshot rows (for summarize context).
+// snapshots — array of folio_account_snapshots rows already filtered to this account.
+function renderHealthTrendBlock(snapshots) {
+  if (!Array.isArray(snapshots) || snapshots.length < 3) return "";
+  var sorted = snapshots.slice().sort(function (a, b) {
+    return (a.snapshot_date || "") > (b.snapshot_date || "") ? 1 : -1;
+  });
+  var statuses = sorted.map(function (s) { return s.health_status || "unknown"; });
+  var first = statuses[0];
+  if (statuses.every(function (s) { return s === first; })) return "";
+  return "HEALTH TREND (last " + statuses.length + " snapshots): " + statuses.join(" → ") + "\n\n";
+}
+
+// Renders a delivery track record block from pip_promise_log stats.
+// promiseStats — { avgDays, recentItems } from usePipPromiseLog, or null.
+function renderPromiseLogBlock(promiseStats) {
+  if (!promiseStats || !promiseStats.avgDays || promiseStats.avgDays <= 0) return "";
+  var lines = ["DELIVERY TRACK RECORD (this account):"];
+  lines.push("- Average days to close a commitment: ~" + promiseStats.avgDays + "d");
+  var recent = Array.isArray(promiseStats.recentItems) ? promiseStats.recentItems : [];
+  if (recent.length > 0) {
+    var closes = recent.slice(0, 5).map(function (r) {
+      return '"' + (r.item_text || "—").slice(0, 60) + '" (' + (r.days_to_complete != null ? r.days_to_complete + "d" : "?") + ')';
+    });
+    lines.push("- Recent closes: " + closes.join(", "));
+  }
+  return lines.join("\n") + "\n\n";
+}
+
+// Renders the commitments sub-section for bp3 — tells Pip which items are already
+// standing promises so it doesn't duplicate them in the plan.
+// openItems — folio_tasks rows (with .text/.title, .due_date, .is_commitment, .owner).
+// todayISO — "YYYY-MM-DD" string for overdue detection.
+function renderCommitmentsInBlock(openItems, todayISO) {
+  if (!Array.isArray(openItems) || openItems.length === 0) return "";
+  var commitments = openItems.filter(function (i) { return i.is_commitment; });
+  if (commitments.length === 0) return "";
+  var lines = ["── STANDING COMMITMENTS ON THIS ACCOUNT (promises already made — avoid duplicating) ──"];
+  commitments.slice(0, 5).forEach(function (c) {
+    var label = c.text || c.title || "—";
+    var due = c.due_date || c.due || null;
+    var isOverdue = due && todayISO && due < todayISO;
+    var duePart = due ? " (due " + due + (isOverdue ? " — OVERDUE" : "") + ")" : "";
+    var ownerPart = (c.owner || c.assignee_email) ? " · owner: " + (c.owner || c.assignee_email) : "";
+    lines.push("- " + label + duePart + ownerPart);
+  });
+  return lines.join("\n") + "\n\n";
+}
+
 // Re-export so callers (PipView) can short-circuit deterministic answers.
 export { classifyIntent };
 
@@ -506,6 +555,9 @@ export function summarizeDraftPip(payload) {
   var meetingHistory   = Array.isArray(payload.meetingHistory) ? payload.meetingHistory : [];
   var cadence          = payload.cadence        || null;
   var facts            = Array.isArray(payload.facts)          ? payload.facts          : [];
+  var healthSnapshots  = Array.isArray(payload.healthSnapshots) ? payload.healthSnapshots : [];
+  var promiseStats     = payload.promiseStats  || null;
+  var openItems        = Array.isArray(payload.openItems)       ? payload.openItems       : existingItems;
 
   // #5 — skip Pip on trivial drafts (< 100 chars of notes + action_items).
   // Returns immediately with an empty plan so the caller still shows the
@@ -659,12 +711,16 @@ export function summarizeDraftPip(payload) {
   var bp2Text = renderPipFactsBlock(facts) + renderGlossaryBlock(glossary) + "Org members (valid assignee emails):\n" + memberLines;
 
   // BP3 — account roster + objective + contacts + cadence + learned patterns (stable per account)
+  var todayISOForCommitments = new Date().toISOString().slice(0, 10);
   var bp3Text =
     renderAccountRosterBlock(accountRoster, payload.accountId || null) +
     (isPersonCadence ? renderPersonCadenceBlock(contactName) : (accountType === "internal_team" ? renderInternalMeetingBlock() : "")) +
     renderAccountObjectiveBlock(accountObjective) +
+    renderHealthTrendBlock(healthSnapshots) +
     renderContactsBlock(contacts) +
     renderCadenceScheduleBlock(cadence) +
+    renderCommitmentsInBlock(openItems, todayISOForCommitments) +
+    renderPromiseLogBlock(promiseStats) +
     correctionBlock;
 
   // BP4 — meeting history + existing items + tasks + projects + hints (changes per meeting session)

@@ -155,6 +155,37 @@ function typeFocusHint(t) {
   return null;
 }
 
+// Renders a one-line health trend string from an array of snapshot rows.
+// Emitted only when ≥ 3 snapshots exist and at least one status differs from the others.
+// snapshots — array of folio_account_snapshots rows (any date range, already filtered to this account).
+function renderHealthTrendBlock(snapshots) {
+  if (!Array.isArray(snapshots) || snapshots.length < 3) return "";
+  var sorted = snapshots.slice().sort(function (a, b) {
+    return (a.snapshot_date || "") > (b.snapshot_date || "") ? 1 : -1;
+  });
+  var statuses = sorted.map(function (s) { return s.health_status || "unknown"; });
+  // Skip if all statuses are identical — no trend to show.
+  var first = statuses[0];
+  if (statuses.every(function (s) { return s === first; })) return "";
+  return "HEALTH TREND (last " + statuses.length + " snapshots): " + statuses.join(" → ");
+}
+
+// Renders a delivery track record block from pip_promise_log stats.
+// promiseStats — { avgDays, recentItems } from usePipPromiseLog, or null.
+function renderPromiseLogBlock(promiseStats) {
+  if (!promiseStats || !promiseStats.avgDays || promiseStats.avgDays <= 0) return "";
+  var lines = ["DELIVERY TRACK RECORD (this account):"];
+  lines.push("- Average days to close a commitment: ~" + promiseStats.avgDays + "d");
+  var recent = Array.isArray(promiseStats.recentItems) ? promiseStats.recentItems : [];
+  if (recent.length > 0) {
+    var closes = recent.slice(0, 5).map(function (r) {
+      return '"' + (r.item_text || "—").slice(0, 60) + '" (' + (r.days_to_complete != null ? r.days_to_complete + "d" : "?") + ')';
+    });
+    lines.push("- Recent closes: " + closes.join(", "));
+  }
+  return lines.join("\n");
+}
+
 function renderAccountFull(a) {
   var lines = [];
   var headerSuffix = "";
@@ -300,6 +331,20 @@ function renderAccountFull(a) {
       lines.push(head);
       if (u.description) lines.push("  " + trunc(u.description, 200));
     });
+  }
+
+  // Health trend — trajectory across last N snapshots.
+  var healthTrendLine = renderHealthTrendBlock(a.healthSnapshots);
+  if (healthTrendLine) {
+    lines.push("");
+    lines.push(healthTrendLine);
+  }
+
+  // Delivery track record — promise log stats for this account.
+  var promiseLogLine = renderPromiseLogBlock(a.promiseStats);
+  if (promiseLogLine) {
+    lines.push("");
+    lines.push(promiseLogLine);
   }
 
   return lines.join("\n");
