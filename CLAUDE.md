@@ -311,7 +311,9 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 2. **Code quality:** *(no open items)*
 
-3. **Feature completeness:** *(no open items)*
+3. **Feature completeness:**
+
+    **Quick task on Home + remove hidden account-screen quick task** — The existing `QuickTaskModal` (account dropdown + due date + reminder presets) already works standalone. Surface it from the Home Screen quick capture area alongside the quick email log button so task capture is always one tap away. Simultaneously remove (or significantly deprioritize) the hidden quick task entry point from the account screen — it's too buried to be useful there. The Home capture area becomes the canonical place for fast task entry; individual account task management still lives in the account's Items tab.
 
 4. **Native feel:** *(no open items)*
 
