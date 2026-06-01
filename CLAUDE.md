@@ -8,6 +8,18 @@ git push origin HEAD:claude/build-folio-desktop-app-XzvZ5
 ```
 **Do NOT push to any other branches** — every branch push counts toward Vercel's deployment limit. Now on Pro plan so limit is much higher, but still avoid unnecessary branch pushes.
 
+## API Module Import Rule (prevent FUNCTION_INVOCATION_FAILED)
+
+With `"type":"module"` in `package.json`, Node.js ESM requires **explicit `.js` extensions** on all relative imports. Vercel's bundler (nft) follows the same resolution rules — a missing `.js` means the file is excluded from the serverless bundle, and the function crashes at load time with `FUNCTION_INVOCATION_FAILED` before any handler code runs.
+
+**Rule:** Any file in `src/lib/` that is imported (directly or transitively) by an `api/*.js` handler must use explicit `.js` extensions on all its own relative imports.
+
+**Verification:** Run `node scripts/test-api-imports.js` before pushing API changes. CI runs this automatically on every push. If a handler fails to load, you'll see exactly which file and why — before it hits Vercel.
+
+**When adding a new `api/*.js` handler:** add it to the `handlers` array in `scripts/test-api-imports.js`.
+
+The symptom of regression: Vercel logs `FUNCTION_INVOCATION_FAILED`; the function never starts; no error detail is available from the handler's own catch block because the module never loaded.
+
 ## Deploy Safety Rule (never make Chris clear cache)
 
 The PWA service worker has bitten Chris twice — every deploy must update cleanly without requiring manual cache clears. Permanent guarantees in the codebase:
