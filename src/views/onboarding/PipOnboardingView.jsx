@@ -6,7 +6,7 @@ import { showToast } from "../../components/Toast.jsx";
 var INTER = "'Inter', system-ui, sans-serif";
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 
-export function PipOnboardingView({ userId, profileApi, onDone, onSkip }) {
+export function PipOnboardingView({ userId, profileApi, accessToken, onDone, onSkip }) {
   var [questions, setQuestions]       = useState([]);
   var [currentIdx, setCurrentIdx]     = useState(0);
   var [answer, setAnswer]             = useState("");
@@ -77,7 +77,10 @@ export function PipOnboardingView({ userId, profileApi, onDone, onSkip }) {
 
     fetch("/api/profile-synthesis", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: Object.assign(
+        { "Content-Type": "application/json" },
+        accessToken ? { Authorization: "Bearer " + accessToken } : {}
+      ),
       body: JSON.stringify({ pairs: pairs }),
     })
       .then(function (r) { return r.json(); })

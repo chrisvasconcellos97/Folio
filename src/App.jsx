@@ -538,6 +538,7 @@ export default function App() {
         <PipOnboardingView
           userId={userId}
           profileApi={userProfileApi}
+          accessToken={session ? session.access_token : null}
           onDone={function () { setShowInterview(false); }}
           onSkip={function () {
             setShowInterview(false);
