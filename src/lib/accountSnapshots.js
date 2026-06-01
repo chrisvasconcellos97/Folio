@@ -27,13 +27,27 @@ function mapHealthStatus(status) {
   return status || "healthy";
 }
 
-// Derive a numeric health score from the status (0-100, higher = healthier).
-function healthScore(status) {
-  if (status === "green")  return 90;
-  if (status === "new")    return 80;
-  if (status === "yellow") return 50;
-  if (status === "red")    return 20;
-  return 70;
+// Derive a real weighted health score (0-100) from signals + days cold.
+// Uses actual signal counts so the sparkline moves meaningfully over time.
+function weightedHealthScore(signals, daysCold, tier) {
+  if (signals.accountAgeDays < 7) return 85;
+  var TH = {
+    Major:  { redCold: 30, yelCold: 14 },
+    Mid:    { redCold: 45, yelCold: 21 },
+    Growth: { redCold: 60, yelCold: 30 },
+  };
+  var th = TH[tier] || TH.Growth;
+  var score = 100;
+  if (daysCold !== null) {
+    if (daysCold > th.redCold)       score -= 40 + Math.min((daysCold - th.redCold) * 0.5, 20);
+    else if (daysCold > th.yelCold)  score -= 15 + Math.min((daysCold - th.yelCold) * 0.4, 15);
+    else                             score -= daysCold * 0.3;
+  }
+  score -= signals.openItemsOverdue * 8;
+  score -= signals.blockedProjects  * 20;
+  score -= signals.onHoldProjects   * 5;
+  score -= signals.missedCadences   * 12;
+  return Math.max(5, Math.min(100, Math.round(score)));
 }
 
 // Main entry point. Called from App.jsx after auth resolves.
@@ -44,10 +58,12 @@ export async function computeAndSaveSnapshots(userId) {
 
   try {
     // Fetch everything we need in parallel
-    var [accR, itemR, projR] = await Promise.all([
+    var [accR, itemR, projR, cadR, meetR] = await Promise.all([
       supabase.from("folio_accounts").select("*").eq("user_id", userId).eq("is_inactive", false),
       supabase.from("folio_tasks").select("id, account_id, done, due_date").eq("user_id", userId).is("project_id", null),
       supabase.from("gauge_projects").select("id, account_id, status, stages").eq("user_id", userId),
+      supabase.from("folio_cadences").select("id, account_id, frequency, created_at").eq("user_id", userId),
+      supabase.from("folio_meetings").select("id, cadence_id, meeting_date, created_at, status").eq("user_id", userId),
     ]);
 
     if (accR.error || !accR.data) return;
@@ -55,6 +71,8 @@ export async function computeAndSaveSnapshots(userId) {
     var accounts  = accR.data  || [];
     var items     = itemR.data || [];
     var projects  = projR.data || [];
+    var cadences  = cadR.data  || [];
+    var meetings  = meetR.data || [];
     var today     = new Date().toISOString().slice(0, 10);
     var now       = Date.now();
     var sevenDaysAgo = new Date(now - 7 * 86400000).toISOString();
@@ -64,7 +82,7 @@ export async function computeAndSaveSnapshots(userId) {
       var acctProjects = projects.filter(function (p) { return p.account_id === account.id; });
 
       // Use gatherSignals + computeAccountHealth for consistency with AccountsView
-      var signals = gatherSignals(account, items, projects, today);
+      var signals = gatherSignals(account, items, projects, today, cadences, meetings);
       var health  = computeAccountHealth(account, signals);
 
       // Days since last contact
@@ -97,7 +115,7 @@ export async function computeAndSaveSnapshots(userId) {
         account_id: account.id,
         snapshot_date: today,
         health_status: mapHealthStatus(health.status),
-        health_score: healthScore(health.status),
+        health_score: weightedHealthScore(signals, daysSince, account.tier || "Growth"),
         days_since_contact: daysSince,
         open_item_count: openItems.length,
         overdue_item_count: overdueItems.length,

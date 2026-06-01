@@ -62,8 +62,57 @@ export function computeAccountHealth(account, signals) {
   return { status: 'green', reason: 'on track', pinned: false };
 }
 
+var FREQ_DAYS = { weekly: 7, biweekly: 14, monthly: 30 };
+
+// Count how many cadence cycles have been skipped across all active cadences
+// for an account. A cycle counts as missed when no logged meeting exists within
+// the expected interval window and at least one full interval has elapsed since
+// the cadence was created.
+function computeMissedCadences(accountId, allCadences, allMeetings, todayISO) {
+  var cadences = (allCadences || []).filter(function (c) {
+    return c.account_id === accountId;
+  });
+  if (!cadences.length) return 0;
+
+  var today = new Date(todayISO);
+  var missed = 0;
+
+  cadences.forEach(function (cadence) {
+    var interval = FREQ_DAYS[cadence.frequency] || 30;
+    var created  = cadence.created_at ? new Date(cadence.created_at) : null;
+    if (!created) return;
+
+    // Grace period — don't flag cadences newer than one full interval
+    var daysSinceCreated = Math.floor((today - created) / 86400000);
+    if (daysSinceCreated < interval) return;
+
+    // Most recent logged (non-draft) meeting for this cadence
+    var cadenceMeetings = (allMeetings || []).filter(function (m) {
+      return m.cadence_id === cadence.id && m.status !== 'draft';
+    });
+
+    var lastDate = null;
+    cadenceMeetings.forEach(function (m) {
+      var d = new Date(m.meeting_date || m.created_at);
+      if (!lastDate || d > lastDate) lastDate = d;
+    });
+
+    var daysSinceLastMeeting = lastDate
+      ? Math.floor((today - lastDate) / 86400000)
+      : daysSinceCreated;
+
+    // Each full interval past the first counts as one missed cycle
+    var slotsMissed = Math.max(0, Math.floor(daysSinceLastMeeting / interval) - 1);
+    missed += Math.min(slotsMissed, 4); // cap per-cadence to avoid outliers dominating
+  });
+
+  return missed;
+}
+
 // Helper: compute signals for an account from raw collections.
-export function gatherSignals(account, allItems, allProjects, todayISO) {
+// allCadences + allMeetings are optional — when omitted missedCadences stays 0
+// (used by in-render callers that don't have meeting data loaded).
+export function gatherSignals(account, allItems, allProjects, todayISO, allCadences, allMeetings) {
   var accountItems = (allItems || []).filter(function (i) { return i.account_id === account.id; });
   var openItemsAll = accountItems.filter(function (i) { return !i.done; });
   var openItemsOverdue = openItemsAll.filter(function (i) {
@@ -76,15 +125,14 @@ export function gatherSignals(account, allItems, allProjects, todayISO) {
     ? Math.floor((Date.now() - new Date(account.created_at).getTime()) / 86400000)
     : 999;
 
-  // Missed cadences computation — too expensive to do per-render reliably.
-  // Pass in `missedCadences: 0` for now; V2 brain will compute this from
-  // cadence + meetings cross-reference. Stub it as 0 here.
   return {
     openItemsAll: openItemsAll.length,
     openItemsOverdue: openItemsOverdue,
     blockedProjects: blockedProjects,
     onHoldProjects: onHoldProjects,
-    missedCadences: 0,
+    missedCadences: (allCadences && allMeetings)
+      ? computeMissedCadences(account.id, allCadences, allMeetings, todayISO)
+      : 0,
     lastInteractionAt: account.last_interaction_at,
     accountAgeDays: accountAgeDays,
   };
