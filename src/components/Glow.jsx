@@ -11,8 +11,8 @@ export function Glow({ onClick, children }) {
       style={{
         background: "none",
         border: "none",
-        padding: 0,
-        margin: 0,
+        padding: "2px 0",
+        margin: "-2px 0",
         font: "inherit",
         fontWeight: 600,
         color: C.accent,
@@ -22,6 +22,8 @@ export function Glow({ onClick, children }) {
         textDecorationThickness: "1px",
         cursor: onClick ? "pointer" : "default",
         letterSpacing: "inherit",
+        touchAction: "manipulation",
+        WebkitTapHighlightColor: "transparent",
       }}
     >
       {children}

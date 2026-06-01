@@ -651,27 +651,27 @@ export default function App() {
         onOpenAccount={function (accountId) {
           var a = (accounts || []).find(function (x) { return x.id === accountId; });
           if (a) {
-            pendingNavAccountRef.current = a;
+            setSelected(a);
             var target = a.account_type === "internal_team" ? "departments" : a.account_type === "partner" ? "partners" : "accounts";
-            handleSetView(target);
+            setView(target);
           }
         }}
         onOpenAccountTab={function (accountId, tab) {
           var a = (accounts || []).find(function (x) { return x.id === accountId; });
           if (a) {
-            pendingNavAccountRef.current = a;
+            setSelected(a);
             setPipPrefill({ tab: tab });
             var target = a.account_type === "internal_team" ? "departments" : a.account_type === "partner" ? "partners" : "accounts";
-            handleSetView(target);
+            setView(target);
           }
         }}
         onOpenCadenceHub={function (accountId, cadenceId) {
           var a = (accounts || []).find(function (x) { return x.id === accountId; });
           if (a) {
-            pendingNavAccountRef.current = a;
+            setSelected(a);
             setPendingHubCadenceId(cadenceId);
             var target = a.account_type === "internal_team" ? "departments" : a.account_type === "partner" ? "partners" : "accounts";
-            handleSetView(target);
+            setView(target);
           }
         }}
         onOpenConversation={function () { setShowStartConv(true); }}
