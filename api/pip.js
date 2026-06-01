@@ -449,11 +449,13 @@ export default async function handler(req, res) {
     });
   } catch (err) {
     console.error("Pip proxy error:", err);
+    var errDetail = (err && err.message) ? err.message : String(err);
+    var errStatus = (err && err.status) ? err.status : null;
     if (wantStream) {
-      try { sseWrite(res, "error", { error: "Pip is unavailable right now." }); } catch (_) {}
+      try { sseWrite(res, "error", { error: "Pip is unavailable right now.", detail: errDetail }); } catch (_) {}
       try { res.end(); } catch (_) {}
       return;
     }
-    return res.status(500).json({ error: "Pip is unavailable right now." });
+    return res.status(500).json({ error: "Pip is unavailable right now.", detail: errDetail, upstream_status: errStatus });
   }
 }
