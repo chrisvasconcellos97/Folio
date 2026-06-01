@@ -258,7 +258,7 @@ export function AccountDetailHeader({
                 ↑ {parentAccount.name}
               </button>
             )}
-            {members && members.length > 0 && (function () {
+            {members && members.length > 0 ? (function () {
               // Compute owner display — falls back to current user if unset.
               // (Result unused directly; the <select> below shows initials per option.)
               findOwner(members, account.owner_user_id) || findOwner(members, userId);
@@ -279,7 +279,31 @@ export function AccountDetailHeader({
                   })}
                 </select>
               );
-            })()}
+            })() : (
+              <button
+                type="button"
+                title="Toggle account ownership"
+                onClick={function () {
+                  if (!onUpdate) return;
+                  var newOwner = (account.owner_user_id === userId || !account.owner_user_id) ? null : userId;
+                  onUpdate({ owner_user_id: newOwner });
+                }}
+                style={{
+                  background: (account.owner_user_id === userId || !account.owner_user_id) ? C.accentFaint : "transparent",
+                  border: "1px solid " + ((account.owner_user_id === userId || !account.owner_user_id) ? C.accentLine : C.rule),
+                  borderRadius: 999,
+                  padding: "3px 10px",
+                  fontFamily: MONO,
+                  fontSize: 10,
+                  color: (account.owner_user_id === userId || !account.owner_user_id) ? C.accent : C.textMuted,
+                  cursor: onUpdate ? "pointer" : "default",
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                }}
+              >
+                {(account.owner_user_id === userId || !account.owner_user_id) ? "Mine" : "Not mine"}
+              </button>
+            )}
           </div>
           {account.tags && account.tags.length > 0 && isCustomerType && (
             <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 8, overflow: "hidden", maxWidth: "100%" }}>

@@ -638,7 +638,7 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
           />
         </div>
 
-        {members && members.length > 0 && (
+        {members && members.length > 0 ? (
           <div>
             <FL>Owner</FL>
             <ChipDropdown
@@ -652,6 +652,22 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
                 if (m) setOwnerUserId(m.user_id);
               }}
             />
+          </div>
+        ) : (
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <input
+              type="checkbox"
+              id="owner-solo-toggle"
+              checked={ownerUserId === userId}
+              onChange={function (e) { setOwnerUserId(e.target.checked ? userId : null); }}
+              style={{ accentColor: C.accent, width: 14, height: 14, cursor: "pointer", flexShrink: 0 }}
+            />
+            <label
+              htmlFor="owner-solo-toggle"
+              style={{ fontSize: 13, color: C.textSoft, fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer" }}
+            >
+              This is my account
+            </label>
           </div>
         )}
 
