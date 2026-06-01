@@ -49,7 +49,9 @@ function pipFetch(url, options, retried) {
       return res.text().then(function (txt) {
         var detail = null;
         try { var j = JSON.parse(txt); detail = (j && j.detail) ? j.detail : null; } catch (_) {}
-        var msg = "Pip proxy error: " + res.status + (detail ? " — " + detail : "");
+        // Include raw snippet if no structured detail (e.g. Vercel crash HTML)
+        var suffix = detail ? (" — " + detail) : (txt ? (" [" + txt.slice(0, 300) + "]") : "");
+        var msg = "Pip proxy error: " + res.status + suffix;
         var e = new Error(msg);
         logPipFailure(url, res.status, e);
         throw e;
