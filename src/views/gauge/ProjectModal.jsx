@@ -8,6 +8,7 @@ import { supabase } from "../../lib/supabase";
 import { showToast } from "../../components/Toast";
 import { defaultCustomFieldSchema, DEFAULT_TASK_STATUS_COLUMNS } from "../../lib/gaugeFields";
 import { CustomFieldSchemaEditor } from "./CustomFieldSchemaEditor";
+import { computeAutoStatus } from "../../lib/gaugeUtils";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 
@@ -18,6 +19,17 @@ var STATUS_OPTS = [
   { value: "complete",    label: "Complete"    },
   { value: "on_hold",     label: "On Hold"     },
 ];
+
+var STATUS_BADGE = {
+  planned:     { text: C.statusPlanned.text,  bg: C.statusPlanned.bg,  border: C.statusPlanned.border  },
+  in_progress: { text: C.accent,              bg: C.accentFaint,       border: C.accentLine            },
+  complete:    { text: C.statusComplete.text, bg: C.statusComplete.bg, border: C.statusComplete.border },
+};
+
+var STATUS_LABELS = {
+  planned: "Planned", in_progress: "In Progress", complete: "Complete",
+  blocked: "Blocked", on_hold: "On Hold", draft: "Draft",
+};
 
 var PRIORITY_OPTS = [
   { value: "high",   label: "High"   },
@@ -122,6 +134,14 @@ export function ProjectModal({
   var [confirmDel, setConfirmDel]   = useState(false);
   var [confirmDraft, setConfirmDraft] = useState(false);
 
+  // Auto-update status from task completion whenever stages or mode changes.
+  // "blocked" and "on_hold" are manual states — computeAutoStatus leaves them alone.
+  useEffect(function () {
+    setStatus(function (prev) {
+      return computeAutoStatus(stages, isStanding, taskStatusColumns, prev);
+    });
+  }, [stages, isStanding]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Track whether the form has unsaved content so we can prompt on X-close
   var defaultSchemaLen = defaultCustomFieldSchema().length;
   var hasContent = (
@@ -223,6 +243,16 @@ export function ProjectModal({
 
   function removeStage(idx) {
     setStages(function (prev) { return prev.filter(function (_, i) { return i !== idx; }); });
+  }
+
+  function moveStage(idx, dir) {
+    setStages(function (prev) {
+      var newIdx = idx + dir;
+      if (newIdx < 0 || newIdx >= prev.length) return prev;
+      var next = prev.slice();
+      var tmp = next[idx]; next[idx] = next[newIdx]; next[newIdx] = tmp;
+      return next;
+    });
   }
 
   function updateStageField(idx, field, value) {
@@ -336,8 +366,8 @@ export function ProjectModal({
     if (!title.trim() || saving) return;
     if (status === "blocked" && !blockedReason.trim()) return;
     setSaving(true);
-    // If this is a draft being promoted via the Save button, bump to "planned"
-    var saveStatus = status === "draft" ? "planned" : status;
+    // Compute final status from task completion; draft promotion is handled inside computeAutoStatus
+    var saveStatus = computeAutoStatus(stages, isStanding, taskStatusColumns, status === "draft" ? "planned" : status);
     var durSave = parseInt(totalDurationDays, 10);
     onSave({
       title:         title.trim(),
@@ -581,14 +611,66 @@ export function ProjectModal({
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <div>
             <FL>Status</FL>
-            <SelectField
-              value={status}
-              onChange={function (e) { setStatus(e.target.value); }}
-            >
-              {STATUS_OPTS.map(function (o) {
-                return <option key={o.value} value={o.value}>{o.label}</option>;
-              })}
-            </SelectField>
+            {/* Auto-computed from task completion — show read-only badge */}
+            {STATUS_BADGE[status] ? (
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                  <span style={{
+                    fontFamily: MONO, fontSize: 11,
+                    background: STATUS_BADGE[status].bg,
+                    color: STATUS_BADGE[status].text,
+                    border: "1px solid " + STATUS_BADGE[status].border,
+                    borderRadius: 20, padding: "4px 10px",
+                    textTransform: "uppercase", letterSpacing: "0.06em",
+                    fontWeight: 600,
+                  }}>
+                    {STATUS_LABELS[status]}
+                  </span>
+                  <span style={{ fontFamily: MONO, fontSize: 9, color: C.textMuted }}>auto</span>
+                </div>
+                <div style={{ display: "flex", gap: 6, marginTop: 7 }}>
+                  <button
+                    onClick={function () { setStatus("blocked"); }}
+                    style={{
+                      background: "transparent", border: "1px solid " + C.rule,
+                      borderRadius: 4, padding: "2px 8px",
+                      fontFamily: MONO, fontSize: 10, color: C.textMuted, cursor: "pointer",
+                    }}
+                  >⊘ Blocked</button>
+                  <button
+                    onClick={function () { setStatus("on_hold"); }}
+                    style={{
+                      background: "transparent", border: "1px solid " + C.rule,
+                      borderRadius: 4, padding: "2px 8px",
+                      fontFamily: MONO, fontSize: 10, color: C.textMuted, cursor: "pointer",
+                    }}
+                  >⏸ On Hold</button>
+                </div>
+              </div>
+            ) : (
+              /* Manual override (blocked / on_hold) or no-task project — show dropdown */
+              <div>
+                <SelectField
+                  value={status}
+                  onChange={function (e) { setStatus(e.target.value); }}
+                >
+                  {STATUS_OPTS.map(function (o) {
+                    return <option key={o.value} value={o.value}>{o.label}</option>;
+                  })}
+                </SelectField>
+                {(status === "blocked" || status === "on_hold") && stages.length > 0 && (
+                  <button
+                    onClick={function () { setStatus(computeAutoStatus(stages, isStanding, taskStatusColumns, "planned")); }}
+                    style={{
+                      background: "transparent", border: "none",
+                      fontFamily: MONO, fontSize: 10, color: C.accent,
+                      cursor: "pointer", padding: "4px 0 0 0",
+                      display: "block",
+                    }}
+                  >↩ Back to auto</button>
+                )}
+              </div>
+            )}
           </div>
           <div>
             <FL>Priority</FL>
@@ -779,6 +861,32 @@ export function ProjectModal({
                         fontFamily: "'Inter', system-ui, sans-serif",
                       }}
                     />
+
+                    {/* Reorder */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                      <button
+                        onClick={function () { moveStage(i, -1); }}
+                        disabled={i === 0}
+                        title="Move up"
+                        style={{
+                          background: "none", border: "none", padding: "0 3px",
+                          color: i === 0 ? C.textFaint : C.textMuted,
+                          cursor: i === 0 ? "default" : "pointer",
+                          fontFamily: MONO, fontSize: 9, lineHeight: 1,
+                        }}
+                      >▲</button>
+                      <button
+                        onClick={function () { moveStage(i, 1); }}
+                        disabled={i === stages.length - 1}
+                        title="Move down"
+                        style={{
+                          background: "none", border: "none", padding: "0 3px",
+                          color: i === stages.length - 1 ? C.textFaint : C.textMuted,
+                          cursor: i === stages.length - 1 ? "default" : "pointer",
+                          fontFamily: MONO, fontSize: 9, lineHeight: 1,
+                        }}
+                      >▼</button>
+                    </div>
 
                     {/* External toggle */}
                     <button

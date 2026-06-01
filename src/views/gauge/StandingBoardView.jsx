@@ -3,6 +3,7 @@ import { C } from "../../lib/colors";
 import { taskStatusLabel, formatFieldValue } from "../../lib/gaugeFields";
 import { TaskDetailPanel } from "./TaskDetailPanel";
 import { useBreakpoint } from "../../hooks/useBreakpoint";
+import { computeAutoStatus } from "../../lib/gaugeUtils";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var INTER = "'Inter', system-ui, sans-serif";
@@ -42,12 +43,14 @@ export function StandingBoardView({ project, accounts, members, userEmail, onUpd
     } else {
       nextTasks = tasks.map(function (t, i) { return i === taskIndex ? newTask : t; });
     }
-    return onUpdate(project.id, { stages: nextTasks });
+    var autoStatus = computeAutoStatus(nextTasks, true, project.task_status_columns, project.status);
+    return onUpdate(project.id, { stages: nextTasks, status: autoStatus });
   }
 
   function deleteTask(taskIndex) {
     var nextTasks = tasks.filter(function (_, i) { return i !== taskIndex; });
-    return onUpdate(project.id, { stages: nextTasks });
+    var autoStatus = computeAutoStatus(nextTasks, true, project.task_status_columns, project.status);
+    return onUpdate(project.id, { stages: nextTasks, status: autoStatus });
   }
 
   function openNew(forStatus) {
