@@ -113,10 +113,7 @@ export function useItems(userId, accountId, orgId) {
       .eq("id", id)
       .then(function (result) {
         if (result.error) throw result.error;
-        // Keep local state in consumer shape (text/owner not title/assignee_email).
-        setItems(function (prev) {
-          return prev.map(function (i) { return i.id === id ? Object.assign({}, i, data) : i; });
-        });
+        fetch();
       });
   }
 

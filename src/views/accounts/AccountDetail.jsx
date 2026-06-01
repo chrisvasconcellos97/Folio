@@ -361,6 +361,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
         account={account}
         userId={userId}
         userEmail={userEmail}
+        orgId={orgId}
         members={members}
         accounts={accounts}
         meetings={meetings}
@@ -404,6 +405,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
         contact={hpcContact}
         userId={userId}
         userEmail={userEmail}
+        orgId={orgId}
         members={members}
         accounts={accounts}
         meetings={meetings}

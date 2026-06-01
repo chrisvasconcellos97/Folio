@@ -36,7 +36,7 @@ export function useToneTrend(userId, accountId) {
   return { toneHistory: toneHistory, trend: trend };
 }
 
-var NEGATIVE = ["concerned", "frustrated", "negative", "cold", "at_risk", "neutral"];
+var NEGATIVE = ["concerned", "frustrated", "negative", "cold", "at_risk"];
 var POSITIVE  = ["positive", "warm", "excited", "engaged", "enthusiastic"];
 
 function score(tone) {

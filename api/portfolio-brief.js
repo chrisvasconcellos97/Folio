@@ -38,7 +38,7 @@ export default async function handler(req, res) {
     snapshots.length + " accounts total.",
     flaggedLines.length > 0 ? "Flagged:\n" + flaggedLines.join("\n") : "No accounts flagged.",
     stuckProjects.length > 0 ? stuckProjects.length + " stuck project" + (stuckProjects.length > 1 ? "s" : "") + " (no progress in 7+ days)." : null,
-    recentWins.length > 0 ? "Recent wins: " + recentWins.map(function (p) { return p.name; }).join(", ") + "." : "No recent wins.",
+    recentWins.length > 0 ? "Recent wins: " + recentWins.map(function (p) { return p.title; }).join(", ") + "." : "No recent wins.",
   ].filter(Boolean).join("\n");
 
   var systemPrompt = `You are Pip — a sharp, slightly dry field analyst who knows this account manager's portfolio inside and out. You're giving them a morning read the way a trusted colleague would: honest, specific, with a little personality. Not a report. Not a dashboard printout. Something they'd actually want to read.

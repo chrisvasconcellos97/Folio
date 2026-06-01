@@ -946,7 +946,7 @@ export function extractTouchpointActionsPip(payload) {
   return callPipApi(
     [{ role: "user", content: prompt }],
     null,
-    { mode: "summarize" }
+    { mode: "summary" }
   ).then(function (resp) {
     var text = resp.content || "";
     var match = text.match(/\{[\s\S]*\}/);
