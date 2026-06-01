@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { C } from "../../lib/colors";
 import { Modal } from "../../components/Modal";
 import { AmberBtn, SecBtn } from "../../components/Buttons";
@@ -109,6 +109,14 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
   function handleCustomTagKey(e) {
     if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addCustomTag(); }
   }
+
+  var suggestedTags = useMemo(function () {
+    var seen = {};
+    (accounts || []).forEach(function (a) {
+      (a.tags || []).forEach(function (t) { if (t) seen[t] = true; });
+    });
+    return Object.keys(seen).filter(function (t) { return !tags.includes(t); }).sort();
+  }, [accounts, tags]);
 
   function toggleState(s) {
     setStates(function (prev) {
@@ -378,32 +386,10 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
         {/* Tags (free-form labels) */}
         <div>
           <FL>Tags <span style={{ fontWeight: 400, color: C.textMuted }}>(optional)</span></FL>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
-            {PRESET_TAGS.map(function (t) {
-              return (
-                <TagChip
-                  key={t}
-                  label={t}
-                  active={tags.includes(t)}
-                  onClick={function () { toggleTag(t); }}
-                />
-              );
-            })}
-          </div>
-          {/* Custom tag input */}
-          <div style={{ display: "flex", gap: 6 }}>
-            <InputField
-              value={customTag}
-              onChange={function (e) { setCustomTag(e.target.value); }}
-              onKeyDown={handleCustomTagKey}
-              placeholder="Add a type, press Enter"
-              style={{ flex: 1 }}
-            />
-          </div>
-          {/* Custom tags */}
-          {tags.filter(function (t) { return !PRESET_TAGS.includes(t); }).length > 0 && (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
-              {tags.filter(function (t) { return !PRESET_TAGS.includes(t); }).map(function (t) {
+          {/* Selected tags */}
+          {tags.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+              {tags.map(function (t) {
                 return (
                   <TagChip
                     key={t}
@@ -413,6 +399,36 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
                   />
                 );
               })}
+            </div>
+          )}
+          {/* Custom tag input */}
+          <div style={{ display: "flex", gap: 6 }}>
+            <InputField
+              value={customTag}
+              onChange={function (e) { setCustomTag(e.target.value); }}
+              onKeyDown={handleCustomTagKey}
+              placeholder="Type a tag, press Enter"
+              style={{ flex: 1 }}
+            />
+          </div>
+          {/* Suggestions from other accounts */}
+          {suggestedTags.length > 0 && (
+            <div style={{ marginTop: 8 }}>
+              <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 5 }}>
+                Suggestions
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {suggestedTags.map(function (t) {
+                  return (
+                    <TagChip
+                      key={t}
+                      label={t}
+                      active={false}
+                      onClick={function () { toggleTag(t); }}
+                    />
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
