@@ -809,7 +809,8 @@ export function summarizeDraftPip(payload) {
     "Cadence: " + (payload.cadenceLabel || "—") + "\n" +
     "Method: "  + (m.method || "—") + "\n" +
     "Date: "    + (m.meeting_date || "") + "\n" +
-    "Title: "   + (m.title || "Conversation") + "\n\n" +
+    "Title: "   + (m.title || "Conversation") + "\n" +
+    "Attendees: " + (m.attendees && m.attendees.length ? m.attendees.join(", ") : "—") + "\n\n" +
     "── NOTES ──\n" +
     (m.notes        ? m.notes + "\n" : "(empty)\n") +
     (m.action_items ? "\nExtra action notes: " + m.action_items + "\n" : "") +
