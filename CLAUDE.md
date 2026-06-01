@@ -25,6 +25,33 @@ The PWA service worker has bitten Chris twice — every deploy must update clean
 
 Symptoms of SW staleness: app won't load, blank page, old UI showing despite recent deploy. Fix-in-the-moment: DevTools → Application → Service Workers → Unregister, then hard reload. But the system should prevent this from being needed.
 
+## Vercel Serverless Function Rule (Pip API endpoints)
+
+**`new Anthropic(...)` must never appear at module level or outside a try-catch in any Vercel handler.** If the SDK throws during construction (missing/invalid `ANTHROPIC_API_KEY`, network issue, etc.) and it happens outside a try-catch, the exception is uncaught — Vercel returns its own `FUNCTION_INVOCATION_FAILED` crash page instead of the function's JSON error response, and the function's catch block is never reached.
+
+Pattern to follow in every `api/*.js` Pip endpoint:
+
+```js
+export default async function handler(req, res) {
+  // 1. Early key check — returns clean JSON before touching the SDK
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.status(500).json({ error: "ANTHROPIC_API_KEY not configured." });
+  }
+  try {
+    // 2. Client constructed INSIDE try-catch as its first statement
+    var client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    // ... rest of handler
+  } catch (err) {
+    // catches SDK construction errors AND API call errors
+    return res.status(500).json({ error: "Pip is unavailable right now.", detail: err.message });
+  }
+}
+```
+
+**Never** do `var client = new Anthropic(...)` at the top of the file (module level) or between the function signature and the first `try {`. The fix was applied to all six endpoints in commit `62b02a0` — do not regress it when adding new endpoints or modifying existing ones.
+
+Symptoms of regression: Vercel logs show `FUNCTION_INVOCATION_FAILED`; `folio_errors` table stores that string verbatim; the client sees an opaque 500 with no JSON body.
+
 ## Sanity-Pass Rule (read before claiming a fix is shipped)
 
 Chris has burned cycles on "fixes" that compiled clean but didn't actually fire at runtime — e.g. relying on `onNeedRefresh` when `skipWaiting + clientsClaim` make it never fire. Before declaring any fix done, do a 60-second sanity pass:
