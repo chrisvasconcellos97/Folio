@@ -8,7 +8,7 @@
 //
 // Both functions are pure; safe to call on either client or server.
 
-import { computeContactEngagement } from "./contactEngagement";
+import { computeContactEngagement } from "./contactEngagement.js";
 
 // Resolve account names mentioned in the message + the prior assistant message
 // (for follow-up context). Returns array of account objects, deduped.
