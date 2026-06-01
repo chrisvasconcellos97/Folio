@@ -8,6 +8,7 @@ import { detectRegion, detectMarketScope, STATE_NAMES } from "../../lib/regions"
 import { ChipDropdown } from "../../components/ChipDropdown";
 import { ownerLabel } from "../../lib/ownerLabel";
 import { PipMark } from "../../components/PipMark";
+import { supabase } from "../../lib/supabase";
 
 var REGION_GROUPS = [
   { label: "Northeast",     states: ["ME","NH","VT","MA","RI","CT","NY","NJ","PA"] },
@@ -80,6 +81,35 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
   var [isMyDepartment, setIsMyDepartment]     = useState(existing ? (existing.is_my_department === true) : false);
   var [loading, setLoading] = useState(false);
   var [error, setError]     = useState(null);
+
+  // Inline contact staging — only used when creating a new account
+  var [pendingContacts, setPendingContacts] = useState([]);
+  var [showContactForm, setShowContactForm] = useState(false);
+  var [cName, setCName]       = useState("");
+  var [cTitle, setCTitle]     = useState("");
+  var [cEmail, setCEmail]     = useState("");
+  var [cPhone, setCPhone]     = useState("");
+  var [cPoc, setCPoc]         = useState(false);
+  var [cLeader, setCLeader]   = useState(false);
+  var [cPrimary, setCPrimary] = useState(false);
+
+  function commitPendingContact() {
+    if (!cName.trim()) return;
+    setPendingContacts(function (prev) {
+      return prev.concat([{
+        name: cName.trim(), title: cTitle.trim() || null,
+        email: cEmail.trim() || null, phone: cPhone.trim() || null,
+        is_poc: cPoc, is_leader: cLeader, is_primary: cPrimary,
+      }]);
+    });
+    setCName(""); setCTitle(""); setCEmail(""); setCPhone("");
+    setCPoc(false); setCLeader(false); setCPrimary(false);
+    setShowContactForm(false);
+  }
+
+  function removePendingContact(idx) {
+    setPendingContacts(function (prev) { return prev.filter(function (_, i) { return i !== idx; }); });
+  }
 
   var isInternal = accountType === 'internal_team';
   var isPartner  = accountType === 'partner';
@@ -179,6 +209,15 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
       }
       return onSave(data);
     })
+      .then(function(newAccount) {
+        if (!existing && pendingContacts.length > 0 && newAccount && newAccount.id) {
+          return Promise.all(pendingContacts.map(function (c) {
+            return supabase.from("folio_contacts").insert([
+              Object.assign({}, c, { account_id: newAccount.id, user_id: userId })
+            ]);
+          }));
+        }
+      })
       .then(function() { setLoading(false); onClose(); })
       .catch(function(err) { setLoading(false); setError(err.message); });
   }
@@ -652,6 +691,131 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
                 if (m) setOwnerUserId(m.user_id);
               }}
             />
+          </div>
+        )}
+
+        {/* Inline contacts — new accounts only */}
+        {!existing && (
+          <div>
+            <FL>Contacts <span style={{ fontWeight: 400, color: C.textMuted }}>(optional)</span></FL>
+
+            {/* Pending contact list */}
+            {pendingContacts.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 5, marginBottom: 8 }}>
+                {pendingContacts.map(function (c, i) {
+                  return (
+                    <div key={i} style={{
+                      display: "flex", alignItems: "center", gap: 8,
+                      background: C.surface2, border: "1px solid " + C.rule,
+                      borderRadius: 8, padding: "7px 10px",
+                    }}>
+                      <div style={{ flex: 1 }}>
+                        <span style={{ fontSize: 13, color: C.text, fontFamily: "'Inter', system-ui, sans-serif" }}>{c.name}</span>
+                        {c.title && <span style={{ fontSize: 11, color: C.textMuted, marginLeft: 6 }}>{c.title}</span>}
+                        <div style={{ display: "flex", gap: 5, marginTop: 3 }}>
+                          {c.is_poc     && <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 9, color: C.accent, border: "1px solid " + C.accentLine, borderRadius: 4, padding: "1px 5px" }}>POC</span>}
+                          {c.is_leader  && <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 9, color: C.accent, border: "1px solid " + C.accentLine, borderRadius: 4, padding: "1px 5px" }}>LEADER</span>}
+                          {c.is_primary && <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 9, color: C.accent, border: "1px solid " + C.accentLine, borderRadius: 4, padding: "1px 5px" }}>PRIMARY</span>}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={function () { removePendingContact(i); }}
+                        style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 16, padding: "0 4px", lineHeight: 1 }}
+                      >×</button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Inline add contact form */}
+            {showContactForm ? (
+              <div style={{
+                background: C.surface2, border: "1px solid " + C.accentLine,
+                borderRadius: 10, padding: "12px 12px 10px",
+                display: "flex", flexDirection: "column", gap: 10,
+              }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  <div>
+                    <FL htmlFor="nc-name">Name *</FL>
+                    <InputField id="nc-name" value={cName} onChange={function (e) { setCName(e.target.value); }} placeholder="Full name" autoFocus />
+                  </div>
+                  <div>
+                    <FL htmlFor="nc-title">Title / Role</FL>
+                    <InputField id="nc-title" value={cTitle} onChange={function (e) { setCTitle(e.target.value); }} placeholder="VP of Sales" />
+                  </div>
+                  <div>
+                    <FL htmlFor="nc-email">Email</FL>
+                    <InputField id="nc-email" value={cEmail} onChange={function (e) { setCEmail(e.target.value); }} placeholder="work@co.com" type="email" />
+                  </div>
+                  <div>
+                    <FL htmlFor="nc-phone">Phone</FL>
+                    <InputField id="nc-phone" value={cPhone} onChange={function (e) { setCPhone(e.target.value); }} placeholder="(555) 123-4567" type="tel" />
+                  </div>
+                </div>
+
+                {/* Role flags */}
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {[
+                    { val: cPoc,     set: setCPoc,     label: "POC"     },
+                    { val: cLeader,  set: setCLeader,  label: "Leader"  },
+                    { val: cPrimary, set: setCPrimary, label: "Primary" },
+                  ].map(function (f) {
+                    return (
+                      <button
+                        key={f.label}
+                        type="button"
+                        onClick={function () { f.set(!f.val); }}
+                        style={{
+                          background: f.val ? C.accentFaint : "transparent",
+                          border: "1px solid " + (f.val ? C.accentLine : C.rule),
+                          borderRadius: 6, padding: "4px 10px",
+                          fontFamily: "'JetBrains Mono',monospace", fontSize: 10,
+                          color: f.val ? C.accent : C.textMuted, cursor: "pointer",
+                          fontWeight: f.val ? 700 : 400,
+                        }}
+                      >{f.val ? "✓ " : ""}{f.label}</button>
+                    );
+                  })}
+                </div>
+
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button
+                    type="button"
+                    onClick={commitPendingContact}
+                    disabled={!cName.trim()}
+                    style={{
+                      background: cName.trim() ? C.accentDeep : C.accentFaint,
+                      border: "none", borderRadius: 20, padding: "7px 16px",
+                      fontSize: 12, fontWeight: 600, color: cName.trim() ? C.bg : C.textMuted,
+                      fontFamily: "'Inter', system-ui, sans-serif",
+                      cursor: cName.trim() ? "pointer" : "default",
+                    }}
+                  >Add contact</button>
+                  <button
+                    type="button"
+                    onClick={function () { setShowContactForm(false); }}
+                    style={{
+                      background: "transparent", border: "1px solid " + C.rule,
+                      borderRadius: 20, padding: "7px 14px", fontSize: 12,
+                      color: C.textMuted, fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer",
+                    }}
+                  >Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={function () { setShowContactForm(true); }}
+                style={{
+                  background: "transparent", border: "1px dashed " + C.rule,
+                  borderRadius: 8, padding: "8px 14px", width: "100%",
+                  fontSize: 12, color: C.textMuted, cursor: "pointer",
+                  fontFamily: "'Inter', system-ui, sans-serif", textAlign: "left",
+                }}
+              >+ Add a contact</button>
+            )}
           </div>
         )}
 
