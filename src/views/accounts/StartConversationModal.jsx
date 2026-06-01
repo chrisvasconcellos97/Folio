@@ -50,7 +50,7 @@ function formatDateLong(iso) {
  *               → Promise<meeting>
  *  - onClose
  */
-export function StartConversationModal({ accountId, accounts, userId, orgId, members, onStart, onAddItems, onClose }) {
+export function StartConversationModal({ accountId, accounts, userId, orgId, members, onStart, onAddItems, onCreateProject, allGaugeProjects, onClose }) {
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
   var needsAccountPicker = !accountId;
@@ -203,6 +203,7 @@ export function StartConversationModal({ accountId, accounts, userId, orgId, mem
           assignee:    it.suggested_assignee || "",
           confidence:  it.confidence || "medium",
           checked:     it.confidence !== "low",
+          gauge:       null,
         };
       });
       setExtractedItems(prepared);
@@ -215,16 +216,68 @@ export function StartConversationModal({ accountId, accounts, userId, orgId, mem
   }
 
   function handleSaveReviewed() {
-    var checkedItems = extractedItems
-      .filter(function (it) { return it.checked && (it.text || "").trim(); })
-      .map(function (it) {
-        return {
-          text:     it.text.trim(),
-          due_date: it.due_date || null,
-          owner:    it.assignee || null,
-        };
+    var checked = extractedItems.filter(function (it) { return it.checked && (it.text || "").trim(); });
+    var projectItems = checked.filter(function (it) { return it.gauge === "project"; });
+    var hasProjectCreation = projectItems.length > 0 && onCreateProject;
+
+    if (!hasProjectCreation) {
+      var simple = checked.filter(function (it) { return it.gauge !== "project"; }).map(function (it) {
+        var o = { text: it.text.trim(), due_date: it.due_date || null, owner: it.assignee || null };
+        if (it.gauge && it.gauge.startsWith("task:uuid:")) o.project_id = it.gauge.slice(10);
+        return o;
       });
-    commitLog(checkedItems);
+      commitLog(simple);
+      return;
+    }
+
+    // Create Gauge projects first, then save remaining items with resolved project_ids.
+    setError(null);
+    setPhase("saving");
+    setLoading(true);
+
+    var projPromises = extractedItems.map(function (it) {
+      if (it.checked && it.gauge === "project" && (it.text || "").trim()) {
+        return onCreateProject(selectedAccountId, { title: it.text.trim() }).catch(function () { return null; });
+      }
+      return Promise.resolve(null);
+    });
+
+    Promise.all(projPromises).then(function (created) {
+      var items = checked
+        .filter(function (it) { return it.gauge !== "project"; })
+        .map(function (it) {
+          var o = { text: it.text.trim(), due_date: it.due_date || null, owner: it.assignee || null };
+          if (it.gauge && it.gauge.startsWith("task:")) {
+            var ref = it.gauge.slice(5);
+            if (ref.startsWith("uuid:")) {
+              o.project_id = ref.slice(5);
+            } else {
+              var proj = created[parseInt(ref, 10)];
+              if (proj) o.project_id = proj.id;
+            }
+          }
+          return o;
+        });
+
+      var title = "Email — " + formatDateLong(date);
+      return Promise.resolve(onStart({
+        account_id: selectedAccountId, user_id: userId, cadence_id: null,
+        method: method, meeting_date: date, title: title, notes: quickNote.trim(),
+        attendees: withContacts.length > 0 ? withContacts.slice() : null,
+        pip_short_title: extractedTitle || null, status: "summarized",
+      })).then(function () {
+        if (items.length > 0 && onAddItems) return onAddItems(selectedAccountId, items);
+      }).then(function () {
+        setLoading(false);
+        var n = items.length + projectItems.length;
+        showToast(n > 0 ? "Logged — added " + n + " item" + (n !== 1 ? "s" : "") + "." : "Logged.");
+        if (onClose) onClose();
+      });
+    }).catch(function (err) {
+      setLoading(false);
+      setPhase("review");
+      setError((err && err.message) || "Couldn't save. Try again.");
+    });
   }
 
   function toggleItem(idx) {
@@ -237,6 +290,27 @@ export function StartConversationModal({ accountId, accounts, userId, orgId, mem
       return prev.map(function (it, i) { return i === idx ? Object.assign({}, it, { [key]: val }) : it; });
     });
   }
+  function setGauge(idx, val) {
+    setExtractedItems(function (prev) {
+      return prev.map(function (it, i) {
+        if (i === idx) return Object.assign({}, it, { gauge: val || null });
+        // Clear refs to this item if it's being un-marked as a project
+        if ((!val || val !== "project") && it.gauge === "task:" + idx) {
+          return Object.assign({}, it, { gauge: null });
+        }
+        return it;
+      });
+    });
+  }
+
+  // Projects for the selected account, open only — used in the gauge dropdown.
+  var accountGaugeProjects = useMemo(function () {
+    if (!selectedAccountId || !allGaugeProjects) return [];
+    return allGaugeProjects.filter(function (p) {
+      return p.account_id === selectedAccountId && p.status !== "complete" && p.status !== "draft";
+    });
+  }, [selectedAccountId, allGaugeProjects]);
+
   function toggleContact(name) {
     setWithContacts(function (prev) {
       return prev.indexOf(name) >= 0 ? prev.filter(function (n) { return n !== name; }) : prev.concat([name]);
@@ -540,6 +614,39 @@ export function StartConversationModal({ accountId, accounts, userId, orgId, mem
                           return <option key={email} value={email}>{email}</option>;
                         })}
                       </select>
+                      {(onCreateProject || accountGaugeProjects.length > 0) && (
+                        <select
+                          value={it.gauge || ""}
+                          onChange={function (e) { setGauge(idx, e.target.value || null); }}
+                          title="Gauge project"
+                          style={{
+                            background: it.gauge ? C.accentFaint : C.bgDark,
+                            border: "1px solid " + (it.gauge ? C.accentBorder : C.rule),
+                            borderRadius: 6, padding: "4px 8px",
+                            color: it.gauge ? C.accent : C.textMuted,
+                            fontSize: 11, fontFamily: INTER, outline: "none",
+                            cursor: "pointer", maxWidth: 170,
+                          }}
+                        >
+                          <option value="">↳ Not in Gauge</option>
+                          {onCreateProject && <option value="project">⊞ New project</option>}
+                          {extractedItems.map(function (other, oi) {
+                            if (oi === idx || other.gauge !== "project" || !(other.text || "").trim()) return null;
+                            return (
+                              <option key={"item-" + oi} value={"task:" + oi}>
+                                {"↳ " + (other.text || "").trim().slice(0, 28)}
+                              </option>
+                            );
+                          })}
+                          {accountGaugeProjects.map(function (p) {
+                            return (
+                              <option key={p.id} value={"task:uuid:" + p.id}>
+                                {"↳ " + (p.title || "").slice(0, 28)}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      )}
                       {it.confidence === "low" && (
                         <span style={{
                           fontFamily: "'JetBrains Mono', ui-monospace, monospace",

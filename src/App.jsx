@@ -189,7 +189,7 @@ export default function App() {
     reminderApi.dismissReminder(reminder.id);
   }
   var { tasks, addTask, updateTask, deleteTask, error: tasksError } = useQuickTasks(userId);
-  var { projects: allProjects, error: projectsErrorApp, refetch: refetchProjectsApp } = useProjects(userId);
+  var { projects: allProjects, error: projectsErrorApp, refetch: refetchProjectsApp, addProject: addProjectApp } = useProjects(userId);
   var pipAcctStateApp = usePipAccountState(userId);
 
   // Part 9 — periodic background pip_account_state refresh.
@@ -900,15 +900,22 @@ export default function App() {
       }}
       onAddItems={function (accountId, items) {
         var creations = (items || []).map(function (it) {
-          return pipAddItem({
-            account_id: accountId,
+          return pipAddItem(Object.assign({ account_id: accountId }, {
             text:       it.text,
             due_date:   it.due_date || null,
             owner:      it.owner || null,
-          });
+            project_id: it.project_id || null,
+          }));
         });
         return Promise.all(creations);
       }}
+      allGaugeProjects={allProjects}
+      onCreateProject={addProjectApp ? function (accountId, data) {
+        return addProjectApp(Object.assign({}, data, {
+          account_id: accountId,
+          status: "in_progress",
+        }));
+      } : null}
       onClose={function () { setShowStartConv(false); }}
     />
   );
