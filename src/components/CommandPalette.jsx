@@ -12,11 +12,12 @@ export function CommandPalette({ accounts, contacts, userId, onSelectAccount, on
   useEffect(function() { if (inputRef.current) inputRef.current.focus(); }, []);
 
   var NAV_ITEMS = [
-    { label: "Accounts",  action: function() { onNavigate("accounts"); } },
-    { label: "Meetings",  action: function() { onNavigate("meetings"); } },
-    { label: "Cadence",   action: function() { onNavigate("cadence"); } },
-    { label: "Gauge",     action: function() { onNavigate("gauge"); } },
-    { label: "Pip",       action: function() { onNavigate("pip"); } },
+    { label: "Accounts",    action: function() { onNavigate("accounts"); } },
+    { label: "Meetings",    action: function() { onNavigate("meetings"); } },
+    { label: "Cadence",     action: function() { onNavigate("cadence"); } },
+    { label: "Commitments", action: function() { onNavigate("commitments"); } },
+    { label: "Gauge",       action: function() { onNavigate("gauge"); } },
+    { label: "Pip",         action: function() { onNavigate("pip"); } },
   ];
 
   var q = query.trim().toLowerCase();

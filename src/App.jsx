@@ -32,6 +32,7 @@ var SettingsView   = lazy(function () { return import("./views/settings/Settings
 var TeamView       = lazy(function () { return import("./views/team/TeamView").then(function (m) { return { default: m.TeamView }; }); });
 var LeadershipView = lazy(function () { return import("./views/leadership/LeadershipView").then(function (m) { return { default: m.LeadershipView }; }); });
 var ObservabilityView = lazy(function () { return import("./views/observability/ObservabilityView").then(function (m) { return { default: m.ObservabilityView }; }); });
+var CommitmentsView = lazy(function () { return import("./views/commitments/CommitmentsView").then(function (m) { return { default: m.CommitmentsView }; }); });
 import { DesktopLayout } from "./layout/DesktopLayout";
 import { MobileLayout } from "./layout/MobileLayout";
 import { PipOrb, PipMark } from "./components/PipMark";
@@ -739,6 +740,20 @@ export default function App() {
         orgId={orgId}
         lens={lens}
       />
+    );
+  }
+
+  if (view === "commitments") {
+    mainContent = (
+      <ErrorBoundary key="commitments" label="commitments" inline>
+        <Suspense fallback={<PipLoader />}>
+          <CommitmentsView
+            items={allItems}
+            accounts={accounts}
+            onOpenAccount={function (acct) { setSelected(acct); setView("accounts"); }}
+          />
+        </Suspense>
+      </ErrorBoundary>
     );
   }
 

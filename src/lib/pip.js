@@ -933,6 +933,8 @@ export function callCadenceBriefPip(payload) {
     return "- " + (p.title || "Untitled") + " (" + bits.join(" · ") + ")" + owner;
   }).join("\n");
 
+  var commitments = (openItems || []).filter(function (i) { return i.is_commitment; });
+
   var prompt =
     renderGlossaryBlock(glossary) +
     renderAccountObjectiveBlock(accountObjective) +
@@ -944,12 +946,22 @@ export function callCadenceBriefPip(payload) {
       return "- " + (m.meeting_date || "") + " " + (m.title || "") + (m.pip_summary ? " — " + m.pip_summary : (m.notes ? " — " + m.notes.slice(0, 200) : ""));
     }).join("\n") + "\n") +
     "Open items: " + (openItems.length === 0 ? "none" : openItems.map(function (i) { return i.text; }).slice(0, 5).join("; ")) + "\n" +
+    "Commitments (promised deliverables): " + (commitments.length === 0 ? "none" : commitments.map(function (i) {
+      var overdue = i.due_date && i.due_date < new Date().toISOString().slice(0, 10) ? " [OVERDUE]" : "";
+      return (i.text || i.title || "—") + (i.due_date ? " due " + i.due_date : "") + overdue;
+    }).slice(0, 4).join("; ")) + "\n" +
     "Active Gauge projects on this account:\n" +
     (projectLines || "(none)") + "\n\n" +
-    "Two short paragraphs: (1) where this cadence stands and what's open " +
-    "(if there's an active Gauge project, name it and call out its status — " +
-    "especially if it's blocked, planning, or due soon), (2) one sharp thing " +
-    "to keep in mind for the next conversation.";
+    "Return a pre-call checklist. Format it as exactly 3-5 bullet points, each starting with '• '. " +
+    "Cover in order (skip any that don't apply): " +
+    "(1) Unresolved from last time — any open items or commitments not yet closed, " +
+    "name the specific item and how long it's been open. " +
+    "(2) Commitments due before or at this call — anything you promised that's due now. " +
+    "(3) Active Gauge project status — if there's a project, name it and call out if it's blocked, planning, or due soon. " +
+    "(4) Contact to re-engage — if a key contact hasn't appeared in recent meetings, name them. " +
+    "(5) One sharp thing to keep in mind — the single most important context for this conversation. " +
+    "Be specific: name items, dates, people. Never say 'various items' or 'some things'. " +
+    "If nothing applies to a category, skip it entirely rather than writing a filler bullet.";
 
   return callPipApi(
     [{ role: "user", content: prompt }],

@@ -518,6 +518,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
           projects={projects}
           updates={updates}
           onSwitchTab={setTab}
+          contacts={contacts}
         />
       )}
 

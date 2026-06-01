@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { C } from "../../../lib/colors";
 import { PipMark } from "../../../components/PipMark";
 import { AmberBtn, SecBtn } from "../../../components/Buttons";
@@ -10,6 +10,7 @@ import { supabase } from "../../../lib/supabase";
 import { buildPipInsight } from "../../../lib/accountInsights.jsx";
 import { UPDATE_TYPE_LABELS, UPDATE_TYPE_COLORS } from "../../../lib/accountUpdateTypes";
 import { useAccountHealthHistory } from "../../../hooks/useAccountHealthHistory";
+import { computeContactEngagement } from "../../../lib/contactEngagement";
 
 function HealthSparkline({ history }) {
   if (!history || history.length < 2) return null;
@@ -51,7 +52,7 @@ var RANGES = [
   { label: "All Time", days: null },
 ];
 
-export function OverviewTab({ account, userId, orgId, openItems, meetings, onQuickMeeting, onLogMeeting, onAddItem, onSaveSummary, subAccounts, onSelectAccount, onUpdateAccount, projects, updates, onSwitchTab }) {
+export function OverviewTab({ account, userId, orgId, openItems, meetings, onQuickMeeting, onLogMeeting, onAddItem, onSaveSummary, subAccounts, onSelectAccount, onUpdateAccount, projects, updates, onSwitchTab, contacts }) {
   var isPartner = account.account_type === "partner";
   var pipInsight = buildPipInsight(account, openItems, projects, {
     onClickOverdue: function () { onSwitchTab && onSwitchTab("tasks"); },
@@ -65,6 +66,19 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
   var [notesDraft, setNotesDraft] = useState(savedNotes || account.objective || "");
   var healthHistory = useAccountHealthHistory(userId, account.id);
   var [externalStages, setExternalStages] = useState([]);
+
+  var coldKeyContacts = useMemo(function () {
+    if (!contacts || !contacts.length || !meetings || !meetings.length) return [];
+    var engagement = computeContactEngagement(contacts, meetings);
+    return contacts.filter(function (c) {
+      var isKey = c.is_poc || c.is_primary || c.is_leader;
+      if (!isKey) return false;
+      var e = engagement[c.name];
+      return e && e.daysSince !== null && e.daysSince >= 60;
+    }).map(function (c) {
+      return { name: c.name, title: c.title, daysSince: engagement[c.name].daysSince };
+    });
+  }, [contacts, meetings]);
 
   useEffect(function () { setNotesDraft(savedNotes || account.objective || ""); }, [account.id, savedNotes]);
 
@@ -446,6 +460,32 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
           </Card>
         )}
       </div>
+
+      {/* Cold key contact alert */}
+      {coldKeyContacts.length > 0 && (
+        <div style={{
+          background: "rgba(204,140,0,0.08)", border: "1px solid rgba(204,140,0,0.25)",
+          borderRadius: 8, padding: "10px 14px", marginBottom: 0,
+          display: "flex", alignItems: "flex-start", gap: 10,
+        }}>
+          <span style={{ fontSize: 14, marginTop: 1 }}>&#9888;</span>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: C.yellow, marginBottom: 3 }}>
+              Key contact{coldKeyContacts.length > 1 ? "s" : ""} not seen recently
+            </div>
+            {coldKeyContacts.map(function (c) {
+              return (
+                <div key={c.name} style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.5 }}>
+                  {c.name}{c.title ? " · " + c.title : ""} — {c.daysSince}d since last meeting
+                </div>
+              );
+            })}
+            <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4, opacity: 0.7 }}>
+              Consider reaching out before the next call.
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Partner Agreement card */}
       {isPartner && (account.agreement_end_date || account.scope_summary || account.billing_terms) && (
