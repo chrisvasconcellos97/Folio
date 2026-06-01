@@ -347,6 +347,12 @@ function renderAccountFull(a) {
     lines.push(promiseLogLine);
   }
 
+  // Pip Tier C — cross-account portfolio theme patterns.
+  if (a.portfolioThemes && a.portfolioThemes.length > 0) {
+    lines.push("");
+    lines.push(renderPortfolioThemesBlock(a.portfolioThemes).trim());
+  }
+
   return lines.join("\n");
 }
 
@@ -428,6 +434,24 @@ export function renderContextProse(curated) {
   }
 
   return sections.join("\n\n");
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Pip Tier C — cross-account theme patterns.
+// Renders recurring meeting themes for portfolio-level Pip context.
+// ──────────────────────────────────────────────────────────────────────
+
+// Renders cross-account theme patterns for portfolio-level Pip context.
+export function renderPortfolioThemesBlock(themes) {
+  if (!themes || themes.length === 0) return "";
+  var significant = themes.filter(function (t) { return t.count >= 2; });
+  if (significant.length === 0) return "";
+  var lines = ["PORTFOLIO PATTERNS (recurring themes across accounts, last 90d):"];
+  significant.slice(0, 5).forEach(function (t) {
+    var accts = t.accounts.length > 0 ? " (" + t.accounts.join(", ") + ")" : "";
+    lines.push("- " + t.theme + ": " + t.count + " meetings" + accts);
+  });
+  return lines.join("\n") + "\n\n";
 }
 
 // ──────────────────────────────────────────────────────────────────────

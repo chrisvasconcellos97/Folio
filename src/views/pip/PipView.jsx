@@ -17,6 +17,7 @@ import { routeToolCall, planToolCalls, describeToolCall, classifyTool, CONFIRM_T
 import { usePipFacts } from "../../hooks/usePipFacts";
 import { usePipAccountState, findStaleAccountIds } from "../../hooks/usePipAccountState";
 import { usePipState } from "../../lib/pipState";
+import { useRecentThemes } from "../../hooks/useRecentThemes";
 
 var STARTERS = [
   "Which accounts need my attention this week?",
@@ -64,6 +65,7 @@ export function PipView(props) {
 
   var pipFacts        = usePipFacts(userId);
   var pipAcctState    = usePipAccountState(userId);
+  var recentThemes    = useRecentThemes(userId);
 
   var openTasks = useMemo(function () {
     return (tasks || []).filter(function (t) { return !t.done; });
@@ -224,9 +226,10 @@ export function PipView(props) {
           meetings:       acctMeetings,
           openItems:      openItems,
           contacts:       acctContacts,
-          activeProjects: acctProjects,
-          recentUpdates:  acctUpdates,
-          cachedState:    cachedStateMap[a.id] || null,
+          activeProjects:  acctProjects,
+          recentUpdates:   acctUpdates,
+          cachedState:     cachedStateMap[a.id] || null,
+          portfolioThemes: recentThemes,
         };
       }),
       recentMeetings: meetings.slice(0, 10).map(function (m) {

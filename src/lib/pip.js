@@ -660,6 +660,7 @@ export function summarizeDraftPip(payload) {
     "  \"summary\": \"2-3 sentence summary\",\n" +
     "  \"follow_up_date\": \"YYYY-MM-DD or null\",\n" +
     "  \"tone\": \"positive|neutral|mixed|negative — based on the meeting's overall energy. Customer pushback or blocker frustration = negative. Smooth check-in with no issues = neutral or positive. Both positive progress and some friction = mixed.\",\n" +
+    "  \"theme\": \"One of: pricing | integration | staffing | product | escalation | planning | delivery | relationship — pick the single best label for the dominant topic of this meeting. 'pricing' for contract/cost discussions. 'integration' for technical/API/data work. 'staffing' for personnel/training. 'product' for feature requests or roadmap. 'escalation' for issues or complaints. 'planning' for strategy/QBR/forecast. 'delivery' for project/milestone/timeline updates. 'relationship' for general check-ins with no dominant other topic.\",\n" +
     "  \"plan\": [\n" +
     "    { \"kind\": \"new_item\",    \"text\": \"...\", \"due_date\": \"YYYY-MM-DD or null\", \"suggested_assignee\": \"email or null\", \"target_account_id\": \"id from YOUR ACCOUNTS list, or null if this belongs to the current account\", \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim 1-3 line slice of the draft notes that triggered this row\", \"is_commitment\": true },\n" +
     "    { \"kind\": \"update_item\", \"target_id\": \"I-...\", \"fields\": { \"due_date\": \"...\", \"text\": \"...\" }, \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim slice from notes\" },\n" +
@@ -779,7 +780,7 @@ export function summarizeDraftPip(payload) {
       if (looksTruncated(text)) {
         throw new Error("Pip's response got cut off mid-way (likely too many tasks). Try again — token limit was bumped.");
       }
-      return { summary: text, short_title: "", plan: [], action_items: [], follow_up_date: null, tone: null };
+      return { summary: text, short_title: "", plan: [], action_items: [], follow_up_date: null, tone: null, theme: null };
     }
     try {
       var parsed = JSON.parse(match[0]);
@@ -791,6 +792,9 @@ export function summarizeDraftPip(payload) {
         : "";
       var tone = ["positive", "neutral", "mixed", "negative"].indexOf(parsed.tone) >= 0
         ? parsed.tone : null;
+      var VALID_THEMES = ["pricing", "integration", "staffing", "product", "escalation", "planning", "delivery", "relationship"];
+      var theme = parsed.theme && VALID_THEMES.indexOf(parsed.theme.toLowerCase()) >= 0
+        ? parsed.theme.toLowerCase() : null;
 
       if (planRaw) {
         var plan = planRaw.map(normalizePlanRow).filter(Boolean);
@@ -799,6 +803,7 @@ export function summarizeDraftPip(payload) {
           short_title:    shortTitle,
           follow_up_date: follow,
           tone:           tone,
+          theme:          theme,
           plan:           plan,
           // Keep legacy field populated from new_item rows for any caller
           // that hasn't migrated yet.
@@ -828,6 +833,7 @@ export function summarizeDraftPip(payload) {
         short_title:    shortTitle,
         follow_up_date: follow,
         tone:           tone,
+        theme:          theme,
         plan:           synthPlan,
         action_items:   legacyItems,
       };
@@ -840,7 +846,7 @@ export function summarizeDraftPip(payload) {
       if (typeof window !== "undefined" && window.console) {
         window.console.warn("[summarizeDraftPip] JSON parse failed:", e && e.message);
       }
-      return { summary: text, short_title: "", plan: [], action_items: [], follow_up_date: null, tone: null };
+      return { summary: text, short_title: "", plan: [], action_items: [], follow_up_date: null, tone: null, theme: null };
     }
   });
 }
