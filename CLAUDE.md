@@ -325,7 +325,38 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 9. **Search & discoverability:** *(no open items)*
 
-10. **Onboarding & contextual help:** *(no open items)*
+10. **Onboarding & contextual help:**
+
+    **Pip onboarding interview + progressive business knowledge** — When a user first creates a Folios account, Pip interviews them (5 questions, soft-gated: routes there but skippable/resumable). Ongoing, Pip surfaces a few gentle questions a week as it notices gaps from observed usage. The knowledge compresses into a `profile_prose` blob injected globally into both Pip paths (parity rule), grounding every output in who the user is and how their business works.
+
+    **Data model:**
+    - `folio_user_profile` table — one row per user: `role_title`, `company_name`, `industry`, `portfolio_shape`, `primary_goal`, `reporting_to`, `working_style`, `kpis`, `profile_prose` (compressed 4–8 sentence narrative, ~600 chars), `prose_generated_at`, `completeness` (0–100), `onboarding_status` ('pending'|'in_progress'|'done'|'skipped'), `org_id` (nullable, multi-tenant ready). RLS scoped to `auth.uid()`.
+    - `folio_pip_questions` table — question queue + answer log: `question_text`, `category` ('role'|'company'|'portfolio'|'working_style'|'goals'|'gap'), `slot` (which profile column this targets), `source` ('bank'|'pip_generated'|'gap_observed'), `priority`, `status` ('queued'|'asked'|'answered'|'skipped'|'dismissed'), `answer_text`, `trigger_context` (for gap questions). RLS scoped to `auth.uid()`. SQL: `supabase/folio_user_profile.sql`.
+
+    **Phase 1 — MVP (the whole "Pip knows my world" win, even before the drip exists):**
+    - Tables + RLS + `useUserProfile` hook.
+    - `PipOnboardingView` — 5-question conversational interview in Pip's voice. Soft-gated: new users route here first (detected in App.jsx above the `authLoading` early return — hook order rule applies), but any question and the whole thing is skippable. Existing users (who have accounts already when this ships) get a dismissible HomeView card instead of a forced route. Interview is resumable: saves each answer to `folio_pip_questions` as answered so closing + returning picks up where it left off.
+    - 5 bank questions (pre-seeded, no LLM): (1) role + day-to-day accountability, (2) company name + what they sell in your words, (3) portfolio shape (how many accounts, what kind), (4) what a good quarter looks like, (5) how you like Pip to communicate + when your week is busiest.
+    - `/api/profile-synthesis` endpoint — one Haiku call after 5th answer (or "finish early"), takes all Q/A pairs, returns structured JSON (slot values) + `profile_prose` narrative (capped 8 sentences / ~600 chars in prompt instruction). Writes to `folio_user_profile`. ~$0.002, once.
+    - Inject `profile_prose` into both Pip paths: `pip.js` → `renderUserProfileBlock()` helper next to `renderPipFactsBlock`; `api/pip.js` → adjacent to facts block in system prompt. Header: `── WHO YOU ARE (about you) ──`. Also pass into `/api/portfolio-brief` payload. `useUserProfile` hook consumed by both PipView and CadenceHub (same two consumers as `usePipFacts`). Grep test: `profile_prose` must appear in both pip.js and api/pip.js.
+
+    **Phase 2 — The "few questions a week" drip:**
+    - `detectKnowledgeGaps()` pure-JS function, runs alongside the daily snapshot computation (app load, once per calendar day, fire-and-forget). Zero LLM cost. Inserts `folio_pip_questions` rows with `source='gap_observed'` for detected holes: contact appears in ≥3 meetings with no role recorded, active account has empty `objective` after 30 days, profile slot still null post-onboarding, same meeting theme across 3+ accounts.
+    - Gap questions are template-filled from observed data (e.g. *"You've sat down with Sarah Chen three times but I don't have her role — who is she to the account?"*) — never LLM-generated in Phase 2.
+    - HomeView "Pip's curious" card — one question at a time, inline answer textarea (16px+ per Mobile Input Rule), "Skip" + "Not now" dismiss. Never a modal.
+    - Throttle: max 1/day, max 3 per 7-day rolling window, 48h cooldown after any skip/dismiss. Persisted in `folio_pip_questions` status + timestamps.
+    - Re-synthesis trigger: when ≥3 new answers accumulated since `prose_generated_at`, fire `/api/profile-synthesis` again to update `profile_prose` + slots.
+    - Evergreen question bank top-up (~15 questions): used only when gap detection produces nothing, so the well never runs completely dry.
+    - Settings → "Pip's Questions" section: global pause toggle ("✕ Pause Pip's questions") to silence the drip entirely (onboarding + profile injection still work). Completeness meter (0–100%).
+
+    **Phase 3 — Polish:**
+    - Haiku-generated questions for novel gaps the templates miss.
+    - "What Pip knows about you" in Settings: structured slot display (each editable inline), `profile_prose` read-only, completeness meter, "Re-run the interview" button. Editing a slot marks prose stale → re-synthesis on next batch.
+    - Cross-link from the per-account "What Pip knows" panel: one-line "Pip also knows some things about you →" link into Settings profile surface.
+
+    **Cost:** onboarding synthesis ~$0.002 once; re-synthesis ~$0.004/month; gap detection = $0 (pure JS); everything else = $0 marginal. Under $0.01/user/month total.
+
+    **Design decisions locked:** soft-gate (route, skippable); gentle throttle (1/day, 3/week, 48h cooldown); global pause toggle in Settings; keep fully per-user in Phase 1 (org-shared profile slots deferred); never auto-route existing users — dismissible HomeView card instead.
 
 11. **Export & sharing:** *(no open items)*
 
