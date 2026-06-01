@@ -1,6 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
 
-var client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 var RATE_MAP = new Map();
 
 export default async function handler(req, res) {
@@ -44,7 +43,12 @@ export default async function handler(req, res) {
     (portfolioSection ? "Portfolio state:\n" + portfolioSection + "\n\n" : "") +
     "Write the email to " + bossName + ".";
 
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.status(500).json({ error: "ANTHROPIC_API_KEY is not configured on this deployment." });
+  }
+
   try {
+    var client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     var resp = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 600,

@@ -310,6 +310,16 @@ export default async function handler(req, res) {
   var userContentBlocks = (mode === "summary" && Array.isArray(body.userContentBlocks) && body.userContentBlocks.length)
     ? body.userContentBlocks : null;
 
+  // Fail fast with a clear message if the API key isn't configured — prevents
+  // an unhandled exception (FUNCTION_INVOCATION_FAILED) later in the handler.
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.status(500).json({ error: "ANTHROPIC_API_KEY is not configured on this deployment." });
+  }
+
+  // Everything from here through the Anthropic call is wrapped in one try-catch
+  // so any unexpected throw (context building, SDK constructor, stream setup)
+  // surfaces as a caught 500 rather than a Vercel FUNCTION_INVOCATION_FAILED.
+  try {
   // Curate + render context as prose. Use the last user message as the resolver hint.
   var lastUserMsg = "";
   for (var i = rawMessages.length - 1; i >= 0; i--) {
@@ -375,8 +385,6 @@ export default async function handler(req, res) {
     messages:   trimmed,
     tools:      mode === "summary" ? undefined : PIP_TOOLS,
   };
-
-  try {
     if (wantStream) {
       res.setHeader("Content-Type", "text/event-stream");
       res.setHeader("Cache-Control", "no-cache, no-transform");

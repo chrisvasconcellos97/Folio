@@ -1,7 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
 
-var client = new Anthropic();
-
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
 
@@ -59,7 +57,12 @@ Also return a JSON array called "callouts" — one object per specific account y
 Return ONLY valid JSON:
 { "brief": "...", "callouts": [...] }`;
 
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.status(500).json({ error: "ANTHROPIC_API_KEY is not configured on this deployment." });
+  }
+
   try {
+    var client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     var msg = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 400,

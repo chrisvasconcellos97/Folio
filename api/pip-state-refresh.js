@@ -191,6 +191,10 @@ export default async function handler(req, res) {
   if (!accountIds.length) return res.status(400).json({ error: "accountIds required" });
   accountIds = accountIds.slice(0, MAX_BATCH);
 
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.status(500).json({ error: "ANTHROPIC_API_KEY is not configured on this deployment." });
+  }
+
   try {
     // Pull everything we need in 4 parallel queries, scoped via .in()
     var pAccts  = userClient.from("folio_accounts")

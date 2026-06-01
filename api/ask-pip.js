@@ -118,11 +118,14 @@ export default async function handler(req, res) {
   if (acct && acct.name) acct = Object.assign({}, acct, { name: clampString(acct.name, 200) });
   if (accountName) accountName = clampString(accountName, 200);
   if (rangeLabel)  rangeLabel  = clampString(rangeLabel, 80);
-  var client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.status(500).json({ error: "ANTHROPIC_API_KEY is not configured on this deployment." });
+  }
 
   var systemBlocks = buildSystemBlocks();
 
   try {
+    var client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     if (mode === "meeting") {
       var prompt =
         "Generate two things for this meeting:\n" +

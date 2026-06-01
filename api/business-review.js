@@ -111,9 +111,12 @@ export default async function handler(req, res) {
   var body = req.body || {};
   var contextStr = buildContext(body);
 
-  var client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.status(500).json({ error: "ANTHROPIC_API_KEY is not configured on this deployment." });
+  }
 
   try {
+    var client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     var response = await client.messages.create({
       model:      MODEL,
       max_tokens: 1024,
