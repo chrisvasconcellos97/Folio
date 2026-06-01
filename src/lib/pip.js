@@ -154,11 +154,23 @@ function renderCorrectionLines(corrections) {
 // Renders an extra instructional block injected ONLY for internal_team meetings.
 function renderInternalMeetingBlock() {
   return "── INTERNAL TEAM MEETING ──\n" +
-    "The current account is an internal team. Action items from these meetings are TYPICALLY " +
-    "for external accounts (customers / partners), not this team itself. Look hard for external " +
-    "account mentions in the notes and route accordingly via target_account_id. Items that DO " +
-    "belong to the internal team look like internal coordination (\"update template\", " +
-    "\"schedule team meeting\", \"review process\") — not delivery work or customer follow-ups.\n\n";
+    "The current account is an internal team (department). These meetings fall into two types — " +
+    "determine which applies before writing the summary:\n\n" +
+    "TYPE A — Customer work review: the team is discussing tasks or issues for specific customer " +
+    "accounts (e.g. 'Let's follow up with Parts Authority on the invoice feed'). " +
+    "Route those items to the relevant customer account via target_account_id. " +
+    "Look for customer account names in the notes to identify TYPE A.\n\n" +
+    "TYPE B — Internal work assignment: a manager or colleague assigns work that belongs to this " +
+    "team (e.g. 'Tony asked us to review the dropped shop report in Power BI and build an analysis'). " +
+    "Items stay on this department account (target_account_id = null or this account). " +
+    "Do NOT complain that customer accounts are missing — this work IS the point of the meeting.\n\n" +
+    "DEFAULT RULE: If no customer account names appear in the notes, treat as TYPE B.\n\n" +
+    "PEOPLE CONTEXT: Use the CONTACTS list to understand who attendees are. " +
+    "A contact with a senior title (Director, VP, Manager, Supervisor) is likely a manager assigning work. " +
+    "Other contacts are likely colleagues. Match names and nicknames to the contacts list " +
+    "(e.g. 'Mike' → Michael, 'Tony' → Anthony). Frame the summary using their actual role " +
+    "(e.g. 'Director Tony Pisciotta asked the team to...' rather than 'an account contact requested...'). " +
+    "Never say you have no accounts or cannot proceed — always produce a clean summary and action plan.\n\n";
 }
 
 // Renders a block injected for person 1:1 cadences (scope='person', no current account).
