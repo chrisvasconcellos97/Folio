@@ -19,6 +19,7 @@ import { usePipAccountState, findStaleAccountIds } from "../../hooks/usePipAccou
 import { usePipState } from "../../lib/pipState";
 import { useRecentThemes } from "../../hooks/useRecentThemes";
 import { useUserProfile } from "../../hooks/useUserProfile";
+import { computeAccountHealth, gatherSignals } from "../../lib/accountHealth";
 
 var STARTERS = [
   "Which accounts need my attention this week?",
@@ -190,6 +191,8 @@ export function PipView(props) {
               follow_up:    m.follow_up_date,
               summary:      m.pip_summary,
               attendees:    m.attendees,
+              tone:         m.pip_tone  || null,
+              theme:        m.theme     || null,
             };
           });
         var openItems = allItems.filter(function (i) { return i.account_id === a.id && !i.done; })
@@ -212,6 +215,9 @@ export function PipView(props) {
               observed_impact: u.observed_impact,
             };
           });
+        var todayStr = new Date().toISOString().slice(0, 10);
+        var healthSignals = gatherSignals(a, allItems, projects || [], todayStr);
+        var computedHealth = computeAccountHealth(a, healthSignals);
         return {
           id:      a.id,
           name:    a.name,
@@ -222,7 +228,10 @@ export function PipView(props) {
           scope_summary: a.scope_summary || null,
           billing_terms: a.billing_terms || null,
           spend_ytd: a.spend_ytd != null ? a.spend_ytd : null,
-          notes:   a.objective,
+          objective: a.objective,
+          is_my_department: a.is_my_department || false,
+          serviced_states:  a.serviced_states  || null,
+          health:  computedHealth.status || null,
           last_interaction_at: a.last_interaction_at,
           region:  a.region,
           tags:    a.tags,

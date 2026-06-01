@@ -794,6 +794,8 @@ export function CadenceHub({
       activeProjects:   activeProjects,
       accountObjective: account ? (account.objective || "") : "",
       glossary:         glossaryApi.entries,
+      contacts:         contacts || [],
+      pipAccountState:  pipAccountStateRow || null,
     }).then(function (out) {
       var brief = out.brief || "";
       var when  = new Date().toISOString();

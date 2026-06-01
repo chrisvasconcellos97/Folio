@@ -1018,6 +1018,8 @@ export function callCadenceBriefPip(payload) {
   var activeProjects   = payload.activeProjects   || [];
   var accountObjective = (payload.accountObjective || "").trim();
   var glossary         = Array.isArray(payload.glossary) ? payload.glossary : [];
+  var contacts         = Array.isArray(payload.contacts) ? payload.contacts : [];
+  var pipAccountState  = payload.pipAccountState  || null;
 
   var projectLines = activeProjects.slice(0, 6).map(function (p) {
     var bits = [];
@@ -1029,9 +1031,21 @@ export function callCadenceBriefPip(payload) {
 
   var commitments = (openItems || []).filter(function (i) { return i.is_commitment; });
 
+  // V2 brain correction context — prefer compressed lessons_learned when fresh.
+  var lessonsLearned = pipAccountState && pipAccountState.lessons_learned ? pipAccountState.lessons_learned.trim() : "";
+  var lastCompAt     = pipAccountState && pipAccountState.last_compression_at
+    ? new Date(pipAccountState.last_compression_at).getTime()
+    : 0;
+  var lessonsStale   = lastCompAt ? (Date.now() - lastCompAt > 14 * 24 * 60 * 60 * 1000) : true;
+  var lessonsBlock   = (lessonsLearned && !lessonsStale)
+    ? "── PIP REMEMBERS (learned from past corrections) ──\n" + lessonsLearned + "\n\n"
+    : "";
+
   var prompt =
     renderGlossaryBlock(glossary) +
     renderAccountObjectiveBlock(accountObjective) +
+    lessonsBlock +
+    renderContactsBlock(contacts) +
     "Give me a short per-cadence brief.\n\n" +
     "Cadence label: " + (payload.cadenceLabel || "cadence") + "\n" +
     "Account: " + (account.name || "—") + "\n" +

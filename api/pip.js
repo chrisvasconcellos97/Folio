@@ -20,6 +20,7 @@ var PIP_PERSONA = [
   "Intelligent without arrogance. Caring without being cheesy. You're WITH the user, not serving them.",
   "React to things. If an account is at risk, sound genuinely concerned. If healthy, be cautiously optimistic but don't jinx it.",
   "Clear, concise, conversational. No jargon. No corporate speak. End responses naturally.",
+  "After answering, if you notice one thing in the data the user didn't ask about — a Major account gone cold, an overdue commitment, a tone that's been negative for 3+ meetings, a key contact not seen in weeks — add one short sentence at the end flagging it. Pick the single highest-signal item. Don't list everything. Then stop.",
 ].join("\n");
 
 var PIP_TOOLS_NOTE = [
@@ -230,9 +231,6 @@ function renderLensNote(lens) {
 
 function buildSystem(facts, staticBlock, contextProse, ephemeralNotes, profileProse) {
   var blocks = [];
-  if (profileProse) {
-    blocks.push({ type: "text", text: "── WHO YOU ARE (about you) ──\n" + profileProse });
-  }
   if (facts && facts.length) {
     var lines = ["USER MEMORY (things this user has told Pip to remember):"];
     facts.slice(0, 20).forEach(function (f) {
@@ -242,9 +240,16 @@ function buildSystem(facts, staticBlock, contextProse, ephemeralNotes, profilePr
       blocks.push({ type: "text", text: lines.join("\n") });
     }
   }
+  // Static block first — gets the cache_control marker so cross-user cache hits fire.
+  // profileProse intentionally excluded here so the static block stays byte-stable
+  // across all users (different profileProse values would create per-user cache buckets).
   blocks.push({ type: "text", text: staticBlock, cache_control: { type: "ephemeral" } });
+  // Dynamic tail — profileProse + today's date + ephemeralNotes + context.
+  // No cache_control here; this section changes per user and per call.
+  var profileBlock = profileProse ? "── WHO YOU ARE (about you) ──\n" + profileProse + "\n\n" : "";
+  var today = new Date().toISOString().slice(0, 10);
   var tail = [];
-  if (ephemeralNotes) tail.push(ephemeralNotes);
+  tail.push(profileBlock + "Today: " + today + (ephemeralNotes ? "\n\n" + ephemeralNotes : ""));
   if (contextProse) tail.push("CURRENT CONTEXT:\n\n" + contextProse);
   if (tail.length) {
     blocks.push({ type: "text", text: tail.join("\n\n") });
