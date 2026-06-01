@@ -645,6 +645,7 @@ export function CadenceHub({
   updateMeeting,
   deleteMeeting,
   updateProject,
+  addProject,
   addItem,
   updateItem,
   closeItem,
@@ -1331,6 +1332,12 @@ export function CadenceHub({
       unknownPeople={previewPlan.unknownPeople || []}
       onAddContact={addContact ? function (data) {
         return addContact(Object.assign({ account_id: accountId }, data));
+      } : undefined}
+      onCreateProject={addProject ? function (acctId, data) {
+        return addProject(Object.assign({}, data, {
+          account_id: acctId,
+          status: "planned",
+        }));
       } : undefined}
     />
   ) : null;

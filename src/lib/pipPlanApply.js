@@ -71,6 +71,7 @@ export function applyPipPlan(selected, ctx) {
           is_commitment:     row.is_commitment || false,
         };
         if (pipStampedAt) addPayload.pip_created_at = pipStampedAt;
+        if (row.gaugeProjectId) addPayload.project_id = row.gaugeProjectId;
         return addItem(addPayload)
           .then(function () {
             return maybeLearnHint(row.text);

@@ -496,6 +496,7 @@ export function PipSummarizePreview({
   onTitleChange,     // (newTitle) => void — called when user edits the title
   unknownPeople,     // [{ name, context_snippet }] — people Pip noticed but aren't contacts
   onAddContact,      // ({ name, role, email }) => Promise — saves a new contact
+  onCreateProject,   // (accountId, { title }) => Promise<project> — optional; creates a Gauge project
 }) {
   var memberEmails = useMemo(function () {
     return (orgMembers || [])
@@ -539,6 +540,8 @@ export function PipSummarizePreview({
         initialTargetAccountId: r.target_account_id || null,
         isCommitment: r.is_commitment === true,
         pipFlaggedCommitment: r.is_commitment === true,
+        gaugeProjectId: null,
+        asProject: false,
       };
     });
   }, [plan]);
@@ -552,6 +555,8 @@ export function PipSummarizePreview({
   var [userRows, setUserRows] = useState([]);
   var [titleDraft, setTitleDraft] = useState(suggestedTitle || "");
   var [dismissedPeople, setDismissedPeople] = useState([]);
+  var [sessionProjects, setSessionProjects] = useState([]);
+  var [creatingProject, setCreatingProject] = useState({});  // { [idx]: true } while in-flight
 
   function patch(idx, fields) {
     setTouched(true);
@@ -615,6 +620,7 @@ export function PipSummarizePreview({
     (plan || []).forEach(function (row, idx) {
       if (row.kind === "skip") return;
       var s = state[idx] || {};
+      if (s.asProject) return;  // already persisted as a Gauge project
       var originalTitle   = s.initialTitle   || "";
       var originalExcerpt = s.initialExcerpt || "";
       var typed           = (s.title   || "").trim();
@@ -663,6 +669,7 @@ export function PipSummarizePreview({
       if (row.kind === "new_item" || row.kind === "new_task") {
         merged.target_account_id = state[idx].targetAccountId || null;
         merged.is_commitment = state[idx].isCommitment || false;
+        if (state[idx].gaugeProjectId) merged.gaugeProjectId = state[idx].gaugeProjectId;
       }
       selected.push({ idx: idx, row: merged });
 
@@ -892,6 +899,93 @@ export function PipSummarizePreview({
                 {s.isCommitment ? "✦ Commitment" : "◇ Commitment"}
               </button>
               <InfoTip text="Mark as a commitment — something you explicitly promised this account. Pip tracks these separately and flags overdue ones." />
+              {onCreateProject && !s.asProject && (
+                <button
+                  type="button"
+                  disabled={!!creatingProject[idx]}
+                  onClick={function () {
+                    var title = (s.title || row.text || row.title || "").trim();
+                    if (!title) return;
+                    setCreatingProject(function (prev) { return Object.assign({}, prev, { [idx]: true }); });
+                    Promise.resolve(onCreateProject(currentAccountId, { title: title }))
+                      .then(function (project) {
+                        setCreatingProject(function (prev) { var n = Object.assign({}, prev); delete n[idx]; return n; });
+                        if (project && project.id) {
+                          setSessionProjects(function (prev) { return prev.concat([project]); });
+                        }
+                        patch(idx, { asProject: true, checked: false });
+                        showToast("Project created — link other items to it ↓");
+                      })
+                      .catch(function () {
+                        setCreatingProject(function (prev) { var n = Object.assign({}, prev); delete n[idx]; return n; });
+                        showToast("Couldn't create project — try again");
+                      });
+                  }}
+                  style={{
+                    background: "transparent",
+                    border: "1px solid " + C.rule,
+                    borderRadius: 6,
+                    padding: "3px 8px",
+                    fontSize: 10,
+                    color: C.textMuted,
+                    cursor: creatingProject[idx] ? "default" : "pointer",
+                    fontFamily: MONO,
+                    display: "inline-flex", alignItems: "center", gap: 4,
+                    opacity: creatingProject[idx] ? 0.6 : 1,
+                  }}
+                >
+                  {creatingProject[idx] ? "Creating…" : "→ New project"}
+                </button>
+              )}
+              {onCreateProject && s.asProject && (
+                <span style={{
+                  background: C.accentFaint,
+                  border: "1px solid " + C.accentLine,
+                  borderRadius: 6,
+                  padding: "3px 8px",
+                  fontSize: 10,
+                  color: C.accent,
+                  fontFamily: MONO,
+                  display: "inline-flex", alignItems: "center", gap: 4,
+                }}>
+                  ⊞ PROJECT
+                </span>
+              )}
+              {onCreateProject && !s.asProject && (sessionProjects.length > 0 || (activeProjects || []).filter(function (p) { return p.status !== "complete"; }).length > 0) && (
+                <select
+                  value={s.gaugeProjectId || ""}
+                  onChange={function (e) { patch(idx, { gaugeProjectId: e.target.value || null }); }}
+                  style={{
+                    background: s.gaugeProjectId ? C.accentFaint : C.surface,
+                    color: s.gaugeProjectId ? C.accent : C.textMuted,
+                    border: "1px solid " + (s.gaugeProjectId ? C.accentLine : C.rule),
+                    borderRadius: 6,
+                    padding: "3px 8px",
+                    fontSize: 10,
+                    fontFamily: MONO,
+                    cursor: "pointer",
+                  }}
+                >
+                  <option value="">↳ Not in Gauge</option>
+                  {sessionProjects.map(function (p) {
+                    return (
+                      <option key={p.id} value={p.id}>
+                        {"⊞ From this meeting: " + (p.title || "").slice(0, 30)}
+                      </option>
+                    );
+                  })}
+                  {(activeProjects || [])
+                    .filter(function (p) { return p.status !== "complete"; })
+                    .sort(function (a, b) { return new Date(b.created_at || 0) - new Date(a.created_at || 0); })
+                    .map(function (p) {
+                      return (
+                        <option key={p.id} value={p.id}>
+                          {"↳ " + (p.title || "").slice(0, 30)}
+                        </option>
+                      );
+                    })}
+                </select>
+              )}
             </div>
           )}
           {(hasAssignee(row.kind) || hasDueEdit(row.kind)) && row.kind !== "skip" && (

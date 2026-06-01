@@ -374,6 +374,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
         updateMeeting={updateMeeting}
         deleteMeeting={deleteMeeting}
         updateProject={updateProject}
+        addProject={addProject}
         addItem={function (data) { return addItem(Object.assign({ account_id: account.id }, data)); }}
         updateItem={updateItem}
         closeItem={closeItem}
@@ -418,6 +419,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
         updateMeeting={updateMeeting}
         deleteMeeting={deleteMeeting}
         updateProject={function () { return Promise.resolve(); }}
+        addProject={undefined}
         addItem={function (data) { return addItem(Object.assign({ account_id: account.id }, data)); }}
         updateItem={updateItem}
         closeItem={closeItem}
@@ -755,6 +757,12 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
           accountRoster={accountRoster}
           currentAccountId={account.id}
           skippedByPip={!!adHocPreviewPlan.skippedByPip}
+          onCreateProject={addProject ? function (acctId, data) {
+            return addProject(Object.assign({}, data, {
+              account_id: acctId || account.id,
+              status: "planned",
+            }));
+          } : undefined}
         />
       )}
 
