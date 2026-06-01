@@ -193,7 +193,10 @@ function renderMeetingHistoryBlock(meetings) {
     if (m.attendees && m.attendees.length) head += " · attendees: " + m.attendees.join(", ");
     if (m.method) head += " · via " + m.method;
     var body = (m.pip_summary || m.notes || "").slice(0, 220);
-    return head + (body ? "\n  " + body : "");
+    var row = head + (body ? "\n  " + body : "");
+    if (m.theme) row += "\n  Theme: " + m.theme;
+    if (m.tone)  row += "\n  Tone: " + m.tone;
+    return row;
   });
   return "── RECENT MEETING HISTORY ──\n" + lines.join("\n") + "\n\n";
 }
@@ -202,6 +205,7 @@ function renderMeetingHistoryBlock(meetings) {
 function renderCadenceScheduleBlock(cadence) {
   if (!cadence) return "";
   var parts = [];
+  if (cadence.label)     parts.push("Label: " + cadence.label);
   if (cadence.type)      parts.push("Type: " + cadence.type);
   if (cadence.frequency) parts.push("Frequency: " + cadence.frequency);
   if (cadence.meeting_time) parts.push("Time: " + cadence.meeting_time);
@@ -220,8 +224,8 @@ function renderPipFactsBlock(facts) {
 // Renders the account context block for system prompts.
 function renderAccountObjectiveBlock(objective) {
   var text = (objective || "").trim();
-  return "── ABOUT THIS ACCOUNT (your notes) ──\n" +
-    (text || "(none yet — write notes about this account in the Overview tab so Pip knows context)") +
+  return "── ACCOUNT INTEL ──\n" +
+    (text || "(none yet — write account intel in the Overview tab so Pip knows context)") +
     "\n\n";
 }
 
@@ -236,6 +240,33 @@ function renderHealthTrendBlock(snapshots) {
   var first = statuses[0];
   if (statuses.every(function (s) { return s === first; })) return "";
   return "HEALTH TREND (last " + statuses.length + " snapshots): " + statuses.join(" → ") + "\n\n";
+}
+
+// Renders snapshot numeric metrics (latest snapshot row) for summarize context.
+function renderSnapshotMetricsBlock(healthSnapshots) {
+  if (!Array.isArray(healthSnapshots) || healthSnapshots.length === 0) return "";
+  var latestSnap = healthSnapshots.slice().sort(function (x, y) {
+    return (x.snapshot_date || "") > (y.snapshot_date || "") ? -1 : 1;
+  })[0];
+  if (!latestSnap) return "";
+  var snapParts = [];
+  if (latestSnap.health_score != null)       snapParts.push("Score: " + Math.round(latestSnap.health_score));
+  if (latestSnap.days_since_contact != null) snapParts.push("Days since contact: " + latestSnap.days_since_contact);
+  if (latestSnap.open_item_count != null)    snapParts.push("Open items: " + latestSnap.open_item_count);
+  if (latestSnap.overdue_count != null)      snapParts.push("Overdue: " + latestSnap.overdue_count);
+  if (latestSnap.active_project_count != null) snapParts.push("Active projects: " + latestSnap.active_project_count);
+  if (!snapParts.length) return "";
+  return "Account metrics: " + snapParts.join(" · ") + "\n\n";
+}
+
+// Renders the serviced states block for system prompts.
+function renderServicedStatesBlock(servicedStates) {
+  if (!Array.isArray(servicedStates) || servicedStates.length === 0) return "";
+  var ss = servicedStates;
+  var ssStr = ss.length >= 48
+    ? "National (" + ss.length + " states)"
+    : ss.length + " states: " + ss.slice(0, 10).join(", ") + (ss.length > 10 ? "…" : "");
+  return "Serviced states: " + ssStr + "\n\n";
 }
 
 // Renders a delivery track record block from pip_promise_log stats.
@@ -402,15 +433,17 @@ export function callBriefMePip(payload) {
       billing_terms: account.billing_terms || null,
       spend_ytd: account.spend_ytd != null ? account.spend_ytd : null,
       last_interaction_at: account.last_interaction_at,
+      objective: account.objective,
       notes:  account.objective,
       tags:   account.tags,
       region: account.region,
+      serviced_states: account.serviced_states || [],
       meetings: meetings.map(function (m) {
         return {
           date: m.meeting_date, title: m.title, notes: m.notes,
           action_items: m.action_items, commitments: m.commitments,
           follow_up: m.follow_up_date, summary: m.pip_summary,
-          attendees: m.attendees,
+          attendees: m.attendees, theme: m.theme, tone: m.pip_tone,
         };
       }),
       openItems: openItems.map(function (i) {
@@ -422,6 +455,7 @@ export function callBriefMePip(payload) {
       activeProjects: activeProjects.map(function (p) {
         return { title: p.title, status: p.status, due_date: p.due_date };
       }),
+      healthSnapshots: Array.isArray(payload.healthSnapshots) ? payload.healthSnapshots : [],
     }],
     recentDeliveries: recentDeliveries,
   };
@@ -556,6 +590,7 @@ export function summarizeDraftPip(payload) {
   var cadence          = payload.cadence        || null;
   var facts            = Array.isArray(payload.facts)          ? payload.facts          : [];
   var healthSnapshots  = Array.isArray(payload.healthSnapshots) ? payload.healthSnapshots : [];
+  var servicedStates   = Array.isArray(payload.servicedStates)  ? payload.servicedStates  : [];
   var promiseStats     = payload.promiseStats  || null;
   var openItems        = Array.isArray(payload.openItems)       ? payload.openItems       : existingItems;
 
@@ -716,8 +751,10 @@ export function summarizeDraftPip(payload) {
   var bp3Text =
     renderAccountRosterBlock(accountRoster, payload.accountId || null) +
     (isPersonCadence ? renderPersonCadenceBlock(contactName) : (accountType === "internal_team" ? renderInternalMeetingBlock() : "")) +
+    renderServicedStatesBlock(servicedStates) +
     renderAccountObjectiveBlock(accountObjective) +
     renderHealthTrendBlock(healthSnapshots) +
+    renderSnapshotMetricsBlock(healthSnapshots) +
     renderContactsBlock(contacts) +
     renderCadenceScheduleBlock(cadence) +
     renderCommitmentsInBlock(openItems, todayISOForCommitments) +

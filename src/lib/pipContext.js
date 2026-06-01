@@ -224,7 +224,12 @@ function renderAccountFull(a) {
   }
   if (a.tags && a.tags.length) lines.push("Tags: " + a.tags.join(", "));
   if (a.region) lines.push("Region: " + a.region);
-  if (a.notes) lines.push("Notes: " + trunc(a.notes, 280));
+  if (a.serviced_states && a.serviced_states.length) {
+    var ss = a.serviced_states;
+    var ssStr = ss.length >= 48 ? "National (" + ss.length + " states)" : ss.length + " states: " + ss.slice(0, 10).join(", ") + (ss.length > 10 ? "…" : "");
+    lines.push("Serviced states: " + ssStr);
+  }
+  if (a.objective) lines.push("Account Intel: " + a.objective);
 
   var meetings = take(a.meetings, 8);
   if (meetings.length) {
@@ -239,6 +244,8 @@ function renderAccountFull(a) {
       if (body) lines.push("  " + trunc(body, 240));
       if (m.action_items) lines.push("  Action items: " + trunc(m.action_items, 200));
       if (m.follow_up) lines.push("  Follow-up: " + m.follow_up);
+      if (m.theme) lines.push("  Theme: " + m.theme);
+      if (m.tone) lines.push("  Tone: " + m.tone);
     });
   }
 
@@ -338,6 +345,23 @@ function renderAccountFull(a) {
   if (healthTrendLine) {
     lines.push("");
     lines.push(healthTrendLine);
+  }
+
+  // Snapshot metrics — numeric detail behind the health status
+  var latestSnap = (a.healthSnapshots && a.healthSnapshots.length > 0)
+    ? a.healthSnapshots.slice().sort(function(x,y){ return (x.snapshot_date||"") > (y.snapshot_date||"") ? -1 : 1; })[0]
+    : null;
+  if (latestSnap) {
+    var snapParts = [];
+    if (latestSnap.health_score != null) snapParts.push("Score: " + Math.round(latestSnap.health_score));
+    if (latestSnap.days_since_contact != null) snapParts.push("Days since contact: " + latestSnap.days_since_contact);
+    if (latestSnap.open_item_count != null) snapParts.push("Open items: " + latestSnap.open_item_count);
+    if (latestSnap.overdue_count != null) snapParts.push("Overdue: " + latestSnap.overdue_count);
+    if (latestSnap.active_project_count != null) snapParts.push("Active projects: " + latestSnap.active_project_count);
+    if (snapParts.length) {
+      lines.push("");
+      lines.push("Account metrics: " + snapParts.join(" · "));
+    }
   }
 
   // Delivery track record — promise log stats for this account.

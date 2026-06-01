@@ -7,6 +7,7 @@ import { FL } from "../../components/FieldLabel";
 import { detectRegion, detectMarketScope, STATE_NAMES } from "../../lib/regions";
 import { ChipDropdown } from "../../components/ChipDropdown";
 import { ownerLabel } from "../../lib/ownerLabel";
+import { PipMark } from "../../components/PipMark";
 
 var REGION_GROUPS = [
   { label: "Northeast",     states: ["ME","NH","VT","MA","RI","CT","NY","NJ","PA"] },
@@ -609,14 +610,14 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
           </div>
         )}
 
-        {/* Notes */}
+        {/* Account Intel */}
         <div>
-          <FL htmlFor="account-notes">Notes</FL>
+          <FL htmlFor="account-notes"><span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><PipMark size={9} />Account Intel</span></FL>
           <TextArea
             id="account-notes"
             value={notes}
             onChange={function (e) { setNotes(e.target.value); }}
-            placeholder="Who they are, what they sell, any context worth knowing..."
+            placeholder="What Pip should always know about this account — key people, context, quirks…"
             rows={2}
           />
         </div>
