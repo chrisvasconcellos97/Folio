@@ -16,6 +16,7 @@ import { SecBtn, DangerBtn } from "../../components/Buttons";
 import { ownerInitials, findOwner } from "../../lib/ownerLabel";
 import { useBreakpoint } from "../../hooks/useBreakpoint";
 import { useToneTrend } from "../../hooks/useToneTrend";
+import { InfoTip } from "../../components/InfoTip";
 
 var MONO = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
@@ -197,6 +198,10 @@ export function AccountDetailHeader({
                     <span style={{ marginLeft: 4, fontSize: 9 }}>📌</span>
                   )}
                 </Pill>
+                <InfoTip text="Computed from days since last contact, overdue items, blocked projects, and missed cadences. Higher = healthier. You can override it by clicking the pill." />
+                {computedHealth.pinned && (
+                  <InfoTip position="below" text="You've manually pinned this account's health status. Pip will note the override in briefs. Click the pill to update or clear it." />
+                )}
                 {computedHealth.reason && !computedHealth.pinned && (
                   <span style={{
                     fontFamily: MONO, fontSize: 9, color: statusColor,
@@ -295,6 +300,7 @@ export function AccountDetailHeader({
               {account.address}
             </div>
           )}
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 12 }}>
           <button
             onClick={onBriefMe}
             style={{
@@ -304,11 +310,14 @@ export function AccountDetailHeader({
               fontFamily: "'Inter', system-ui, sans-serif",
               fontSize: 12, fontWeight: 500,
               color: C.accent, cursor: "pointer",
-              marginTop: 12, display: "flex", alignItems: "center", gap: 5,
+              display: "flex", alignItems: "center", gap: 5,
             }}
           >
             <span style={{ fontSize: 13 }}>✦</span> Brief Me
           </button>
+          <InfoTip text="Pip generates a pre-call summary — last meeting, open items, contacts, and anything to flag before you get on a call." />
+          </div>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 6 }}>
           <button
             onClick={onBusinessReview}
             style={{
@@ -318,11 +327,13 @@ export function AccountDetailHeader({
               fontFamily: "'Inter', system-ui, sans-serif",
               fontSize: 12, fontWeight: 500,
               color: C.accent, cursor: "pointer",
-              marginTop: 6, display: "flex", alignItems: "center", gap: 5,
+              display: "flex", alignItems: "center", gap: 5,
             }}
           >
             <span style={{ fontSize: 11 }}>◈</span> Business Review
           </button>
+          <InfoTip text="Pip drafts a QBR-style rollup across a date range. Use before a quarterly review with your client. Copy sections into your deck." />
+          </div>
           <button
             onClick={onResyncPipMemory}
             disabled={resyncingPip}

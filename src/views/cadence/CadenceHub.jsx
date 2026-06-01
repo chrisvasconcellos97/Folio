@@ -674,6 +674,9 @@ export function CadenceHub({
   var [summarizingId, setSummarizingId]     = useState(null);
   var [summarizeErrors, setSummarizeErrors] = useState({}); // { draftId: msg }
   var [previewPlan, setPreviewPlan]         = useState(null); // { plan, summary, draftId }
+  var [readoutMeetingId, setReadoutMeetingId] = useState(null);
+  var [readoutEmail, setReadoutEmail]         = useState("");
+  var [readoutLoading, setReadoutLoading]     = useState(false);
 
   var accountId = account ? account.id : null;
   var hintsApi       = usePipAssignmentHints(userId, accountId);
@@ -974,6 +977,37 @@ export function CadenceHub({
 
   function handleCancelPlan() { setPreviewPlan(null); }
 
+  function handleGenerateReadout(meeting) {
+    if (readoutLoading) return;
+    setReadoutMeetingId(meeting.id);
+    setReadoutEmail("");
+    setReadoutLoading(true);
+    fetch("/api/leadership-readout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: userId,
+        meetingSummary: meeting.pip_summary || meeting.notes || "",
+        actionItems: [],
+        contactName: contact ? contact.name : null,
+        portfolioState: (snapshotsApi.snapshots || []).map(function (s) {
+          var acc = (accounts || []).find(function (a) { return a.id === s.account_id; });
+          return Object.assign({}, s, { account_name: acc ? acc.name : "Account" });
+        }),
+      }),
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        setReadoutLoading(false);
+        if (data.email) setReadoutEmail(data.email);
+        else setReadoutEmail("Pip couldn't generate the readout. Try again.");
+      })
+      .catch(function () {
+        setReadoutLoading(false);
+        setReadoutEmail("Something went wrong. Check your connection.");
+      });
+  }
+
   // After updateMeeting in meeting mode, the draft object passed to the
   // overlay can fall behind. The overlay reads only `draft.notes` for its
   // initial state, so passing the latest meeting from the meetings list keeps
@@ -1142,16 +1176,30 @@ export function CadenceHub({
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {history.map(function (m) {
             return (
-              <HistoryRow
-                key={m.id}
-                meeting={m}
-                onEdit={onEditMeeting}
-                onDelete={deleteMeeting}
-                accountId={accountId}
-                openItems={openItems}
-                addItem={addItem}
-                isCadenceTied={!!m.cadence_id}
-              />
+              <div key={m.id}>
+                <HistoryRow
+                  meeting={m}
+                  onEdit={onEditMeeting}
+                  onDelete={deleteMeeting}
+                  accountId={accountId}
+                  openItems={openItems}
+                  addItem={addItem}
+                  isCadenceTied={!!m.cadence_id}
+                />
+                {isPersonCadence && m.pip_summary && (
+                  <button
+                    onClick={function () { handleGenerateReadout(m); }}
+                    style={{
+                      background: "none", border: "1px solid " + C.accentLine,
+                      borderRadius: 6, padding: "3px 10px", fontSize: 11,
+                      color: C.accent, cursor: "pointer", marginTop: 6,
+                      fontFamily: INTER, fontWeight: 600,
+                    }}
+                  >
+                    ✦ Leadership Readout
+                  </button>
+                )}
+              </div>
             );
           })}
         </div>
@@ -1262,6 +1310,81 @@ export function CadenceHub({
     />
   ) : null;
 
+  var readoutModal = readoutMeetingId ? (
+    <div
+      onClick={function (e) {
+        if (e.target === e.currentTarget) {
+          setReadoutMeetingId(null);
+          setReadoutEmail("");
+        }
+      }}
+      style={{
+        position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
+        zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center",
+        padding: 16,
+      }}
+    >
+      <div style={{
+        background: C.surface, borderRadius: 12, padding: 24,
+        width: "100%", maxWidth: 520,
+        border: "1px solid " + C.rule,
+        boxShadow: "0 12px 40px rgba(0,0,0,0.4)",
+        display: "flex", flexDirection: "column", gap: 14,
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ fontFamily: SERIF, fontSize: 18, color: C.text }}>
+            Leadership Readout
+          </div>
+          <button
+            onClick={function () { setReadoutMeetingId(null); setReadoutEmail(""); }}
+            style={{ background: "none", border: "none", color: C.textMuted, fontSize: 20, cursor: "pointer", padding: "0 4px" }}
+          >×</button>
+        </div>
+        <div style={{ fontFamily: INTER, fontSize: 12, color: C.textMuted, lineHeight: 1.5 }}>
+          {readoutLoading
+            ? "Pip is drafting your readout…"
+            : "Copy and paste into an email to your manager."}
+        </div>
+        {readoutLoading && (
+          <div style={{ color: C.textMuted, fontSize: 13, fontFamily: INTER }}>
+            Generating…
+          </div>
+        )}
+        {readoutEmail && (
+          <>
+            <textarea
+              readOnly
+              value={readoutEmail}
+              style={{
+                width: "100%", minHeight: 200, resize: "vertical",
+                background: C.bg, border: "1px solid " + C.rule,
+                borderRadius: 8, padding: "10px 12px",
+                fontFamily: INTER, fontSize: 13,
+                color: C.text, lineHeight: 1.6,
+                boxSizing: "border-box",
+              }}
+            />
+            <button
+              onClick={function () {
+                navigator.clipboard.writeText(readoutEmail).then(function () {
+                  showToast("Copied to clipboard");
+                });
+              }}
+              style={{
+                background: C.accent, border: "none", borderRadius: 8,
+                padding: "9px 18px", color: "#fff", fontSize: 13, fontWeight: 700,
+                cursor: "pointer", fontFamily: INTER,
+                alignSelf: "flex-start",
+              }}
+            >
+              Copy to clipboard
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  ) : null;
+
   /* ---- Mobile (segmented tabs) ---- */
   if (isMobile) {
     var tabs = [
@@ -1325,6 +1448,7 @@ export function CadenceHub({
         </div>
         {overlay}
         {previewModal}
+        {readoutModal}
       </div>
     );
   }
@@ -1351,6 +1475,7 @@ export function CadenceHub({
       </div>
       {overlay}
       {previewModal}
+      {readoutModal}
     </div>
   );
 }

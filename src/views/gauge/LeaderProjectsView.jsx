@@ -15,6 +15,7 @@
 
 import { useState, useMemo } from "react";
 import { C } from "../../lib/colors";
+import { InfoTip } from "../../components/InfoTip";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
@@ -319,14 +320,17 @@ export function LeaderProjectsView({ projects, accounts, members, userEmail, onO
                       {STATUS_LABELS[p.status] || p.status}
                     </div>
                     {isStuck && (
-                      <div style={{
-                        background: "transparent",
-                        border: "1px solid " + C.yellow,
-                        borderRadius: 999, padding: "2px 9px",
-                        fontFamily: MONO, fontSize: 9.5, color: C.yellow,
-                        whiteSpace: "nowrap", letterSpacing: "0.06em",
-                      }}>
-                        STUCK · {sinceMove}D
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                        <div style={{
+                          background: "transparent",
+                          border: "1px solid " + C.yellow,
+                          borderRadius: 999, padding: "2px 9px",
+                          fontFamily: MONO, fontSize: 9.5, color: C.yellow,
+                          whiteSpace: "nowrap", letterSpacing: "0.06em",
+                        }}>
+                          STUCK · {sinceMove}D
+                        </div>
+                        <InfoTip position="below" text="No stage completed in 7+ days. Pip flags this project as potentially blocked. Check in on what's holding it up." />
                       </div>
                     )}
                   </div>

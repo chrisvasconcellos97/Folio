@@ -3,6 +3,7 @@ import { Modal } from "../../components/Modal";
 import { C } from "../../lib/colors";
 import { PipMark } from "../../components/PipMark";
 import { showToast } from "../../components/Toast";
+import { InfoTip } from "../../components/InfoTip";
 
 var INTER = "'Inter', system-ui, sans-serif";
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
@@ -765,6 +766,7 @@ export function PipSummarizePreview({
               >
                 {s.isCommitment ? "✦ Commitment" : "◇ Commitment"}
               </button>
+              <InfoTip text="Mark as a commitment — something you explicitly promised this account. Pip tracks these separately and flags overdue ones." />
             </div>
           )}
           {(hasAssignee(row.kind) || hasDueEdit(row.kind)) && row.kind !== "skip" && (

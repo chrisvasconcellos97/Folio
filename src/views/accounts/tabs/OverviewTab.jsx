@@ -11,6 +11,7 @@ import { buildPipInsight } from "../../../lib/accountInsights.jsx";
 import { UPDATE_TYPE_LABELS, UPDATE_TYPE_COLORS } from "../../../lib/accountUpdateTypes";
 import { useAccountHealthHistory } from "../../../hooks/useAccountHealthHistory";
 import { computeContactEngagement } from "../../../lib/contactEngagement";
+import { InfoTip } from "../../../components/InfoTip";
 
 function HealthSparkline({ history }) {
   if (!history || history.length < 2) return null;
@@ -437,6 +438,7 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
             <span style={{ fontSize: 14, color: healthScore === "green" ? C.green : healthScore === "yellow" ? C.yellow : C.red, fontWeight: 500, textTransform: "capitalize" }}>
               {healthScore === "green" ? "Healthy" : healthScore === "yellow" ? "Watch" : "At Risk"}
             </span>
+            <InfoTip text="Auto-computed from meeting recency, overdue items, and project health. Updates daily. Click 'Override' to pin it manually if Pip has it wrong." />
           </div>
           {healthHistory.length >= 2 && (
             <div style={{ marginTop: 10 }}>
