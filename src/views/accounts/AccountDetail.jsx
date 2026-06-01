@@ -780,6 +780,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
               status: "planned",
             }));
           } : undefined}
+          accountContacts={contacts || []}
         />
       )}
 

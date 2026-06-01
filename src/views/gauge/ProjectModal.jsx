@@ -26,7 +26,7 @@ var PRIORITY_OPTS = [
 ];
 
 function memberLabel(m) {
-  return m.full_name || m.email || "";
+  return m.full_name || (m.invited_email || m.email || "").split("@")[0] || "";
 }
 
 // Normalize stages from existing data — handle old format gracefully
@@ -653,17 +653,28 @@ export function ProjectModal({
         {scope === "team" && (
           <div>
             <FL>Assigned To</FL>
-            {members && members.length > 0 ? (
+            {(members && members.length > 0) || contacts.length > 0 ? (
               <SelectField
                 value={assigneeEmail}
                 onChange={function (e) { setAssignee(e.target.value); }}
               >
                 <option value="">Unassigned</option>
-                {members.map(function (m) {
-                  return (
-                    <option key={m.email || m.id} value={m.email || ""}>{memberLabel(m)}</option>
-                  );
-                })}
+                {members && members.length > 0 && (
+                  <optgroup label="Team">
+                    {members.map(function (m) {
+                      return (
+                        <option key={m.email || m.id} value={m.email || ""}>{memberLabel(m)}</option>
+                      );
+                    })}
+                  </optgroup>
+                )}
+                {contacts.length > 0 && (
+                  <optgroup label="Contacts">
+                    {contacts.map(function (c) {
+                      return <option key={c.id} value={c.name}>{c.name}</option>;
+                    })}
+                  </optgroup>
+                )}
               </SelectField>
             ) : (
               <InputField
@@ -861,17 +872,28 @@ export function ProjectModal({
                         />
                       )
                     ) : (
-                      // Internal: org member dropdown
-                      members && members.length > 0 ? (
+                      // Internal: org member + contact dropdown
+                      (members && members.length > 0) || contacts.length > 0 ? (
                         <SelectField
                           value={s.assignee_email || ""}
                           onChange={function (e) { updateStageField(i, "assignee_email", e.target.value || null); }}
                           style={{ fontSize: 12, padding: "4px 10px", flex: 1 }}
                         >
                           <option value="">Assign to…</option>
-                          {members.map(function (m) {
-                            return <option key={m.email || m.id} value={m.email || ""}>{memberLabel(m)}</option>;
-                          })}
+                          {members && members.length > 0 && (
+                            <optgroup label="Team">
+                              {members.map(function (m) {
+                                return <option key={m.email || m.id} value={m.email || ""}>{memberLabel(m)}</option>;
+                              })}
+                            </optgroup>
+                          )}
+                          {contacts.length > 0 && (
+                            <optgroup label="Contacts">
+                              {contacts.map(function (c) {
+                                return <option key={c.id} value={c.name}>{c.name}</option>;
+                              })}
+                            </optgroup>
+                          )}
                         </SelectField>
                       ) : (
                         <InputField

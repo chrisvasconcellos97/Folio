@@ -8,7 +8,7 @@ import { taskStatusLabel } from "../../lib/gaugeFields";
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var INTER = "'Inter', system-ui, sans-serif";
 
-function memberLabel(m) { return m.full_name || m.email || ""; }
+function memberLabel(m) { return m.full_name || (m.invited_email || m.email || "").split("@")[0] || ""; }
 
 // Unified detail panel for a single Gauge task. Handles both create
 // (project + index === null) and edit (existing task at index). Renders
@@ -22,6 +22,7 @@ export function TaskDetailPanel({
   taskIndex,      // number for edit, null for new
   accounts,
   members,
+  contacts,       // optional: [{ id, name, role }] — account contacts as assignee options
   userEmail,
   onSave,         // (taskShape) => Promise — caller does the project update
   onDelete,       // optional: (taskIndex) => Promise
@@ -189,16 +190,27 @@ export function TaskDetailPanel({
       );
     }
     if (f.type === "person") {
-      if (members && members.length > 0) {
+      if ((members && members.length > 0) || (contacts && contacts.length > 0)) {
         return (
           <SelectField
             value={v || ""}
             onChange={function (e) { updateCustom(f.key, e.target.value); }}
           >
             <option value="">— Unassigned —</option>
-            {members.map(function (m) {
-              return <option key={m.email || m.id} value={m.email || ""}>{memberLabel(m)}</option>;
-            })}
+            {members && members.length > 0 && (
+              <optgroup label="Team">
+                {members.map(function (m) {
+                  return <option key={m.email || m.id} value={m.email || ""}>{memberLabel(m)}</option>;
+                })}
+              </optgroup>
+            )}
+            {contacts && contacts.length > 0 && (
+              <optgroup label="Contacts">
+                {contacts.map(function (c) {
+                  return <option key={c.id} value={c.name}>{c.name}{c.role ? " · " + c.role : ""}</option>;
+                })}
+              </optgroup>
+            )}
           </SelectField>
         );
       }
@@ -264,15 +276,26 @@ export function TaskDetailPanel({
         {/* Assignee — drives admin queue surfacing */}
         <div>
           <FL>Assignee</FL>
-          {members && members.length > 0 ? (
+          {(members && members.length > 0) || (contacts && contacts.length > 0) ? (
             <SelectField
               value={assignee}
               onChange={function (e) { setAssignee(e.target.value); }}
             >
               <option value="">— Unassigned —</option>
-              {members.map(function (m) {
-                return <option key={m.email || m.id} value={m.email || ""}>{memberLabel(m)}</option>;
-              })}
+              {members && members.length > 0 && (
+                <optgroup label="Team">
+                  {members.map(function (m) {
+                    return <option key={m.email || m.id} value={m.email || ""}>{memberLabel(m)}</option>;
+                  })}
+                </optgroup>
+              )}
+              {contacts && contacts.length > 0 && (
+                <optgroup label="Contacts">
+                  {contacts.map(function (c) {
+                    return <option key={c.id} value={c.name}>{c.name}{c.role ? " · " + c.role : ""}</option>;
+                  })}
+                </optgroup>
+              )}
             </SelectField>
           ) : (
             <InputField

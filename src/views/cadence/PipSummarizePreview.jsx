@@ -148,7 +148,7 @@ function RowCheckbox({ checked, onChange, lowConfidence, ariaLabel }) {
   );
 }
 
-function AssigneeSelect({ value, options, onChange }) {
+function AssigneeSelect({ value, memberOptions, contactOptions, onChange }) {
   return (
     <select
       value={value || ""}
@@ -161,9 +161,20 @@ function AssigneeSelect({ value, options, onChange }) {
       }}
     >
       <option value="">— Unassigned —</option>
-      {options.map(function (e) {
-        return <option key={e} value={e}>{e}</option>;
-      })}
+      {memberOptions && memberOptions.length > 0 && (
+        <optgroup label="Team">
+          {memberOptions.map(function (o) {
+            return <option key={o.value} value={o.value}>{o.label}</option>;
+          })}
+        </optgroup>
+      )}
+      {contactOptions && contactOptions.length > 0 && (
+        <optgroup label="Contacts">
+          {contactOptions.map(function (o) {
+            return <option key={o.value} value={o.value}>{o.label}</option>;
+          })}
+        </optgroup>
+      )}
     </select>
   );
 }
@@ -498,12 +509,21 @@ export function PipSummarizePreview({
   unknownPeople,     // [{ name, context_snippet }] — people Pip noticed but aren't contacts
   onAddContact,      // ({ name, role, email }) => Promise — saves a new contact
   onCreateProject,   // (accountId, { title }) => Promise<project> — optional; creates a Gauge project
+  accountContacts,   // optional: [{ id, name, role }] — contacts for this account as assignee options
 }) {
-  var memberEmails = useMemo(function () {
-    return (orgMembers || [])
-      .map(function (m) { return m.invited_email || m.email || null; })
-      .filter(Boolean);
+  var memberOptions = useMemo(function () {
+    return (orgMembers || []).map(function (m) {
+      var email = m.invited_email || m.email || "";
+      var label = m.full_name || email.split("@")[0] || email;
+      return { label: label, value: email };
+    }).filter(function (o) { return o.value; });
   }, [orgMembers]);
+
+  var contactOptions = useMemo(function () {
+    return (accountContacts || []).map(function (c) {
+      return { label: c.name, value: c.name };
+    });
+  }, [accountContacts]);
 
   var rosterLookup = useMemo(function () {
     var map = {};
@@ -1002,7 +1022,8 @@ export function PipSummarizePreview({
                   </span>
                   <AssigneeSelect
                     value={s.assignee}
-                    options={memberEmails}
+                    memberOptions={memberOptions}
+                    contactOptions={contactOptions}
                     onChange={function (v) { patch(idx, { assignee: v }); }}
                   />
                 </div>
@@ -1096,7 +1117,8 @@ export function PipSummarizePreview({
               </span>
               <AssigneeSelect
                 value={ur.assignee}
-                options={memberEmails}
+                memberOptions={memberOptions}
+                contactOptions={contactOptions}
                 onChange={function (v) { patchUserRow(ur.id, { assignee: v }); }}
               />
             </div>

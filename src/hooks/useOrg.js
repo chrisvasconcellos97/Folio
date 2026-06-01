@@ -45,10 +45,29 @@ export function useOrg(userId, userEmail) {
             .then(function (r) {
               setLoading(false);
               if (r.error) return;
-              // Note: members includes both active and inactive; consumers split
-              // by .is_inactive. Pending invites stay separate.
-              setMembers(r.data.filter(function (m) { return m.accepted; }));
-              setPending(r.data.filter(function (m) { return !m.accepted; }));
+              var allRows = r.data || [];
+              // Patch current user's entry with full_name from Supabase Auth
+              // so ownerLabel() can show a real name instead of the raw email.
+              supabase.auth.getUser().then(function (authResult) {
+                var userData = authResult && authResult.data && authResult.data.user;
+                var fullName = userData && userData.user_metadata && userData.user_metadata.full_name
+                  ? userData.user_metadata.full_name
+                  : null;
+                var patchedRows = allRows.map(function (m) {
+                  if (m.user_id === userId && fullName) {
+                    return Object.assign({}, m, { full_name: fullName });
+                  }
+                  return m;
+                });
+                // Note: members includes both active and inactive; consumers split
+                // by .is_inactive. Pending invites stay separate.
+                setMembers(patchedRows.filter(function (m) { return m.accepted; }));
+                setPending(patchedRows.filter(function (m) { return !m.accepted; }));
+              }).catch(function () {
+                // Auth call failed — fall back to rows without full_name patch
+                setMembers(allRows.filter(function (m) { return m.accepted; }));
+                setPending(allRows.filter(function (m) { return !m.accepted; }));
+              });
             });
         } else {
           // No accepted membership — check for a pending invite by email

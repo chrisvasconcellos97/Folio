@@ -12,7 +12,7 @@ var INTER = "'Inter', system-ui, sans-serif";
 // and edit. Tasks group into a "done" lane (or whichever the last column
 // is) when completed_at is set, so the kanban and the done flag stay
 // consistent visually.
-export function StandingBoardView({ project, accounts, members, userEmail, onUpdate, logCorrection }) {
+export function StandingBoardView({ project, accounts, members, contacts, userEmail, onUpdate, logCorrection }) {
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
   var [panelTask, setPanelTask]   = useState(null);   // task object or null
@@ -219,6 +219,7 @@ export function StandingBoardView({ project, accounts, members, userEmail, onUpd
           taskIndex={panelIndex}
           accounts={accounts}
           members={members}
+          contacts={contacts}
           userEmail={userEmail}
           logCorrection={logCorrection}
           onSave={commitTask}

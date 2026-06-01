@@ -569,6 +569,7 @@ export function HubProjectCard({ project, accounts, members, userEmail, onUpdate
               project={project}
               accounts={accounts}
               members={members}
+              contacts={contacts}
               userEmail={userEmail}
               onUpdate={onUpdateProject}
             />
@@ -1344,6 +1345,7 @@ export function CadenceHub({
           status: "planned",
         }));
       } : undefined}
+      accountContacts={contacts || []}
     />
   ) : null;
 
