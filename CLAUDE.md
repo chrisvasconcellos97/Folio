@@ -361,6 +361,13 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 11. **Export & sharing:** *(no open items)*
 
+    **Pip unknown-person detection in summarize flow** — At the end of the `PipSummarizePreview` modal (after plan items but before Apply), Pip surfaces a "People Pip noticed" section listing names found in the meeting notes that don't match any existing contact on the account or the meeting's attendees list. For each unknown name, show a one-tap "Add as contact" button that opens an inline quick-add form pre-filled with the name and the sentence it appeared in as context. User can add (saves via `useContacts` / `addContact` to `folio_contacts` for that account) or dismiss each independently. If no unknown names are found, the section doesn't render at all.
+
+    **Implementation:**
+    - Extend the summarize prompt (`pip.js`) to return an `unknown_people: [{name, context_snippet}]` array — Pip extracts proper names from notes, cross-references against the contacts list + attendees passed in the payload, and includes only unrecognized names (skip the current user, skip names already in contacts). Pass existing contacts + attendees into `summarizeDraftPip` if not already there.
+    - `PipSummarizePreview.jsx` — add "People Pip noticed" section below the plan items. Each entry shows the name + the context snippet (the sentence they appeared in), with an "Add as contact" inline form (name pre-filled, role + email optional) and a "Dismiss" button. Saving calls `addContact({ name, account_id, ...})` and removes the row. Dismissing just hides it (no correction log needed — this is opportunistic, not a miss).
+    - No schema changes. No new tables. Rides the existing contact creation path entirely.
+
 12. **Personalization:** *(no open items)*
 
 13. **Data visualization:** *(no open items)*
