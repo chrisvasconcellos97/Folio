@@ -313,6 +313,8 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 3. **Feature completeness:**
 
+    **Account ownership always visible + Pip ownership awareness** — `owner_user_id` already exists on `folio_accounts` and there's a "Mine" filter, but the owner-setting UI in `AddAccountModal` is gated to `org > 1 members` — solo users can't set it at all. Fix: always show an ownership toggle in `AddAccountModal` and in the account detail header (not just for multi-member orgs). For solo users it's a simple "This is my account" checkbox/toggle; for multi-member orgs it's the existing owner picker. The header chip should be prominent — something like a "MINE" teal pill or "Not mine" muted indicator right at the top next to the account name. Also wire ownership into Pip context: in both `pipContext.js` and `pip.js`, when `owner_user_id !== auth.uid()` (or is null), include a note in the account context block — *"Note: this account is not assigned to you"* — so Pip doesn't brief you on it as if you're responsible for it. No schema changes needed.
+
     **Quick task on Home + remove hidden account-screen quick task** — The existing `QuickTaskModal` (account dropdown + due date + reminder presets) already works standalone. Surface it from the Home Screen quick capture area alongside the quick email log button so task capture is always one tap away. Simultaneously remove (or significantly deprioritize) the hidden quick task entry point from the account screen — it's too buried to be useful there. The Home capture area becomes the canonical place for fast task entry; individual account task management still lives in the account's Items tab.
 
 4. **Native feel:** *(no open items)*
