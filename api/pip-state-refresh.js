@@ -94,7 +94,7 @@ function daysSince(iso) {
 function buildPrompt(account, meetings, items, contacts, projects) {
   var lines = [];
   lines.push("ACCOUNT: " + (account.name || "Untitled"));
-  var hd = "Status: " + (account.status || "—") + " · Health: " + (account.health || "—");
+  var hd = "Status: " + (account.status || "—") + (account.status_override ? " (pinned: " + account.status_override + ")" : "");
   if (account.last_interaction_at) {
     var ds = daysSince(account.last_interaction_at);
     hd += " · Last contact: " + account.last_interaction_at + (ds != null ? " (" + ds + "d ago)" : "");
@@ -198,7 +198,7 @@ export default async function handler(req, res) {
   try {
     // Pull everything we need in 4 parallel queries, scoped via .in()
     var pAccts  = userClient.from("folio_accounts")
-      .select("id, name, status, health, last_interaction_at, tier, region")
+      .select("id, name, status, status_override, last_interaction_at, tier, region")
       .in("id", accountIds);
     var pMtgs   = userClient.from("folio_meetings")
       .select("account_id, meeting_date, title, notes, pip_summary, action_items, follow_up_date")
@@ -286,6 +286,6 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true, refreshed: accts.length });
   } catch (err) {
     console.error("pip-state-refresh error:", err);
-    return res.status(500).json({ error: "refresh failed" });
+    return res.status(500).json({ error: "refresh failed", detail: err && err.message ? err.message : String(err) });
   }
 }
