@@ -165,12 +165,19 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
+  try {
+
   var authHeader = req.headers.authorization || "";
   var token      = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
   if (!token) return res.status(401).json({ error: "Unauthorized" });
 
+  if (!process.env.VITE_SUPABASE_URL || !process.env.VITE_SUPABASE_ANON_KEY) {
+    return res.status(500).json({ error: "Supabase is not configured on this deployment." });
+  }
+
   var supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
-  var { data: { user }, error: authError } = await supabase.auth.getUser(token);
+  var { data: authData, error: authError } = await supabase.auth.getUser(token);
+  var user = authData && authData.user ? authData.user : null;
   if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
 
   if (isRateLimited(user.id)) {
@@ -195,8 +202,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "ANTHROPIC_API_KEY is not configured on this deployment." });
   }
 
-  try {
-    // Pull everything we need in 4 parallel queries, scoped via .in()
+  // Pull everything we need in 4 parallel queries, scoped via .in()
     var pAccts  = userClient.from("folio_accounts")
       .select("id, name, status, status_override, last_interaction_at, tier, region")
       .in("id", accountIds);

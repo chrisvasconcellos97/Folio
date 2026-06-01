@@ -90,12 +90,19 @@ function buildSystemBlocks() {
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
+  try {
+
   var authHeader = req.headers.authorization || "";
   var token      = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
   if (!token) return res.status(401).json({ error: "Unauthorized" });
 
+  if (!process.env.VITE_SUPABASE_URL || !process.env.VITE_SUPABASE_ANON_KEY) {
+    return res.status(500).json({ error: "Supabase is not configured on this deployment." });
+  }
+
   var supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
-  var { data: { user }, error: authError } = await supabase.auth.getUser(token);
+  var { data: authData, error: authError } = await supabase.auth.getUser(token);
+  var user = authData && authData.user ? authData.user : null;
   if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
   if (isRateLimited(user.id)) return res.status(429).json({ error: "Too many requests." });
 
@@ -124,8 +131,7 @@ export default async function handler(req, res) {
 
   var systemBlocks = buildSystemBlocks();
 
-  try {
-    var client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  var client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     if (mode === "meeting") {
       var prompt =
         "Generate two things for this meeting:\n" +

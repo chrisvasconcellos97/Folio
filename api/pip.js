@@ -262,13 +262,23 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
+  // Outer try wraps the entire handler so any synchronous throw (e.g.
+  // createClient("", "") → "supabaseUrl is required") surfaces as a caught
+  // JSON 500 instead of Vercel's FUNCTION_INVOCATION_FAILED HTML page.
+  try {
+
   // Auth
   var authHeader = req.headers.authorization || "";
   var token      = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
   if (!token) return res.status(401).json({ error: "Unauthorized" });
 
+  if (!process.env.VITE_SUPABASE_URL || !process.env.VITE_SUPABASE_ANON_KEY) {
+    return res.status(500).json({ error: "Supabase is not configured on this deployment." });
+  }
+
   var supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
-  var { data: { user }, error: authError } = await supabase.auth.getUser(token);
+  var { data: authData, error: authError } = await supabase.auth.getUser(token);
+  var user = authData && authData.user ? authData.user : null;
   if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
 
   if (isRateLimited(user.id)) {
@@ -316,10 +326,6 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "ANTHROPIC_API_KEY is not configured on this deployment." });
   }
 
-  // Everything from here through the Anthropic call is wrapped in one try-catch
-  // so any unexpected throw (context building, SDK constructor, stream setup)
-  // surfaces as a caught 500 rather than a Vercel FUNCTION_INVOCATION_FAILED.
-  try {
   // Curate + render context as prose. Use the last user message as the resolver hint.
   var lastUserMsg = "";
   for (var i = rawMessages.length - 1; i >= 0; i--) {
