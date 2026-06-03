@@ -169,6 +169,7 @@ export function AccountsView({ accounts, allAccounts, loading, onSelect, onAddAc
     try { localStorage.setItem(DENSITY_KEY, density); } catch(e) {}
   }, [density]);
   var [editingTask, setEditingTask] = useState(null);
+  var [completingTaskIds, setCompletingTaskIds] = useState(function () { return new Set(); });
 
   // Checklist logic
   var checklistDone = (function() {
@@ -514,17 +515,24 @@ export function AccountsView({ accounts, allAccounts, loading, onSelect, onAddAc
                   gap: 10,
                 }}>
                   <button
-                    onClick={function () { updateTask(t.id, { done: true }); }}
+                    onClick={function () {
+                      var taskId = t.id;
+                      setCompletingTaskIds(function (prev) { var next = new Set(prev); next.add(taskId); return next; });
+                      setTimeout(function () {
+                        updateTask(taskId, { done: true });
+                        setCompletingTaskIds(function (prev) { var next = new Set(prev); next.delete(taskId); return next; });
+                      }, 350);
+                    }}
                     title="Mark done"
                     style={{
-                      width: 18,
-                      height: 18,
+                      width: 18, height: 18,
                       borderRadius: "50%",
-                      border: "1px solid " + C.rule,
-                      background: "transparent",
+                      border: "1px solid " + (completingTaskIds.has(t.id) ? C.accent : C.rule),
+                      background: completingTaskIds.has(t.id) ? C.accentFaint : "transparent",
                       cursor: "pointer",
                       flexShrink: 0,
                       padding: 0,
+                      transition: "border-color 0.15s, background 0.15s",
                     }}
                   />
                   <div

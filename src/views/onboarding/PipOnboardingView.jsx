@@ -71,6 +71,9 @@ export function PipOnboardingView({ userId, profileApi, accessToken, onDone, onS
 
   function handleSynthesize(finalAnswers) {
     setSynthesizing(true);
+    // Mark done immediately — synthesis enriches the profile but shouldn't gate completion.
+    // Without this, a hung/slow API call leaves status "in_progress" and re-prompts on reload.
+    profileApi.upsertProfile({ onboarding_status: "done" }).catch(function () {});
     var pairs = questions.map(function (q) {
       return { question: q.question_text, answer: finalAnswers[q.id] || "" };
     }).filter(function (p) { return p.answer.trim(); });
