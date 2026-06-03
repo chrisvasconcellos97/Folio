@@ -3,11 +3,17 @@ import { supabase } from "../lib/supabase.js";
 
 export function useUserProfile(userId) {
   var [profile, setProfile]   = useState(null);
-  var [loading, setLoading]   = useState(false);
+  // Default to TRUE so the "no profile yet" state is never mistaken for
+  // "confirmed no profile" before the first fetch resolves. Routing code
+  // gates the onboarding interview on (!loading && profile === null); if
+  // loading started false, the very first render after a cache clear —
+  // before this hook's effect fires — would read loading=false + profile=null
+  // and wrongly re-trigger onboarding for users who already completed it.
+  var [loading, setLoading]   = useState(true);
   var [error, setError]       = useState(null);
 
   var fetch = useCallback(function () {
-    if (!userId) return;
+    if (!userId) { setLoading(false); return; }
     setLoading(true);
     supabase
       .from("folio_user_profile")

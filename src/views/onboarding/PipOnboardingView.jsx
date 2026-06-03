@@ -34,8 +34,14 @@ export function PipOnboardingView({ userId, profileApi, accessToken, onDone, onS
       setLoadingQs(false);
     }).catch(function () { setLoadingQs(false); });
 
-    // Mark in_progress
-    profileApi.upsertProfile({ onboarding_status: "in_progress" }).catch(function () {});
+    // Mark in_progress — but never downgrade a profile that already finished.
+    // Without this guard, a stray mount (e.g. a load-time flash) would overwrite
+    // a "done" status with "in_progress", which routing treats as pending and
+    // would re-trap a completed user in the interview permanently.
+    var existingStatus = profileApi.profile && profileApi.profile.onboarding_status;
+    if (existingStatus !== "done" && existingStatus !== "skipped") {
+      profileApi.upsertProfile({ onboarding_status: "in_progress" }).catch(function () {});
+    }
   }, [userId]);
 
   var current = questions[currentIdx] || null;
