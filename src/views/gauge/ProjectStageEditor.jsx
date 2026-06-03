@@ -65,8 +65,9 @@ export function ProjectStageEditor({ project, onUpdate, accounts, members, conta
   var [expanded, setExpanded] = useState({});
   var [newStageTitle, setNewStageTitle] = useState("");
   var [addingSub, setAddingSub] = useState({}); // { stageIdx: "title text" }
-  var [detailIdx, setDetailIdx] = useState(null);     // open existing-task panel by index
-  var [showNewDetail, setShowNewDetail] = useState(false); // open new-task panel
+  var [detailIdx, setDetailIdx] = useState(null);
+  var [showNewDetail, setShowNewDetail] = useState(false);
+  var [lastAddedIdx, setLastAddedIdx] = useState(null);
 
   var stages = project.stages || [];
   var hasSchema = (project.custom_field_schema || []).length > 0;
@@ -120,8 +121,10 @@ export function ProjectStageEditor({ project, onUpdate, accounts, members, conta
     var t = newStageTitle.trim();
     if (!t) return;
     var next = stages.concat([{ title: t, completed_at: null, is_external: false, blocked_reason: null, sub_stages: [] }]);
+    var newIdx = next.length - 1;
     setNewStageTitle("");
     commitStages(next);
+    setLastAddedIdx(newIdx);
   }
 
   function addSub(stageIdx) {
@@ -230,13 +233,16 @@ export function ProjectStageEditor({ project, onUpdate, accounts, members, conta
               </button>
             </div>
 
-            <TaskEntityDetector
-              task={s}
-              contacts={contacts}
-              accounts={accounts}
-              aliases={aliases}
-              onAccept={function (suggestion) { acceptStageSuggestion(idx, suggestion); }}
-            />
+            {lastAddedIdx === idx && (
+              <TaskEntityDetector
+                task={s}
+                contacts={contacts}
+                accounts={accounts}
+                aliases={aliases}
+                onAccept={function (suggestion) { acceptStageSuggestion(idx, suggestion); setLastAddedIdx(null); }}
+                onDismiss={function () { setLastAddedIdx(null); }}
+              />
+            )}
 
             {blocked && (
               <textarea
