@@ -10,6 +10,7 @@ import { useUserProfile } from "../../hooks/useUserProfile";
 import { usePipFacts } from "../../hooks/usePipFacts";
 import { summarizeDraftPip } from "../../lib/pip";
 import { applyPipPlan } from "../../lib/pipPlanApply";
+import { updateTask, insertTask } from "../../hooks/useTasks";
 import { CadenceMeetingMode } from "../cadence/CadenceMeetingMode";
 import { PipSummarizePreview } from "../cadence/PipSummarizePreview";
 
@@ -217,6 +218,13 @@ export function AdHocConversationFlow({
           summarizing={summarizing}
           summarizeErr={summarizeErr}
           onAddContact={addContact || undefined}
+          userId={userId}
+          onUpdateTask={userId ? function (taskId, fields) {
+            return updateTask(userId, taskId, fields);
+          } : undefined}
+          onAddTask={userId ? function (payload) {
+            return insertTask(userId, payload);
+          } : undefined}
         />
       )}
       {previewPlan && (

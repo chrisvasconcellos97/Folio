@@ -21,6 +21,8 @@ import { useAccountSnapshots } from "../../hooks/useAccountSnapshots";
 import { usePipPromiseLog } from "../../hooks/usePipPromiseLog";
 import { useUserProfile } from "../../hooks/useUserProfile";
 import { applyPipPlan } from "../../lib/pipPlanApply";
+import { updateTask, insertTask } from "../../hooks/useTasks";
+import { ownerLabel } from "../../lib/ownerLabel";
 
 var INTER = "'Inter', system-ui, sans-serif";
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
@@ -465,9 +467,330 @@ export function OpenItemRow({ item, onClose, discussed, mentioned, onToggleDiscu
   );
 }
 
+/* ---- Compact inline task row with quick-action controls ---- */
+function MeetingTaskRow({ task, userId, members, contacts, onUpdateTask }) {
+  var [editingTitle, setEditingTitle] = useState(false);
+  var [titleDraft,   setTitleDraft]   = useState(task.title || task.text || "");
+  var [saving,       setSaving]       = useState(false);
+  var [done,         setDone]         = useState(!!(task.completed_at || task.done));
+  var [showAssign,   setShowAssign]   = useState(false);
+  var [showDate,     setShowDate]     = useState(false);
+
+  var assigneeOptions = (members || []).map(function (m) {
+    return { value: m.invited_email || m.email, label: ownerLabel(m) };
+  }).concat(
+    (contacts || []).filter(function (c) { return c.email; }).map(function (c) {
+      return { value: c.email, label: c.name || c.email };
+    })
+  );
+
+  function handleMarkDone(e) {
+    e.stopPropagation();
+    if (saving) return;
+    var newDone = !done;
+    setDone(newDone);
+    setSaving(true);
+    onUpdateTask(task.id, { done: newDone, status: newDone ? "complete" : "in_progress" })
+      .catch(function () { setDone(!newDone); showToast("Couldn't update task"); })
+      .finally(function () { setSaving(false); });
+  }
+
+  function handleTitleBlur() {
+    var trimmed = titleDraft.trim();
+    if (!trimmed || trimmed === (task.title || task.text || "")) {
+      setEditingTitle(false);
+      return;
+    }
+    setSaving(true);
+    onUpdateTask(task.id, { title: trimmed })
+      .catch(function () { showToast("Couldn't rename task"); })
+      .finally(function () { setSaving(false); setEditingTitle(false); });
+  }
+
+  function handleReassign(e) {
+    var email = e.target.value;
+    if (!email) return;
+    setShowAssign(false);
+    onUpdateTask(task.id, { assignee_email: email })
+      .catch(function () { showToast("Couldn't reassign task"); });
+  }
+
+  function handleDateChange(e) {
+    var val = e.target.value;
+    setShowDate(false);
+    onUpdateTask(task.id, { due_date: val || null })
+      .catch(function () { showToast("Couldn't set due date"); });
+  }
+
+  var displayTitle = task.title || task.text || "Untitled";
+  var currentAssignee = task.assignee_email || task.owner || null;
+  var currentDue = task.due_date || null;
+  var isOverdue = currentDue && currentDue < new Date().toISOString().slice(0, 10);
+
+  return (
+    <div style={{
+      display: "flex", alignItems: "flex-start", gap: 8,
+      padding: "7px 10px",
+      background: done ? C.surface3 : C.surface,
+      borderRadius: 8,
+      border: "1px solid " + C.rule,
+      marginBottom: 5,
+      opacity: done ? 0.55 : 1,
+      transition: "opacity 0.2s",
+    }}>
+      {/* Checkbox */}
+      <button
+        type="button"
+        onClick={handleMarkDone}
+        aria-label={done ? "Mark incomplete" : "Mark done"}
+        style={{
+          flexShrink: 0, width: 22, height: 22,
+          border: "1.5px solid " + (done ? C.accent : C.accentDim),
+          borderRadius: 5, background: done ? C.accent : "transparent",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          cursor: "pointer", marginTop: 1,
+        }}
+      >
+        {done && <span style={{ color: C.bg, fontSize: 11, lineHeight: 1, fontWeight: 700 }}>✓</span>}
+      </button>
+
+      {/* Title + sub-row actions */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        {editingTitle ? (
+          <input
+            type="text"
+            value={titleDraft}
+            onChange={function (e) { setTitleDraft(e.target.value); }}
+            onBlur={handleTitleBlur}
+            onKeyDown={function (e) {
+              if (e.key === "Enter") { e.preventDefault(); handleTitleBlur(); }
+              if (e.key === "Escape") { setEditingTitle(false); setTitleDraft(task.title || task.text || ""); }
+            }}
+            autoFocus
+            style={{
+              width: "100%", background: C.bg,
+              border: "1px solid " + C.accentLine, borderRadius: 4,
+              padding: "3px 6px", fontSize: 13, color: C.text,
+              fontFamily: INTER, outline: "none",
+              boxSizing: "border-box",
+            }}
+          />
+        ) : (
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={function () { setEditingTitle(true); setTitleDraft(task.title || task.text || ""); }}
+            onKeyDown={function (e) {
+              if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setEditingTitle(true); }
+            }}
+            style={{
+              fontSize: 12.5, color: done ? C.textMuted : C.text,
+              lineHeight: 1.4, cursor: "text",
+              textDecoration: done ? "line-through" : "none",
+              wordBreak: "break-word",
+            }}
+          >
+            {displayTitle}
+          </div>
+        )}
+        <div style={{ display: "flex", gap: 6, marginTop: 5, flexWrap: "wrap", alignItems: "center" }}>
+          {/* Assignee chip */}
+          {showAssign ? (
+            <select
+              autoFocus
+              onChange={handleReassign}
+              onBlur={function () { setShowAssign(false); }}
+              style={{
+                fontSize: 11, padding: "2px 5px",
+                background: C.surface, border: "1px solid " + C.rule,
+                borderRadius: 4, color: C.text,
+                fontFamily: INTER, outline: "none",
+              }}
+            >
+              <option value="">Select…</option>
+              {assigneeOptions.map(function (opt) {
+                return <option key={opt.value} value={opt.value}>{opt.label}</option>;
+              })}
+            </select>
+          ) : (
+            <button
+              type="button"
+              onClick={function (e) { e.stopPropagation(); setShowAssign(true); setShowDate(false); }}
+              title="Reassign"
+              style={{
+                background: currentAssignee ? C.accentFaint : "transparent",
+                border: "1px solid " + (currentAssignee ? C.accentLine : C.rule),
+                borderRadius: 12, padding: "2px 7px",
+                fontSize: 10, color: currentAssignee ? C.accent : C.textMuted,
+                fontFamily: INTER, cursor: "pointer", lineHeight: 1.4,
+              }}
+            >
+              {currentAssignee
+                ? (currentAssignee.split("@")[0].slice(0, 12))
+                : "Assign"}
+            </button>
+          )}
+          {/* Due date chip */}
+          {showDate ? (
+            <input
+              type="date"
+              defaultValue={currentDue || ""}
+              autoFocus
+              onChange={handleDateChange}
+              onBlur={function () { setShowDate(false); }}
+              style={{
+                fontSize: 11, padding: "2px 5px",
+                background: C.surface, border: "1px solid " + C.rule,
+                borderRadius: 4, color: C.text, fontFamily: INTER, outline: "none",
+              }}
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={function (e) { e.stopPropagation(); setShowDate(true); setShowAssign(false); }}
+              title="Set due date"
+              style={{
+                background: isOverdue ? C.yellowFaint : (currentDue ? C.accentFaint : "transparent"),
+                border: "1px solid " + (isOverdue ? C.yellow : (currentDue ? C.accentLine : C.rule)),
+                borderRadius: 12, padding: "2px 7px",
+                fontSize: 10, color: isOverdue ? C.yellow : (currentDue ? C.accent : C.textMuted),
+                fontFamily: INTER, cursor: "pointer", lineHeight: 1.4,
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              {currentDue
+                ? new Date(currentDue + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                : "Due date"}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---- Inline add-task form for a project ---- */
+function AddTaskInlineForm({ projectId, accountId, userId, members, contacts, onAddTask, onCancel }) {
+  var [title,    setTitle]    = useState("");
+  var [assignee, setAssignee] = useState("");
+  var [dueDate,  setDueDate]  = useState("");
+  var [saving,   setSaving]   = useState(false);
+
+  var assigneeOptions = (members || []).map(function (m) {
+    return { value: m.invited_email || m.email, label: ownerLabel(m) };
+  }).concat(
+    (contacts || []).filter(function (c) { return c.email; }).map(function (c) {
+      return { value: c.email, label: c.name || c.email };
+    })
+  );
+
+  function handleAdd() {
+    var t = title.trim();
+    if (!t || saving) return;
+    setSaving(true);
+    onAddTask({
+      title:          t,
+      project_id:     projectId,
+      account_id:     accountId || null,
+      assignee_email: assignee || null,
+      due_date:       dueDate  || null,
+      status:         "in_progress",
+      done:           false,
+      user_added:     true,
+    }).then(function () {
+      setSaving(false);
+      onCancel();
+      showToast("Task added");
+    }).catch(function () {
+      setSaving(false);
+      showToast("Couldn't add task");
+    });
+  }
+
+  return (
+    <div style={{
+      background: C.surface2, border: "1px solid " + C.accentLine,
+      borderRadius: 8, padding: "10px 12px", marginBottom: 8,
+      display: "flex", flexDirection: "column", gap: 8,
+    }}>
+      <input
+        type="text"
+        value={title}
+        onChange={function (e) { setTitle(e.target.value); }}
+        onKeyDown={function (e) {
+          if (e.key === "Enter") { e.preventDefault(); handleAdd(); }
+          if (e.key === "Escape") { onCancel(); }
+        }}
+        placeholder="Task title…"
+        autoFocus
+        style={{
+          background: C.bg, border: "1px solid " + C.rule, borderRadius: 6,
+          padding: "6px 10px", fontSize: 13, color: C.text,
+          fontFamily: INTER, outline: "none",
+          width: "100%", boxSizing: "border-box",
+        }}
+      />
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+        {assigneeOptions.length > 0 && (
+          <select
+            value={assignee}
+            onChange={function (e) { setAssignee(e.target.value); }}
+            style={{
+              fontSize: 12, padding: "4px 8px",
+              background: C.surface, border: "1px solid " + C.rule,
+              borderRadius: 6, color: C.text,
+              fontFamily: INTER, outline: "none", flex: 1, minWidth: 100,
+            }}
+          >
+            <option value="">Assignee…</option>
+            {assigneeOptions.map(function (opt) {
+              return <option key={opt.value} value={opt.value}>{opt.label}</option>;
+            })}
+          </select>
+        )}
+        <input
+          type="date"
+          value={dueDate}
+          onChange={function (e) { setDueDate(e.target.value); }}
+          style={{
+            fontSize: 12, padding: "4px 8px",
+            background: C.surface, border: "1px solid " + C.rule,
+            borderRadius: 6, color: C.text,
+            fontFamily: INTER, outline: "none",
+          }}
+        />
+      </div>
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+        <button
+          type="button"
+          onClick={onCancel}
+          style={{
+            background: "none", border: "1px solid " + C.rule, borderRadius: 6,
+            padding: "5px 12px", fontSize: 11, color: C.textMuted,
+            fontFamily: INTER, cursor: "pointer",
+          }}
+        >Cancel</button>
+        <button
+          type="button"
+          disabled={!title.trim() || saving}
+          onClick={handleAdd}
+          style={{
+            background: !title.trim() || saving ? C.accentFaint : C.accentDeep,
+            border: "none", borderRadius: 6,
+            padding: "5px 14px", fontSize: 11, fontWeight: 700,
+            color: !title.trim() || saving ? C.textMuted : C.bg,
+            fontFamily: INTER, cursor: !title.trim() || saving ? "default" : "pointer",
+          }}
+        >{saving ? "Adding…" : "Add Task"}</button>
+      </div>
+    </div>
+  );
+}
+
 /* ---- Inline-expandable Gauge project card ---- */
-export function HubProjectCard({ project, accounts, members, userEmail, onUpdateProject, discussed, mentioned, onToggleDiscussed }) {
-  var [open, setOpen] = useState(false);
+export function HubProjectCard({ project, accounts, members, userEmail, onUpdateProject, discussed, mentioned, onToggleDiscussed, onUpdateTask, onAddTask, userId, contacts }) {
+  var [open,          setOpen]          = useState(false);
+  var [addTaskOpen,   setAddTaskOpen]   = useState(false);
   var isPlanning   = project.status === "planned" || project.status === "on_hold";
   var statusColor  = isPlanning ? C.yellow : C.accent;
   var statusKey    = (project.status || "planned").split("_").map(function(w) { return w.charAt(0).toUpperCase() + w.slice(1); }).join("");
@@ -607,31 +930,129 @@ export function HubProjectCard({ project, accounts, members, userEmail, onUpdate
             </div>
           )}
           <ProjectNotesEditor project={project} onUpdate={onUpdateProject} compact />
-          <div style={{
-            fontFamily: MONO, fontSize: 9.5, color: C.textMuted,
-            textTransform: "uppercase", letterSpacing: "0.08em",
-            marginTop: 10, marginBottom: 8,
-          }}>
-            Tasks
-          </div>
-          {project.is_standing ? (
-            <StandingBoardView
-              project={project}
-              accounts={accounts}
-              members={members}
-              contacts={contacts}
-              aliases={contactAliases || []}
-              userEmail={userEmail}
-              onUpdate={onUpdateProject}
-            />
-          ) : (
-            <ProjectStageEditor
-              project={project}
-              onUpdate={onUpdateProject}
-              accounts={accounts}
-              members={members}
-              userEmail={userEmail}
-            />
+
+          {/* Quick-action task list — shown when onUpdateTask is wired (meeting mode) */}
+          {onUpdateTask && tasks.length > 0 && (
+            <div style={{ marginTop: 12 }}>
+              <div style={{
+                fontFamily: MONO, fontSize: 9.5, color: C.textMuted,
+                textTransform: "uppercase", letterSpacing: "0.08em",
+                marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between",
+              }}>
+                <span>Tasks · Quick Actions</span>
+                {onAddTask && (
+                  <button
+                    type="button"
+                    onClick={function (e) { e.stopPropagation(); setAddTaskOpen(function (v) { return !v; }); }}
+                    style={{
+                      background: C.accentFaint, border: "1px solid " + C.accentLine,
+                      borderRadius: 5, padding: "2px 8px",
+                      fontSize: 10, fontFamily: MONO, color: C.accent,
+                      cursor: "pointer", letterSpacing: "0.06em", textTransform: "uppercase",
+                    }}
+                  >+ Task</button>
+                )}
+              </div>
+              {addTaskOpen && onAddTask && (
+                <AddTaskInlineForm
+                  projectId={project.id}
+                  accountId={project.account_id || null}
+                  userId={userId}
+                  members={members}
+                  contacts={contacts}
+                  onAddTask={onAddTask}
+                  onCancel={function () { setAddTaskOpen(false); }}
+                />
+              )}
+              {tasks.filter(function (t) { return !t.completed_at; }).map(function (t) {
+                return (
+                  <MeetingTaskRow
+                    key={t.id || t.title}
+                    task={t}
+                    userId={userId}
+                    members={members}
+                    contacts={contacts}
+                    onUpdateTask={onUpdateTask}
+                  />
+                );
+              })}
+              {tasks.filter(function (t) { return !!t.completed_at; }).length > 0 && (
+                <div style={{ fontSize: 10, color: C.textMuted, marginTop: 4, fontFamily: MONO }}>
+                  + {tasks.filter(function (t) { return !!t.completed_at; }).length} completed
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* + Task button when no tasks exist yet */}
+          {onUpdateTask && tasks.length === 0 && (
+            <div style={{ marginTop: 12 }}>
+              <div style={{
+                fontFamily: MONO, fontSize: 9.5, color: C.textMuted,
+                textTransform: "uppercase", letterSpacing: "0.08em",
+                marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between",
+              }}>
+                <span>Tasks</span>
+                {onAddTask && (
+                  <button
+                    type="button"
+                    onClick={function (e) { e.stopPropagation(); setAddTaskOpen(function (v) { return !v; }); }}
+                    style={{
+                      background: C.accentFaint, border: "1px solid " + C.accentLine,
+                      borderRadius: 5, padding: "2px 8px",
+                      fontSize: 10, fontFamily: MONO, color: C.accent,
+                      cursor: "pointer", letterSpacing: "0.06em", textTransform: "uppercase",
+                    }}
+                  >+ Task</button>
+                )}
+              </div>
+              {addTaskOpen && onAddTask && (
+                <AddTaskInlineForm
+                  projectId={project.id}
+                  accountId={project.account_id || null}
+                  userId={userId}
+                  members={members}
+                  contacts={contacts}
+                  onAddTask={onAddTask}
+                  onCancel={function () { setAddTaskOpen(false); }}
+                />
+              )}
+              {!addTaskOpen && (
+                <div style={{ fontSize: 11, color: C.textMuted }}>No tasks yet.</div>
+              )}
+            </div>
+          )}
+
+          {/* Full editor — always shown when onUpdateTask is NOT wired (outside meeting mode) */}
+          {!onUpdateTask && (
+            <>
+              <div style={{
+                fontFamily: MONO, fontSize: 9.5, color: C.textMuted,
+                textTransform: "uppercase", letterSpacing: "0.08em",
+                marginTop: 10, marginBottom: 8,
+              }}>
+                Tasks
+              </div>
+              {project.is_standing ? (
+                <StandingBoardView
+                  project={project}
+                  accounts={accounts}
+                  members={members}
+                  contacts={contacts}
+                  aliases={[]}
+                  userEmail={userEmail}
+                  onUpdate={onUpdateProject}
+                />
+              ) : (
+                <ProjectStageEditor
+                  project={project}
+                  onUpdate={onUpdateProject}
+                  accounts={accounts}
+                  members={members}
+                  userEmail={userEmail}
+                />
+              )}
+            </>
           )}
         </div>
       )}
@@ -1370,6 +1791,13 @@ export function CadenceHub({
       summarizing={summarizingId != null && meetingMode && summarizingId === meetingMode.draft.id}
       summarizeErr={meetingMode ? summarizeErrors[meetingMode.draft.id] || null : null}
       onAddContact={addContact || undefined}
+      userId={userId}
+      onUpdateTask={userId ? function (taskId, fields) {
+        return updateTask(userId, taskId, fields);
+      } : undefined}
+      onAddTask={userId ? function (payload) {
+        return insertTask(userId, payload);
+      } : undefined}
     />
   ) : null;
 
