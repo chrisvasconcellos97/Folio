@@ -1,6 +1,6 @@
 # Folios — Upgrade Log
 
-*Last updated: 2026-06-01 (Pip onboarding interview Phase 1)*
+*Last updated: 2026-06-03 (Meeting discussed signal)*
 
 Plain-English log of major upgrades shipped to Folios. Date, time, and
 a short explanation written in terms anyone can read — not technical
@@ -14,6 +14,52 @@ For the technical changelog with full release detail, see
 architectural changes, anything that meaningfully changes what Folios
 *does* or *is*. Not bug fixes, styling tweaks, or doc-only updates —
 those live in git history.
+
+---
+
+## 2026-06-03 — Meeting discussed signal — Pip now knows what you talked about
+
+**What I built:** Two interlocked features that fix Pip's #1 failure mode: creating
+duplicate tasks instead of updating the ones you already discussed.
+
+**Problem it solves:** During a meeting, you might talk through three open Gauge
+projects and two open action items. Pip gets your notes as free text and has to
+guess which of your active projects and items you actually touched. It defaults to
+creating new rows when it's unsure — which is frustrating when you clearly discussed
+"the LKQ integration project" and Pip creates a new task instead of updating the
+existing one.
+
+**What changed:**
+
+1. **Tap to mark discussed (Part A).** During a meeting in the full-screen meeting
+   mode, you can tap any project card or open-item row in the sidebar to flag it
+   as "discussed this meeting." Flagged cards show a teal ✦ Discussed chip and a
+   teal left border. When you hit End & Summarize, those flagged IDs are sent to
+   Pip as a high-confidence signal — Pip strongly prefers updating or closing
+   flagged items rather than creating new ones.
+
+2. **Live note highlight (Part B).** As you type your meeting notes, the sidebar
+   automatically detects when you've written a project or item title in the notes
+   and highlights the matching card with a subtle teal glow. This gives you instant
+   visual confirmation that Pip will connect the dots — before you even hit
+   summarize. No tapping required for the auto-detection.
+
+3. **Plan modal badge.** In the summarize-preview modal, any row that Pip derived
+   from a flagged project or item shows a ✦ Discussed badge so you can see Pip
+   acted on your signal.
+
+**What you see today:** In meeting mode, sidebar project cards now have a small
+"◇ Mark discussed" button in the top-right corner. Tap it and it turns to
+"✦ Discussed" in teal. Open-item rows are tappable directly to toggle the same
+flag. As you write notes, any card whose name appears in your text gets a soft
+teal glow. When you summarize, Pip's plan modal shows ✦ Discussed badges on the
+rows that connect to things you flagged.
+
+**Why it matters:** This directly fixes the user's #1 complaint. When Pip knows
+what you discussed, it stops creating duplicates and starts doing what you actually
+want — updating the right project, closing the resolved item, and routing the work
+correctly. The signal is explicit (you tapped it) so Pip gets the highest possible
+confidence, not a guess.
 
 ---
 

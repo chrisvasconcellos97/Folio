@@ -411,11 +411,24 @@ function HistoryRow({ meeting, onEdit, onDelete, accountId, openItems, addItem, 
 }
 
 /* ---- Open items row ---- */
-export function OpenItemRow({ item, onClose }) {
+export function OpenItemRow({ item, onClose, discussed, mentioned, onToggleDiscussed }) {
   return (
-    <div style={Object.assign({}, glass, { display: "flex", alignItems: "flex-start", gap: 6, borderRadius: 10, padding: "10px 12px" })}>
+    <div
+      role={onToggleDiscussed ? "button" : undefined}
+      tabIndex={onToggleDiscussed ? 0 : undefined}
+      onClick={onToggleDiscussed ? function () { onToggleDiscussed(); } : undefined}
+      onKeyDown={onToggleDiscussed ? function (e) {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggleDiscussed(); }
+      } : undefined}
+      style={Object.assign({}, glass, {
+        display: "flex", alignItems: "flex-start", gap: 6, borderRadius: 10, padding: "10px 12px",
+        cursor: onToggleDiscussed ? "pointer" : "default",
+        borderLeft: discussed ? "3px solid " + C.accent : undefined,
+        boxShadow: mentioned && !discussed ? "0 0 0 1.5px " + C.accentLine : undefined,
+      })}
+    >
       <button
-        onClick={function () { onClose(item.id); }}
+        onClick={function (e) { e.stopPropagation(); onClose(item.id); }}
         aria-label="Mark complete"
         style={{
           width: 24, height: 24,
@@ -426,12 +439,22 @@ export function OpenItemRow({ item, onClose }) {
       >
         <span style={{
           width: 16, height: 16, borderRadius: 4,
-          border: "1.5px solid " + C.accentDim, background: "transparent",
+          border: "1.5px solid " + (discussed ? C.accent : C.accentDim), background: "transparent",
           display: "inline-block",
         }} />
       </button>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 12, color: C.text, lineHeight: 1.45 }}>{item.text}</div>
+        <div style={{
+          fontSize: 12, color: C.text, lineHeight: 1.45,
+          textDecoration: mentioned && !discussed ? "underline" : undefined,
+          textDecorationStyle: mentioned && !discussed ? "dashed" : undefined,
+          textDecorationColor: mentioned && !discussed ? C.accentLine : undefined,
+        }}>
+          {item.text}
+          {discussed && (
+            <span style={{ marginLeft: 6, fontSize: 9, color: C.accent, fontFamily: MONO }}>✦</span>
+          )}
+        </div>
         {item.due_date && (
           <div style={{ fontSize: 10, color: C.yellow, marginTop: 3, fontVariantNumeric: "tabular-nums" }}>
             Due {new Date(item.due_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
@@ -443,7 +466,7 @@ export function OpenItemRow({ item, onClose }) {
 }
 
 /* ---- Inline-expandable Gauge project card ---- */
-export function HubProjectCard({ project, accounts, members, userEmail, onUpdateProject }) {
+export function HubProjectCard({ project, accounts, members, userEmail, onUpdateProject, discussed, mentioned, onToggleDiscussed }) {
   var [open, setOpen] = useState(false);
   var isPlanning   = project.status === "planned" || project.status === "on_hold";
   var statusColor  = isPlanning ? C.yellow : C.accent;
@@ -456,8 +479,10 @@ export function HubProjectCard({ project, accounts, members, userEmail, onUpdate
     <div style={{
       background: C.surface,
       border: "1px solid " + (project.status === "blocked" ? C.statusBlocked.border : C.rule),
+      borderLeft: discussed ? "3px solid " + C.accent : undefined,
       borderRadius: 10,
       overflow: "hidden",
+      boxShadow: mentioned && !discussed ? "0 0 0 1.5px " + C.accentLine : undefined,
     }}>
       <div
         onClick={function () { setOpen(function (v) { return !v; }); }}
@@ -540,10 +565,35 @@ export function HubProjectCard({ project, accounts, members, userEmail, onUpdate
           )}
         </div>
         <div style={{
+          display: "flex", alignItems: "center", gap: 8,
           fontSize: 10, color: statusColor, fontFamily: MONO,
           letterSpacing: "0.08em", textTransform: "uppercase",
         }}>
-          {open ? "Collapse" : "Expand"}
+          {onToggleDiscussed && (
+            <button
+              type="button"
+              onClick={function (e) { e.stopPropagation(); onToggleDiscussed(); }}
+              title={discussed ? "Remove discussed flag" : "Mark as discussed"}
+              aria-label={discussed ? "Remove discussed flag" : "Mark as discussed"}
+              style={{
+                background: discussed ? C.accentFaint : "transparent",
+                border: "1px solid " + (discussed ? C.accentLine : C.rule),
+                borderRadius: 6,
+                padding: "6px 8px",
+                fontFamily: MONO, fontSize: 9,
+                color: discussed ? C.accent : C.textMuted,
+                cursor: "pointer",
+                letterSpacing: "0.07em", textTransform: "uppercase",
+                lineHeight: 1,
+                minWidth: 44, minHeight: 44,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {discussed ? "✦ Discussed" : "◇ Mark discussed"}
+            </button>
+          )}
+          <span>{open ? "Collapse" : "Expand"}</span>
         </div>
       </div>
       {open && (
@@ -678,6 +728,8 @@ export function CadenceHub({
   var [summarizeErrors, setSummarizeErrors] = useState({}); // { draftId: msg }
   var [previewPlan, setPreviewPlan]         = useState(null); // { plan, summary, draftId, suggestedTitle, meetingTitle, unknownPeople }
   var [previewTitleDraft, setPreviewTitleDraft] = useState(null); // edited title from preview modal
+  var [lastDiscussedProjectIds, setLastDiscussedProjectIds] = useState([]);
+  var [lastDiscussedItemIds,    setLastDiscussedItemIds]    = useState([]);
   var [readoutMeetingId, setReadoutMeetingId] = useState(null);
   var [readoutEmail, setReadoutEmail]         = useState("");
   var [readoutLoading, setReadoutLoading]     = useState(false);
@@ -900,10 +952,12 @@ export function CadenceHub({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoOpenMeetingMode]);
 
-  function handleSummarizeRequest(draftPayload) {
+  function handleSummarizeRequest(draftPayload, discussedProjectIds, discussedItemIds) {
     var draftId = draftPayload.id;
     if (summarizingId) return;
     setSummarizingId(draftId);
+    setLastDiscussedProjectIds(discussedProjectIds || []);
+    setLastDiscussedItemIds(discussedItemIds || []);
     setSummarizeErrors(function (prev) { var next = Object.assign({}, prev); delete next[draftId]; return next; });
     summarizeDraftPip({
       draft:             draftPayload,
@@ -934,6 +988,8 @@ export function CadenceHub({
       promiseStats:      promiseLog || null,
       openItems:         openItems,
       profileProse:      userProfile && userProfile.profile_prose ? userProfile.profile_prose : null,
+      discussedProjectIds: discussedProjectIds || [],
+      discussedItemIds:    discussedItemIds    || [],
     }).then(function (out) {
       var followUp = out.follow_up_date || null;
       return updateMeeting(draftId, {
@@ -1348,6 +1404,8 @@ export function CadenceHub({
         }));
       } : undefined}
       accountContacts={contacts || []}
+      discussedProjectIds={lastDiscussedProjectIds}
+      discussedItemIds={lastDiscussedItemIds}
     />
   ) : null;
 

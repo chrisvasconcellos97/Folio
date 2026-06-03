@@ -621,7 +621,9 @@ export function summarizeDraftPip(payload) {
   var healthSnapshots  = Array.isArray(payload.healthSnapshots) ? payload.healthSnapshots : [];
   var servicedStates   = Array.isArray(payload.servicedStates)  ? payload.servicedStates  : [];
   var promiseStats     = payload.promiseStats  || null;
-  var openItems        = Array.isArray(payload.openItems)       ? payload.openItems       : existingItems;
+  var openItems          = Array.isArray(payload.openItems)          ? payload.openItems          : existingItems;
+  var discussedProjectIds = Array.isArray(payload.discussedProjectIds) ? payload.discussedProjectIds : [];
+  var discussedItemIds    = Array.isArray(payload.discussedItemIds)    ? payload.discussedItemIds    : [];
 
   // #5 — skip Pip on trivial drafts (< 100 chars of notes + action_items).
   // Returns immediately with an empty plan so the caller still shows the
@@ -771,7 +773,8 @@ export function summarizeDraftPip(payload) {
     "account is mentioned, leave target_account_id null.\n" +
     "- is_commitment: set true when this row represents a first-person promise or deliverable you are committing to — language like \"I'll get you...\", \"we'll have X by...\", \"I'll follow up on...\", \"we'll send...\", \"I'll loop in...\". Default false for tasks, observations, or things the customer will do.\n" +
     "- new_task: ONLY use this kind when the project_id is a UUID that appears in the Active Gauge projects list. If no project matches, use new_item instead — never invent a project_id.\n" +
-    "- unknown_people: Scan the meeting notes for proper names (people, not companies or products) that do NOT appear in the CONTACTS list or attendees list provided. Include only names that seem to be real people relevant to the account. Omit the current user. Return empty array if no unknown people found.\n";
+    "- unknown_people: Scan the meeting notes for proper names (people, not companies or products) that do NOT appear in the CONTACTS list or attendees list provided. Include only names that seem to be real people relevant to the account. Omit the current user. Return empty array if no unknown people found.\n" +
+    "- DISCUSSED signal: when a project or item appears in the DISCUSSED block above, you have explicit confirmation it was talked about. For those items: always prefer update_task / update_item / close_item over creating a new row. Only create a new row if the discussed project clearly needs a NEW task that doesn't exist yet. Set confidence 'high' on all rows related to discussed items.\n";
 
   // BP1 — system: static schema + rules, cached globally
   var summarySystemBlocks = [
@@ -810,6 +813,20 @@ export function summarizeDraftPip(payload) {
     (activeProjects.length
       ? activeProjects.map(function (p) { return "- " + p.id + " · " + (p.title || "Untitled"); }).join("\n")
       : "(none)") + "\n\n" +
+    (discussedProjectIds.length || discussedItemIds.length
+      ? "── DISCUSSED THIS MEETING (high-confidence signal) ──\n" +
+        "These were explicitly flagged as discussed by the user — STRONGLY prefer update/close over new rows for them:\n" +
+        (discussedProjectIds.length
+          ? "Projects: " + discussedProjectIds.map(function (id) {
+              var p = activeProjects.find(function (x) { return x.id === id; });
+              return id + (p ? " (" + (p.title || "Untitled") + ")" : "");
+            }).join(", ") + "\n"
+          : "") +
+        (discussedItemIds.length
+          ? "Items/Tasks: " + discussedItemIds.join(", ") + "\n"
+          : "") +
+        "\n"
+      : "") +
     "Assignment hints (historical overrides on this account):\n" + hintLines;
 
   // Variable tail — CONTEXT + NOTES, different every call, no cache marker

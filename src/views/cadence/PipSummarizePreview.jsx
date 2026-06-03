@@ -510,6 +510,8 @@ export function PipSummarizePreview({
   onAddContact,      // ({ name, role, email }) => Promise — saves a new contact
   onCreateProject,   // (accountId, { title }) => Promise<project> — optional; creates a Gauge project
   accountContacts,   // optional: [{ id, name, role }] — contacts for this account as assignee options
+  discussedProjectIds = [],  // UUIDs of projects the user flagged as discussed
+  discussedItemIds    = [],  // UUIDs of items/tasks the user flagged as discussed
 }) {
   var memberOptions = useMemo(function () {
     return (orgMembers || []).map(function (m) {
@@ -1052,11 +1054,24 @@ export function PipSummarizePreview({
           )}
         </div>
         <div style={{
-          fontFamily: MONO, fontSize: 9, color: low ? C.yellow : C.textMuted,
-          letterSpacing: "0.07em", textTransform: "uppercase", flexShrink: 0,
-          marginTop: 2,
+          display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4,
+          flexShrink: 0, marginTop: 2,
         }}>
-          {row.confidence}
+          <div style={{
+            fontFamily: MONO, fontSize: 9, color: low ? C.yellow : C.textMuted,
+            letterSpacing: "0.07em", textTransform: "uppercase",
+          }}>
+            {row.confidence}
+          </div>
+          {((row.project_id && discussedProjectIds.indexOf(row.project_id) !== -1) ||
+            (row.target_id  && discussedItemIds.indexOf(row.target_id)    !== -1)) && (
+            <span style={{
+              background: C.accentFaint, border: "1px solid " + C.accentLine,
+              borderRadius: 6, padding: "2px 6px",
+              fontSize: 9, color: C.accent, fontFamily: MONO,
+              whiteSpace: "nowrap",
+            }}>✦ Discussed</span>
+          )}
         </div>
       </div>
     );

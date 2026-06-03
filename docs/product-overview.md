@@ -1,6 +1,6 @@
 # Folios — Product Overview
 
-*Last updated: 2026-06-01*
+*Last updated: 2026-06-03*
 
 This is the substantive product read after the [one-pager](./one-pager.md).
 Covers what Folios does, how it's structured, and what makes the Pip
@@ -117,6 +117,17 @@ On End & Summarize, Pip generates a structured plan (action items,
 project updates, follow-ups) and the user reviews it in the
 [summarize-preview modal](#pip--the-summarize-preview-modal) before
 applying.
+
+**Discussed signal:** during a meeting the user can tap any project card
+or open-item row in the sidebar to flag it as "discussed this meeting."
+Flagged cards show a teal ✦ Discussed chip. As the user types notes, the
+sidebar also auto-highlights any project or item whose title appears in
+the notes with a subtle glow — giving visual confirmation Pip will
+connect the dots before hitting summarize. Flagged IDs are passed to Pip
+at summarize time so Pip strongly prefers updating or closing those items
+instead of creating new duplicates. Rows in the plan modal that touch a
+flagged project or item show a ✦ Discussed badge so the user can see Pip
+acted on the signal.
 
 ### Logging conversations (non-cadence)
 

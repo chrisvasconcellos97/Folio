@@ -102,7 +102,7 @@ export function AdHocConversationFlow({
     return done.length ? done[0].meeting_date : null;
   }, [meetings, draftId]);
 
-  function handleSummarize(draftPayload) {
+  function handleSummarize(draftPayload, discussedProjectIds, discussedItemIds) {
     if (summarizing || !draftPayload) return;
     setSummarizing(true);
     setSummarizeErr(null);
@@ -123,11 +123,13 @@ export function AdHocConversationFlow({
       pipAccountState:  pipAccountStateRow || null,
       contacts:         (contacts || []),
       meetingHistory:   (meetings || []).filter(function(m) { return m.id !== draftPayload.id; }).slice(0, 5),
-      ownerUserId:      account.owner_user_id || null,
-      userId:           userId,
-      isPersonCadence:  false,
-      profileProse:     profileProse,
-      facts:            pipFactsApi.activeFactStrings || [],
+      ownerUserId:         account.owner_user_id || null,
+      userId:              userId,
+      isPersonCadence:     false,
+      profileProse:        profileProse,
+      facts:               pipFactsApi.activeFactStrings || [],
+      discussedProjectIds: discussedProjectIds || [],
+      discussedItemIds:    discussedItemIds    || [],
     }).then(function (out) {
       var followUp = out.follow_up_date || null;
       return updateMeeting(draftPayload.id, {

@@ -256,7 +256,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
     .sort()
     .reverse()[0] || null;
 
-  function handleAdHocSummarize(draftPayload) {
+  function handleAdHocSummarize(draftPayload, discussedProjectIds, discussedItemIds) {
     if (adHocSummarizing || !draftPayload) return;
     setAdHocSummarizing(true);
     setAdHocSummarizeErr(null);
@@ -280,11 +280,13 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
       pipAccountState:  pipAcctState.getStateRow(account.id) || null,
       contacts:         contacts || [],
       meetingHistory:   (meetings || []).filter(function(m) { return m.id !== draftPayload.id; }).slice(0, 5),
-      ownerUserId:      account.owner_user_id || null,
-      userId:           userId,
-      isPersonCadence:  false,
-      profileProse:     profileProse,
-      facts:            pipFactsApi.activeFactStrings || [],
+      ownerUserId:         account.owner_user_id || null,
+      userId:              userId,
+      isPersonCadence:     false,
+      profileProse:        profileProse,
+      facts:               pipFactsApi.activeFactStrings || [],
+      discussedProjectIds: discussedProjectIds || [],
+      discussedItemIds:    discussedItemIds    || [],
     }).then(function (out) {
       var followUp = out.follow_up_date || null;
       return updateMeeting(draftPayload.id, {
@@ -298,7 +300,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
     }).then(function (out) {
       setAdHocSummarizing(false);
       setAdHocTitleDraft(out.suggested_title || null);
-      setAdHocPreviewPlan({ plan: out.plan || [], summary: out.summary || "", draftId: draftPayload.id, skippedByPip: !!out.skippedByPip, suggestedTitle: out.suggested_title || null, meetingTitle: draftPayload.title || null, unknownPeople: out.unknown_people || [] });
+      setAdHocPreviewPlan({ plan: out.plan || [], summary: out.summary || "", draftId: draftPayload.id, skippedByPip: !!out.skippedByPip, suggestedTitle: out.suggested_title || null, meetingTitle: draftPayload.title || null, unknownPeople: out.unknown_people || [], discussedProjectIds: discussedProjectIds || [], discussedItemIds: discussedItemIds || [] });
     }).catch(function (err) {
       setAdHocSummarizing(false);
       setAdHocSummarizeErr((err && err.message) || "Pip couldn't summarize.");
@@ -794,6 +796,8 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
             }));
           } : undefined}
           accountContacts={contacts || []}
+          discussedProjectIds={adHocPreviewPlan.discussedProjectIds || []}
+          discussedItemIds={adHocPreviewPlan.discussedItemIds || []}
         />
       )}
 

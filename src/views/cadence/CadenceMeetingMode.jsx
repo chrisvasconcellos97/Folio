@@ -130,6 +130,10 @@ export function CadenceMeetingMode({
   var isDesktop                         = useBreakpoint();
   var isMobile                          = !isDesktop;
   var [notes, setNotes]                 = useState(draft.notes || "");
+  var [discussedProjectIds, setDiscussedProjectIds] = useState([]);
+  var [discussedItemIds,    setDiscussedItemIds]    = useState([]);
+  var [mentionedProjectIds, setMentionedProjectIds] = useState([]);
+  var [mentionedItemIds,    setMentionedItemIds]    = useState([]);
   var [bulletsOn, setBulletsOn]         = useState(function () {
     try { var v = localStorage.getItem(BULLET_KEY); return v === null ? true : v === "1"; } catch (e) { return true; }
   });
@@ -203,6 +207,34 @@ export function CadenceMeetingMode({
     });
   }
 
+  // Live fuzzy match — highlight sidebar cards whose title/text appears in notes.
+  // Runs debounced 300ms after each keystroke so it never blocks typing.
+  useEffect(function () {
+    var timer = setTimeout(function () {
+      var lower = (notes || "").toLowerCase();
+      var pIds = (projects || []).filter(function (p) {
+        if (!p || !p.title) return false;
+        var title = p.title.toLowerCase();
+        if (title.length >= 3 && lower.indexOf(title) !== -1) return true;
+        return title.split(/\s+/).filter(function (w) {
+          return w.length >= 3 && ["and","the","for","auto","inc","llc","corp","ltd","group"].indexOf(w) === -1;
+        }).some(function (w) {
+          return new RegExp("\\b" + w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i").test(notes);
+        });
+      }).map(function (p) { return p.id; });
+
+      var iIds = (openItems || []).filter(function (item) {
+        if (!item || !item.text) return false;
+        var text = item.text.toLowerCase();
+        return text.length >= 4 && lower.indexOf(text.substring(0, Math.min(text.length, 20))) !== -1;
+      }).map(function (item) { return item.id; });
+
+      setMentionedProjectIds(pIds);
+      setMentionedItemIds(iIds);
+    }, 300);
+    return function () { clearTimeout(timer); };
+  }, [notes, projects, openItems]);
+
   // ESC closes
   useEffect(function () {
     function onKey(e) {
@@ -236,7 +268,7 @@ export function CadenceMeetingMode({
     if (summarizing) return;
     var draftPayload = Object.assign({}, draft, { notes: notes });
     flushPendingSave().finally(function () {
-      onSummarizeRequest(draftPayload);
+      onSummarizeRequest(draftPayload, discussedProjectIds, discussedItemIds);
     });
   }
 
@@ -502,6 +534,15 @@ export function CadenceMeetingMode({
                           members={members}
                           userEmail={userEmail}
                           onUpdateProject={onUpdateProject}
+                          discussed={discussedProjectIds.indexOf(p.id) !== -1}
+                          mentioned={mentionedProjectIds.indexOf(p.id) !== -1}
+                          onToggleDiscussed={function () {
+                            setDiscussedProjectIds(function (prev) {
+                              return prev.indexOf(p.id) !== -1
+                                ? prev.filter(function (id) { return id !== p.id; })
+                                : prev.concat([p.id]);
+                            });
+                          }}
                         />
                       );
                     })}
@@ -514,7 +555,22 @@ export function CadenceMeetingMode({
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                     {(openItems || []).map(function (i) {
-                      return <OpenItemRow key={i.id} item={i} onClose={onCloseItem} />;
+                      return (
+                        <OpenItemRow
+                          key={i.id}
+                          item={i}
+                          onClose={onCloseItem}
+                          discussed={discussedItemIds.indexOf(i.id) !== -1}
+                          mentioned={mentionedItemIds.indexOf(i.id) !== -1}
+                          onToggleDiscussed={function () {
+                            setDiscussedItemIds(function (prev) {
+                              return prev.indexOf(i.id) !== -1
+                                ? prev.filter(function (id) { return id !== i.id; })
+                                : prev.concat([i.id]);
+                            });
+                          }}
+                        />
+                      );
                     })}
                   </div>
                 )}
@@ -797,6 +853,15 @@ export function CadenceMeetingMode({
                           members={members}
                           userEmail={userEmail}
                           onUpdateProject={onUpdateProject}
+                          discussed={discussedProjectIds.indexOf(p.id) !== -1}
+                          mentioned={mentionedProjectIds.indexOf(p.id) !== -1}
+                          onToggleDiscussed={function () {
+                            setDiscussedProjectIds(function (prev) {
+                              return prev.indexOf(p.id) !== -1
+                                ? prev.filter(function (id) { return id !== p.id; })
+                                : prev.concat([p.id]);
+                            });
+                          }}
                         />
                       );
                     })}
@@ -807,7 +872,22 @@ export function CadenceMeetingMode({
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                     {(openItems || []).map(function (i) {
-                      return <OpenItemRow key={i.id} item={i} onClose={onCloseItem} />;
+                      return (
+                        <OpenItemRow
+                          key={i.id}
+                          item={i}
+                          onClose={onCloseItem}
+                          discussed={discussedItemIds.indexOf(i.id) !== -1}
+                          mentioned={mentionedItemIds.indexOf(i.id) !== -1}
+                          onToggleDiscussed={function () {
+                            setDiscussedItemIds(function (prev) {
+                              return prev.indexOf(i.id) !== -1
+                                ? prev.filter(function (id) { return id !== i.id; })
+                                : prev.concat([i.id]);
+                            });
+                          }}
+                        />
+                      );
                     })}
                   </div>
                 ))}
