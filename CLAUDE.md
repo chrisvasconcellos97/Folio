@@ -404,6 +404,39 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 25. *(shipped — see Already shipped: Stakeholder / relationship layer)*
 
+26. **Universal account picker search** — every account dropdown across the app gets live search/filter. Currently all pickers are plain selects or ChipDropdowns with no search, making large account lists slow to navigate. Affected locations: `QuickTaskModal`, `ProjectModal`, `ShareTargetView`, `SetCadenceModal` (single + multi), `TaskDetailPanel`, `AddAccountModal` parent picker. Build a shared `AccountPicker` component (search input + filtered list, keyboard navigable, mobile-safe ≥16px) and replace all existing account selects with it.
+
+27. **Smart entity detection + contact/account aliases (org-scoped)** — converts natural language in task and note fields into structured data without manual work.
+
+    **Alias table (`folio_contact_aliases`, `folio_account_aliases`):**
+    - Scoped to `org_id` (not `user_id`) — one team builds one shared dictionary
+    - `contact_id / account_id`, `alias text`, `org_id`, `created_by uuid`
+    - Three population layers: (1) manual add inline on contact/account card; (2) confirmation learning — when detection is ambiguous and user resolves it, system asks "Save X as shorthand for Y?" one tap, never asks again; (3) Pip passive suggestion — Pip notices an alias recurring ≥3× in notes near a resolved entity and suggests adding it; any org member can approve
+    - Company/brand aliases too: "LKQ" → LKQ Corporation, "PA" → Parts Authority, "KSI" → KSI Auto Parts
+
+    **Real-time detection hook (`useEntityDetection`):**
+    - Runs on every keystroke in task title, task description, and meeting note fields (debounced 300ms)
+    - Matching layers in priority order: alias exact match → full name match → first name match (per-account scoped) → role-based match ("the PM" → Sarah if Sarah is tagged PM at that account) → org keyword rules (user-configured: "product team" → assignee email)
+    - Verb-signal confidence scoring: delivery verbs ("get X", "send to X", "for X") → low confidence recipient flag; ownership verbs ("X will", "X to handle", "with X", "X owns") → high confidence assignee
+    - Temporal signal detection alongside name: "by Friday", "end of month", "before the QBR" → suggest due date at same moment as assignee suggestion
+    - Recurring phrase learning: org's specific language patterns ("loop in X" = add attendee, "X owns the Y" = assign) learned over time
+
+    **Confidence-based UI:**
+    - High confidence → auto-fills assignee/recipient field with subtle "matched: Ryan P → Ryan Przybylski" label; dismiss button always visible
+    - Ambiguous (two Ryans, delivery vs. ownership unclear) → inline prompt chip: `[Assignee] [Recipient] [Ignore]` — one tap, no modal
+    - Low confidence → suggestion chip only, doesn't auto-fill
+
+    **Structured output Pip reads:**
+    - Confirmed detections write `assignee_contact_id`, `recipient_contact_id`, `is_commitment` to task rows
+    - Pip distinguishes "tasks you owe a contact" from "tasks a contact owes you" — briefs become two-directional
+    - Recipient data surfaces in pre-call briefs: "Danielle is waiting on the deck from your last meeting"
+    - Alias table resolves in: ⌘K search, email drafts, QBR generation, cadence prep briefs, cross-account pattern detection
+    - Historical notes retroactively more legible to Pip — "Ryan P" in 6-month-old notes now resolves correctly
+
+28. **Gauge filter by account** — filter the project list by one or multiple accounts alongside the existing scope/status/overdue pills. When a user has many projects across many accounts, scanning for "all KSI projects" or "all Parts Authority projects" is slow without this. Add an account filter pill row (or multi-select chip) above or beside the existing filter pills in GaugeView. Selecting one or more accounts narrows the project list to only those accounts' projects; combining with scope/status/overdue filters applies all criteria together (AND logic). Clear-all resets the account filter. The filter state should persist within the session (same pattern as scope/status filters already do).
+
+29. **Progress bar gradient: blue → Pip teal** — any progress bar in the app that tracks completeness or progress should use a gradient fill that starts blue on the left and ends at Pip's teal (`C.accent`) on the right, so the visual language communicates "heading toward done." Primary candidate: the onboarding interview progress bar in `PipOnboardingView`. Secondary: the completeness meter in Settings → "What Pip knows about you" (item 10 Phase 3 when built). Use `background: linear-gradient(to right, #3b82f6, var(--c-accent))` on the fill element.
+
 15. *(shipped — see Already shipped)*
 
 16. *(ripped — Route Builder removed, not needed)*
