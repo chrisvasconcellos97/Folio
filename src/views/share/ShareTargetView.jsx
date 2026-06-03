@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { C } from "../../lib/colors.js";
 import { useAccounts } from "../../hooks/useAccounts.js";
+import { AccountPicker } from "../../components/AccountPicker.jsx";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
@@ -47,20 +48,12 @@ export function ShareTargetView({ userId, onOpenConversation, onBack }) {
 
       <div style={{ marginBottom: 14 }}>
         <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Account</div>
-        <select
-          value={selectedAccountId}
-          onChange={function (e) { setSelectedAccountId(e.target.value); }}
-          style={{
-            width: "100%", background: C.surface, border: "1px solid " + C.rule,
-            borderRadius: 8, padding: "10px 12px", fontFamily: MONO, fontSize: 16,
-            color: C.text, outline: "none", cursor: "pointer",
-          }}
-        >
-          <option value="">Pick an account…</option>
-          {(accounts || []).filter(function (a) { return !a.is_inactive; }).map(function (a) {
-            return <option key={a.id} value={a.id}>{a.name}</option>;
-          })}
-        </select>
+        <AccountPicker
+          accounts={(accounts || []).filter(function (a) { return !a.is_inactive; })}
+          value={selectedAccountId || null}
+          onChange={function (id) { setSelectedAccountId(id || ""); }}
+          placeholder="Pick an account…"
+        />
       </div>
 
       <div style={{ display: "flex", gap: 10 }}>
