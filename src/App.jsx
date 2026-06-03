@@ -1076,6 +1076,13 @@ export default function App() {
       members={members}
       defaultType={editingAccount ? null : addAccountDefaultType}
       onSave={editingAccount ? handleEditAccount : handleAddAccount}
+      onAddContacts={function (accountId, contacts) {
+        return Promise.all(contacts.map(function (c) {
+          return supabase
+            .from("folio_contacts")
+            .insert([{ user_id: userId, account_id: accountId, name: c.name.trim(), title: c.role || null, email: c.email || null, is_leader: !!c.is_leader }]);
+        }));
+      }}
       onClose={function () { setShowAddAccount(false); setEditingAccount(null); setAddAccountDefaultType(null); }}
     />
   );
