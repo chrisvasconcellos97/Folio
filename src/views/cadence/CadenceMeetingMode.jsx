@@ -163,6 +163,7 @@ export function CadenceMeetingMode({
   var [newContactRole, setNewContactRole]   = useState("");
   var [newContactEmail, setNewContactEmail] = useState("");
   var [savingContact, setSavingContact]     = useState(false);
+  var [focusMode, setFocusMode]         = useState(false);
   var [attendees, setAttendees]         = useState(Array.isArray(draft.attendees) ? draft.attendees.slice() : []);
   var saveTimer = useRef(null);
   var attendeesTimer = useRef(null);
@@ -546,8 +547,8 @@ export function CadenceMeetingMode({
           vertical with a tabbed context section so neither column gets
           squeezed. */}
       <div style={{ display: "flex", flex: 1, minHeight: 0, flexDirection: isMobile ? "column" : "row" }}>
-        {/* Sidebar — desktop only */}
-        {!isMobile && (
+        {/* Sidebar — desktop only, hidden in focus mode */}
+        {!isMobile && !focusMode && (
         <div style={{
           width: sidebarWidth,
           background: C.surface2,
@@ -828,6 +829,20 @@ export function CadenceMeetingMode({
                   >
                     • Bullets {bulletsOn ? "on" : "off"}
                   </button>
+                  <button
+                    onClick={function () { setFocusMode(function (v) { return !v; }); }}
+                    aria-pressed={focusMode}
+                    title={focusMode ? "Exit focus mode" : "Focus mode"}
+                    style={{
+                      background: focusMode ? C.accentFaint : "transparent",
+                      border: "1px solid " + (focusMode ? C.accentLine : C.rule),
+                      borderRadius: 6, color: focusMode ? C.accent : C.textMuted,
+                      fontFamily: MONO, fontSize: 11, padding: "4px 10px",
+                      cursor: "pointer", whiteSpace: "nowrap",
+                    }}
+                  >
+                    {focusMode ? "⊠ Focus" : "⊡ Focus"}
+                  </button>
                 </div>
               </div>
               {(function () {
@@ -886,8 +901,8 @@ export function CadenceMeetingMode({
 
           {/* Mobile context tabs + content. Stacks below the notes so all
               three sections (projects / items / contacts) are reachable
-              without a sidebar drawer. */}
-          {isMobile && (
+              without a sidebar drawer. Hidden in focus mode. */}
+          {isMobile && !focusMode && (
             <>
               <div style={{
                 display: "flex", gap: 4,
