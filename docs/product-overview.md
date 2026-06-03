@@ -212,6 +212,24 @@ output.
    accounts they have. Soft-gated: interview is skippable and resumable.
    Existing users see a dismissible HomeView card. Cost: ~$0.002 once.
 
+   **Phase 2 — drip questions.** After onboarding, Pip continues learning
+   via a gentle weekly drip. Once per day (max 3 per rolling 7 days, 48h
+   cooldown after any skip), a "Pip's Curious" card appears on the Home
+   screen with one question at a time — inline textarea, never a modal.
+   Three gap types are auto-detected (zero LLM cost): contacts who appear
+   in ≥3 meetings but have no role recorded, accounts past 30 days with
+   no objective, and empty profile slots post-onboarding. An evergreen
+   bank of 15 get-to-know-you questions ensures the well never runs dry.
+   **Terminology lane (Lane C):** once per week, a Haiku scan of recent
+   meeting notes surfaces proper nouns / brand names / codenames that appear
+   ≥3 times but aren't a known account name, contact, or glossary term.
+   Pip asks what they are — answers write directly to `folio_pip_facts` so
+   future briefs know the company's vocabulary automatically. Answering ≥3
+   drip questions since the last synthesis triggers a background re-synthesis
+   so `profile_prose` stays current. Settings → "Pip's Questions" has a
+   global pause toggle and a completeness meter. Cost: gap detection = $0;
+   terminology scan ≈ $0.01/month; re-synthesis ≈ $0.004 per batch.
+
 1. **Correction log (`pip_correction_log`).** Every time the user
    declines a proposed action, edits the text of a Pip-created item,
    reassigns a task, or rejects a routing decision, the correction is

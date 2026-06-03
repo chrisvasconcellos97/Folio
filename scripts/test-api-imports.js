@@ -18,6 +18,7 @@ var handlers = [
   "api/business-review.js",
   "api/leadership-readout.js",
   "api/profile-synthesis.js",
+  "api/detect-terminology.js",
 ];
 
 var failed = false;

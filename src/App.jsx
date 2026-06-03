@@ -46,6 +46,9 @@ import { usePipState } from "./lib/pipState";
 import { compressCorrectionsPip } from "./lib/pip";
 import { PipOnboardingView } from "./views/onboarding/PipOnboardingView";
 import { computeAndSaveSnapshots } from "./lib/accountSnapshots";
+import { detectKnowledgeGaps, seedEvergreenIfEmpty } from "./lib/detectKnowledgeGaps.js";
+import { usePipDripQuestions } from "./hooks/usePipDripQuestions.js";
+import { usePipFacts as usePipFactsApp } from "./hooks/usePipFacts.js";
 import { C } from "./lib/colors";
 import { QuickTaskModal } from "./views/quicktasks/QuickTaskModal";
 
@@ -479,6 +482,87 @@ export default function App() {
     }).catch(function (e) { showToast(e.message || "Couldn't merge — check your connection", "error"); });
   }
 
+  // Pip drip questions (Phase 2) — global facts hook for writing terminology answers.
+  var pipFactsAppApi = usePipFactsApp(userId);
+
+  // Drip question hook — loads gap_observed questions, applies throttle, exposes active question.
+  var dripHook = usePipDripQuestions(
+    userId,
+    userProfile,
+    function onTermLearned(term, definition) {
+      if (!term || !definition) return;
+      pipFactsAppApi.addFact({ fact: term + " — " + definition, source: "pip_inferred" }).catch(function () {});
+    }
+  );
+
+  // Daily detectKnowledgeGaps — once per calendar day, pure JS, zero LLM cost.
+  useEffect(function () {
+    if (!userId || !accounts || !allContacts) return;
+    var key = "folio_detect_gaps_last_" + userId;
+    var last = 0;
+    try { last = parseInt(localStorage.getItem(key) || "0", 10); } catch (e) {}
+    var todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+    if (last >= todayStart.getTime()) return; // already ran today
+    try { localStorage.setItem(key, String(Date.now())); } catch (e) {}
+    detectKnowledgeGaps({ userId: userId, supabase: supabase, accounts: accounts, meetings: meetings || [], contacts: allContacts, profile: userProfile })
+      .then(function () { return seedEvergreenIfEmpty({ userId: userId, supabase: supabase }); })
+      .catch(function (err) { console.warn("[detectKnowledgeGaps] failed:", err && err.message); });
+  }, [userId, accounts && accounts.length, allContacts && allContacts.length]);
+
+  // Weekly terminology scan — one lightweight Haiku call, fire-and-forget.
+  // Skip if user has paused drip questions.
+  useEffect(function () {
+    if (!userId || !session) return;
+    if (userProfile && userProfile.pip_questions_paused) return;
+    var key = "folio_terminology_scan_last_" + userId;
+    var last = 0;
+    try { last = parseInt(localStorage.getItem(key) || "0", 10); } catch (e) {}
+    if (Date.now() - last < 7 * 24 * 60 * 60 * 1000) return; // once per 7 days
+    try { localStorage.setItem(key, String(Date.now())); } catch (e) {}
+    fetch("/api/detect-terminology", {
+      method:  "POST",
+      headers: {
+        "Content-Type":  "application/json",
+        "Authorization": "Bearer " + session.access_token,
+      },
+      body: JSON.stringify({}),
+    }).catch(function (err) { console.warn("[detect-terminology] failed:", err && err.message); });
+  }, [userId]);
+
+  // Re-synthesis trigger — when drip hook reports >= 3 new answers since last synthesis.
+  useEffect(function () {
+    if (!userId || !session) return;
+    if (dripHook.answeredCount < 3) return;
+    var key = "folio_resynth_last_" + userId;
+    var last = 0;
+    try { last = parseInt(localStorage.getItem(key) || "0", 10); } catch (e) {}
+    if (Date.now() - last < 24 * 60 * 60 * 1000) return; // once per 24h
+    try { localStorage.setItem(key, String(Date.now())); } catch (e) {}
+
+    // Gather all answered Q&A pairs (bank + drip) for synthesis.
+    Promise.all([
+      supabase.from("folio_pip_questions").select("question_text, answer_text, category, source").eq("user_id", userId).eq("status", "answered"),
+    ]).then(function (results) {
+      var allAnswered = results[0].data || [];
+      var pairs = allAnswered
+        .filter(function (r) { return r.answer_text; })
+        .map(function (r) { return { question: r.question_text, answer: r.answer_text }; });
+      if (!pairs.length) return;
+      return fetch("/api/profile-synthesis", {
+        method:  "POST",
+        headers: {
+          "Content-Type":  "application/json",
+          "Authorization": "Bearer " + session.access_token,
+        },
+        body: JSON.stringify({ pairs: pairs }),
+      }).then(function (r) { return r.json(); }).then(function (parsed) {
+        if (!parsed || parsed.error) return;
+        var update = Object.assign({}, parsed, { prose_generated_at: new Date().toISOString() });
+        userProfileApi.upsertProfile(update).catch(function () {});
+      });
+    }).catch(function (err) { console.warn("[resynth] failed:", err && err.message); });
+  }, [userId, dripHook.answeredCount]);
+
   // ──── ALL HOOKS MUST BE ABOVE THIS LINE — see React Hook Order Rule in CLAUDE.md ────
   if (authLoading) {
     return (
@@ -735,6 +819,10 @@ export default function App() {
           setDismissedOnboardingCard(true);
           try { localStorage.setItem("folio_onboarding_dismissed", "1"); } catch (e) {}
         }}
+        dripQuestion={dripHook.activeQuestion}
+        onAnswerDrip={dripHook.answerQuestion}
+        onSkipDrip={dripHook.skipQuestion}
+        onDismissDrip={dripHook.dismissQuestion}
       />
     );
   }

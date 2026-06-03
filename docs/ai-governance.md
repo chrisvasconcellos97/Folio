@@ -41,6 +41,8 @@ Folios takes AI seriously. Pip is built on three principles:
 | Route tasks across accounts based on user notes | Inside summarize plans |
 | Distill correction history into account lessons | Background compression pass |
 | Execute confirmed tool calls (add item, set follow-up, close item, etc.) | User-approved actions from chat |
+| Scan meeting notes for unknown brand names / codenames | Weekly background scan (once per 7 days, user-initiated on first load) |
+| Synthesize profile prose from drip Q&A answers | Background re-synthesis when ≥3 new answers accumulated |
 
 ## What Pip cannot do
 
@@ -51,7 +53,7 @@ Folios takes AI seriously. Pip is built on three principles:
 | Access data outside the user's own (or org-mates') scope | Enforced by Supabase RLS at the database layer |
 | Persist anything to other users' data | Same — RLS enforces user/org scope |
 | Speak for the user externally (Slack, email, etc.) | No external write integrations exist |
-| Auto-trigger on a schedule | No cron jobs; Pip only runs when the user invokes a Pip surface |
+| Auto-trigger on a server-side schedule | No cron jobs; all background passes run client-side when the user opens the app |
 | Override user corrections | Corrections are immutable; Pip reads them as instructions |
 
 ---

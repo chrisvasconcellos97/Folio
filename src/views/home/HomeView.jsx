@@ -128,7 +128,7 @@ function renderBriefWithGlows(text, accounts, onOpenAccount) {
   return segments;
 }
 
-export function HomeView({ userName, userId, accounts, meetings, items, cadences, projects, onOpenAccount, onOpenAccountTab, onOpenCadenceHub, onOpenConversation, onOpenQuickTask, showOnboardingCard, onStartInterview, onDismissOnboardingCard }) {
+export function HomeView({ userName, userId, accounts, meetings, items, cadences, projects, onOpenAccount, onOpenAccountTab, onOpenCadenceHub, onOpenConversation, onOpenQuickTask, showOnboardingCard, onStartInterview, onDismissOnboardingCard, dripQuestion, onAnswerDrip, onSkipDrip, onDismissDrip }) {
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
   var [mounted, setMounted] = useState(false);
@@ -136,6 +136,11 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
   var [captureMenuOpen, setCaptureMenuOpen] = useState(false);
   var [briefCallouts, setBriefCallouts] = useState([]);
   var [briefLoading, setBriefLoading] = useState(false);
+  var [dripAnswer, setDripAnswer]     = useState("");
+  var [dripSaving, setDripSaving]     = useState(false);
+
+  // Reset textarea when the active question changes.
+  useEffect(function () { setDripAnswer(""); }, [dripQuestion && dripQuestion.id]);
 
   var { snapshots } = useAccountSnapshots(userId);
 
@@ -780,6 +785,98 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
                 </div>
               )
             }
+          </div>
+        </div>
+      )}
+
+      {/* Drip question card — between daily brief and four-panel grid */}
+      {dripQuestion && (
+        <div style={{
+          maxWidth: 600,
+          margin: isMobile ? "0 16px 12px" : "0 auto 12px",
+          padding: "16px",
+          background: C.surface,
+          border: "1px solid " + C.rule,
+          borderLeft: "3px solid " + C.accent,
+          borderRadius: 12,
+        }}>
+          <div style={{ fontFamily: MONO, fontSize: 10, color: C.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
+            {"Pip's Curious"}
+          </div>
+          <div style={{ fontFamily: INTER, fontSize: 14, color: C.text, lineHeight: 1.55, marginBottom: 12 }}>
+            {dripQuestion.question_text}
+          </div>
+          <textarea
+            value={dripAnswer}
+            onChange={function (e) { setDripAnswer(e.target.value); }}
+            placeholder="Your answer…"
+            rows={2}
+            style={{
+              width: "100%",
+              fontSize: 16,
+              fontFamily: INTER,
+              color: C.text,
+              background: C.bg,
+              border: "1px solid " + C.rule,
+              borderRadius: 7,
+              padding: "9px 12px",
+              resize: "vertical",
+              outline: "none",
+              boxSizing: "border-box",
+              lineHeight: 1.5,
+              marginBottom: 10,
+            }}
+          />
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <button
+              type="button"
+              disabled={!dripAnswer.trim() || dripSaving}
+              onClick={function () {
+                if (!dripAnswer.trim() || dripSaving) return;
+                setDripSaving(true);
+                var p = onAnswerDrip ? onAnswerDrip(dripQuestion.id, dripAnswer.trim()) : Promise.resolve();
+                (p || Promise.resolve()).then(function () {
+                  setDripSaving(false);
+                  setDripAnswer("");
+                }).catch(function () { setDripSaving(false); });
+              }}
+              style={{
+                background: C.accentDeep,
+                border: "1px solid " + C.accent,
+                borderRadius: 7,
+                padding: "7px 16px",
+                fontSize: 13,
+                fontWeight: 600,
+                color: C.bg,
+                fontFamily: INTER,
+                cursor: dripAnswer.trim() && !dripSaving ? "pointer" : "not-allowed",
+                opacity: dripAnswer.trim() && !dripSaving ? 1 : 0.5,
+              }}
+            >
+              {dripSaving ? "Saving…" : "Answer"}
+            </button>
+            <button
+              type="button"
+              onClick={function () { if (onSkipDrip) onSkipDrip(dripQuestion.id); }}
+              style={{
+                background: "none", border: "none",
+                color: C.textMuted, fontSize: 12,
+                fontFamily: INTER, cursor: "pointer", padding: "4px 0",
+              }}
+            >
+              Skip
+            </button>
+            <button
+              type="button"
+              onClick={function () { if (onDismissDrip) onDismissDrip(dripQuestion.id); }}
+              style={{
+                background: "none", border: "none",
+                color: C.textMuted, fontSize: 12,
+                fontFamily: INTER, cursor: "pointer", padding: "4px 0",
+              }}
+            >
+              Not now
+            </button>
           </div>
         </div>
       )}

@@ -8,6 +8,7 @@ import { showToast } from "../../components/Toast";
 import { Modal } from "../../components/Modal";
 import { supabase } from "../../lib/supabase";
 import { usePipFacts } from "../../hooks/usePipFacts";
+import { useUserProfile } from "../../hooks/useUserProfile";
 import { usePipUsage } from "../../hooks/usePipUsage";
 import { useGlossary } from "../../hooks/useGlossary";
 import { useActivity } from "../../hooks/useActivity";
@@ -1378,6 +1379,93 @@ function NotificationsSection() {
   );
 }
 
+function PipQuestionsSection({ userId }) {
+  var profileApi = useUserProfile(userId);
+  var profile    = profileApi.profile;
+  var [saving, setSaving] = useState(false);
+
+  var paused = !!(profile && profile.pip_questions_paused);
+  var completeness = (profile && profile.completeness) || 0;
+
+  function togglePause() {
+    if (!profile || saving) return;
+    setSaving(true);
+    profileApi.upsertProfile({ pip_questions_paused: !paused })
+      .then(function () { setSaving(false); })
+      .catch(function (err) { setSaving(false); showToast(err.message || "Couldn't save", "error"); });
+  }
+
+  return (
+    <Card>
+      <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 20, fontWeight: 400, color: C.text, marginBottom: 4 }}>
+        {"Pip's Questions"}
+      </div>
+      <div style={{ fontSize: 13, color: C.textSub, lineHeight: 1.6, marginBottom: 14 }}>
+        Pip asks a few gentle questions each week to learn your world — your accounts, contacts, vocabulary — and use them in every brief.
+      </div>
+
+      {/* Completeness meter */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+          <div style={{ fontSize: 12, color: C.textSub, fontWeight: 600 }}>Profile completeness</div>
+          <div style={{ fontSize: 12, color: C.accent, fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontWeight: 700 }}>
+            {completeness}%
+          </div>
+        </div>
+        <div style={{
+          height: 6, borderRadius: 999,
+          background: C.rule, overflow: "hidden",
+        }}>
+          <div style={{
+            height: "100%",
+            width: completeness + "%",
+            background: C.accent,
+            borderRadius: 999,
+            transition: "width 0.4s ease",
+          }} />
+        </div>
+      </div>
+
+      {/* Pause toggle */}
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "12px 0", borderTop: "1px solid " + C.rule, gap: 12,
+      }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>Pause {"Pip's"} questions</div>
+          <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
+            Onboarding and profile injection still work. Just silences the weekly drip.
+          </div>
+        </div>
+        <button
+          role="switch"
+          aria-checked={paused}
+          onClick={togglePause}
+          disabled={saving || !profile}
+          style={{
+            width: 44, height: 24, borderRadius: 999,
+            background: paused ? C.accent : C.surface3,
+            border: "1px solid " + (paused ? C.accent : C.rule),
+            cursor: saving || !profile ? "not-allowed" : "pointer",
+            position: "relative", flexShrink: 0,
+            transition: "background 0.18s ease, border-color 0.18s ease",
+            opacity: saving || !profile ? 0.6 : 1,
+          }}
+        >
+          <span style={{
+            position: "absolute",
+            top: 1, left: paused ? 21 : 1,
+            width: 20, height: 20, borderRadius: "50%",
+            background: "#fff",
+            transition: "left 0.18s ease",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+          }} />
+        </button>
+      </div>
+    </Card>
+  );
+}
+
 function AppearanceSection() {
   var t = useTheme();
   var options = [
@@ -1457,6 +1545,8 @@ export function SettingsView({ userId, userMeta, orgId, role, members, accounts 
         {userId && <PipUsageSection userId={userId} />}
 
         {userId && <PipGlossarySection userId={userId} orgId={orgId} accounts={accounts} />}
+
+        {userId && <PipQuestionsSection userId={userId} />}
 
         {orgId && (
           <ActivitySection

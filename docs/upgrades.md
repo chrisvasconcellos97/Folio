@@ -1,6 +1,6 @@
 # Folios — Upgrade Log
 
-*Last updated: 2026-06-03 (Meeting discussed signal)*
+*Last updated: 2026-06-03 (Meeting discussed signal + Pip drip questions Phase 2)*
 
 Plain-English log of major upgrades shipped to Folios. Date, time, and
 a short explanation written in terms anyone can read — not technical
@@ -60,6 +60,28 @@ what you discussed, it stops creating duplicates and starts doing what you actua
 want — updating the right project, closing the resolved item, and routing the work
 correctly. The signal is explicit (you tapped it) so Pip gets the highest possible
 confidence, not a guess.
+
+---
+
+## 2026-06-03 — Pip drip questions (Phase 2)
+
+**What I built:** After the Phase 1 onboarding interview, Pip now keeps learning through a gentle weekly drip. A "Pip's Curious" card appears on your Home screen with one question at a time — you type your answer inline, hit Answer, and Pip files it away. No modal, no interruption.
+
+**The problem it solves:** The 5-question interview gave Pip a solid foundation, but a real relationship develops over time. Contacts gain roles, accounts get objectives, and your company builds up its own vocabulary of brands, programs, and codenames that no onboarding script could anticipate. Phase 2 is how Pip catches up to your real world without asking you to fill out a form.
+
+**What changed:**
+
+- **Daily gap detection (`detectKnowledgeGaps`)** — runs once per calendar day, zero LLM cost. Scans your data for three structural holes: contacts who appear in ≥3 meetings with no role on file, active accounts older than 30 days with no objective, and empty profile slots (if onboarding is marked done). Inserts `folio_pip_questions` rows (`source='gap_observed'`) for each gap found, templated from real names and account data.
+- **Evergreen question bank** — 15 get-to-know-you questions (what a great week looks like, what metric you're judged on, which account keeps you up at night, etc.). Seeds only when the gap detector comes up empty, so the drip never stops.
+- **Throttle (DB-driven, cross-device)** — max 1 per day, max 3 per rolling 7 days, 48h cooldown after any skip or dismiss. All persisted in `folio_pip_questions.answered_at` so it follows you across devices.
+- **HomeView "Pip's Curious" card** — appears between the Daily Brief and the four-panel grid. Inline textarea (16px, no zoom), Answer / Skip / Not now buttons. Disappears when answered.
+- **Terminology scan (`api/detect-terminology.js`)** — one Haiku call per week. Scans the last 30 meeting notes for proper nouns appearing ≥3 times that aren't a known account, contact, or glossary entry. Creates `category='terminology'` drip questions. When you answer, the answer writes to `folio_pip_facts` automatically.
+- **Re-synthesis trigger** — when you've answered ≥3 drip questions since the last synthesis, a background call to `/api/profile-synthesis` updates your profile prose.
+- **Settings → "Pip's Questions"** — global pause toggle and a 0–100% completeness progress bar.
+
+**What you see today:** On home load, if Pip has a gap question queued and the throttle allows it, the "Pip's Curious" card appears. Answer it, skip it, or dismiss it. Over the first few weeks, Pip builds up your company's vocabulary and fills in missing data — silently, from data it already sees.
+
+**Why it matters:** A good analyst doesn't interview you once and coast. Phase 2 is what turns Pip from a static profile into a system that gets smarter the longer you use it.
 
 ---
 
