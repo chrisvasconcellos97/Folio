@@ -58,7 +58,7 @@ function TagChip({ label, active, onClick, onRemove, color }) {
   );
 }
 
-export function AddAccountModal({ userId, onSave, onClose, existing, accounts, defaultType, defaultParentId, members }) {
+export function AddAccountModal({ userId, onSave, onAddContacts, onClose, existing, accounts, defaultType, defaultParentId, members }) {
   var [name, setName]       = useState(existing ? existing.name : "");
   var [tier, setTier]       = useState(existing ? (existing.tier || "Mid") : "Mid");
   var [notes, setNotes]     = useState(existing ? (existing.objective || "") : "");
@@ -73,6 +73,9 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
   var [address, setAddress]             = useState(existing ? (existing.address || '') : '');
   var [accountNumber, setAccountNumber] = useState(existing ? (existing.account_number || '') : '');
   var [agreementEndDate, setAgreementEndDate] = useState(existing ? (existing.agreement_end_date || '') : '');
+  // Staged contacts — only shown when creating a new account
+  var [stagedContacts, setStagedContacts] = useState([]);
+  var [contactDraft, setContactDraft]     = useState({ name: "", role: "", email: "" });
   var [scopeSummary, setScopeSummary]         = useState(existing ? (existing.scope_summary || '') : '');
   var [billingTerms, setBillingTerms]         = useState(existing ? (existing.billing_terms || '') : '');
   var [spendYtd, setSpendYtd]                 = useState(existing && existing.spend_ytd != null ? String(existing.spend_ytd) : '');
@@ -179,6 +182,12 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
       }
       return onSave(data);
     })
+      .then(function(acct) {
+        var contactsToAdd = stagedContacts.filter(function (c) { return c.name.trim(); });
+        if (acct && acct.id && contactsToAdd.length > 0 && onAddContacts) {
+          return onAddContacts(acct.id, contactsToAdd);
+        }
+      })
       .then(function() { setLoading(false); onClose(); })
       .catch(function(err) { setLoading(false); setError(err.message); });
   }
@@ -668,6 +677,91 @@ export function AddAccountModal({ userId, onSave, onClose, existing, accounts, d
             >
               This is my account
             </label>
+          </div>
+        )}
+
+        {/* Inline contacts — new account creation only */}
+        {!existing && (
+          <div>
+            <FL>Contacts <span style={{ fontWeight: 400, color: C.textMuted }}>(optional)</span></FL>
+            {stagedContacts.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 8 }}>
+                {stagedContacts.map(function (c, i) {
+                  return (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, background: C.surface, border: "1px solid " + C.rule, borderRadius: 8, padding: "8px 12px" }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, color: C.text, fontFamily: "'Inter', system-ui, sans-serif" }}>
+                          {c.name}
+                          {c.is_leader && <span style={{ marginLeft: 6, fontSize: 12, color: C.yellow }}>☆</span>}
+                        </div>
+                        {(c.role || c.email) && (
+                          <div style={{ fontSize: 11, color: C.textMuted, fontFamily: "'JetBrains Mono', ui-monospace, monospace", marginTop: 2 }}>
+                            {[c.role, c.email].filter(Boolean).join(" · ")}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={function () { setStagedContacts(function (prev) { return prev.filter(function (_, j) { return j !== i; }); }); }}
+                        style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 15, lineHeight: 1, padding: "2px 4px" }}
+                      >×</button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, background: C.surface, border: "1px solid " + C.rule, borderRadius: 8, padding: "10px 12px" }}>
+              <InputField
+                placeholder="Name *"
+                value={contactDraft.name}
+                onChange={function (e) { setContactDraft(function (d) { return Object.assign({}, d, { name: e.target.value }); }); }}
+              />
+              <div style={{ display: "flex", gap: 8 }}>
+                <InputField
+                  placeholder="Role / title"
+                  value={contactDraft.role}
+                  onChange={function (e) { setContactDraft(function (d) { return Object.assign({}, d, { role: e.target.value }); }); }}
+                  style={{ flex: 1 }}
+                />
+                <InputField
+                  type="email"
+                  placeholder="Email"
+                  value={contactDraft.email}
+                  onChange={function (e) { setContactDraft(function (d) { return Object.assign({}, d, { email: e.target.value }); }); }}
+                  style={{ flex: 1 }}
+                />
+              </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 12, color: C.textSoft, fontFamily: "'Inter', system-ui, sans-serif" }}>
+                  <input
+                    type="checkbox"
+                    checked={!!contactDraft.is_leader}
+                    onChange={function (e) { setContactDraft(function (d) { return Object.assign({}, d, { is_leader: e.target.checked }); }); }}
+                    style={{ accentColor: C.yellow, cursor: "pointer" }}
+                  />
+                  <span style={{ color: C.yellow }}>☆</span> Leader
+                </label>
+                <button
+                  type="button"
+                  onClick={function () {
+                    if (!contactDraft.name.trim()) return;
+                    setStagedContacts(function (prev) { return prev.concat([contactDraft]); });
+                    setContactDraft({ name: "", role: "", email: "", is_leader: false });
+                  }}
+                  disabled={!contactDraft.name.trim()}
+                  style={{
+                    background: contactDraft.name.trim() ? C.accentFaint : "transparent",
+                    color: contactDraft.name.trim() ? C.accent : C.textMuted,
+                    border: "1px solid " + (contactDraft.name.trim() ? C.accentLine : C.rule),
+                    borderRadius: 6, padding: "5px 14px",
+                    fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 11, fontWeight: 600,
+                    cursor: contactDraft.name.trim() ? "pointer" : "default",
+                  }}
+                >
+                  + Add
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
