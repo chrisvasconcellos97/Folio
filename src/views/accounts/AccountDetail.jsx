@@ -48,6 +48,7 @@ import { supabase } from "../../lib/supabase";
 import { buildAccountExport, downloadAccountExport } from "../../lib/accountExport";
 import { computeAccountHealth, gatherSignals } from "../../lib/accountHealth";
 import { AccountHealthOverrideModal } from "./AccountHealthOverrideModal";
+import { useContactAliases } from "../../hooks/useContactAliases";
 
 function getDefaultTab(accountId) {
   try { return localStorage.getItem("folio_default_tab_" + accountId) || null; } catch(e) { return null; }
@@ -166,6 +167,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
   var { cadences: personCadencesAll, addCadence: addPersonCadence, refetch: refetchPersonCadences } = useCadences(userId);
   var { projects, addProject, updateProject, deleteProject, error: projectsError, refetch: refetchProjects } = useProjects(userId, account.id, orgId, childAccountIds);
   var { updates, addUpdate, updateUpdate, deleteUpdate, error: updatesError, refetch: refetchUpdates } = useAccountUpdates(userId, account.id, orgId);
+  var contactAliasesApi = useContactAliases(orgId || null);
 
   // Filter person cadences to those whose contact_id belongs to this account's contacts
   var personCadences = useMemo(function () {
@@ -409,6 +411,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
         onAutoOpenMeetingModeConsumed={onAutoOpenMeetingModeConsumed}
         pipLessonsLearned={(pipAcctState.getStateRow(account.id) || {}).lessons_learned || null}
         pipAccountStateRow={pipAcctState.getStateRow(account.id) || null}
+        contactAliases={contactAliasesApi.aliases}
       />
     );
   }
@@ -607,6 +610,9 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
           onDelete={deleteContact}
           onAddContact={addContact}
           onUpdate={updateContact}
+          aliases={contactAliasesApi.aliases}
+          addAlias={contactAliasesApi.addAlias}
+          removeAlias={contactAliasesApi.removeAlias}
         />
         </>
       )}
@@ -748,6 +754,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
           projects={activeProjects}
           openItems={openItemsList}
           contacts={contacts || []}
+          contactAliases={contactAliasesApi.aliases}
           accounts={accounts}
           members={members}
           userEmail={userEmail}

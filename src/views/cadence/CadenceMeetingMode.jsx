@@ -6,6 +6,8 @@ import { showToast } from "../../components/Toast";
 import { PipBriefPanel, HubProjectCard, OpenItemRow } from "./CadenceHub";
 import { useBreakpoint } from "../../hooks/useBreakpoint";
 import { useAutoBullet } from "../../lib/useAutoBullet";
+import { useEntityDetection } from "../../hooks/useEntityDetection";
+import { EntitySuggestionChip } from "../../components/EntitySuggestionChip";
 
 var BULLET_KEY = "folio_autobullet_meeting_mode";
 
@@ -113,6 +115,7 @@ export function CadenceMeetingMode({
   projects,
   openItems,
   contacts,
+  contactAliases,
   accounts,
   members,
   userEmail,
@@ -161,6 +164,9 @@ export function CadenceMeetingMode({
   var saveTimer = useRef(null);
   var attendeesTimer = useRef(null);
   var notesRef  = useRef(null);
+  var [notesEntityDismissed, setNotesEntityDismissed] = useState(false);
+
+  var notesEntitySuggestion = useEntityDetection(notes, contacts || [], contactAliases || []);
 
   // Auto-collapse sidebar whenever crossing into mobile width.
   useEffect(function () {
@@ -841,7 +847,7 @@ export function CadenceMeetingMode({
               <textarea
                 ref={notesRef}
                 value={notes}
-                onChange={function (e) { setNotes(e.target.value); }}
+                onChange={function (e) { setNotes(e.target.value); setNotesEntityDismissed(false); }}
                 onKeyDown={bulletProps.onKeyDown}
                 onFocus={bulletProps.onFocus}
                 onPaste={bulletProps.onPaste}
@@ -861,6 +867,12 @@ export function CadenceMeetingMode({
                   boxSizing: "border-box",
                   boxShadow: "0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.06)",
                 }}
+              />
+              <EntitySuggestionChip
+                suggestion={notesEntityDismissed ? null : notesEntitySuggestion}
+                onAcceptAssignee={function () { setNotesEntityDismissed(true); }}
+                onAcceptRecipient={function () { setNotesEntityDismissed(true); }}
+                onDismiss={function () { setNotesEntityDismissed(true); }}
               />
             </div>
           </div>

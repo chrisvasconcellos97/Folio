@@ -620,6 +620,7 @@ export function HubProjectCard({ project, accounts, members, userEmail, onUpdate
               accounts={accounts}
               members={members}
               contacts={contacts}
+              aliases={contactAliases || []}
               userEmail={userEmail}
               onUpdate={onUpdateProject}
             />
@@ -710,6 +711,7 @@ export function CadenceHub({
   onAutoOpenMeetingModeConsumed,
   pipLessonsLearned,
   pipAccountStateRow,
+  contactAliases,
 }) {
   var isPersonCadence = cadence.cadence_scope === 'person' || !account;
 
@@ -1354,6 +1356,7 @@ export function CadenceHub({
       projects={activeProjects}
       openItems={openItems}
       contacts={contacts || []}
+      contactAliases={contactAliases || []}
       accounts={accounts}
       members={members}
       userEmail={userEmail}

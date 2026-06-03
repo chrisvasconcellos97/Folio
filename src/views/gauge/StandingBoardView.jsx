@@ -25,7 +25,7 @@ function resolveAssignee(emailOrName, members) {
 // and edit. Tasks group into a "done" lane (or whichever the last column
 // is) when completed_at is set, so the kanban and the done flag stay
 // consistent visually.
-export function StandingBoardView({ project, accounts, members, contacts, userEmail, onUpdate, logCorrection }) {
+export function StandingBoardView({ project, accounts, members, contacts, aliases, userEmail, onUpdate, logCorrection }) {
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
   var [panelTask, setPanelTask]   = useState(null);   // task object or null
@@ -233,6 +233,7 @@ export function StandingBoardView({ project, accounts, members, contacts, userEm
           accounts={accounts}
           members={members}
           contacts={contacts}
+          aliases={aliases}
           userEmail={userEmail}
           logCorrection={logCorrection}
           onSave={commitTask}
