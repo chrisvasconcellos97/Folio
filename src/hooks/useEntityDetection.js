@@ -90,18 +90,42 @@ export function useEntityDetection(text, contacts, aliases, accounts) {
       }
 
       // 4. Account name match (departments especially)
+      // Tries multiple patterns per account:
+      //   a) exact name
+      //   b) name before a trailing parenthetical: "Data Team (Poland)" → "Data Team"
+      //   c) all-caps acronym words in the name: "KSI Auto Parts" → "KSI"
+      // All patterns use \b word boundaries so partial-word false positives are prevented.
       if (!found && accounts) {
         for (var l = 0; l < accounts.length; l++) {
           var acct = accounts[l];
           if (!acct.name || acct.name.length < 3) continue;
-          var acctNameLower = acct.name.toLowerCase();
-          var acctIdx = lower.indexOf(acctNameLower);
-          if (acctIdx !== -1) {
+
+          var patterns = [acct.name];
+
+          var parenMatch = acct.name.match(/^(.+?)\s*\(/);
+          if (parenMatch && parenMatch[1].trim().length >= 3) {
+            patterns.push(parenMatch[1].trim());
+          }
+
+          acct.name.split(/\s+/).forEach(function (word) {
+            if (/^[A-Z]{2,5}$/.test(word)) patterns.push(word);
+          });
+
+          var matchedPattern = null;
+          var matchIdx = -1;
+          for (var m = 0; m < patterns.length; m++) {
+            var escaped = patterns[m].replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            var re = new RegExp("\\b" + escaped + "\\b", "i");
+            var hit = re.exec(lower);
+            if (hit) { matchedPattern = patterns[m]; matchIdx = hit.index; break; }
+          }
+
+          if (matchedPattern) {
             found = {
               account: acct,
               contact: null,
-              matchedAs: acct.name,
-              role: scoreMatch(text, acct.name, acctIdx),
+              matchedAs: matchedPattern,
+              role: scoreMatch(text, matchedPattern, matchIdx),
               type: "account",
             };
             break;
