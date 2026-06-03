@@ -453,6 +453,12 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
     Recommendation: T1.1 (slash-commands) + T1.2 (inline checkboxes) change daily life most — they collapse "take notes" and "manage work" into one motion. T1.3 (focus mode) is a fast, felt win.
 
+    **APPROVED BUILD — Interactive sidebar + project highlighting:**
+    - **Flag project as discussed** — tap any project in the CadenceMeetingMode sidebar to highlight it teal ("discussed in this meeting"). Multiple projects can be flagged. Pip receives the flagged project IDs in the summarize payload so it routes action items to the right project and stops guessing from note text alone.
+    - **Inline task actions on sidebar tasks** — each task in the sidebar gets: ✓ mark done (one tap), reassign (contact/member picker inline), set due date (date input inline), edit title (inline). No TaskDetailPanel needed for these — actions fire directly without opening a modal.
+    - **Add task to a project mid-meeting** — each flagged (or any) project in the sidebar gets a small "+ Task" button. Tapping it opens a minimal inline form (title + optional assignee/due) that creates a `folio_task` immediately. Pip sees these tasks on summarize and doesn't re-suggest them — it works around what's already committed and focuses on what's still unstructured in the notes.
+    - **Pip context change** — `summarizeDraftPip` receives `discussedProjectIds: [uuid, ...]`. Pip's prompt instructs: "The following projects were flagged as discussed in this meeting — prefer routing new tasks to these projects rather than inferring from note text."
+
     **30a — Tab = sub-bullet in the meeting notepad (CONFIRMED BUG, ship first).** In `CadenceMeetingMode`'s notes textarea, pressing Tab moves focus out of the textarea (into the quick-task entry / next focusable element) instead of indenting into a sub-bullet. Chris can't create nested structure while taking notes. Fix: intercept `Tab` (and `Shift+Tab` to outdent) in the notepad `onKeyDown`, `preventDefault()`, and insert/remove indentation on the current line(s) — keeping the `• ` auto-bullet behavior intact (sub-bullets render as `  ◦ ` or indented `• `). Nested structure also helps Pip: indentation conveys hierarchy (which detail belongs to which topic/decision/action), giving Pip grouping signal it currently has to infer. So it matters on the Pip side too — keep the indentation in the saved notes text so `summarizeDraftPip` sees it.
 
 15. *(shipped — see Already shipped)*
