@@ -7,7 +7,7 @@ import { EntitySuggestionChip } from "./EntitySuggestionChip";
 // (contact match) or no linked account (dept/account match) yet.
 // Wraps click with stopPropagation so accepting/dismissing doesn't
 // also trigger the card's own onClick (open-edit handler).
-export function TaskEntityDetector({ task, contacts, accounts, aliases, onAccept }) {
+export function TaskEntityDetector({ task, contacts, accounts, aliases, onAccept, onDismiss }) {
   var [dismissed, setDismissed] = useState(false);
   var suggestion = useEntityDetection(task.title || "", contacts || [], aliases || [], accounts || []);
 
@@ -18,13 +18,18 @@ export function TaskEntityDetector({ task, contacts, accounts, aliases, onAccept
 
   if (!show) return null;
 
+  function handleDismiss() {
+    setDismissed(true);
+    if (onDismiss) onDismiss();
+  }
+
   return (
     <div onClick={function (e) { e.stopPropagation(); }}>
       <EntitySuggestionChip
         suggestion={suggestion}
         onAcceptAssignee={function () { onAccept(suggestion); setDismissed(true); }}
         onAcceptRecipient={function () { onAccept(suggestion); setDismissed(true); }}
-        onDismiss={function () { setDismissed(true); }}
+        onDismiss={handleDismiss}
       />
     </div>
   );

@@ -2,7 +2,6 @@ import { useState } from "react";
 import { C } from "../../lib/colors";
 import { taskStatusLabel, formatFieldValue } from "../../lib/gaugeFields";
 import { TaskDetailPanel } from "./TaskDetailPanel";
-import { TaskEntityDetector } from "../../components/TaskEntityDetector";
 import { useBreakpoint } from "../../hooks/useBreakpoint";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
@@ -64,15 +63,7 @@ export function StandingBoardView({ project, accounts, members, contacts, aliase
     return onUpdate(project.id, { stages: nextTasks });
   }
 
-  function acceptTaskSuggestion(idx, suggestion) {
-    var patch = suggestion.type === "account"
-      ? { account_id: suggestion.account.id }
-      : { assignee_email: suggestion.contact.email || suggestion.contact.name || "" };
-    var nextTasks = tasks.map(function (t, i) { return i === idx ? Object.assign({}, t, patch) : t; });
-    onUpdate(project.id, { stages: nextTasks });
-  }
-
-  function openNew(forStatus) {
+function openNew(forStatus) {
     setPanelTask(null);
     setPanelIndex(null);
     setPresetStatus(forStatus || columns[0]);
@@ -176,13 +167,6 @@ export function StandingBoardView({ project, accounts, members, contacts, aliase
                     }}>
                       {t.title || "Untitled task"}
                     </div>
-                    <TaskEntityDetector
-                      task={t}
-                      contacts={contacts}
-                      accounts={accounts}
-                      aliases={aliases}
-                      onAccept={function (suggestion) { acceptTaskSuggestion(row.idx, suggestion); }}
-                    />
                     {acct && (
                       <div style={{
                         fontFamily: MONO, fontSize: 9.5, color: C.textMuted,
