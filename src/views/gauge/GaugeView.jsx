@@ -181,6 +181,7 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
   var [statusFilter, setStatusFilter] = useState("all");
   var [overdueOnly, setOverdueOnly]   = useState(false);
   var [selectedAccountIds, setSelectedAccountIds] = useState([]);
+  var [sortBy, setSortBy]             = useState("default"); // "default" | "due_asc" | "due_desc"
   var [showAdd, setShowAdd]         = useState(false);
   var [showPicker, setShowPicker]   = useState(false);
   var [editing, setEditing]         = useState(null);
@@ -232,7 +233,17 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
   var draftFiltered    = filtered.filter(function (p) { return p.status === "draft"; });
   var activeFiltered   = filtered.filter(function (p) { return p.status !== "complete" && p.status !== "draft"; });
   var completeFiltered = filtered.filter(function (p) { return p.status === "complete"; });
-  var sortedFiltered   = draftFiltered.concat(activeFiltered).concat(completeFiltered);
+
+  function applySort(list) {
+    if (sortBy === "default") return list;
+    return list.slice().sort(function (a, b) {
+      var aMs = a.due_date ? new Date(a.due_date + "T00:00:00").getTime() : Infinity;
+      var bMs = b.due_date ? new Date(b.due_date + "T00:00:00").getTime() : Infinity;
+      return sortBy === "due_asc" ? aMs - bMs : bMs - aMs;
+    });
+  }
+
+  var sortedFiltered = applySort(draftFiltered).concat(applySort(activeFiltered)).concat(applySort(completeFiltered));
 
   var totalCount      = projects.length;
   var inProgressCount = projects.filter(function (p) { return p.status === "in_progress"; }).length;
@@ -645,6 +656,29 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
             </button>
           );
         })}
+        <div style={{ flex: 1 }} />
+        <button
+          onClick={function () {
+            setSortBy(function (prev) {
+              return prev === "default" ? "due_asc" : prev === "due_asc" ? "due_desc" : "default";
+            });
+          }}
+          title="Sort by due date"
+          style={{
+            flex: "0 0 auto",
+            padding: "4px 12px",
+            borderRadius: 999,
+            cursor: "pointer",
+            fontFamily: MONO,
+            fontSize: 10.5,
+            background: sortBy !== "default" ? C.accentFaint : "transparent",
+            color: sortBy !== "default" ? C.accent : C.textMuted,
+            border: "1px solid " + (sortBy !== "default" ? C.accentLine : C.rule),
+            whiteSpace: "nowrap",
+          }}
+        >
+          {sortBy === "due_asc" ? "Due ↑" : sortBy === "due_desc" ? "Due ↓" : "Sort"}
+        </button>
       </div>
 
       {/* Account filter pills — only shown when projects span more than one account */}
@@ -887,6 +921,8 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
           var isComplete  = p.status === "complete";
           var isDraft     = p.status === "draft";
           var overdue     = p.status === "in_progress" && isOverdue(p.due_date);
+          var dueSoon     = p.due_date && !overdue && p.status !== "complete" && p.status !== "draft" &&
+                            (new Date(p.due_date + "T00:00:00").getTime() - new Date(new Date().toDateString()).getTime()) <= 7 * 86400000;
           var steps       = countSteps(p.stages);
           var pct         = steps.total > 0 ? Math.round((steps.done / steps.total) * 100) : 0;
           var extCount    = countExternal(p.stages || []);
@@ -1041,30 +1077,19 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
                       {p.assignee}
                     </div>
                   )}
-                  {p.due_date && (
-                    <div style={{ fontFamily: MONO, fontSize: 10, color: overdue ? C.red : C.textMuted, fontFeatureSettings: '"tnum"' }}>
-                      {overdue ? "Overdue · " : "Due · "}{fmt(p.due_date)}
+                  {/* Due date pill — inline in meta row on mobile, hidden on desktop (shown in right col) */}
+                  {isMobile && p.due_date && (
+                    <div style={{
+                      fontFamily: MONO, fontSize: 9.5, fontFeatureSettings: '"tnum"',
+                      padding: "2px 8px", borderRadius: 999,
+                      background: overdue ? "rgba(239,68,68,0.15)" : dueSoon ? "rgba(234,179,8,0.12)" : C.surface3,
+                      border: "1px solid " + (overdue ? C.red : dueSoon ? C.yellow : C.rule),
+                      color: overdue ? C.red : dueSoon ? C.yellow : C.textMuted,
+                      whiteSpace: "nowrap",
+                    }}>
+                      {overdue ? "Overdue" : "Due"} · {fmt(p.due_date)}
                     </div>
                   )}
-                  {p.expected_complete_date && !p.due_date && (function () {
-                    var expMs   = new Date(p.expected_complete_date + "T00:00:00").getTime();
-                    var nowMs   = new Date(new Date().toDateString()).getTime();
-                    var isPast  = expMs < nowMs;
-                    var isClose = !isPast && (expMs - nowMs) <= 7 * 86400000;
-                    if (isPast || isClose) {
-                      return (
-                        <div style={{ fontFamily: MONO, fontSize: 10, color: isPast ? C.yellow : C.textMuted, fontFeatureSettings: '"tnum"' }}>
-                          {isPast ? "Est. complete · " : "Est. complete · "}{fmt(p.expected_complete_date)}
-                          {isPast && " · overdue"}
-                        </div>
-                      );
-                    }
-                    return (
-                      <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, fontFeatureSettings: '"tnum"' }}>
-                        Est. complete · {fmt(p.expected_complete_date)}
-                      </div>
-                    );
-                  })()}
                   {/* External stages badge */}
                   {extCount > 0 && (
                     <div style={{ fontFamily: MONO, fontSize: 10, color: C.yellow }}>
@@ -1074,14 +1099,14 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
                 </div>
               </div>
 
-              {/* Right: stages + progress bar (desktop only) */}
+              {/* Right: stages + progress bar + due date pill (desktop only) */}
               {!isMobile && (
-                <div style={{ textAlign: "right" }}>
+                <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8, minWidth: 80 }}>
                   {steps.total > 0 && (
                     <>
                       <div style={{
                         fontFamily: MONO, fontSize: 13.5, fontWeight: 700,
-                        color: C.accent, marginBottom: 8, lineHeight: 1.1,
+                        color: C.accent, lineHeight: 1.1,
                         textShadow: "0 0 12px " + C.accentGlow + ", 0 0 24px " + C.accentGlow2,
                         fontVariantNumeric: "tabular-nums",
                       }}>
@@ -1089,7 +1114,7 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
                         <span style={{ color: C.textMuted, margin: "0 6px" }}>·</span>
                         {pct}%
                       </div>
-                      <div style={{ position: "relative", height: 4, background: C.surface3, borderRadius: 2, overflow: "hidden" }}>
+                      <div style={{ position: "relative", height: 4, background: C.surface3, borderRadius: 2, overflow: "hidden", width: "100%" }}>
                         <div style={{
                           position: "absolute", inset: 0,
                           background: "linear-gradient(to right, #3b82f6, var(--c-accent))",
@@ -1102,6 +1127,19 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
                         }} />
                       </div>
                     </>
+                  )}
+                  {p.due_date && (
+                    <div style={{
+                      fontFamily: MONO, fontSize: 9.5, fontFeatureSettings: '"tnum"',
+                      padding: "3px 10px", borderRadius: 999,
+                      background: overdue ? "rgba(239,68,68,0.15)" : dueSoon ? "rgba(234,179,8,0.12)" : C.surface3,
+                      border: "1px solid " + (overdue ? C.red : dueSoon ? C.yellow : C.rule),
+                      color: overdue ? C.red : dueSoon ? C.yellow : C.textMuted,
+                      whiteSpace: "nowrap",
+                      fontWeight: overdue || dueSoon ? 600 : 400,
+                    }}>
+                      {overdue ? "Overdue" : "Due"} · {fmt(p.due_date)}
+                    </div>
                   )}
                 </div>
               )}
