@@ -371,6 +371,8 @@ export function ProjectStageEditor({ project, onUpdate, accounts, members, conta
           taskIndex={null}
           accounts={accounts}
           members={members}
+          contacts={contacts}
+          aliases={aliases}
           userEmail={userEmail}
           logCorrection={logCorrection}
           onSave={function (taskShape) {
@@ -388,6 +390,8 @@ export function ProjectStageEditor({ project, onUpdate, accounts, members, conta
           taskIndex={detailIdx}
           accounts={accounts}
           members={members}
+          contacts={contacts}
+          aliases={aliases}
           userEmail={userEmail}
           logCorrection={logCorrection}
           onSave={function (taskShape) {
