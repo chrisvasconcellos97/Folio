@@ -26,6 +26,7 @@ export function InputField({ id, value, onChange, placeholder, type, style, onKe
       onBlur={onBlur}
       autoFocus={autoFocus}
       placeholder={placeholder}
+      autoCapitalize="sentences"
       aria-label={ariaLabel || (id ? undefined : placeholder)}
       style={Object.assign({}, baseStyle, style || {})}
     />
@@ -44,6 +45,7 @@ export function TextArea({ id, value, onChange, onKeyDown, onFocus, onPaste, pla
       placeholder={placeholder}
       rows={rows || 4}
       autoFocus={autoFocus}
+      autoCapitalize="sentences"
       aria-label={ariaLabel || (id ? undefined : placeholder)}
       style={Object.assign({}, baseStyle, {
         resize: "vertical",
