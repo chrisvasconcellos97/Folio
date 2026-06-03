@@ -202,7 +202,7 @@ export function ContactsTab({ contacts, meetings, accountId, accountName, onAdd,
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: CT_SERIF, fontSize: 15.5, fontWeight: 400, color: C.text, marginBottom: 3, display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", letterSpacing: "-0.005em", lineHeight: 1.2 }}>
                   {c.is_leader && (
-                    <span title="Leader" aria-label="Leader" style={{ fontSize: 13, color: C.yellow, lineHeight: 1 }}>☆</span>
+                    <span aria-label="Leader" style={{ fontFamily: CT_MONO, fontSize: 9, color: C.yellow, fontWeight: 600, letterSpacing: "0.06em", background: "rgba(251,191,36,0.12)", padding: "2px 6px", borderRadius: 10, textTransform: "uppercase" }}>LEADER</span>
                   )}
                   {c.name}
                   {c.is_primary && (

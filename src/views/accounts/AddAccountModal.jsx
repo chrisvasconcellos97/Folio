@@ -692,7 +692,7 @@ export function AddAccountModal({ userId, onSave, onAddContacts, onClose, existi
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 13, color: C.text, fontFamily: "'Inter', system-ui, sans-serif" }}>
                           {c.name}
-                          {c.is_leader && <span style={{ marginLeft: 6, fontSize: 12, color: C.yellow }}>☆</span>}
+                          {c.is_leader && <span style={{ marginLeft: 6, fontSize: 9, color: C.yellow, fontWeight: 600, letterSpacing: "0.06em", background: "rgba(251,191,36,0.12)", padding: "2px 6px", borderRadius: 10, textTransform: "uppercase", fontFamily: "'JetBrains Mono', ui-monospace, monospace" }}>LEADER</span>}
                         </div>
                         {(c.role || c.email) && (
                           <div style={{ fontSize: 11, color: C.textMuted, fontFamily: "'JetBrains Mono', ui-monospace, monospace", marginTop: 2 }}>
