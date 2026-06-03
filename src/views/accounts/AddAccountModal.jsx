@@ -76,7 +76,7 @@ export function AddAccountModal({ userId, onSave, onAddContacts, onClose, existi
   var [agreementEndDate, setAgreementEndDate] = useState(existing ? (existing.agreement_end_date || '') : '');
   // Staged contacts — only shown when creating a new account
   var [stagedContacts, setStagedContacts] = useState([]);
-  var [contactDraft, setContactDraft]     = useState({ name: "", role: "", email: "" });
+  var [contactDraft, setContactDraft]     = useState({ name: "", nickname: "", role: "", email: "", is_leader: false, is_poc: false });
   var [scopeSummary, setScopeSummary]         = useState(existing ? (existing.scope_summary || '') : '');
   var [billingTerms, setBillingTerms]         = useState(existing ? (existing.billing_terms || '') : '');
   var [spendYtd, setSpendYtd]                 = useState(existing && existing.spend_ytd != null ? String(existing.spend_ytd) : '');
@@ -688,7 +688,9 @@ export function AddAccountModal({ userId, onSave, onAddContacts, onClose, existi
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 13, color: C.text, fontFamily: "'Inter', system-ui, sans-serif" }}>
                           {c.name}
+                          {c.nickname && <span style={{ marginLeft: 4, fontSize: 11, color: C.textMuted, fontFamily: "'JetBrains Mono', ui-monospace, monospace" }}>({c.nickname})</span>}
                           {c.is_leader && <span style={{ marginLeft: 6, fontSize: 9, color: C.yellow, fontWeight: 600, letterSpacing: "0.06em", background: "rgba(251,191,36,0.12)", padding: "2px 6px", borderRadius: 10, textTransform: "uppercase", fontFamily: "'JetBrains Mono', ui-monospace, monospace" }}>LEADER</span>}
+                          {c.is_poc && <span style={{ marginLeft: 6, fontSize: 9, color: C.accent, fontWeight: 600, letterSpacing: "0.06em", background: C.accentFaint, padding: "2px 6px", borderRadius: 10, textTransform: "uppercase", fontFamily: "'JetBrains Mono', ui-monospace, monospace" }}>POC</span>}
                         </div>
                         {(c.role || c.email) && (
                           <div style={{ fontSize: 11, color: C.textMuted, fontFamily: "'JetBrains Mono', ui-monospace, monospace", marginTop: 2 }}>
@@ -712,6 +714,11 @@ export function AddAccountModal({ userId, onSave, onAddContacts, onClose, existi
                 value={contactDraft.name}
                 onChange={function (e) { setContactDraft(function (d) { return Object.assign({}, d, { name: e.target.value }); }); }}
               />
+              <InputField
+                placeholder="Nickname (optional)"
+                value={contactDraft.nickname}
+                onChange={function (e) { setContactDraft(function (d) { return Object.assign({}, d, { nickname: e.target.value }); }); }}
+              />
               <div style={{ display: "flex", gap: 8 }}>
                 <InputField
                   placeholder="Role / title"
@@ -728,21 +735,32 @@ export function AddAccountModal({ userId, onSave, onAddContacts, onClose, existi
                 />
               </div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 12, color: C.textSoft, fontFamily: "'Inter', system-ui, sans-serif" }}>
-                  <input
-                    type="checkbox"
-                    checked={!!contactDraft.is_leader}
-                    onChange={function (e) { setContactDraft(function (d) { return Object.assign({}, d, { is_leader: e.target.checked }); }); }}
-                    style={{ accentColor: C.yellow, cursor: "pointer" }}
-                  />
-                  <span style={{ color: C.yellow }}>☆</span> Leader
-                </label>
+                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 12, color: C.textSoft, fontFamily: "'Inter', system-ui, sans-serif" }}>
+                    <input
+                      type="checkbox"
+                      checked={!!contactDraft.is_leader}
+                      onChange={function (e) { setContactDraft(function (d) { return Object.assign({}, d, { is_leader: e.target.checked }); }); }}
+                      style={{ accentColor: C.yellow, cursor: "pointer" }}
+                    />
+                    <span style={{ color: C.yellow }}>☆</span> Leader
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 12, color: C.textSoft, fontFamily: "'Inter', system-ui, sans-serif" }}>
+                    <input
+                      type="checkbox"
+                      checked={!!contactDraft.is_poc}
+                      onChange={function (e) { setContactDraft(function (d) { return Object.assign({}, d, { is_poc: e.target.checked }); }); }}
+                      style={{ accentColor: C.accent, cursor: "pointer" }}
+                    />
+                    <span style={{ color: C.accent }}>◎</span> POC
+                  </label>
+                </div>
                 <button
                   type="button"
                   onClick={function () {
                     if (!contactDraft.name.trim()) return;
                     setStagedContacts(function (prev) { return prev.concat([contactDraft]); });
-                    setContactDraft({ name: "", role: "", email: "", is_leader: false });
+                    setContactDraft({ name: "", nickname: "", role: "", email: "", is_leader: false, is_poc: false });
                   }}
                   disabled={!contactDraft.name.trim()}
                   style={{

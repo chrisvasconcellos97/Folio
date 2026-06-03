@@ -65,7 +65,7 @@ export function TaskDetailPanel({
   var [suggestionDismissed, setSuggestionDismissed] = useState(false);
   var [recipientNote, setRecipientNote] = useState(null);
 
-  var entitySuggestion = useEntityDetection(title, contacts || [], aliases || []);
+  var entitySuggestion = useEntityDetection(title, contacts || [], aliases || [], accounts || []);
 
   var projectAccount = project.account_id
     ? (accounts || []).find(function (a) { return a.id === project.account_id; })
@@ -91,6 +91,18 @@ export function TaskDetailPanel({
     if (!accountId) return null;
     return (accounts || []).find(function (a) { return a.id === accountId; }) || null;
   }, [accounts, accountId]);
+
+  var internalTeamContacts = useMemo(function () {
+    if (!contacts || !accounts) return [];
+    var internalIds = (accounts || [])
+      .filter(function (a) { return a.account_type === "internal_team"; })
+      .map(function (a) { return a.id; });
+    return (contacts || []).filter(function (c) {
+      return internalIds.indexOf(c.account_id) !== -1 &&
+             c.account_id !== project.account_id &&
+             c.account_id !== accountId;
+    });
+  }, [contacts, accounts, project.account_id, accountId]);
 
   function updateCustom(key, val) {
     setCustomFields(function (prev) { return Object.assign({}, prev, { [key]: val }); });
@@ -223,7 +235,7 @@ export function TaskDetailPanel({
       );
     }
     if (f.type === "person") {
-      if ((members && members.length > 0) || projectContacts.length > 0 || linkedAccountContacts.length > 0) {
+      if ((members && members.length > 0) || projectContacts.length > 0 || linkedAccountContacts.length > 0 || internalTeamContacts.length > 0) {
         return (
           <SelectField
             value={v || ""}
@@ -247,6 +259,13 @@ export function TaskDetailPanel({
             {linkedAccountContacts.length > 0 && linkedAccount && (
               <optgroup label={linkedAccount.name}>
                 {linkedAccountContacts.map(function (c) {
+                  return <option key={c.id} value={c.name}>{c.name}{c.role ? " · " + c.role : ""}</option>;
+                })}
+              </optgroup>
+            )}
+            {internalTeamContacts.length > 0 && (
+              <optgroup label="Internal Teams">
+                {internalTeamContacts.map(function (c) {
                   return <option key={c.id} value={c.name}>{c.name}{c.role ? " · " + c.role : ""}</option>;
                 })}
               </optgroup>
@@ -298,8 +317,12 @@ export function TaskDetailPanel({
           <EntitySuggestionChip
             suggestion={suggestionDismissed ? null : entitySuggestion}
             onAcceptAssignee={function () {
-              if (entitySuggestion && entitySuggestion.contact) {
-                setAssignee(entitySuggestion.contact.email || entitySuggestion.contact.name || "");
+              if (entitySuggestion) {
+                if (entitySuggestion.type === "account") {
+                  setAccountId(entitySuggestion.account.id);
+                } else if (entitySuggestion.contact) {
+                  setAssignee(entitySuggestion.contact.email || entitySuggestion.contact.name || "");
+                }
               }
               setSuggestionDismissed(true);
             }}
@@ -331,7 +354,7 @@ export function TaskDetailPanel({
         {/* Assignee — drives admin queue surfacing */}
         <div>
           <FL>Assignee</FL>
-          {(members && members.length > 0) || projectContacts.length > 0 || linkedAccountContacts.length > 0 ? (
+          {(members && members.length > 0) || projectContacts.length > 0 || linkedAccountContacts.length > 0 || internalTeamContacts.length > 0 ? (
             <SelectField
               value={assignee}
               onChange={function (e) { setAssignee(e.target.value); }}
@@ -354,6 +377,13 @@ export function TaskDetailPanel({
               {linkedAccountContacts.length > 0 && linkedAccount && (
                 <optgroup label={linkedAccount.name}>
                   {linkedAccountContacts.map(function (c) {
+                    return <option key={c.id} value={c.name}>{c.name}{c.role ? " · " + c.role : ""}</option>;
+                  })}
+                </optgroup>
+              )}
+              {internalTeamContacts.length > 0 && (
+                <optgroup label="Internal Teams">
+                  {internalTeamContacts.map(function (c) {
                     return <option key={c.id} value={c.name}>{c.name}{c.role ? " · " + c.role : ""}</option>;
                   })}
                 </optgroup>

@@ -389,16 +389,14 @@ export function AccountsView({ accounts, allAccounts, loading, onSelect, onAddAc
         <div style={{ marginBottom: 12 }}>
           <div style={{
             display: "inline-flex", gap: 4, background: C.surface2,
-            border: "1px solid " + C.rule, borderRadius: 999,
+            border: "1px solid " + C.rule, borderRadius: 12,
             padding: 3, flexWrap: "wrap",
           }}>
+            {/* Built-in tabs */}
             {[
               { key: "customer",      label: "Customers" },
               ...(hasDepartments ? [{ key: "internal_team", label: "Departments" }] : []),
               ...(hasPartners    ? [{ key: "partner",       label: "Partners"     }] : []),
-              ...(customWorkspaces || []).map(function (ws) {
-                return { key: "cws_" + ws.id, label: ws.name };
-              }),
             ].map(function (tab) {
               var on = activeType === tab.key;
               return (
@@ -419,6 +417,36 @@ export function AccountsView({ accounts, allAccounts, loading, onSelect, onAddAc
                   }}
                 >
                   {tab.label}
+                </button>
+              );
+            })}
+
+            {/* Force second row for custom workspaces */}
+            {(customWorkspaces && customWorkspaces.length > 0) && (
+              <div style={{ flexBasis: "100%", height: 4 }} />
+            )}
+
+            {/* Custom workspace tabs */}
+            {(customWorkspaces || []).map(function (ws) {
+              var on = activeType === "cws_" + ws.id;
+              return (
+                <button
+                  key={"cws_" + ws.id}
+                  onClick={function () { onTypeFilterChange("cws_" + ws.id); }}
+                  style={{
+                    padding: "6px 14px",
+                    borderRadius: 999,
+                    border: "none",
+                    background: on ? C.surface : "transparent",
+                    boxShadow: on ? "0 1px 3px rgba(0,0,0,0.3)" : "none",
+                    color: on ? C.accent : C.textSoft,
+                    fontFamily: MONO, fontSize: 11, fontWeight: on ? 700 : 400,
+                    letterSpacing: "0.04em",
+                    cursor: "pointer",
+                    transition: "background 0.12s, color 0.12s",
+                  }}
+                >
+                  {ws.name}
                 </button>
               );
             })}

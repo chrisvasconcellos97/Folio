@@ -11,79 +11,101 @@ function scoreMatch(text, name, position) {
   return "ambiguous";
 }
 
-export function useEntityDetection(text, contacts, aliases) {
+export function useEntityDetection(text, contacts, aliases, accounts) {
   var [suggestion, setSuggestion] = useState(null);
   var timerRef = useRef(null);
 
   useEffect(function () {
     clearTimeout(timerRef.current);
     timerRef.current = setTimeout(function () {
-      if (!text || !contacts || contacts.length === 0) {
+      if (!text) {
         setSuggestion(null);
         return;
       }
       var lower = text.toLowerCase();
       var found = null;
 
-      // 1. Alias match (highest priority)
-      if (aliases) {
-        for (var i = 0; i < aliases.length; i++) {
-          var a = aliases[i];
-          var idx = lower.indexOf(a.alias.toLowerCase());
-          if (idx !== -1) {
-            var contact = contacts.find(function (c) { return c.id === a.contact_id; });
-            if (contact) {
+      if (contacts && contacts.length > 0) {
+        // 1. Alias match (highest priority)
+        if (aliases) {
+          for (var i = 0; i < aliases.length; i++) {
+            var a = aliases[i];
+            var idx = lower.indexOf(a.alias.toLowerCase());
+            if (idx !== -1) {
+              var contact = contacts.find(function (c) { return c.id === a.contact_id; });
+              if (contact) {
+                found = {
+                  contact: contact,
+                  matchedAs: a.alias,
+                  role: scoreMatch(text, a.alias, idx),
+                };
+                break;
+              }
+            }
+          }
+        }
+
+        // 2. Full name match
+        if (!found) {
+          for (var j = 0; j < contacts.length; j++) {
+            var c = contacts[j];
+            if (!c.name) continue;
+            var nameIdx = lower.indexOf(c.name.toLowerCase());
+            if (nameIdx !== -1) {
               found = {
-                contact: contact,
-                matchedAs: a.alias,
-                role: scoreMatch(text, a.alias, idx),
+                contact: c,
+                matchedAs: c.name,
+                role: scoreMatch(text, c.name, nameIdx),
               };
               break;
             }
           }
         }
+
+        // 3. First name match (only if unambiguous — one contact with that first name)
+        if (!found) {
+          var firstNameMatches = [];
+          for (var k = 0; k < contacts.length; k++) {
+            var ct = contacts[k];
+            if (!ct.name) continue;
+            var firstName = ct.name.split(" ")[0];
+            if (firstName.length >= 3 && (
+              lower.includes(" " + firstName.toLowerCase() + " ") ||
+              lower.includes(" " + firstName.toLowerCase() + "'") ||
+              lower.endsWith(" " + firstName.toLowerCase())
+            )) {
+              firstNameMatches.push(ct);
+            }
+          }
+          if (firstNameMatches.length === 1) {
+            var firstName2 = firstNameMatches[0].name.split(" ")[0];
+            var fnIdx = lower.indexOf(firstName2.toLowerCase());
+            found = {
+              contact: firstNameMatches[0],
+              matchedAs: firstName2,
+              role: scoreMatch(text, firstName2, fnIdx),
+            };
+          }
+        }
       }
 
-      // 2. Full name match
-      if (!found) {
-        for (var j = 0; j < contacts.length; j++) {
-          var c = contacts[j];
-          if (!c.name) continue;
-          var nameIdx = lower.indexOf(c.name.toLowerCase());
-          if (nameIdx !== -1) {
+      // 4. Account name match (departments especially)
+      if (!found && accounts) {
+        for (var l = 0; l < accounts.length; l++) {
+          var acct = accounts[l];
+          if (!acct.name || acct.name.length < 3) continue;
+          var acctNameLower = acct.name.toLowerCase();
+          var acctIdx = lower.indexOf(acctNameLower);
+          if (acctIdx !== -1) {
             found = {
-              contact: c,
-              matchedAs: c.name,
-              role: scoreMatch(text, c.name, nameIdx),
+              account: acct,
+              contact: null,
+              matchedAs: acct.name,
+              role: scoreMatch(text, acct.name, acctIdx),
+              type: "account",
             };
             break;
           }
-        }
-      }
-
-      // 3. First name match (only if unambiguous — one contact with that first name)
-      if (!found) {
-        var firstNameMatches = [];
-        for (var k = 0; k < contacts.length; k++) {
-          var ct = contacts[k];
-          if (!ct.name) continue;
-          var firstName = ct.name.split(" ")[0];
-          if (firstName.length >= 3 && (
-            lower.includes(" " + firstName.toLowerCase() + " ") ||
-            lower.includes(" " + firstName.toLowerCase() + "'") ||
-            lower.endsWith(" " + firstName.toLowerCase())
-          )) {
-            firstNameMatches.push(ct);
-          }
-        }
-        if (firstNameMatches.length === 1) {
-          var firstName2 = firstNameMatches[0].name.split(" ")[0];
-          var fnIdx = lower.indexOf(firstName2.toLowerCase());
-          found = {
-            contact: firstNameMatches[0],
-            matchedAs: firstName2,
-            role: scoreMatch(text, firstName2, fnIdx),
-          };
         }
       }
 
@@ -91,7 +113,7 @@ export function useEntityDetection(text, contacts, aliases) {
     }, 300);
 
     return function () { clearTimeout(timerRef.current); };
-  }, [text, contacts, aliases]);
+  }, [text, contacts, aliases, accounts]);
 
   return suggestion;
 }
