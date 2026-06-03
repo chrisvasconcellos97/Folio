@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { C } from "../../lib/colors";
 import { TaskDetailPanel } from "./TaskDetailPanel";
 import { TaskEntityDetector } from "../../components/TaskEntityDetector";
@@ -68,8 +68,11 @@ export function ProjectStageEditor({ project, onUpdate, accounts, members, conta
   var [detailIdx, setDetailIdx] = useState(null);
   var [showNewDetail, setShowNewDetail] = useState(false);
   var [lastAddedIdx, setLastAddedIdx] = useState(null);
+  // Optimistic local stages — applied immediately on mutations, cleared when DB confirms via prop update.
+  var [localStages, setLocalStages] = useState(null);
+  useEffect(function () { setLocalStages(null); }, [project.stages]);
 
-  var stages = project.stages || [];
+  var stages = localStages !== null ? localStages : (project.stages || []);
   var hasSchema = (project.custom_field_schema || []).length > 0;
 
   function commitStages(next) { return onUpdate(project.id, { stages: next }); }
@@ -148,7 +151,8 @@ export function ProjectStageEditor({ project, onUpdate, accounts, members, conta
     var patch = suggestion.type === "account"
       ? { account_id: suggestion.account.id }
       : { assignee_email: suggestion.contact.email || suggestion.contact.name || "" };
-    var next = stages.map(function (s, i) { return i === idx ? Object.assign({}, s, patch) : s; });
+    var next = (project.stages || []).map(function (s, i) { return i === idx ? Object.assign({}, s, patch) : s; });
+    setLocalStages(next); // optimistic — detail panel sees it immediately
     commitStages(next);
   }
 

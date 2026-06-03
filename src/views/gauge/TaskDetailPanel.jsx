@@ -75,11 +75,15 @@ export function TaskDetailPanel({
     projectAccount.account_type === "internal_team" ||
     projectAccount.account_type === "partner";
 
-  // Contacts from the project's own account (always shown as "Account Contacts")
+  // Contacts from ALL accounts linked to the project (account_id + account_ids array)
   var projectContacts = useMemo(function () {
-    if (!contacts || !project.account_id) return [];
-    return contacts.filter(function (c) { return c.account_id === project.account_id; });
-  }, [contacts, project.account_id]);
+    if (!contacts) return [];
+    var ids = new Set();
+    if (project.account_id) ids.add(project.account_id);
+    (project.account_ids || []).forEach(function (id) { ids.add(id); });
+    if (ids.size === 0) return [];
+    return contacts.filter(function (c) { return ids.has(c.account_id); });
+  }, [contacts, project.account_id, project.account_ids]);
 
   // Contacts from the selected Dept/Partner account (3rd group — only when a different account is linked)
   var linkedAccountContacts = useMemo(function () {
