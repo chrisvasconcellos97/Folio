@@ -178,6 +178,7 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
   var [scopeFilter, setScopeFilter]   = useState("all");
   var [statusFilter, setStatusFilter] = useState("all");
   var [overdueOnly, setOverdueOnly]   = useState(false);
+  var [selectedAccountIds, setSelectedAccountIds] = useState([]);
   var [showAdd, setShowAdd]         = useState(false);
   var [showPicker, setShowPicker]   = useState(false);
   var [editing, setEditing]         = useState(null);
@@ -214,7 +215,15 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
     if (overdueOnly) {
       byStatus = byStatus.filter(function (p) { return p.status === "in_progress" && isOverdue(p.due_date); });
     }
-    return byStatus;
+    var byAccount = selectedAccountIds.length > 0
+      ? byStatus.filter(function (p) {
+          if (p.account_ids && p.account_ids.length > 0) {
+            return p.account_ids.some(function (id) { return selectedAccountIds.includes(id); });
+          }
+          return p.account_id && selectedAccountIds.includes(p.account_id);
+        })
+      : byStatus;
+    return byAccount;
   })();
 
   // Drafts float to top, complete sinks to bottom
@@ -257,6 +266,24 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
       return false;
     });
   }, [projects, ownedAccountIds, lens]);
+  var accountsInProjects = useMemo(function () {
+    var seen = {};
+    projects.forEach(function (p) {
+      if (p.account_ids && p.account_ids.length > 0) {
+        p.account_ids.forEach(function (id) {
+          if (id && !seen[id]) {
+            var a = accountsById[id];
+            if (a) seen[id] = a.name;
+          }
+        });
+      } else if (p.account_id && !seen[p.account_id]) {
+        var a = accountsById[p.account_id];
+        if (a) seen[p.account_id] = a.name;
+      }
+    });
+    return Object.entries(seen).map(function (entry) { return { id: entry[0], name: entry[1] }; }).sort(function (a, b) { return a.name.localeCompare(b.name); });
+  }, [projects, accountsById]);
+
   var gaugeHandlers = {
     onClickOverdue: function () { setStatusFilter("all"); setScopeFilter("all"); setOverdueOnly(true); },
     onClickBlocked: function () { setOverdueOnly(false); setStatusFilter("blocked"); },
@@ -617,6 +644,71 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
           );
         })}
       </div>
+
+      {/* Account filter pills — only shown when projects span more than one account */}
+      {accountsInProjects.length > 1 && (
+        <div
+          style={{
+            display: "flex",
+            gap: 5,
+            marginBottom: 10,
+            overflowX: "auto",
+            paddingBottom: 2,
+          }}
+        >
+          {selectedAccountIds.length > 0 && (
+            <button
+              onClick={function () { setSelectedAccountIds([]); }}
+              style={{
+                flex: "0 0 auto",
+                padding: "4px 12px",
+                borderRadius: 999,
+                cursor: "pointer",
+                fontFamily: MONO,
+                fontSize: 10.5,
+                background: C.accentFaint,
+                color: C.accent,
+                border: "1px solid " + C.accentLine,
+                whiteSpace: "nowrap",
+                display: "inline-flex", alignItems: "center", gap: 6,
+                fontWeight: 600,
+              }}
+            >
+              Clear
+              <span style={{ fontSize: 13, lineHeight: 1, opacity: 0.7 }}>×</span>
+            </button>
+          )}
+          {accountsInProjects.map(function (acct) {
+            var isSelected = selectedAccountIds.includes(acct.id);
+            return (
+              <button
+                key={acct.id}
+                onClick={function () {
+                  setSelectedAccountIds(function (prev) {
+                    return isSelected
+                      ? prev.filter(function (id) { return id !== acct.id; })
+                      : prev.concat([acct.id]);
+                  });
+                }}
+                style={{
+                  flex: "0 0 auto",
+                  padding: "4px 12px",
+                  borderRadius: 999,
+                  cursor: "pointer",
+                  fontFamily: MONO,
+                  fontSize: 10.5,
+                  background: isSelected ? C.accent : "transparent",
+                  color: isSelected ? C.bg : C.textMuted,
+                  border: "1px solid " + (isSelected ? C.accent : C.rule),
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {acct.name}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {overdueOnly && (
         <div style={{ marginBottom: 10 }}>
