@@ -49,6 +49,7 @@ import { computeAndSaveSnapshots } from "./lib/accountSnapshots";
 import { detectKnowledgeGaps, seedEvergreenIfEmpty } from "./lib/detectKnowledgeGaps.js";
 import { usePipDripQuestions } from "./hooks/usePipDripQuestions.js";
 import { usePipFacts as usePipFactsApp } from "./hooks/usePipFacts.js";
+import { useCommitmentNudges } from "./hooks/useCommitmentNudges.js";
 import { C } from "./lib/colors";
 import { QuickTaskModal } from "./views/quicktasks/QuickTaskModal";
 
@@ -563,6 +564,8 @@ export default function App() {
     }).catch(function (err) { console.warn("[resynth] failed:", err && err.message); });
   }, [userId, dripHook.answeredSinceSynthesis]);
 
+  var commitmentNudgesHook = useCommitmentNudges(userId, accounts);
+
   // ──── ALL HOOKS MUST BE ABOVE THIS LINE — see React Hook Order Rule in CLAUDE.md ────
   if (authLoading) {
     return (
@@ -823,6 +826,9 @@ export default function App() {
         onAnswerDrip={dripHook.answerQuestion}
         onSkipDrip={dripHook.skipQuestion}
         onDismissDrip={dripHook.dismissQuestion}
+        commitmentNudges={commitmentNudgesHook.nudges}
+        onSnoozeNudge={commitmentNudgesHook.snooze}
+        onMarkNudgeDone={commitmentNudgesHook.markDone}
       />
     );
   }

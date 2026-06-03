@@ -128,7 +128,8 @@ function renderBriefWithGlows(text, accounts, onOpenAccount) {
   return segments;
 }
 
-export function HomeView({ userName, userId, accounts, meetings, items, cadences, projects, onOpenAccount, onOpenAccountTab, onOpenCadenceHub, onOpenConversation, onOpenQuickTask, showOnboardingCard, onStartInterview, onDismissOnboardingCard, dripQuestion, onAnswerDrip, onSkipDrip, onDismissDrip }) {
+export function HomeView({ userName, userId, accounts, meetings, items, cadences, projects, onOpenAccount, onOpenAccountTab, onOpenCadenceHub, onOpenConversation, onOpenQuickTask, showOnboardingCard, onStartInterview, onDismissOnboardingCard, dripQuestion, onAnswerDrip, onSkipDrip, onDismissDrip, commitmentNudges, onSnoozeNudge, onMarkNudgeDone }) {
+  commitmentNudges = commitmentNudges || [];
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
   var [mounted, setMounted] = useState(false);
@@ -788,6 +789,53 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
           </div>
         </div>
       )}
+
+      {/* Commitment nudge card — amber warning for ✦ commitments due soon or overdue */}
+      {commitmentNudges.length > 0 && (function () {
+        var n = commitmentNudges[0];
+        var dueLabel = n.isOverdue
+          ? Math.abs(n.daysUntilDue) + "d overdue"
+          : n.daysUntilDue === 0 ? "due today"
+          : n.daysUntilDue === 1 ? "due tomorrow"
+          : "due in " + n.daysUntilDue + "d";
+        return (
+          <div style={{
+            maxWidth: 600,
+            margin: isMobile ? "0 16px 12px" : "0 auto 12px",
+            background: "rgba(251,191,36,0.07)",
+            border: "1px solid rgba(251,191,36,0.25)",
+            borderRadius: 10,
+            padding: "14px 16px",
+          }}>
+            <div style={{ fontFamily: MONO, fontSize: 10, color: C.yellow, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>
+              {"✦ Commitment · " + dueLabel}
+            </div>
+            <div style={{ fontSize: 14, color: C.text, lineHeight: 1.4, marginBottom: 10 }}>
+              {n.title}
+              {n.accountName ? <span style={{ color: C.textMuted }}>{" · " + n.accountName}</span> : null}
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <button
+                onClick={function () { if (onMarkNudgeDone) onMarkNudgeDone(n.taskId); }}
+                style={{ background: C.accentFaint, border: "1px solid " + C.accentLine, borderRadius: 6, padding: "5px 12px", fontFamily: MONO, fontSize: 11, color: C.accent, cursor: "pointer" }}
+              >
+                {"Mark done ✓"}
+              </button>
+              <button
+                onClick={function () { if (onSnoozeNudge) onSnoozeNudge(n.taskId); }}
+                style={{ background: "none", border: "1px solid " + C.rule, borderRadius: 6, padding: "5px 12px", fontFamily: MONO, fontSize: 11, color: C.textMuted, cursor: "pointer" }}
+              >
+                Snooze
+              </button>
+              {commitmentNudges.length > 1 && (
+                <span style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, alignSelf: "center" }}>
+                  {"+" + (commitmentNudges.length - 1) + " more"}
+                </span>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Drip question card — between daily brief and four-panel grid */}
       {dripQuestion && (

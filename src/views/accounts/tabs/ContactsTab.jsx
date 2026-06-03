@@ -125,9 +125,12 @@ function exportContacts(contacts, accountName) {
 }
 
 export function ContactsTab({ contacts, meetings, accountId, accountName, onAdd, onDelete, onAddContact, onUpdate }) {
-  var [confirmDeleteId, setConfirmDeleteId] = useState(null);
-  var [editingContact, setEditingContact]   = useState(null);
-  var [selected, setSelected]               = useState({});
+  var [confirmDeleteId, setConfirmDeleteId]       = useState(null);
+  var [editingContact, setEditingContact]         = useState(null);
+  var [selected, setSelected]                     = useState({});
+  var [editingRelationship, setEditingRelationship] = useState(null); // contact id or null
+  var [relRoleDraft, setRelRoleDraft]             = useState("unknown");
+  var [relNoteDraft, setRelNoteDraft]             = useState("");
 
   // Pip Tier B — derive last-seen engagement from meeting attendees
   var engagement = useMemo(function () {
@@ -210,6 +213,24 @@ export function ContactsTab({ contacts, meetings, accountId, accountName, onAdd,
                       POC
                     </span>
                   )}
+                  {c.relationship_role === "champion" && (
+                    <span
+                      title="Champion"
+                      onClick={function () { setEditingRelationship(c.id); setRelRoleDraft(c.relationship_role || "unknown"); setRelNoteDraft(c.relationship_note || ""); }}
+                      style={{ fontFamily: CT_MONO, fontSize: 9, fontWeight: 600, padding: "2px 7px", borderRadius: 10, textTransform: "uppercase", letterSpacing: "0.06em", cursor: "pointer", background: C.accentFaint, border: "1px solid " + C.accentLine, color: C.accent }}
+                    >
+                      CHAMPION
+                    </span>
+                  )}
+                  {c.relationship_role === "blocker" && (
+                    <span
+                      title="Blocker"
+                      onClick={function () { setEditingRelationship(c.id); setRelRoleDraft(c.relationship_role || "unknown"); setRelNoteDraft(c.relationship_note || ""); }}
+                      style={{ fontFamily: CT_MONO, fontSize: 9, fontWeight: 600, padding: "2px 7px", borderRadius: 10, textTransform: "uppercase", letterSpacing: "0.06em", cursor: "pointer", background: C.redFaint, border: "1px solid " + C.redLine, color: C.red }}
+                    >
+                      BLOCKER
+                    </span>
+                  )}
                 </div>
 
                 {c.title && (
@@ -255,9 +276,80 @@ export function ContactsTab({ contacts, meetings, accountId, accountName, onAdd,
                     </div>
                   );
                 })()}
+
+                {/* Relationship note — shown when role is set and note exists */}
+                {c.relationship_role && c.relationship_role !== "unknown" && c.relationship_note && (
+                  <div style={{ fontFamily: CT_MONO, fontSize: 10.5, color: C.textSoft, marginTop: 4, fontStyle: "italic" }}>
+                    {c.relationship_note}
+                  </div>
+                )}
+
+                {/* Inline relationship editor */}
+                {editingRelationship === c.id && (
+                  <div style={{ marginTop: 10, background: C.surface, border: "1px solid " + C.rule, borderRadius: 8, padding: "12px" }}>
+                    <div style={{ fontFamily: CT_MONO, fontSize: 10, color: C.textMuted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+                      Relationship role
+                    </div>
+                    <select
+                      value={relRoleDraft}
+                      onChange={function (e) { setRelRoleDraft(e.target.value); }}
+                      style={{ width: "100%", fontSize: 13, fontFamily: CT_MONO, color: C.text, background: C.bg, border: "1px solid " + C.rule, borderRadius: 6, padding: "7px 10px", marginBottom: 8, outline: "none", cursor: "pointer" }}
+                    >
+                      <option value="unknown">Not set</option>
+                      <option value="champion">Champion</option>
+                      <option value="blocker">Blocker</option>
+                      <option value="neutral">Neutral</option>
+                    </select>
+                    <textarea
+                      value={relNoteDraft}
+                      onChange={function (e) { setRelNoteDraft(e.target.value.slice(0, 120)); }}
+                      placeholder={"Why? e.g. 'owns the budget'"}
+                      rows={2}
+                      style={{ width: "100%", fontSize: 13, fontFamily: CT_MONO, color: C.text, background: C.bg, border: "1px solid " + C.rule, borderRadius: 6, padding: "7px 10px", resize: "vertical", outline: "none", boxSizing: "border-box", lineHeight: 1.5, marginBottom: 8 }}
+                    />
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button
+                        onClick={function () {
+                          if (onUpdate) {
+                            onUpdate(c.id, { relationship_role: relRoleDraft, relationship_note: relNoteDraft })
+                              .then(function () { showToast("Relationship saved"); setEditingRelationship(null); })
+                              .catch(function (err) { showToast(err && err.message || "Couldn't save", "error"); });
+                          } else {
+                            setEditingRelationship(null);
+                          }
+                        }}
+                        style={{ background: C.accentDeep, border: "1px solid " + C.accent, borderRadius: 6, padding: "5px 14px", fontFamily: CT_MONO, fontSize: 11, color: C.bg, cursor: "pointer" }}
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={function () { setEditingRelationship(null); }}
+                        style={{ background: "none", border: "1px solid " + C.rule, borderRadius: 6, padding: "5px 10px", fontFamily: CT_MONO, fontSize: 11, color: C.textMuted, cursor: "pointer" }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
+                {onUpdate && (
+                  <SecBtn
+                    onClick={function () {
+                      if (editingRelationship === c.id) {
+                        setEditingRelationship(null);
+                      } else {
+                        setEditingRelationship(c.id);
+                        setRelRoleDraft(c.relationship_role || "unknown");
+                        setRelNoteDraft(c.relationship_note || "");
+                      }
+                    }}
+                    style={{ fontSize: 10, padding: "4px 10px" }}
+                  >
+                    {"☆ Role"}
+                  </SecBtn>
+                )}
                 {onUpdate && (
                   <SecBtn
                     onClick={function () { setEditingContact(c); }}

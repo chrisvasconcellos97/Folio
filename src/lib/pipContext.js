@@ -320,6 +320,21 @@ function renderAccountFull(a, userId) {
     }
   }
 
+  // Stakeholder relationship layer — champion/blocker/neutral map
+  var relContacts = contacts.filter(function (c) {
+    return c.relationship_role && c.relationship_role !== "unknown";
+  });
+  if (relContacts.length > 0) {
+    lines.push("");
+    lines.push("── RELATIONSHIPS ──");
+    relContacts.forEach(function (c) {
+      var role = c.relationship_role.charAt(0).toUpperCase() + c.relationship_role.slice(1);
+      var line = role + ": " + (c.name || "—");
+      if (c.relationship_note) line += " — " + c.relationship_note;
+      lines.push(line);
+    });
+  }
+
   var projects = take(a.activeProjects, 5);
   if (projects.length) {
     lines.push("");
