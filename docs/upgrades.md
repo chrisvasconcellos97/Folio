@@ -1,6 +1,6 @@
 # Folios — Upgrade Log
 
-*Last updated: 2026-06-03 (Meeting discussed signal + Pip drip questions Phase 2)*
+*Last updated: 2026-06-03 (Commitment enforcement + Stakeholder layer)*
 
 Plain-English log of major upgrades shipped to Folios. Date, time, and
 a short explanation written in terms anyone can read — not technical
@@ -14,6 +14,34 @@ For the technical changelog with full release detail, see
 architectural changes, anything that meaningfully changes what Folios
 *does* or *is*. Not bug fixes, styling tweaks, or doc-only updates —
 those live in git history.
+
+---
+
+## 2026-06-03 — Stakeholder / relationship layer
+
+**What I built:** Champion/blocker/neutral tags on each contact with a one-line "why" note.
+
+**Problem it solves:** Pip had no structured sense of who controls decisions at each account — it had contact names and roles but not relationship dynamics. Briefs and QBRs didn't lead with the power map.
+
+**What changed:** Two new columns on `folio_contacts` (`relationship_role`, `relationship_note`). Contact cards show colored CHAMPION/BLOCKER pills. Pip context and summarize both emit a RELATIONSHIPS block so every brief and QBR leads with champion + blocker dynamics. SQL: `supabase/stakeholder_layer.sql` — run in production.
+
+**What you see today:** Open any contact, tap "☆ Role", tag them as Champion/Blocker/Neutral with a one-liner. Pip's next brief will cite the power map directly.
+
+**Why it matters:** "Sarah is the champion but Mike is the blocker" is the most important context in any sales situation. Now Pip knows it and leads with it.
+
+---
+
+## 2026-06-03 — Commitment enforcement
+
+**What I built:** A daily commitment nudge on the home screen that monitors tasks you've marked as commitments (✦) and warns you 2 days before they're due — or flags them as overdue.
+
+**Problem it solves:** Promises to clients would slip because there was no proactive reminder before the due date passed.
+
+**What changed:** New `useCommitmentNudges` hook (client-side, zero LLM cost). HomeView shows an amber nudge card for the most urgent upcoming commitment with Mark Done and Snooze actions.
+
+**What you see today:** If you have a ✦ commitment task due in ≤2 days, an amber card appears on the home screen above Pip's drip questions.
+
+**Why it matters:** AM credibility lives or dies on follow-through. This closes the loop without you having to remember to check.
 
 ---
 

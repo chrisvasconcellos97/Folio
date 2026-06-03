@@ -200,7 +200,22 @@ function renderContactsBlock(contacts) {
     if (c.notes) line += " — " + c.notes.slice(0, 120);
     return line;
   });
-  return "── CONTACTS ──\n" + lines.join("\n") + "\n\n";
+  var out = "── CONTACTS ──\n" + lines.join("\n") + "\n\n";
+
+  // Append stakeholder relationship layer if any contacts have roles set
+  var relContacts = contacts.filter(function (c) {
+    return c.relationship_role && c.relationship_role !== "unknown";
+  });
+  if (relContacts.length > 0) {
+    var relLines = relContacts.map(function (c) {
+      var role = c.relationship_role.charAt(0).toUpperCase() + c.relationship_role.slice(1);
+      var line = role + ": " + (c.name || "—");
+      if (c.relationship_note) line += " — " + c.relationship_note;
+      return line;
+    });
+    out += "── RELATIONSHIPS ──\n" + relLines.join("\n") + "\n\n";
+  }
+  return out;
 }
 
 // Renders recent meeting history (with Pip summaries) for summarize prompts.
