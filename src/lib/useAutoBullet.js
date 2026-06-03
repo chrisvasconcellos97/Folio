@@ -8,8 +8,14 @@ import { useRef, useCallback } from "react";
 //   - First focus into an empty textarea pre-inserts "• " so you start
 //     in bullet mode.
 //   - Enter inserts a newline + "• " so the next line stays bulleted.
-//   - Enter on a line that's just "• " (empty bullet) removes the bullet
-//     and exits bullet mode — gives you a clean line for paragraphs.
+//     Leading indentation of the current line is preserved, so pressing
+//     Enter inside a sub-bullet keeps you at the same nesting depth.
+//   - Enter on a line that's just "• " (empty bullet, at any indent) removes
+//     the bullet and exits bullet mode — gives you a clean line for paragraphs.
+//   - Tab indents the current line (or every line in a multi-line selection)
+//     by two spaces to make a sub-bullet; Shift+Tab outdents. Tab is captured
+//     so focus never escapes the notepad mid-note. Indentation is plain text,
+//     so Pip reads the nesting as hierarchy (which detail belongs to which point).
 //   - Backspace right after "• " at line start removes both characters
 //     at once, so escaping from a bullet doesn't need two keystrokes.
 //   - Paste normalizes external bullet styles ("- ", "* ", "· ", "‣ ",
@@ -38,28 +44,80 @@ export function useAutoBullet({ value, onChange, enabled }) {
     });
   }
 
+  var INDENT = "  "; // two spaces per nesting level
+
   var onKeyDown = useCallback(function (e) {
     if (!enabledRef.current) return;
     var ta    = e.target;
     var val   = valueRef.current || "";
     var caret = ta.selectionStart;
 
+    // Tab / Shift+Tab → indent / outdent (sub-bullets). Captured so focus
+    // never leaves the notepad while taking notes.
+    if (e.key === "Tab") {
+      e.preventDefault();
+      var selStart = ta.selectionStart;
+      var selEnd   = ta.selectionEnd;
+      var firstLineStart = val.lastIndexOf("\n", selStart - 1) + 1;
+
+      // Single caret — indent/outdent just this line.
+      if (selStart === selEnd) {
+        if (e.shiftKey) {
+          var removable = 0;
+          while (removable < INDENT.length && val[firstLineStart + removable] === " ") removable++;
+          if (removable === 0) return;
+          var outVal   = val.slice(0, firstLineStart) + val.slice(firstLineStart + removable);
+          var outCaret = Math.max(firstLineStart, selStart - removable);
+          emit(ta, outVal, outCaret);
+        } else {
+          var inVal = val.slice(0, firstLineStart) + INDENT + val.slice(firstLineStart);
+          emit(ta, inVal, selStart + INDENT.length);
+        }
+        return;
+      }
+
+      // Multi-line selection — indent/outdent every line in the range.
+      var region   = val.slice(firstLineStart, selEnd);
+      var delta    = 0;
+      var newRegion = region.split("\n").map(function (line) {
+        if (e.shiftKey) {
+          var r = 0;
+          while (r < INDENT.length && line[r] === " ") r++;
+          delta -= r;
+          return line.slice(r);
+        }
+        delta += INDENT.length;
+        return INDENT + line;
+      }).join("\n");
+      var nextVal = val.slice(0, firstLineStart) + newRegion + val.slice(selEnd);
+      onChangeRef.current(nextVal);
+      requestAnimationFrame(function () {
+        try {
+          ta.selectionStart = firstLineStart;
+          ta.selectionEnd   = selEnd + delta;
+        } catch (er) { /* swallow — DOM may have unmounted */ }
+      });
+      return;
+    }
+
     if (e.key === "Enter" && !e.shiftKey) {
       var lineStart   = val.lastIndexOf("\n", caret - 1) + 1;
       var currentLine = val.slice(lineStart, caret);
+      var indent      = (currentLine.match(/^(\s*)/) || ["", ""])[1];
 
-      // Empty bullet line + Enter → strip the bullet, exit bullet mode.
-      if (currentLine === "• ") {
+      // Empty bullet line (at any indent) + Enter → strip it, exit bullet mode.
+      if (/^\s*• $/.test(currentLine)) {
         e.preventDefault();
         var stripped = val.slice(0, lineStart) + val.slice(caret);
         emit(ta, stripped, lineStart);
         return;
       }
 
-      // Otherwise insert newline + bullet so the next line continues bulleted.
+      // Otherwise newline + same indent + bullet, so nesting depth carries over.
       e.preventDefault();
-      var next = val.slice(0, caret) + "\n• " + val.slice(caret);
-      emit(ta, next, caret + 3);
+      var insert = "\n" + indent + "• ";
+      var next   = val.slice(0, caret) + insert + val.slice(caret);
+      emit(ta, next, caret + insert.length);
       return;
     }
 
