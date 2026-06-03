@@ -5,7 +5,7 @@ import { Modal } from "../../components/Modal";
 import { AmberBtn, SecBtn, DangerBtn } from "../../components/Buttons";
 import { InputField, TextArea } from "../../components/InputField";
 import { FL } from "../../components/FieldLabel";
-import { ChipDropdown } from "../../components/ChipDropdown";
+import { AccountPicker } from "../../components/AccountPicker";
 
 var PRESETS = [
   { label: "30 min", minutes: 30  },
@@ -102,15 +102,13 @@ export function QuickTaskModal({ existing, accounts, onSave, onDelete, onClose }
 
         <div>
           <FL>Account (optional)</FL>
-          <ChipDropdown
-            options={["— No account —"].concat(sortedAccounts.map(function (a) { return a.name; }))}
-            value={accountId ? (sortedAccounts.find(function (a) { return a.id === accountId; }) || {}).name || "" : "— No account —"}
-            onSelect={function (name) {
-              if (name === "— No account —") { setAccountId(""); return; }
-              var acct = sortedAccounts.find(function (a) { return a.name === name; });
-              if (acct) setAccountId(acct.id);
-            }}
-            placeholder="— No account —"
+          <AccountPicker
+            accounts={sortedAccounts}
+            value={accountId || null}
+            onChange={function (id) { setAccountId(id || ""); }}
+            placeholder="Search accounts…"
+            allowNone
+            noneLabel="— No account —"
           />
         </div>
 

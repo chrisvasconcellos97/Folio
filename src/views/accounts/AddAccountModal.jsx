@@ -6,6 +6,7 @@ import { InputField, TextArea } from "../../components/InputField";
 import { FL } from "../../components/FieldLabel";
 import { detectRegion, detectMarketScope, STATE_NAMES } from "../../lib/regions";
 import { ChipDropdown } from "../../components/ChipDropdown";
+import { AccountPicker } from "../../components/AccountPicker";
 import { ownerLabel } from "../../lib/ownerLabel";
 import { PipMark } from "../../components/PipMark";
 
@@ -615,22 +616,15 @@ export function AddAccountModal({ userId, onSave, onAddContacts, onClose, existi
         {!defaultParentId && accounts && accounts.length > 0 && (
           <div>
             <FL>Part of <span style={{ fontWeight: 400, color: C.textMuted }}>(optional)</span></FL>
-            <ChipDropdown
-              options={["None (standalone)"].concat(
-                accounts
-                  .filter(function (a) { return !existing || a.id !== existing.id; })
-                  .filter(function (a) { return !a.parent_account_id; })
-                  .map(function (a) { return a.name; })
-              )}
-              value={parentAccountId
-                ? (accounts.find(function (a) { return a.id === parentAccountId; }) || {}).name || ""
-                : "None (standalone)"}
-              onSelect={function (name) {
-                if (name === "None (standalone)") { setParentAccountId(""); return; }
-                var acct = accounts.find(function (a) { return a.name === name; });
-                if (acct) setParentAccountId(acct.id);
-              }}
-              placeholder="None (standalone)"
+            <AccountPicker
+              accounts={accounts
+                .filter(function (a) { return !existing || a.id !== existing.id; })
+                .filter(function (a) { return !a.parent_account_id; })}
+              value={parentAccountId || null}
+              onChange={function (id) { setParentAccountId(id || ""); }}
+              placeholder="Search accounts…"
+              allowNone
+              noneLabel="None (standalone)"
             />
           </div>
         )}

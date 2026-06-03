@@ -4,6 +4,7 @@ import { Modal } from "../../components/Modal";
 import { InputField, TextArea, SelectField } from "../../components/InputField";
 import { FL } from "../../components/FieldLabel";
 import { taskStatusLabel } from "../../lib/gaugeFields";
+import { AccountPicker } from "../../components/AccountPicker";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var INTER = "'Inter', system-ui, sans-serif";
@@ -261,15 +262,14 @@ export function TaskDetailPanel({
         {accounts && accounts.length > 0 && (
           <div>
             <FL>Linked Account</FL>
-            <SelectField
-              value={accountId}
-              onChange={function (e) { setAccountId(e.target.value); }}
-            >
-              <option value="">— None —</option>
-              {accounts.map(function (a) {
-                return <option key={a.id} value={a.id}>{a.name}</option>;
-              })}
-            </SelectField>
+            <AccountPicker
+              accounts={accounts}
+              value={accountId || null}
+              onChange={function (id) { setAccountId(id || ""); }}
+              placeholder="Search accounts…"
+              allowNone
+              noneLabel="— None —"
+            />
           </div>
         )}
 

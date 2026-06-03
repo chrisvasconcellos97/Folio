@@ -5,6 +5,7 @@ import { AmberBtn, SecBtn } from "../../components/Buttons";
 import { FL } from "../../components/FieldLabel";
 import { InputField } from "../../components/InputField";
 import { ChipDropdown } from "../../components/ChipDropdown";
+import { AccountPicker } from "../../components/AccountPicker";
 
 var DAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -235,14 +236,11 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues, acco
         {scope === 'account' && accounts && accounts.length > 0 && effectiveType === 'meeting' && (
           <div>
             <FL>Account</FL>
-            <ChipDropdown
-              options={accounts.map(function (a) { return a.name; })}
-              value={selectedAccountId ? (accounts.find(function (a) { return a.id === selectedAccountId; }) || {}).name || '' : ''}
-              onSelect={function (name) {
-                var acct = accounts.find(function (a) { return a.name === name; });
-                if (acct) setSelectedAccountId(acct.id);
-              }}
-              placeholder="Select an account..."
+            <AccountPicker
+              accounts={accounts}
+              value={selectedAccountId || null}
+              onChange={function (id) { setSelectedAccountId(id || null); }}
+              placeholder="Search accounts…"
             />
           </div>
         )}
