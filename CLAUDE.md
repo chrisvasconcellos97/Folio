@@ -394,6 +394,20 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 14. **Gauge + account change log:** *(no open items — Gauge V3 all 6 phases shipped; see Already shipped: Gauge V3)*
 
+21. **Inbound capture — forward-to-Pip email + share sheet** — Biggest capture gap: every meeting note is manual retyping. Two entry points:
+    - **Forward-to-Pip email address** (e.g. `pip@folioshq.com`): user forwards a meeting recap, chain, or PDF → Vercel edge function receives inbound email via SendGrid/Postmark → Haiku extracts meeting notes + action items → drops a draft meeting on the matching account → same PipSummarizePreview plan flow. Account matching: subject/body parsed for known account names; fallback to unlinked inbox for review.
+    - **Mobile share sheet** (PWA Web Share Target in `manifest.webmanifest`): user shares a note, screenshot, or email from their phone to Folios → lands in a quick-review tray → same plan flow. No server needed for share target, just a `share_target` entry in the manifest + a route handler.
+    - Phase 1: share sheet only (zero infra cost). Phase 2: inbound email with a transactional email provider.
+    - Why this matters: removes the biggest friction point for road AMs — currently you have to sit down and retype everything you already wrote elsewhere.
+
+22. **Voice capture — hold-to-record field memo** — AM is in the car between meetings. Hold the mic button → Pip transcribes (Web Speech API or Whisper) → same summarize plan flow. Complements existing Voice Chat but distinct: Voice Chat is conversational Q&A, this is one-shot dictation of a meeting recap or quick note. Implementation: reuse `CadenceMeetingMode` with a voice-first textarea that auto-fills from speech; "Done — summarize" runs the existing flow. No new backend needed for Web Speech. Whisper API option if Web Speech accuracy is insufficient on noisy mobile.
+
+23. **Proactive commitment enforcement** — Pip monitors promises before they slip. When a task has `is_commitment=true` and a due date, Pip fires a nudge N days before ("You told Parts Authority you'd send the feed spec by Friday — it's Thursday, no follow-up logged"). Nudge surface: HomeView card (same lane as drip questions) or a `MeetingReminderBanner`-style inline strip. Logic: client-side daily sweep of `folio_tasks` where `is_commitment=true AND due_date <= today+2 AND status != 'complete'` — zero API cost. "Mark done" or "Snooze" actions. Builds directly on the existing commitment ledger (Tier B) + `is_commitment` flag already on tasks.
+
+24. **Conversational recall as a headline verb** — Sharpen "Ask Pip" positioning as an explicit external brain, not just a chat widget. Changes: (1) Pip's greeting on first open shifts to "What do you need to remember?" framing. (2) Add a `folio_pip_facts` "things I taught Pip" section in Settings so users can see and edit their standing context. (3) Quick-answer mode: one-tap common queries ("Recap last meeting with [account]", "What did I promise [account]?", "Who is [name]?") displayed as chips before the user types. (4) Pip answers from `folio_pip_facts` + correction log + snapshots before making an API call — local-first recall.
+
+25. **Stakeholder / relationship layer** — Champion/blocker/neutral map per account with one-line "why". Adds `relationship_role enum('champion','blocker','neutral','unknown')` + `relationship_note text` to `folio_contacts`. Contact card shows a colored relationship pill. Pip context emits a RELATIONSHIPS block: "Champion: Sarah Chen (owns the budget). Blocker: Mike Davis (IT compliance gate)." QBRs and briefs automatically lead with champion + blocker dynamic. No new table — two columns on `folio_contacts`. SQL: simple `alter table folio_contacts add column if not exists ...`.
+
 15. *(shipped — see Already shipped)*
 
 16. *(ripped — Route Builder removed, not needed)*

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useDeferredValue } from "react";
 import { C } from "../../lib/colors";
 import { usePipCorrections } from "../../hooks/usePipCorrections";
 import { GaugeIcon } from "../../components/GaugeIcon";
@@ -173,6 +173,8 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
 
+  var [searchQuery, setSearchQuery]   = useState("");
+  var deferredSearch = useDeferredValue(searchQuery);
   var [scopeFilter, setScopeFilter]   = useState("all");
   var [statusFilter, setStatusFilter] = useState("all");
   var [overdueOnly, setOverdueOnly]   = useState(false);
@@ -183,9 +185,19 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
   var [prefillTemplate, setPrefill] = useState(null);
 
   var filtered = (function () {
-    var byScope = projects;
+    var bySearch = deferredSearch.trim()
+      ? projects.filter(function (p) {
+          var q = deferredSearch.toLowerCase();
+          return (
+            (p.title       || "").toLowerCase().includes(q) ||
+            (p.description || "").toLowerCase().includes(q) ||
+            (p.assignee    || "").toLowerCase().includes(q)
+          );
+        })
+      : projects;
+    var byScope = bySearch;
     if (scopeFilter === "my_queue") {
-      byScope = projects.filter(function (p) {
+      byScope = bySearch.filter(function (p) {
         if (userEmail && p.assignee && p.assignee.toLowerCase() === userEmail.toLowerCase()) return true;
         if (p.scope === "personal" && p.user_id === userId) return true;
         var stages = p.stages || [];
@@ -194,9 +206,9 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
         });
       });
     } else if (scopeFilter === "team") {
-      byScope = projects.filter(function (p) { return p.scope === "team"; });
+      byScope = bySearch.filter(function (p) { return p.scope === "team"; });
     } else if (scopeFilter === "personal") {
-      byScope = projects.filter(function (p) { return !p.scope || p.scope === "personal"; });
+      byScope = bySearch.filter(function (p) { return !p.scope || p.scope === "personal"; });
     }
     var byStatus = statusFilter === "all" ? byScope : byScope.filter(function (p) { return p.status === statusFilter; });
     if (overdueOnly) {
@@ -536,6 +548,39 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
             </div>
           );
         })}
+      </div>
+
+      {/* Search bar */}
+      <div style={{ marginBottom: 10, position: "relative" }}>
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={function (e) { setSearchQuery(e.target.value); }}
+          placeholder="Search projects…"
+          style={{
+            width: "100%", boxSizing: "border-box",
+            background: C.surface, border: "1px solid " + C.rule,
+            borderRadius: 6, padding: "7px 32px 7px 30px",
+            fontFamily: MONO, fontSize: 12, color: C.text,
+            outline: "none",
+          }}
+          onFocus={function (e) { e.target.style.borderColor = C.accent; }}
+          onBlur={function  (e) { e.target.style.borderColor = C.rule;   }}
+        />
+        <span style={{
+          position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)",
+          color: C.textMuted, fontSize: 12, pointerEvents: "none",
+        }}>⌕</span>
+        {searchQuery && (
+          <button
+            onClick={function () { setSearchQuery(""); }}
+            style={{
+              position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)",
+              background: "none", border: "none", color: C.textMuted,
+              cursor: "pointer", fontSize: 13, lineHeight: 1, padding: 2,
+            }}
+          >×</button>
+        )}
       </div>
 
       {/* Filter chips */}
