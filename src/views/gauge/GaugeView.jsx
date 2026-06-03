@@ -712,7 +712,7 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
                     <div style={{ flex: 1, height: 3, background: C.surface3, borderRadius: 2, overflow: "hidden" }}>
-                      <div style={{ height: "100%", width: pct + "%", background: overdue ? C.red : C.accent, borderRadius: 2 }} />
+                      <div style={{ height: "100%", width: pct + "%", background: overdue ? C.red : "linear-gradient(to right, #3b82f6, var(--c-accent))", borderRadius: 2 }} />
                     </div>
                     <div style={{ fontFamily: MONO, fontSize: 9, color: C.textMuted, whiteSpace: "nowrap", fontFeatureSettings: '"tnum"' }}>
                       {steps.done}/{steps.total}
@@ -998,7 +998,7 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
                       <div style={{ position: "relative", height: 4, background: C.surface3, borderRadius: 2, overflow: "hidden" }}>
                         <div style={{
                           position: "absolute", inset: 0,
-                          background: C.accent,
+                          background: "linear-gradient(to right, #3b82f6, var(--c-accent))",
                           borderRadius: 2,
                         }} />
                         <div style={{
@@ -1050,7 +1050,7 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
                 <div style={{ position: "relative", height: 4, background: C.surface3, borderRadius: 2, overflow: "hidden" }}>
                   <div style={{
                     position: "absolute", inset: 0,
-                    background: C.accent,
+                    background: "linear-gradient(to right, #3b82f6, var(--c-accent))",
                     borderRadius: 2,
                   }} />
                   <div style={{
