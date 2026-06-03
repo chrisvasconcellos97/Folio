@@ -187,26 +187,49 @@ export function usePipDripQuestions(userId, profile, onTermLearned) {
       });
   }
 
-  // Track local answer count for the re-synthesis trigger in App.jsx.
-  var [localAnswerCount, setLocalAnswerCount] = useState(0);
-  function incrementAnswerCount() { setLocalAnswerCount(function (n) { return n + 1; }); }
+  // ── Re-synthesis signal ─────────────────────────────────────────────────
+  // Count of answered drip questions since the profile was last synthesized.
+  // DB-driven (not a session counter) so it accumulates across days/devices —
+  // the daily throttle means answers trickle in one at a time, so a session
+  // counter would never reach the threshold.
+  var [answeredSince, setAnsweredSince] = useState(0);
 
-  // Wrap answerQuestion to increment counter.
+  var countAnsweredSince = useCallback(function () {
+    if (!userId) return;
+    // prose_generated_at marks the last synthesis; null → count every answer.
+    var since = (profile && profile.prose_generated_at) || "1970-01-01T00:00:00Z";
+    supabase
+      .from("folio_pip_questions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("source", "gap_observed")
+      .eq("status", "answered")
+      .gt("answered_at", since)
+      .then(function (r) {
+        if (r.error) return;
+        setAnsweredSince(r.count || 0);
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, profile && profile.prose_generated_at]);
+
+  useEffect(function () { countAnsweredSince(); }, [countAnsweredSince]);
+
+  // Wrap answerQuestion to refresh the re-synthesis count afterward.
   function answerAndCount(id, text) {
     return answerQuestion(id, text).then(function (result) {
-      incrementAnswerCount();
+      countAnsweredSince();
       return result;
     });
   }
 
   return {
-    activeQuestion:       throttleLoaded ? activeQuestion : null,
-    answerQuestion:       answerAndCount,
-    skipQuestion:         skipQuestion,
-    dismissQuestion:      dismissQuestion,
-    answeredCount:        localAnswerCount,
-    loading:              loading,
-    error:                error,
-    refetch:              fetch,
+    activeQuestion:         throttleLoaded ? activeQuestion : null,
+    answerQuestion:         answerAndCount,
+    skipQuestion:           skipQuestion,
+    dismissQuestion:        dismissQuestion,
+    answeredSinceSynthesis: answeredSince,
+    loading:                loading,
+    error:                  error,
+    refetch:                fetch,
   };
 }

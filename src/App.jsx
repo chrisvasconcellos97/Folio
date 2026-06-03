@@ -532,7 +532,7 @@ export default function App() {
   // Re-synthesis trigger — when drip hook reports >= 3 new answers since last synthesis.
   useEffect(function () {
     if (!userId || !session) return;
-    if (dripHook.answeredCount < 3) return;
+    if (dripHook.answeredSinceSynthesis < 3) return;
     var key = "folio_resynth_last_" + userId;
     var last = 0;
     try { last = parseInt(localStorage.getItem(key) || "0", 10); } catch (e) {}
@@ -561,7 +561,7 @@ export default function App() {
         userProfileApi.upsertProfile(update).catch(function () {});
       });
     }).catch(function (err) { console.warn("[resynth] failed:", err && err.message); });
-  }, [userId, dripHook.answeredCount]);
+  }, [userId, dripHook.answeredSinceSynthesis]);
 
   // ──── ALL HOOKS MUST BE ABOVE THIS LINE — see React Hook Order Rule in CLAUDE.md ────
   if (authLoading) {
