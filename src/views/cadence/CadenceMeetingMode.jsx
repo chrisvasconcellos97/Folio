@@ -843,6 +843,10 @@ export function CadenceMeetingMode({
                   >
                     {focusMode ? "⊠ Focus" : "⊡ Focus"}
                   </button>
+                  <span style={{
+                    fontFamily: MONO, fontSize: 10, color: C.textFaint,
+                    padding: "4px 6px", userSelect: "none", flexShrink: 0,
+                  }}>[ ] tasks</span>
                 </div>
               </div>
               {(function () {

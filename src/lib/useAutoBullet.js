@@ -113,6 +113,14 @@ export function useAutoBullet({ value, onChange, enabled }) {
         return;
       }
 
+      // Checkbox lines ([ ] or [x]) get a plain newline — no bullet prefix.
+      if (/^\s*\[/.test(currentLine)) {
+        e.preventDefault();
+        var cbNext = val.slice(0, caret) + "\n" + val.slice(caret);
+        emit(ta, cbNext, caret + 1);
+        return;
+      }
+
       // Otherwise newline + same indent + bullet, so nesting depth carries over.
       e.preventDefault();
       var insert = "\n" + indent + "• ";
