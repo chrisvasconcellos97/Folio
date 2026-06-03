@@ -465,9 +465,11 @@ function PipPrefsSection({ userId }) {
 
   return (
     <Card>
-      <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 6 }}>Pip preferences</div>
+      <div style={{ fontFamily: SETTINGS_SERIF, fontSize: 20, fontWeight: 400, color: C.text, marginBottom: 4 }}>
+        What Pip knows about you
+      </div>
       <div style={{ fontSize: 13, color: C.textSub, lineHeight: 1.6, marginBottom: 14 }}>
-        Things Pip should remember about you. These are injected into every Pip prompt — keep them short and durable.
+        Standing facts and preferences injected into every Pip prompt — your working style, regional context, shorthand. Keep them short and durable.
       </div>
 
       <div style={{ display: "flex", gap: 8, alignItems: "flex-end", marginBottom: 14 }}>

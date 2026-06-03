@@ -134,6 +134,9 @@ export function CadenceMeetingMode({
   var [discussedItemIds,    setDiscussedItemIds]    = useState([]);
   var [mentionedProjectIds, setMentionedProjectIds] = useState([]);
   var [mentionedItemIds,    setMentionedItemIds]    = useState([]);
+  // Voice dictation state
+  var [recording, setRecording]         = useState(false);
+  var recognitionRef                    = useRef(null);
   var [bulletsOn, setBulletsOn]         = useState(function () {
     try { var v = localStorage.getItem(BULLET_KEY); return v === null ? true : v === "1"; } catch (e) { return true; }
   });
@@ -244,6 +247,60 @@ export function CadenceMeetingMode({
     return function () { window.removeEventListener("keydown", onKey); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notes]);
+
+  // Stop recognition on unmount so the mic doesn't stay open if the overlay closes.
+  useEffect(function () {
+    return function () {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch (e) {}
+        recognitionRef.current = null;
+      }
+    };
+  }, []);
+
+  function startRecording() {
+    var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      showToast("Voice input isn't supported in this browser", "warning");
+      return;
+    }
+    var rec = new SpeechRecognition();
+    rec.continuous = true;
+    rec.interimResults = false;
+    rec.lang = "en-US";
+    rec.onresult = function (e) {
+      var transcript = Array.from(e.results)
+        .filter(function (r) { return r.isFinal; })
+        .map(function (r) { return r[0].transcript; })
+        .join(" ");
+      if (transcript) {
+        setNotes(function (prev) {
+          return prev ? prev + "\n• " + transcript : "• " + transcript;
+        });
+      }
+    };
+    rec.onerror = function (e) {
+      if (e.error !== "aborted") showToast("Voice input error: " + e.error, "warning");
+      setRecording(false);
+    };
+    rec.onend = function () { setRecording(false); };
+    recognitionRef.current = rec;
+    rec.start();
+    setRecording(true);
+  }
+
+  function stopRecording() {
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch (e) {}
+      recognitionRef.current = null;
+    }
+    setRecording(false);
+  }
+
+  function toggleRecording() {
+    if (recording) stopRecording();
+    else startRecording();
+  }
 
   function flushPendingSave() {
     if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null; }
@@ -724,22 +781,41 @@ export function CadenceMeetingMode({
                     {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
                   </div>
                 ) : <span />}
-                <button
-                  onClick={function () { setBulletsOn(function (v) { return !v; }); }}
-                  aria-pressed={bulletsOn}
-                  title="Auto-bullet new lines"
-                  style={{
-                    fontFamily: MONO, fontSize: 9.5,
-                    textTransform: "uppercase", letterSpacing: "0.08em",
-                    background: bulletsOn ? C.accentFaint : "transparent",
-                    color: bulletsOn ? C.accent : C.textMuted,
-                    border: "1px solid " + (bulletsOn ? C.accentLine : C.rule),
-                    borderRadius: 999, padding: "3px 10px",
-                    cursor: "pointer", flexShrink: 0,
-                  }}
-                >
-                  • Bullets {bulletsOn ? "on" : "off"}
-                </button>
+                <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                  <button
+                    onClick={toggleRecording}
+                    title={recording ? "Stop recording" : "Dictate notes"}
+                    style={{
+                      background: recording ? "rgba(239,68,68,0.12)" : "transparent",
+                      border: "1px solid " + (recording ? "rgba(239,68,68,0.4)" : C.rule),
+                      borderRadius: 6, padding: "3px 10px",
+                      fontFamily: MONO, fontSize: 9.5,
+                      textTransform: "uppercase", letterSpacing: "0.08em",
+                      color: recording ? C.red : C.textMuted,
+                      cursor: "pointer",
+                      display: "inline-flex", alignItems: "center", gap: 4,
+                    }}
+                  >
+                    <span>{recording ? "⏹" : "🎙"}</span>
+                    {recording ? "Stop" : "Dictate"}
+                  </button>
+                  <button
+                    onClick={function () { setBulletsOn(function (v) { return !v; }); }}
+                    aria-pressed={bulletsOn}
+                    title="Auto-bullet new lines"
+                    style={{
+                      fontFamily: MONO, fontSize: 9.5,
+                      textTransform: "uppercase", letterSpacing: "0.08em",
+                      background: bulletsOn ? C.accentFaint : "transparent",
+                      color: bulletsOn ? C.accent : C.textMuted,
+                      border: "1px solid " + (bulletsOn ? C.accentLine : C.rule),
+                      borderRadius: 999, padding: "3px 10px",
+                      cursor: "pointer", flexShrink: 0,
+                    }}
+                  >
+                    • Bullets {bulletsOn ? "on" : "off"}
+                  </button>
+                </div>
               </div>
               {(function () {
                 var todayStr = new Date().toISOString().slice(0, 10);

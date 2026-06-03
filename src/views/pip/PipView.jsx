@@ -87,7 +87,7 @@ export function PipView(props) {
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch (e) {}
-    return [{ role: "assistant", text: "Hey. Ready when you are. What's going on with your accounts?" }];
+    return [{ role: "assistant", text: "What do you need to remember?\n\nAsk me anything about your accounts, meetings, or commitments." }];
   });
 
   useEffect(function () {
@@ -748,34 +748,40 @@ export function PipView(props) {
         <div ref={bottomRef} />
       </div>
 
-      {/* Starters (only show if only the first greeting message) */}
+      {/* Quick-answer chips — shown when no conversation started yet.
+          Four recall-focused queries as one-tap shortcuts. */}
       {messages.length === 1 && (
         <div
           style={{
             display: "flex",
             flexWrap: "wrap",
-            gap: 6,
-            padding: "10px 0",
+            gap: 8,
+            padding: "8px 0 12px",
           }}
         >
-          {STARTERS.map(function (s, i) {
+          {[
+            "Recap last meeting",
+            "What did I promise?",
+            "What's at risk?",
+            "Who haven't I contacted?",
+          ].map(function (chip) {
             return (
               <button
-                key={i}
-                onClick={function () { send(s); }}
+                key={chip}
+                onClick={function () { send(chip); }}
                 style={{
-                  background: "transparent",
-                  border: "1px solid " + C.rule,
-                  borderRadius: 999,
-                  padding: "5px 13px",
+                  background: C.accentFaint,
+                  border: "1px solid " + C.accentLine,
+                  borderRadius: 20,
+                  padding: "6px 14px",
                   fontFamily: MONO,
-                  fontSize: 10.5,
-                  color: C.textSoft,
+                  fontSize: 11,
+                  color: C.accent,
                   cursor: "pointer",
                   whiteSpace: "nowrap",
                 }}
               >
-                {s}
+                {chip}
               </button>
             );
           })}
