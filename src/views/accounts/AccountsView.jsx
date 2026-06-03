@@ -388,9 +388,9 @@ export function AccountsView({ accounts, allAccounts, loading, onSelect, onAddAc
       {(hasDepartments || hasPartners || (customWorkspaces && customWorkspaces.length > 0)) && onTypeFilterChange && (
         <div style={{ marginBottom: 12 }}>
           <div style={{
-            display: "flex", gap: 4, background: C.surface2,
+            display: "inline-flex", gap: 4, background: C.surface2,
             border: "1px solid " + C.rule, borderRadius: 999,
-            padding: 3, alignSelf: "flex-start", flexWrap: "wrap",
+            padding: 3, flexWrap: "wrap",
           }}>
             {[
               { key: "customer",      label: "Customers" },
