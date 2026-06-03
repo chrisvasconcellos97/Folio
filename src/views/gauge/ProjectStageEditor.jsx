@@ -185,6 +185,15 @@ export function ProjectStageEditor({ project, onUpdate, accounts, members, conta
               <div style={{ fontFamily: MONO, fontSize: 9.5, color: blocked ? C.red : C.textMuted, textTransform: "lowercase" }}>
                 {statusText}
               </div>
+              {s.assignee_email && (
+                <div style={{
+                  fontFamily: MONO, fontSize: 9, color: C.accent,
+                  background: C.accentFaint, border: "1px solid " + C.accentLine,
+                  borderRadius: 999, padding: "1px 7px", whiteSpace: "nowrap",
+                }}>
+                  {s.assignee_email.includes("@") ? s.assignee_email.split("@")[0] : s.assignee_email}
+                </div>
+              )}
               {subs.length > 0 && (
                 <button
                   onClick={function () { setExpanded(function (prev) { return Object.assign({}, prev, { [idx]: !prev[idx] }); }); }}
