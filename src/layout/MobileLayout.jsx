@@ -28,7 +28,7 @@ var NAV_ITEMS = [
   { id: "gauge",      label: "Gauge",      icon: "gauge"  },
 ];
 
-export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, onSettings, onDiagnostics, diagnosticsCount, userMeta, children }) {
+export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, onSettings, onTeam, onDiagnostics, diagnosticsCount, userMeta, children }) {
   var scrollRef = useRef(null);
   var [wsOpen, setWsOpen] = useState(false);
   var isWorkspaceView = WORKSPACE_IDS.indexOf(view) !== -1;
@@ -102,7 +102,7 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
             <AmberBtn onClick={onAddAccount} style={{ fontSize: 10, padding: "5px 10px" }}>
               {view === "departments" ? "+ Dept" : view === "partners" ? "+ Partner" : "+ Account"}
             </AmberBtn>
-            <UserMenu userMeta={userMeta} onSignOut={onSignOut} onTour={onTour} onSettings={onSettings} onDiagnostics={onDiagnostics} diagnosticsCount={diagnosticsCount} />
+            <UserMenu userMeta={userMeta} onSignOut={onSignOut} onTour={onTour} onSettings={onSettings} onTeam={onTeam} onDiagnostics={onDiagnostics} diagnosticsCount={diagnosticsCount} />
           </div>
         </div>
       </div>
@@ -192,14 +192,15 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
           right: 0,
           background: "var(--c-rail-bg)",
           borderTop: "1px solid " + C.rule,
-          padding: "8px 16px max(12px, env(safe-area-inset-bottom))",
+          padding: "0 0 max(8px, env(safe-area-inset-bottom))",
           zIndex: 50,
         }}
       >
         <div
           style={{
-            display: "flex",
-            gap: 0,
+            display: "grid",
+            gridTemplateColumns: "repeat(4, 1fr)",
+            width: "100%",
           }}
         >
           {NAV_ITEMS.map(function (item) {
@@ -225,7 +226,7 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
                   setView(item.id);
                 }}
                 style={{
-                  flex: 1,
+                  width: "100%",
                   height: 52,
                   padding: "6px 6px",
                   cursor: "pointer",

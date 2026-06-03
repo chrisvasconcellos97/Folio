@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { C } from "../../lib/colors";
 import { Modal } from "../../components/Modal";
 import { InputField, TextArea, SelectField } from "../../components/InputField";
@@ -58,6 +58,31 @@ export function TaskDetailPanel({
   });
   var [saving, setSaving]       = useState(false);
   var [confirmDel, setConfirmDel] = useState(false);
+
+  var projectAccount = project.account_id
+    ? (accounts || []).find(function (a) { return a.id === project.account_id; })
+    : null;
+  // Show "Dept / Partner" field only when project has no account, or project's account is internal_team or partner.
+  var showDeptPartnerField = !projectAccount ||
+    projectAccount.account_type === "internal_team" ||
+    projectAccount.account_type === "partner";
+
+  // Contacts from the project's own account (always shown as "Account Contacts")
+  var projectContacts = useMemo(function () {
+    if (!contacts || !project.account_id) return [];
+    return contacts.filter(function (c) { return c.account_id === project.account_id; });
+  }, [contacts, project.account_id]);
+
+  // Contacts from the selected Dept/Partner account (3rd group — only when a different account is linked)
+  var linkedAccountContacts = useMemo(function () {
+    if (!contacts || !accountId || accountId === project.account_id) return [];
+    return contacts.filter(function (c) { return c.account_id === accountId; });
+  }, [contacts, accountId, project.account_id]);
+
+  var linkedAccount = useMemo(function () {
+    if (!accountId) return null;
+    return (accounts || []).find(function (a) { return a.id === accountId; }) || null;
+  }, [accounts, accountId]);
 
   function updateCustom(key, val) {
     setCustomFields(function (prev) { return Object.assign({}, prev, { [key]: val }); });
@@ -190,7 +215,7 @@ export function TaskDetailPanel({
       );
     }
     if (f.type === "person") {
-      if ((members && members.length > 0) || (contacts && contacts.length > 0)) {
+      if ((members && members.length > 0) || projectContacts.length > 0 || linkedAccountContacts.length > 0) {
         return (
           <SelectField
             value={v || ""}
@@ -204,9 +229,16 @@ export function TaskDetailPanel({
                 })}
               </optgroup>
             )}
-            {contacts && contacts.length > 0 && (
-              <optgroup label="Contacts">
-                {contacts.map(function (c) {
+            {projectContacts.length > 0 && (
+              <optgroup label="Account Contacts">
+                {projectContacts.map(function (c) {
+                  return <option key={c.id} value={c.name}>{c.name}{c.role ? " · " + c.role : ""}</option>;
+                })}
+              </optgroup>
+            )}
+            {linkedAccountContacts.length > 0 && linkedAccount && (
+              <optgroup label={linkedAccount.name}>
+                {linkedAccountContacts.map(function (c) {
                   return <option key={c.id} value={c.name}>{c.name}{c.role ? " · " + c.role : ""}</option>;
                 })}
               </optgroup>
@@ -257,10 +289,10 @@ export function TaskDetailPanel({
           />
         </div>
 
-        {/* Account (optional — for standing projects where each task ties to a customer) */}
-        {accounts && accounts.length > 0 && (
+        {/* Department / Partner link (hidden when task is already on a customer account) */}
+        {showDeptPartnerField && accounts && accounts.length > 0 && (
           <div>
-            <FL>Linked Account</FL>
+            <FL>Department / Partner</FL>
             <SelectField
               value={accountId}
               onChange={function (e) { setAccountId(e.target.value); }}
@@ -276,7 +308,7 @@ export function TaskDetailPanel({
         {/* Assignee — drives admin queue surfacing */}
         <div>
           <FL>Assignee</FL>
-          {(members && members.length > 0) || (contacts && contacts.length > 0) ? (
+          {(members && members.length > 0) || projectContacts.length > 0 || linkedAccountContacts.length > 0 ? (
             <SelectField
               value={assignee}
               onChange={function (e) { setAssignee(e.target.value); }}
@@ -289,9 +321,16 @@ export function TaskDetailPanel({
                   })}
                 </optgroup>
               )}
-              {contacts && contacts.length > 0 && (
-                <optgroup label="Contacts">
-                  {contacts.map(function (c) {
+              {projectContacts.length > 0 && (
+                <optgroup label="Account Contacts">
+                  {projectContacts.map(function (c) {
+                    return <option key={c.id} value={c.name}>{c.name}{c.role ? " · " + c.role : ""}</option>;
+                  })}
+                </optgroup>
+              )}
+              {linkedAccountContacts.length > 0 && linkedAccount && (
+                <optgroup label={linkedAccount.name}>
+                  {linkedAccountContacts.map(function (c) {
                     return <option key={c.id} value={c.name}>{c.name}{c.role ? " · " + c.role : ""}</option>;
                   })}
                 </optgroup>

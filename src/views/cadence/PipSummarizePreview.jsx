@@ -169,7 +169,7 @@ function AssigneeSelect({ value, memberOptions, contactOptions, onChange }) {
         </optgroup>
       )}
       {contactOptions && contactOptions.length > 0 && (
-        <optgroup label="Contacts">
+        <optgroup label="Account Contacts">
           {contactOptions.map(function (o) {
             return <option key={o.value} value={o.value}>{o.label}</option>;
           })}

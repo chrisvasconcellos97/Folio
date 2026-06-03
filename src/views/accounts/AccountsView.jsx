@@ -86,14 +86,18 @@ var WORKSPACE_COPY = {
 };
 
 function matchesTypeFilter(account, typeFilter) {
-  var t = account.account_type;
+  var t = account.account_type || "";
   if (typeFilter === "internal_team") return t === "internal_team";
   if (typeFilter === "partner")       return t === "partner";
-  // customer: legacy nulls + standard/mso/shop
-  return !t || t === "standard" || t === "mso" || t === "shop";
+  if (typeFilter && typeFilter.startsWith("cws_")) {
+    var wsId = typeFilter.slice(4);
+    return account.custom_workspace_id === wsId;
+  }
+  // customer view: standard/mso/shop/null — but EXCLUDE accounts in a custom workspace
+  return (!t || t === "standard" || t === "mso" || t === "shop") && !account.custom_workspace_id;
 }
 
-export function AccountsView({ accounts, allAccounts, loading, onSelect, onAddAccount, tasks, addTask, updateTask, deleteTask, hasMeetings, hasCadences, items, meetings, contacts, onColdClick, onOverdueClick, onFollowUpClick, onOpenConversation, typeFilter, onTypeFilterChange, userId, members, bannerFilter, onClearBannerFilter }) {
+export function AccountsView({ accounts, allAccounts, loading, onSelect, onAddAccount, tasks, addTask, updateTask, deleteTask, hasMeetings, hasCadences, items, meetings, contacts, onColdClick, onOverdueClick, onFollowUpClick, onOpenConversation, typeFilter, onTypeFilterChange, userId, members, bannerFilter, onClearBannerFilter, customWorkspaces, addCustomWorkspace }) {
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
   var activeType = typeFilter || "customer";
@@ -126,6 +130,22 @@ export function AccountsView({ accounts, allAccounts, loading, onSelect, onAddAc
     try { return localStorage.getItem(DENSITY_KEY) || "comfortable"; } catch(e) { return "comfortable"; }
   });
   var [filterOpen, setFilterOpen]   = useState(false);
+  var [showNewWs, setShowNewWs]     = useState(false);
+  var [newWsName, setNewWsName]     = useState("");
+  var [newWsPortfolio, setNewWsPortfolio] = useState(false);
+  var [savingWs, setSavingWs]       = useState(false);
+
+  function handleCreateWs() {
+    if (!newWsName.trim() || savingWs) return;
+    setSavingWs(true);
+    addCustomWorkspace(newWsName, newWsPortfolio)
+      .then(function () {
+        setShowNewWs(false);
+        setNewWsName("");
+        setSavingWs(false);
+      })
+      .catch(function () { setSavingWs(false); });
+  }
 
   var activeFilterCount =
     (filter !== "All" ? 1 : 0) +
@@ -321,12 +341,17 @@ export function AccountsView({ accounts, allAccounts, loading, onSelect, onAddAc
     return counts;
   }, [accounts]);
 
-  var workspaceTitle = typeFilter === "internal_team" ? "Departments"
-                     : typeFilter === "partner"       ? "Partners"
-                     : "Accounts";
-  var workspaceSubtitle = typeFilter === "internal_team" ? "Internal Teams · " + (accounts.length) + " Total"
-                        : typeFilter === "partner"       ? "Partners · " + (accounts.length) + " Total"
-                        : "Customer Portfolio · " + (accounts.length) + " Total";
+  var customWsMatch = typeFilter && typeFilter.startsWith("cws_")
+    ? (customWorkspaces || []).find(function (w) { return "cws_" + w.id === typeFilter; })
+    : null;
+  var workspaceTitle = customWsMatch ? customWsMatch.name
+    : typeFilter === "internal_team" ? "Departments"
+    : typeFilter === "partner"       ? "Partners"
+    : "Accounts";
+  var workspaceSubtitle = customWsMatch ? (customWsMatch.name + " · " + accounts.length + " Total")
+    : typeFilter === "internal_team" ? "Internal Teams · " + (accounts.length) + " Total"
+    : typeFilter === "partner"       ? "Partners · " + (accounts.length) + " Total"
+    : "Customer Portfolio · " + (accounts.length) + " Total";
   var workspaceMarkId  = typeFilter === "internal_team" ? "departments"
                        : typeFilter === "partner"       ? "partners"
                        : "accounts";
@@ -359,40 +384,98 @@ export function AccountsView({ accounts, allAccounts, loading, onSelect, onAddAc
         </div>
       </div>
 
-      {/* Workspaces segmented pill — only shows when Departments or Partners exist */}
-      {(hasDepartments || hasPartners) && onTypeFilterChange && (
-        <div style={{
-          display: "flex", gap: 4, background: C.surface2,
-          border: "1px solid " + C.rule, borderRadius: 999,
-          padding: 3, marginBottom: 12, alignSelf: "flex-start",
-        }}>
-          {[
-            { key: "customer",      label: "Customers" },
-            ...(hasDepartments ? [{ key: "internal_team", label: "Departments" }] : []),
-            ...(hasPartners    ? [{ key: "partner",       label: "Partners"     }] : []),
-          ].map(function (tab) {
-            var on = activeType === tab.key;
-            return (
+      {/* Workspaces segmented pill — shows when Departments, Partners, or custom workspaces exist */}
+      {(hasDepartments || hasPartners || (customWorkspaces && customWorkspaces.length > 0)) && onTypeFilterChange && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{
+            display: "flex", gap: 4, background: C.surface2,
+            border: "1px solid " + C.rule, borderRadius: 999,
+            padding: 3, alignSelf: "flex-start", flexWrap: "wrap",
+          }}>
+            {[
+              { key: "customer",      label: "Customers" },
+              ...(hasDepartments ? [{ key: "internal_team", label: "Departments" }] : []),
+              ...(hasPartners    ? [{ key: "partner",       label: "Partners"     }] : []),
+              ...(customWorkspaces || []).map(function (ws) {
+                return { key: "cws_" + ws.id, label: ws.name };
+              }),
+            ].map(function (tab) {
+              var on = activeType === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={function () { onTypeFilterChange(tab.key); }}
+                  style={{
+                    padding: "6px 14px",
+                    borderRadius: 999,
+                    border: "none",
+                    background: on ? C.surface : "transparent",
+                    boxShadow: on ? "0 1px 3px rgba(0,0,0,0.3)" : "none",
+                    color: on ? C.accent : C.textSoft,
+                    fontFamily: MONO, fontSize: 11, fontWeight: on ? 700 : 400,
+                    letterSpacing: "0.04em",
+                    cursor: "pointer",
+                    transition: "background 0.12s, color 0.12s",
+                  }}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+            {addCustomWorkspace && (
               <button
-                key={tab.key}
-                onClick={function () { onTypeFilterChange(tab.key); }}
+                onClick={function () { setShowNewWs(true); }}
                 style={{
-                  padding: "6px 14px",
-                  borderRadius: 999,
-                  border: "none",
-                  background: on ? C.surface : "transparent",
-                  boxShadow: on ? "0 1px 3px rgba(0,0,0,0.3)" : "none",
-                  color: on ? C.accent : C.textSoft,
-                  fontFamily: MONO, fontSize: 11, fontWeight: on ? 700 : 400,
-                  letterSpacing: "0.04em",
+                  padding: "4px 8px", borderRadius: 999,
+                  background: "transparent",
+                  border: "1px dashed " + C.rule,
+                  color: C.textMuted,
+                  fontFamily: MONO, fontSize: 10,
                   cursor: "pointer",
-                  transition: "background 0.12s, color 0.12s",
+                }}
+              >+</button>
+            )}
+          </div>
+          {showNewWs && (
+            <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6 }}>
+              <input
+                autoFocus
+                value={newWsName}
+                onChange={function (e) { setNewWsName(e.target.value); }}
+                onKeyDown={function (e) {
+                  if (e.key === "Enter" && newWsName.trim() && !savingWs) handleCreateWs();
+                  if (e.key === "Escape") { setShowNewWs(false); setNewWsName(""); }
+                }}
+                placeholder="Workspace name…"
+                style={{
+                  flex: 1, background: C.surface, border: "1px solid " + C.rule,
+                  borderRadius: 6, padding: "6px 10px",
+                  fontFamily: MONO, fontSize: 12, color: C.text, outline: "none",
+                }}
+              />
+              <button
+                onClick={handleCreateWs}
+                disabled={!newWsName.trim() || savingWs}
+                style={{
+                  background: C.accent, border: "none", borderRadius: 6,
+                  padding: "6px 12px", fontFamily: MONO, fontSize: 11,
+                  color: C.bg, cursor: "pointer", opacity: !newWsName.trim() || savingWs ? 0.5 : 1,
                 }}
               >
-                {tab.label}
+                {savingWs ? "…" : "Create"}
               </button>
-            );
-          })}
+              <button
+                onClick={function () { setShowNewWs(false); setNewWsName(""); }}
+                style={{
+                  background: "transparent", border: "1px solid " + C.rule,
+                  borderRadius: 6, padding: "6px 10px", fontFamily: MONO,
+                  fontSize: 11, color: C.textMuted, cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
         </div>
       )}
 
