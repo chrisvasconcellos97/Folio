@@ -1,11 +1,16 @@
 # Folios — Claude Development Context
 
 ## Deployment Rule
-**Vercel production branch is `main`.** Every commit gets one push:
-```
-git push origin HEAD:main
-```
-**Do NOT push to any other branches** — every branch push triggers a Vercel deployment. Worktree agent branches are ephemeral and never pushed to remote directly; their commits are cherry-picked into `main`.
+**Vercel production branch is `main`.** A PreToolUse hook in `.claude/settings.json` blocks all `git push` to main — Claude **cannot** push without Chris explicitly approving it.
+
+**The workflow:**
+1. Build everything in the batch (or single item) and commit
+2. Tell Chris: "Ready to push — [summary of what's built]. Approve when ready."
+3. Chris approves → push happens → one Vercel deployment
+
+**Never push mid-batch.** Never push to kick off a partial build. Build the full list, then ask once.
+
+Worktree agent (Patch) branches are ephemeral — commits are cherry-picked into `main`, then Chris approves the single push.
 
 ## API Module Import Rule (prevent FUNCTION_INVOCATION_FAILED)
 
