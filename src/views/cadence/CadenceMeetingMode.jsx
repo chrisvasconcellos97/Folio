@@ -129,6 +129,9 @@ export function CadenceMeetingMode({
   summarizing,
   summarizeErr,
   onAddContact,
+  userId,
+  onUpdateTask,
+  onAddTask,
 }) {
   var isDesktop                         = useBreakpoint();
   var isMobile                          = !isDesktop;
@@ -595,8 +598,12 @@ export function CadenceMeetingMode({
                           project={p}
                           accounts={accounts}
                           members={members}
+                          contacts={contacts}
                           userEmail={userEmail}
                           onUpdateProject={onUpdateProject}
+                          userId={userId}
+                          onUpdateTask={onUpdateTask}
+                          onAddTask={onAddTask}
                           discussed={discussedProjectIds.indexOf(p.id) !== -1}
                           mentioned={mentionedProjectIds.indexOf(p.id) !== -1}
                           onToggleDiscussed={function () {
@@ -939,8 +946,12 @@ export function CadenceMeetingMode({
                           project={p}
                           accounts={accounts}
                           members={members}
+                          contacts={contacts}
                           userEmail={userEmail}
                           onUpdateProject={onUpdateProject}
+                          userId={userId}
+                          onUpdateTask={onUpdateTask}
+                          onAddTask={onAddTask}
                           discussed={discussedProjectIds.indexOf(p.id) !== -1}
                           mentioned={mentionedProjectIds.indexOf(p.id) !== -1}
                           onToggleDiscussed={function () {
