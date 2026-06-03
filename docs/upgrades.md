@@ -1,6 +1,6 @@
 # Folios — Upgrade Log
 
-*Last updated: 2026-06-03 (Commitment enforcement + Stakeholder layer)*
+*Last updated: 2026-06-03 (Share sheet, voice dictation, Ask Pip recall polish)*
 
 Plain-English log of major upgrades shipped to Folios. Date, time, and
 a short explanation written in terms anyone can read — not technical
@@ -14,6 +14,48 @@ For the technical changelog with full release detail, see
 architectural changes, anything that meaningfully changes what Folios
 *does* or *is*. Not bug fixes, styling tweaks, or doc-only updates —
 those live in git history.
+
+---
+
+## 2026-06-03 — PWA share sheet (Phase 1)
+
+**What I built:** A Web Share Target so you can share text, links, or notes from any phone app directly into Folios.
+
+**Problem it solves:** Every meeting note required sitting down and manually retyping content you'd already written elsewhere (email, Messages, notes app).
+
+**What changed:** `share_target` added to `manifest.webmanifest` (via `vite.config.js`). New `ShareTargetView` route handles shared content, lets you pick an account, and opens it in the meeting flow with the text pre-filled.
+
+**What you see today:** From your phone, tap Share on any note or email → Folios appears in the share sheet → pick the account → it opens in a meeting note with the text ready.
+
+**Why it matters:** Field AMs write notes everywhere in the moment. This closes the retyping loop.
+
+---
+
+## 2026-06-03 — Voice dictation in meetings
+
+**What I built:** A "Dictate" mic button in the meeting notepad that transcribes speech directly into your notes.
+
+**Problem it solves:** Typing notes while driving between calls is unsafe and slow. Voice capture lets you dictate a quick recap hands-free.
+
+**What changed:** Dictate button added to CadenceMeetingMode (the full-screen meeting overlay). Uses the browser's built-in Web Speech API — no backend, no cost. Appends transcribed text as bullet points to the existing notes.
+
+**What you see today:** In any meeting, tap the 🎙 Dictate button → speak → text appears in your notes as bullets. Tap ⏹ Stop when done.
+
+**Why it matters:** Removes the biggest in-car friction point. You can debrief immediately after leaving a meeting.
+
+---
+
+## 2026-06-03 — Ask Pip recall polish
+
+**What I built:** Quick-answer chips on the Ask Pip screen and a sharper "external brain" framing.
+
+**Problem it solves:** The Ask Pip screen looked like a generic chat widget. Users didn't immediately know what to ask or how to use it as an external brain.
+
+**What changed:** Greeting updated to "What do you need to remember?". Four quick-tap chips appear before you type (Recap last meeting, What did I promise?, What's at risk?, Who haven't I contacted?). Facts Pip knows about you are now prominently labeled in Settings as "What Pip knows about you".
+
+**What you see today:** Open Ask Pip → see the chips → tap one → instant answer. No need to figure out what to type.
+
+**Why it matters:** Positions Pip correctly as a memory layer, not just a chat window.
 
 ---
 

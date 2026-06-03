@@ -34,6 +34,7 @@ var TeamView       = lazy(function () { return import("./views/team/TeamView").t
 var LeadershipView = lazy(function () { return import("./views/leadership/LeadershipView").then(function (m) { return { default: m.LeadershipView }; }); });
 var ObservabilityView = lazy(function () { return import("./views/observability/ObservabilityView").then(function (m) { return { default: m.ObservabilityView }; }); });
 var CommitmentsView = lazy(function () { return import("./views/commitments/CommitmentsView").then(function (m) { return { default: m.CommitmentsView }; }); });
+var ShareTargetView = lazy(function () { return import("./views/share/ShareTargetView").then(function (m) { return { default: m.ShareTargetView }; }); });
 import { DesktopLayout } from "./layout/DesktopLayout";
 import { MobileLayout } from "./layout/MobileLayout";
 import { PipOrb, PipMark } from "./components/PipMark";
@@ -566,6 +567,16 @@ export default function App() {
 
   var commitmentNudgesHook = useCommitmentNudges(userId, accounts);
 
+  // Share Target — detect when the app is launched via the PWA Web Share Target.
+  // GET params title/text/url are set by the OS share sheet. Initialized once from
+  // the URL so it doesn't reset on re-renders. Cleared when user navigates away.
+  var [isShareTarget, setIsShareTarget] = useState(function () {
+    try {
+      var p = new URLSearchParams(window.location.search);
+      return !!(p.get("title") || p.get("text") || p.get("url"));
+    } catch (e) { return false; }
+  });
+
   // ──── ALL HOOKS MUST BE ABOVE THIS LINE — see React Hook Order Rule in CLAUDE.md ────
   if (authLoading) {
     return (
@@ -640,6 +651,59 @@ export default function App() {
             try { localStorage.setItem("folio_onboarding_dismissed", "1"); } catch (e) {}
           }}
         />
+      </>
+    );
+  }
+
+  // Share Target — when launched via the OS share sheet, show a full-page
+  // tray so the user can pick an account and open it in a meeting note.
+  if (isShareTarget && userId) {
+    return (
+      <>
+        <Toast />
+        <ErrorBoundary label="share-target">
+          <Suspense fallback={<PipLoader />}>
+            <ShareTargetView
+              userId={userId}
+              onOpenConversation={function (opts) {
+                // Strip the share params from the URL so a refresh doesn't
+                // re-trigger the share target flow.
+                try {
+                  window.history.replaceState({}, "", window.location.pathname);
+                } catch (e) {}
+                setIsShareTarget(false);
+                // Launch the ad-hoc conversation flow pre-filled with the shared text.
+                // We need a draft meeting first — use addMeeting then open the overlay.
+                var method = "in_person";
+                var today  = new Date().toISOString().slice(0, 10);
+                addMeeting({
+                  account_id:   opts.accountId,
+                  meeting_date: today,
+                  method:       method,
+                  notes:        opts.prefillNotes || "",
+                  status:       "draft",
+                }).then(function (m) {
+                  if (m && m.id) {
+                    setAdHocFlow({ accountId: opts.accountId, draftId: m.id });
+                  }
+                }).catch(function () {});
+                // Navigate to accounts view so the overlay has the right backdrop.
+                var acct = (accounts || []).find(function (a) { return a.id === opts.accountId; });
+                if (acct) {
+                  setSelected(acct);
+                  var target = acct.account_type === "internal_team" ? "departments"
+                             : acct.account_type === "partner" ? "partners"
+                             : "accounts";
+                  setView(target);
+                }
+              }}
+              onBack={function () {
+                try { window.history.replaceState({}, "", window.location.pathname); } catch (e) {}
+                setIsShareTarget(false);
+              }}
+            />
+          </Suspense>
+        </ErrorBoundary>
       </>
     );
   }
