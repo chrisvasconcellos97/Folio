@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { C } from "../../lib/colors";
 import { Modal } from "../../components/Modal";
 import { AmberBtn, SecBtn } from "../../components/Buttons";
-import { InputField, TextArea } from "../../components/InputField";
+import { InputField, TextArea, SelectField } from "../../components/InputField";
 import { FL } from "../../components/FieldLabel";
 import { detectRegion, detectMarketScope, STATE_NAMES } from "../../lib/regions";
 import { ChipDropdown } from "../../components/ChipDropdown";
@@ -59,7 +59,7 @@ function TagChip({ label, active, onClick, onRemove, color }) {
   );
 }
 
-export function AddAccountModal({ userId, onSave, onAddContacts, onClose, existing, accounts, defaultType, defaultParentId, members }) {
+export function AddAccountModal({ userId, onSave, onAddContacts, onClose, existing, accounts, defaultType, defaultParentId, members, customWorkspaces }) {
   var [name, setName]       = useState(existing ? existing.name : "");
   var [tier, setTier]       = useState(existing ? (existing.tier || "Mid") : "Mid");
   var [notes, setNotes]     = useState(existing ? (existing.objective || "") : "");
@@ -82,6 +82,7 @@ export function AddAccountModal({ userId, onSave, onAddContacts, onClose, existi
   var [spendYtd, setSpendYtd]                 = useState(existing && existing.spend_ytd != null ? String(existing.spend_ytd) : '');
   var [ownerUserId, setOwnerUserId]           = useState(existing ? (existing.owner_user_id || userId) : userId);
   var [isMyDepartment, setIsMyDepartment]     = useState(existing ? (existing.is_my_department === true) : false);
+  var [customWorkspaceId, setCustomWorkspaceId] = useState(existing ? (existing.custom_workspace_id || "") : "");
   var [loading, setLoading] = useState(false);
   var [error, setError]     = useState(null);
 
@@ -169,8 +170,9 @@ export function AddAccountModal({ userId, onSave, onAddContacts, onClose, existi
       scope_summary:      isPartner ? (scopeSummary.trim() || null) : null,
       billing_terms:      isPartner ? (billingTerms.trim() || null) : null,
       spend_ytd:          isPartner ? parsedSpend : null,
-      owner_user_id:      ownerUserId || userId,
-      is_my_department:   isInternal ? isMyDepartment : false,
+      owner_user_id:        ownerUserId || userId,
+      is_my_department:     isInternal ? isMyDepartment : false,
+      custom_workspace_id:  isCustomer ? (customWorkspaceId || null) : null,
     };
 
     var needsGeocode = address.trim() && (!existing || existing.address !== address.trim()) && !(existing && existing.lat);
@@ -756,6 +758,21 @@ export function AddAccountModal({ userId, onSave, onAddContacts, onClose, existi
                 </button>
               </div>
             </div>
+          </div>
+        )}
+
+        {isCustomer && customWorkspaces && customWorkspaces.length > 0 && (
+          <div>
+            <FL>Workspace</FL>
+            <SelectField
+              value={customWorkspaceId || ""}
+              onChange={function (e) { setCustomWorkspaceId(e.target.value || null); }}
+            >
+              <option value="">— Default (Customers) —</option>
+              {customWorkspaces.map(function (ws) {
+                return <option key={ws.id} value={ws.id}>{ws.name}</option>;
+              })}
+            </SelectField>
           </div>
         )}
 

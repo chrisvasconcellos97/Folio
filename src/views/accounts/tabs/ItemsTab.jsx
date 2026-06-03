@@ -85,9 +85,7 @@ var SEVEN_DAYS_MS = 7 * 86400 * 1000;
 
 export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAdd, onUpdate, onDelete, onGoToCadence, logCorrection, projects, accounts, members, onUpdateProject, onCreateProject }) {
   var [editingItem, setEditingItem] = useState(null);
-  // Track in-flight close requests so rapid taps on the same checkbox don't
-  // fire closeItem twice (would log two activity entries + race the refetch).
-  var [closingIds, setClosingIds] = useState({});
+  var [completingIds, setCompletingIds] = useState(function () { return new Set(); });
   var [confirmDelete, setConfirmDelete] = useState(null); // item id mid-confirm
   var [escalatingItem, setEscalatingItem] = useState(null); // item being escalated to new project
   var [pickerItem, setPickerItem] = useState(null); // item for "add to project" picker
@@ -137,14 +135,16 @@ export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAd
   };
 
   function handleClose(id) {
-    if (closingIds[id]) return; // already in flight — ignore extra clicks
-    setClosingIds(function (prev) { return Object.assign({}, prev, { [id]: true }); });
-    onClose(id)
-      .then(function () { showToast("Item closed"); })
-      .catch(function (err) { showToast(err.message || "Couldn't close — check your connection", "error"); })
-      .then(function () {
-        setClosingIds(function (prev) { var n = Object.assign({}, prev); delete n[id]; return n; });
-      });
+    if (completingIds.has(id)) return;
+    setCompletingIds(function (prev) { var next = new Set(prev); next.add(id); return next; });
+    setTimeout(function () {
+      onClose(id)
+        .then(function () { showToast("Item closed"); })
+        .catch(function (err) { showToast(err.message || "Couldn't close — check your connection", "error"); })
+        .finally(function () {
+          setCompletingIds(function (prev) { var next = new Set(prev); next.delete(id); return next; });
+        });
+    }, 350);
   }
 
   return (
@@ -204,17 +204,27 @@ export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAd
           {open.map(function (item) {
             return (
               <div key={item.id} style={Object.assign({}, glass, { display: "flex", alignItems: "flex-start", gap: 10, borderRadius: 10, padding: "11px 13px", marginBottom: 6 })}>
-                <div style={{ paddingTop: 2 }}>
-                  <button
-                    type="button"
-                    onClick={function () { handleClose(item.id); }}
-                    disabled={!!closingIds[item.id]}
-                    aria-label="Mark complete"
-                    style={{ padding: 8, margin: -8, display: "inline-flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", opacity: closingIds[item.id] ? 0.4 : 1, cursor: closingIds[item.id] ? "wait" : "pointer" }}
-                  >
-                    <div style={{ width: 16, height: 16, borderRadius: 4, border: "1.5px solid " + C.accentDim, flexShrink: 0, background: "transparent" }} />
-                  </button>
-                </div>
+                {(function () {
+                  var isCompleting = completingIds.has(item.id);
+                  return (
+                    <button
+                      type="button"
+                      onClick={function () { handleClose(item.id); }}
+                      disabled={isCompleting}
+                      aria-label="Mark complete"
+                      style={{
+                        width: 18, height: 18,
+                        borderRadius: "50%",
+                        border: "1px solid " + (isCompleting ? C.accent : C.accentDim),
+                        background: isCompleting ? C.accentFaint : "transparent",
+                        cursor: isCompleting ? "default" : "pointer",
+                        flexShrink: 0, padding: 0, marginTop: 2,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        transition: "border-color 0.15s, background 0.15s",
+                      }}
+                    />
+                  );
+                })()}
                 <div style={{ flex: 1 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
                     <div style={{ fontFamily: IT_SERIF, fontSize: 15.5, fontWeight: 400, color: C.text, lineHeight: 1.2, letterSpacing: "-0.005em" }}>{item.text}</div>

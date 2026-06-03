@@ -40,12 +40,16 @@ export function useQuickTasks(userId) {
   }
 
   function updateTask(id, data) {
+    // Optimistic update — immediate local state change so UI doesn't flash back
+    setTasks(function (prev) {
+      return prev.map(function (t) { return t.id === id ? Object.assign({}, t, data) : t; });
+    });
     return supabase
       .from("folio_quick_tasks")
       .update(data)
       .eq("id", id)
       .then(function (result) {
-        if (result.error) throw result.error;
+        if (result.error) { fetch(); throw result.error; } // revert on error
         fetch();
       });
   }

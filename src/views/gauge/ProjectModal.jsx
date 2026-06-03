@@ -669,7 +669,7 @@ export function ProjectModal({
                   </optgroup>
                 )}
                 {contacts.length > 0 && (
-                  <optgroup label="Contacts">
+                  <optgroup label="Account Contacts">
                     {contacts.map(function (c) {
                       return <option key={c.id} value={c.name}>{c.name}</option>;
                     })}
@@ -888,7 +888,7 @@ export function ProjectModal({
                             </optgroup>
                           )}
                           {contacts.length > 0 && (
-                            <optgroup label="Contacts">
+                            <optgroup label="Account Contacts">
                               {contacts.map(function (c) {
                                 return <option key={c.id} value={c.name}>{c.name}</option>;
                               })}
