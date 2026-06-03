@@ -822,6 +822,7 @@ export default function App() {
             autoOpenMeetingMode={pendingAutoOpenMeetingMode}
             onAutoOpenMeetingModeConsumed={function () { setPendingAutoOpenMeetingMode(false); }}
             onAddAccount={addAccount}
+            allProjects={allProjects}
           />
         </div>
       );

@@ -57,7 +57,7 @@ function setDefaultTab(accountId, tab) {
   try { localStorage.setItem("folio_default_tab_" + accountId, tab); } catch(e) {}
 }
 
-export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, accounts, members, onBack, onEdit, onDelete, onReactivate, onMerge, onUpdate, onSelectAccount, pipPrefill, onPipPrefillHandled, initialHubCadenceId, onHubConsumed, initialPersonHubCadenceId, onPersonHubConsumed, autoOpenMeetingMode, onAutoOpenMeetingModeConsumed, onAddAccount }) {
+export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, accounts, members, onBack, onEdit, onDelete, onReactivate, onMerge, onUpdate, onSelectAccount, pipPrefill, onPipPrefillHandled, initialHubCadenceId, onHubConsumed, initialPersonHubCadenceId, onPersonHubConsumed, autoOpenMeetingMode, onAutoOpenMeetingModeConsumed, onAddAccount, allProjects }) {
   var isInternalTeam = account.account_type === 'internal_team';
   var isPartner      = account.account_type === 'partner';
   var isCustomerType = !isInternalTeam && !isPartner;
@@ -251,6 +251,11 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
     : null;
   var openItemsList = items.filter(function (i) { return !i.done; });
   var activeProjects = (projects || []).filter(function (p) { return p.status !== "complete"; });
+  // For meeting hubs: show all portfolio projects so cross-account work is visible.
+  // Falls back to account-scoped activeProjects if allProjects not provided.
+  var allActiveProjects = allProjects
+    ? (allProjects || []).filter(function (p) { return p.status !== "complete"; })
+    : activeProjects;
   var lastNonDraftMeetingAt = (meetings || [])
     .filter(function (m) { return m.status !== "draft" && m.id !== adHocDraftId; })
     .map(function (m) { return m.meeting_date; })
@@ -388,7 +393,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
         meetings={meetings}
         items={items}
         cadences={cadences}
-        projects={projects}
+        projects={allActiveProjects}
         contacts={contacts}
         addContact={addContact}
         addMeeting={addMeeting}
@@ -434,7 +439,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
         meetings={meetings}
         items={items}
         cadences={personCadences}
-        projects={[]}
+        projects={allActiveProjects}
         contacts={contacts}
         addContact={addContact}
         addMeeting={addMeeting}
@@ -589,7 +594,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
           onDelete={deleteItem}
           onGoToCadence={function () { setTab("cadence"); }}
           logCorrection={adHocCorrectionsApi.logCorrection}
-          projects={activeProjects}
+          projects={allActiveProjects}
           accounts={[account]}
           members={members}
           onUpdateProject={updateProject}
@@ -751,7 +756,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
           cadenceLabel={null}
           brief={null}
           briefAt={null}
-          projects={activeProjects}
+          projects={allActiveProjects}
           openItems={openItemsList}
           contacts={contacts || []}
           contactAliases={contactAliasesApi.aliases}
