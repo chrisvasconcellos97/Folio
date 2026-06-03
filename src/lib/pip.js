@@ -4,6 +4,7 @@ import { classifyIntent } from "./pipIntent";
 import { logError } from "./errorLog";
 import { timed } from "./net";
 import { pipBusyStart, pipBusyEnd } from "./pipBusy";
+import { showToast } from "../components/Toast";
 
 var PROXY_URL    = import.meta.env.VITE_PIP_PROXY_URL || "/api/pip";
 var ASK_PIP_URL  = "/api/ask-pip";
@@ -72,6 +73,29 @@ function authHeaders() {
     var headers = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = "Bearer " + token;
     return headers;
+  });
+}
+
+// Wraps a fetch call with a single 401 retry using refreshSession().
+// If refresh also fails, signs the user out and shows a session-expired toast.
+function fetchWithAuthRetry(url, body) {
+  return authHeaders().then(function (headers) {
+    return fetch(url, { method: "POST", headers: headers, body: JSON.stringify(body) })
+      .then(function (res) {
+        if (res.status !== 401) return res;
+        // 401 — try to refresh the session once
+        return supabase.auth.refreshSession().then(function (refreshResult) {
+          if (refreshResult.error || !refreshResult.data.session) {
+            // Refresh token is truly dead — sign out gracefully
+            showToast("Your session expired — signing you back in…", "error");
+            return supabase.auth.signOut().then(function () { return res; });
+          }
+          // Got a new token — retry the request once
+          var newToken = refreshResult.data.session.access_token;
+          var retryHeaders = Object.assign({}, headers, { "Authorization": "Bearer " + newToken });
+          return fetch(url, { method: "POST", headers: retryHeaders, body: JSON.stringify(body) });
+        });
+      });
   });
 }
 
@@ -528,10 +552,7 @@ export function callBriefMePip(payload) {
 export function callAskPip(payload) {
   if (payload.mode !== "meeting") {
     // Fallback for any other legacy callers — keep old behaviour via ask-pip.
-    return supabase.auth.getSession().then(function (result) {
-      var token = result.data.session ? result.data.session.access_token : null;
-      var headers = { "Content-Type": "application/json" };
-      if (token) headers["Authorization"] = "Bearer " + token;
+    return authHeaders().then(function (headers) {
       return pipFetch(ASK_PIP_URL, {
         method: "POST",
         headers: headers,

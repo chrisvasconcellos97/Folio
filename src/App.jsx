@@ -13,6 +13,7 @@ import { useProjects } from "./hooks/useProjects";
 import { useOrg } from "./hooks/useOrg";
 import { usePipAccountState } from "./hooks/usePipAccountState";
 import { useUserProfile } from "./hooks/useUserProfile";
+import { useCustomWorkspaces } from "./hooks/useCustomWorkspaces";
 import { AuthView } from "./views/auth/AuthView";
 import { AccountsView } from "./views/accounts/AccountsView";
 import { AccountDetail } from "./views/accounts/AccountDetail";
@@ -210,6 +211,7 @@ export default function App() {
   var { tasks, addTask, updateTask, deleteTask, error: tasksError } = useQuickTasks(userId);
   var { projects: allProjects, error: projectsErrorApp, refetch: refetchProjectsApp, addProject: addProjectApp } = useProjects(userId);
   var pipAcctStateApp = usePipAccountState(userId);
+  var { workspaces: customWorkspaces, addWorkspace: addCustomWorkspace, deleteWorkspace: deleteCustomWorkspace } = useCustomWorkspaces(userId);
 
   // Part 9 — periodic background pip_account_state refresh.
   // Once per 6h, silently refresh the top 10 accounts by last_interaction_at.
@@ -736,7 +738,7 @@ export default function App() {
   function workspaceTypeFor(v) {
     if (v === "departments") return "internal_team";
     if (v === "partners")    return "partner";
-    return "customer";
+    return pillWorkspaceType || "customer";
   }
 
   function buildWorkspacePane(typeFilter) {
@@ -751,8 +753,11 @@ export default function App() {
           // Also update the nav view so the nav item highlights correctly.
           if (t === "internal_team") handleSetView("departments");
           else if (t === "partner")  handleSetView("partners");
+          else if (t && t.startsWith("cws_")) handleSetView("accounts");
           else                       handleSetView("accounts");
         }}
+        customWorkspaces={customWorkspaces}
+        addCustomWorkspace={addCustomWorkspace}
         userId={userId}
         members={members}
         onSelect={handleSelectAccount}
@@ -1074,6 +1079,7 @@ export default function App() {
       existing={editingAccount || null}
       accounts={accounts}
       members={members}
+      customWorkspaces={customWorkspaces}
       defaultType={editingAccount ? null : addAccountDefaultType}
       onSave={editingAccount ? handleEditAccount : handleAddAccount}
       onAddContacts={function (accountId, contacts) {
@@ -1340,6 +1346,7 @@ export default function App() {
         onSignOut={signOut}
         onTour={replayTour}
         onSettings={function () { handleSetView("settings"); }}
+        onTeam={function () { handleSetView("team"); }}
         onDiagnostics={diagnosticsCount > 0 ? function () { handleSetView("diagnostics"); } : null}
         diagnosticsCount={diagnosticsCount}
         userMeta={userMeta}
