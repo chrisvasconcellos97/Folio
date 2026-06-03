@@ -5,6 +5,8 @@ import { InputField, TextArea, SelectField } from "../../components/InputField";
 import { FL } from "../../components/FieldLabel";
 import { taskStatusLabel } from "../../lib/gaugeFields";
 import { AccountPicker } from "../../components/AccountPicker";
+import { useEntityDetection } from "../../hooks/useEntityDetection";
+import { EntitySuggestionChip } from "../../components/EntitySuggestionChip";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var INTER = "'Inter', system-ui, sans-serif";
@@ -24,6 +26,7 @@ export function TaskDetailPanel({
   accounts,
   members,
   contacts,       // optional: [{ id, name, role }] — account contacts as assignee options
+  aliases,        // optional: contact aliases for entity detection
   userEmail,
   onSave,         // (taskShape) => Promise — caller does the project update
   onDelete,       // optional: (taskIndex) => Promise
@@ -59,6 +62,10 @@ export function TaskDetailPanel({
   });
   var [saving, setSaving]       = useState(false);
   var [confirmDel, setConfirmDel] = useState(false);
+  var [suggestionDismissed, setSuggestionDismissed] = useState(false);
+  var [recipientNote, setRecipientNote] = useState(null);
+
+  var entitySuggestion = useEntityDetection(title, contacts || [], aliases || []);
 
   function updateCustom(key, val) {
     setCustomFields(function (prev) { return Object.assign({}, prev, { [key]: val }); });
@@ -252,9 +259,25 @@ export function TaskDetailPanel({
           <FL>Task Title *</FL>
           <InputField
             value={title}
-            onChange={function (e) { setTitle(e.target.value); }}
+            onChange={function (e) { setTitle(e.target.value); setSuggestionDismissed(false); }}
             placeholder="What is this task?"
             autoFocus
+          />
+          <EntitySuggestionChip
+            suggestion={suggestionDismissed ? null : entitySuggestion}
+            onAcceptAssignee={function () {
+              if (entitySuggestion && entitySuggestion.contact) {
+                setAssignee(entitySuggestion.contact.email || entitySuggestion.contact.name || "");
+              }
+              setSuggestionDismissed(true);
+            }}
+            onAcceptRecipient={function () {
+              if (entitySuggestion && entitySuggestion.contact) {
+                setRecipientNote(entitySuggestion.contact.name || "");
+              }
+              setSuggestionDismissed(true);
+            }}
+            onDismiss={function () { setSuggestionDismissed(true); }}
           />
         </div>
 

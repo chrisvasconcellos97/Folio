@@ -11,6 +11,114 @@ import { pickV } from "../../../lib/metricsUtils";
 import { showToast } from "../../../components/Toast";
 import { EditContactModal } from "../EditContactModal";
 
+function AliasSection({ contact, aliases, addAlias, removeAlias }) {
+  var [open, setOpen] = useState(false);
+  var [newAlias, setNewAlias] = useState("");
+  var [saving, setSaving] = useState(false);
+
+  var contactAliases = (aliases || []).filter(function (a) { return a.contact_id === contact.id; });
+
+  function handleAdd() {
+    if (!newAlias.trim() || saving) return;
+    setSaving(true);
+    Promise.resolve(addAlias(contact.id, newAlias.trim()))
+      .then(function () {
+        setNewAlias("");
+        showToast("Alias saved");
+      })
+      .catch(function (err) {
+        showToast((err && err.message) || "Couldn't save alias", "error");
+      })
+      .finally(function () { setSaving(false); });
+  }
+
+  function handleRemove(aliasId) {
+    Promise.resolve(removeAlias(aliasId))
+      .then(function () { showToast("Alias removed"); })
+      .catch(function () { showToast("Couldn't remove alias", "error"); });
+  }
+
+  return (
+    <div style={{ marginTop: 6 }}>
+      <button
+        onClick={function () { setOpen(function (v) { return !v; }); }}
+        style={{
+          background: "none", border: "none", padding: 0,
+          fontFamily: CT_MONO, fontSize: 10, color: C.accent,
+          cursor: "pointer", letterSpacing: "0.04em",
+        }}
+      >
+        {open ? "▾ aliases" : "＋ alias"}
+        {contactAliases.length > 0 && !open && (
+          <span style={{ marginLeft: 5, color: C.textMuted }}>
+            ({contactAliases.map(function (a) { return a.alias; }).join(", ")})
+          </span>
+        )}
+      </button>
+      {open && (
+        <div style={{ marginTop: 6 }}>
+          {contactAliases.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 6 }}>
+              {contactAliases.map(function (a) {
+                return (
+                  <span
+                    key={a.id}
+                    style={{
+                      fontFamily: CT_MONO, fontSize: 10,
+                      background: C.accentFaint, border: "1px solid " + C.accentLine,
+                      borderRadius: 999, padding: "2px 8px", color: C.accent,
+                      display: "inline-flex", alignItems: "center", gap: 5,
+                    }}
+                  >
+                    {a.alias}
+                    <button
+                      onClick={function () { handleRemove(a.id); }}
+                      style={{
+                        background: "none", border: "none", padding: 0,
+                        color: C.textMuted, cursor: "pointer", fontSize: 11, lineHeight: 1,
+                      }}
+                      aria-label={"Remove alias " + a.alias}
+                    >×</button>
+                  </span>
+                );
+              })}
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            <input
+              type="text"
+              value={newAlias}
+              onChange={function (e) { setNewAlias(e.target.value); }}
+              onKeyDown={function (e) { if (e.key === "Enter") handleAdd(); }}
+              placeholder={"Short name for " + (contact.name ? contact.name.split(" ")[0] : "contact")}
+              style={{
+                flex: 1, fontSize: 16, fontFamily: CT_MONO,
+                background: C.bg, border: "1px solid " + C.rule, borderRadius: 6,
+                padding: "4px 8px", color: C.text, outline: "none",
+                minWidth: 0,
+              }}
+            />
+            <button
+              onClick={handleAdd}
+              disabled={!newAlias.trim() || saving}
+              style={{
+                fontFamily: CT_MONO, fontSize: 10, padding: "4px 12px",
+                background: !newAlias.trim() || saving ? C.accentFaint : C.accentDeep,
+                border: "none", borderRadius: 6,
+                color: !newAlias.trim() || saving ? C.textMuted : C.bg,
+                cursor: !newAlias.trim() || saving ? "default" : "pointer",
+                flexShrink: 0,
+              }}
+            >
+              {saving ? "…" : "Add"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function buildContactsInsight(contacts, accountId) {
   var seed = (accountId || "x") + new Date().getDate().toString();
 
@@ -124,7 +232,7 @@ function exportContacts(contacts, accountName) {
   URL.revokeObjectURL(url);
 }
 
-export function ContactsTab({ contacts, meetings, accountId, accountName, onAdd, onDelete, onAddContact, onUpdate }) {
+export function ContactsTab({ contacts, meetings, accountId, accountName, onAdd, onDelete, onAddContact, onUpdate, aliases, addAlias, removeAlias }) {
   var [confirmDeleteId, setConfirmDeleteId]       = useState(null);
   var [editingContact, setEditingContact]         = useState(null);
   var [selected, setSelected]                     = useState({});
@@ -282,6 +390,16 @@ export function ContactsTab({ contacts, meetings, accountId, accountName, onAdd,
                   <div style={{ fontFamily: CT_MONO, fontSize: 10.5, color: C.textSoft, marginTop: 4, fontStyle: "italic" }}>
                     {c.relationship_note}
                   </div>
+                )}
+
+                {/* Alias management — show if aliases/addAlias are provided */}
+                {addAlias && (
+                  <AliasSection
+                    contact={c}
+                    aliases={aliases || []}
+                    addAlias={addAlias}
+                    removeAlias={removeAlias}
+                  />
                 )}
 
                 {/* Inline relationship editor */}
