@@ -615,6 +615,20 @@ export function callAskPip(payload) {
  * @param {string} [payload.accountType]       - account_type of the current account
  * @param {Object} [payload.pipAccountState]   - { lessons_learned, last_compression_at } row
  */
+
+function extractCheckboxTasks(notes) {
+  if (!notes) return { pending: [], done: [] };
+  var lines   = notes.split("\n");
+  var pending = [];
+  var done    = [];
+  lines.forEach(function (line) {
+    var trimmed = line.trim();
+    if (/^\[ \]/.test(trimmed))       pending.push(trimmed.replace(/^\[ \]\s*/, "").trim());
+    else if (/^\[x\]/i.test(trimmed)) done.push(trimmed.replace(/^\[x\]\s*/i, "").trim());
+  });
+  return { pending: pending, done: done };
+}
+
 export function summarizeDraftPip(payload) {
   var m              = payload.draft || {};
   var existingItems  = Array.isArray(payload.existingItems)  ? payload.existingItems  : [];
@@ -845,6 +859,20 @@ export function summarizeDraftPip(payload) {
     "Assignment hints (historical overrides on this account):\n" + hintLines;
 
   // Variable tail — CONTEXT + NOTES, different every call, no cache marker
+  var checkboxTasks   = extractCheckboxTasks(m.notes);
+  var checkboxBlock   = "";
+  if (checkboxTasks.pending.length || checkboxTasks.done.length) {
+    checkboxBlock = "── EXPLICITLY MARKED TASKS ──\n";
+    if (checkboxTasks.pending.length) {
+      checkboxBlock += "Include ALL of these as new tasks (user explicitly marked them):\n" +
+        checkboxTasks.pending.map(function (t) { return "  [ ] " + t; }).join("\n") + "\n";
+    }
+    if (checkboxTasks.done.length) {
+      checkboxBlock += "Already done — do NOT create tasks for these:\n" +
+        checkboxTasks.done.map(function (t) { return "  [x] " + t; }).join("\n") + "\n";
+    }
+    checkboxBlock += "\n";
+  }
   var tailText =
     "\n\n── CONTEXT ──\n" +
     "Account: " + (payload.accountName || "—") + "\n" +
@@ -853,6 +881,7 @@ export function summarizeDraftPip(payload) {
     "Date: "    + (m.meeting_date || "") + "\n" +
     "Title: "   + (m.title || "Conversation") + "\n" +
     "Attendees: " + (m.attendees && m.attendees.length ? m.attendees.join(", ") : "—") + "\n\n" +
+    checkboxBlock +
     "── NOTES ──\n" +
     (m.notes        ? m.notes + "\n" : "(empty)\n") +
     (m.action_items ? "\nExtra action notes: " + m.action_items + "\n" : "") +
