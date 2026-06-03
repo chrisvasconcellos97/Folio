@@ -936,7 +936,7 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
           var isOpen = !!expandedRows[p.id];
           function toggleRow() { setExpandedRows(function (prev) { return Object.assign({}, prev, { [p.id]: !prev[p.id] }); }); }
 
-          var leftEdge = PRIORITY_COLORS[p.priority];
+          var leftEdge = isComplete ? null : PRIORITY_COLORS[p.priority];
           var glow     = leftEdge ? "-2px 0 8px -3px " + leftEdge : undefined;
 
           return (
@@ -1106,8 +1106,8 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
                     <>
                       <div style={{
                         fontFamily: MONO, fontSize: 13.5, fontWeight: 700,
-                        color: C.accent, lineHeight: 1.1,
-                        textShadow: "0 0 12px " + C.accentGlow + ", 0 0 24px " + C.accentGlow2,
+                        color: isComplete ? C.textMuted : C.accent, lineHeight: 1.1,
+                        textShadow: isComplete ? "none" : "0 0 12px " + C.accentGlow + ", 0 0 24px " + C.accentGlow2,
                         fontVariantNumeric: "tabular-nums",
                       }}>
                         <span style={{ color: C.text }}>{steps.done}<span style={{ color: C.textMuted }}>/{steps.total}</span></span>
@@ -1117,7 +1117,7 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
                       <div style={{ position: "relative", height: 4, background: C.surface3, borderRadius: 2, overflow: "hidden", width: "100%" }}>
                         <div style={{
                           position: "absolute", inset: 0,
-                          background: "linear-gradient(to right, #3b82f6, var(--c-accent))",
+                          background: isComplete ? C.textMuted : "linear-gradient(to right, #3b82f6, var(--c-accent))",
                           borderRadius: 2,
                         }} />
                         <div style={{
@@ -1170,8 +1170,8 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                   <div style={{
                     fontFamily: MONO, fontSize: 13, fontWeight: 700,
-                    color: C.accent,
-                    textShadow: "0 0 12px " + C.accentGlow + ", 0 0 24px " + C.accentGlow2,
+                    color: isComplete ? C.textMuted : C.accent,
+                    textShadow: isComplete ? "none" : "0 0 12px " + C.accentGlow + ", 0 0 24px " + C.accentGlow2,
                     fontVariantNumeric: "tabular-nums", lineHeight: 1.1,
                   }}>
                     <span style={{ color: C.text }}>{steps.done}<span style={{ color: C.textMuted }}>/{steps.total}</span></span>
@@ -1182,7 +1182,7 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
                 <div style={{ position: "relative", height: 4, background: C.surface3, borderRadius: 2, overflow: "hidden" }}>
                   <div style={{
                     position: "absolute", inset: 0,
-                    background: "linear-gradient(to right, #3b82f6, var(--c-accent))",
+                    background: isComplete ? C.textMuted : "linear-gradient(to right, #3b82f6, var(--c-accent))",
                     borderRadius: 2,
                   }} />
                   <div style={{

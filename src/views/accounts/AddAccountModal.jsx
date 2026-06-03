@@ -734,27 +734,38 @@ export function AddAccountModal({ userId, onSave, onAddContacts, onClose, existi
                   style={{ flex: 1 }}
                 />
               </div>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 12, color: C.textSoft, fontFamily: "'Inter', system-ui, sans-serif" }}>
-                    <input
-                      type="checkbox"
-                      checked={!!contactDraft.is_leader}
-                      onChange={function (e) { setContactDraft(function (d) { return Object.assign({}, d, { is_leader: e.target.checked }); }); }}
-                      style={{ accentColor: C.yellow, cursor: "pointer" }}
-                    />
-                    <span style={{ color: C.yellow }}>☆</span> Leader
-                  </label>
-                  <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 12, color: C.textSoft, fontFamily: "'Inter', system-ui, sans-serif" }}>
-                    <input
-                      type="checkbox"
-                      checked={!!contactDraft.is_poc}
-                      onChange={function (e) { setContactDraft(function (d) { return Object.assign({}, d, { is_poc: e.target.checked }); }); }}
-                      style={{ accentColor: C.accent, cursor: "pointer" }}
-                    />
-                    <span style={{ color: C.accent }}>◎</span> POC
-                  </label>
-                </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {[
+                  { key: "is_leader", label: "Leader", icon: "☆", color: C.yellow },
+                  { key: "is_poc",    label: "POC",    icon: "◎", color: C.accent },
+                ].map(function (item) {
+                  var on = !!contactDraft[item.key];
+                  return (
+                    <div
+                      key={item.key}
+                      onClick={function () { setContactDraft(function (d) { var next = Object.assign({}, d); next[item.key] = !on; return next; }); }}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 7, cursor: "pointer",
+                        padding: "7px 12px", borderRadius: 8,
+                        background: on ? "rgba(77,184,150,0.08)" : C.surface2,
+                        border: "1px solid " + (on ? item.color : C.rule),
+                        userSelect: "none", flex: "0 0 auto",
+                      }}
+                    >
+                      <div style={{
+                        width: 15, height: 15, borderRadius: 3, flexShrink: 0,
+                        border: "1.5px solid " + (on ? item.color : C.textMuted),
+                        background: on ? item.color : "transparent",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}>
+                        {on && <span style={{ fontSize: 9, color: on && item.key === "is_leader" ? C.bg : "#fff", lineHeight: 1 }}>✓</span>}
+                      </div>
+                      <span style={{ fontSize: 11, color: on ? item.color : C.textMuted, fontFamily: "'JetBrains Mono', ui-monospace, monospace" }}>
+                        <span style={{ marginRight: 4 }}>{item.icon}</span>{item.label}
+                      </span>
+                    </div>
+                  );
+                })}
                 <button
                   type="button"
                   onClick={function () {
@@ -767,9 +778,10 @@ export function AddAccountModal({ userId, onSave, onAddContacts, onClose, existi
                     background: contactDraft.name.trim() ? C.accentFaint : "transparent",
                     color: contactDraft.name.trim() ? C.accent : C.textMuted,
                     border: "1px solid " + (contactDraft.name.trim() ? C.accentLine : C.rule),
-                    borderRadius: 6, padding: "5px 14px",
+                    borderRadius: 6, padding: "7px 16px",
                     fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 11, fontWeight: 600,
                     cursor: contactDraft.name.trim() ? "pointer" : "default",
+                    alignSelf: "flex-end", marginLeft: "auto",
                   }}
                 >
                   + Add
