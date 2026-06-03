@@ -16,6 +16,7 @@ import { routeToolCall, planToolCalls, describeToolCall, classifyTool, CONFIRM_T
 // (CONFIRM_THRESHOLD re-export below; routeToolCall still used by executeTools.)
 import { usePipFacts } from "../../hooks/usePipFacts";
 import { usePipAccountState, findStaleAccountIds } from "../../hooks/usePipAccountState";
+import { useGlossary } from "../../hooks/useGlossary";
 import { usePipState } from "../../lib/pipState";
 import { useRecentThemes } from "../../hooks/useRecentThemes";
 import { useUserProfile } from "../../hooks/useUserProfile";
@@ -67,6 +68,7 @@ export function PipView(props) {
 
   var pipFacts        = usePipFacts(userId);
   var pipAcctState    = usePipAccountState(userId);
+  var glossaryApi     = useGlossary(userId, null, null);
   var recentThemes    = useRecentThemes(userId);
   var userProfileApi  = useUserProfile(userId);
   var userProfile     = userProfileApi.profile;
@@ -470,10 +472,26 @@ export function PipView(props) {
       });
     }
 
+    // Merge glossary entries + per-account lessons into the facts channel so
+    // chat-Pip sees the same terminology and learned corrections as summarize-Pip.
+    var glossaryFacts = (glossaryApi.entries || [])
+      .filter(function (g) { return g && g.term && g.definition; })
+      .map(function (g) {
+        var line = "TERM: " + g.term + " — " + g.definition;
+        var aliases = Array.isArray(g.aliases) ? g.aliases.filter(Boolean) : [];
+        if (aliases.length) line += " (also: " + aliases.join(", ") + ")";
+        return line;
+      });
+    var lessonsFactStrings = (pipAcctState.states || [])
+      .filter(function (s) { return s && s.lessons_learned && s.lessons_learned.trim(); })
+      .slice(0, 5)
+      .map(function (s) { return "LEARNED (account): " + s.lessons_learned.trim().slice(0, 300); });
+    var mergedFacts = (pipFacts.activeFactStrings || []).concat(glossaryFacts).concat(lessonsFactStrings);
+
     var opts = {
       onDelta: onDelta,
       mode: intent.mode,
-      facts: pipFacts.activeFactStrings,
+      facts: mergedFacts,
       lens: lens,
       profileProse: userProfile && userProfile.profile_prose ? userProfile.profile_prose : undefined,
     };

@@ -1,6 +1,6 @@
 # Folios — AI Governance
 
-*Last updated: 2026-05-30*
+*Last updated: 2026-06-03*
 
 This document describes how Folios uses AI (Pip) responsibly. It
 covers what Pip can and can't do, what guardrails are in place, how
@@ -186,6 +186,10 @@ Pip is an LLM. It can be wrong. Folios mitigates this with:
 - Every Pip call is grounded in the user's actual data (accounts,
   items, contacts, glossary, lessons learned). Pip is not asked to
   recall general knowledge.
+- **Context parity:** Both chat-Pip (Pip view) and summarize-Pip
+  (End & Summarize) receive the same glossary entries and per-account
+  lessons learned, so Pip's vocabulary and learned patterns are
+  consistent across both surfaces.
 - The user's notes are always in context; Pip is summarizing
   text the user wrote, not generating from thin air.
 

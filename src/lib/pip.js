@@ -846,12 +846,17 @@ export function summarizeDraftPip(payload) {
     // long body but we can't extract clean JSON, treat as an error rather
     // than silently returning an empty plan — silent empties make the
     // user think Pip "found nothing" when really the response got cut off.
+    //
+    // Brace-counting was removed — it false-positives on valid source_excerpts
+    // that contain braces (e.g. template strings, code snippets in meeting notes).
+    // Reliable heuristic: the outermost JSON object simply didn't close cleanly.
+    // If text ends with } the response completed; otherwise it was cut off.
     function looksTruncated(t) {
       if (!t) return false;
       if (t.length < 200) return false;  // short → genuine "nothing" is plausible
-      var openBraces = (t.match(/\{/g) || []).length;
-      var closeBraces = (t.match(/\}/g) || []).length;
-      return openBraces > closeBraces;
+      // Skip truncation check when the outermost JSON closed cleanly.
+      if (t.trim().endsWith("}")) return false;
+      return true;
     }
 
     if (!match) {

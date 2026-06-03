@@ -163,7 +163,8 @@ var MODE_CONFIG = {
   // per row + summary + short_title + tone. Long meetings with 10+ action
   // items can easily exceed 1024 and get truncated mid-JSON, producing an
   // empty plan downstream. 3072 comfortably handles 15+ rows.
-  summary: { model: MODEL_HAIKU, max_tokens: 3072 },
+  // Sonnet for summarize: semantic project matching requires stronger reasoning
+  summary: { model: MODEL_SONNET, max_tokens: 3072 },
   email:   { model: MODEL_HAIKU, max_tokens: 768 },
 };
 

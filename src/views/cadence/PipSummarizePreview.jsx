@@ -577,6 +577,7 @@ export function PipSummarizePreview({
   var [titleDraft, setTitleDraft] = useState(suggestedTitle || "");
   var [dismissedPeople, setDismissedPeople] = useState([]);
   var [sessionProjects, setSessionProjects] = useState([]);
+  var [confidenceBannerDismissed, setConfidenceBannerDismissed] = useState(false);
   var [creatingProject, setCreatingProject] = useState({});  // { [idx]: true } while in-flight
 
   function patch(idx, fields) {
@@ -1175,6 +1176,37 @@ export function PipSummarizePreview({
             note that triggered Pip.
           </div>
         </div>
+
+        {(function () {
+          var lowCount = (plan || []).filter(function (r) { return r.confidence === "low"; }).length;
+          if (lowCount === 0 || confidenceBannerDismissed) return null;
+          return (
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              padding: "8px 12px",
+              background: "rgba(220,160,0,0.10)",
+              border: "1px solid " + C.yellow,
+              borderRadius: 8,
+              gap: 10,
+            }}>
+              <div style={{ fontSize: 12, color: C.yellow, lineHeight: 1.45, flex: 1 }}>
+                <strong>{lowCount} row{lowCount === 1 ? "" : "s"} need a look</strong>
+                {" — Pip wasn't sure about " + (lowCount === 1 ? "this one" : "these")}
+              </div>
+              <button
+                type="button"
+                onClick={function () { setConfidenceBannerDismissed(true); }}
+                aria-label="Dismiss"
+                style={{
+                  background: "none", border: "none",
+                  color: C.yellow, cursor: "pointer",
+                  padding: "0 4px", fontSize: 16, lineHeight: 1,
+                  flexShrink: 0,
+                }}
+              >×</button>
+            </div>
+          );
+        })()}
 
         {showTitleField && (
           <div style={{ marginBottom: 4 }}>

@@ -685,6 +685,27 @@ export function CadenceMeetingMode({
                   • Bullets {bulletsOn ? "on" : "off"}
                 </button>
               </div>
+              {(function () {
+                var todayStr = new Date().toISOString().slice(0, 10);
+                var stuckCount = (projects || []).filter(function (p) {
+                  return p.status === "blocked" ||
+                    (p.expected_complete_date && p.expected_complete_date < todayStr && p.status !== "complete");
+                }).length;
+                if (openItemCount === 0) return null;
+                var parts = ["Open: " + openItemCount + " item" + (openItemCount === 1 ? "" : "s")];
+                if (overdueItems > 0) parts.push(overdueItems + " overdue");
+                var loopStr = parts.join(", ");
+                if (stuckCount > 0) loopStr += " · " + stuckCount + " project" + (stuckCount === 1 ? "" : "s") + " stuck";
+                return (
+                  <div style={{
+                    fontFamily: MONO, fontSize: 11, color: C.textMuted,
+                    marginBottom: 8, lineHeight: 1.4,
+                    letterSpacing: "0.03em",
+                  }}>
+                    {loopStr}
+                  </div>
+                );
+              })()}
               <textarea
                 ref={notesRef}
                 value={notes}

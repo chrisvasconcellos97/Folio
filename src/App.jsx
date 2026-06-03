@@ -75,6 +75,7 @@ export default function App() {
   // the setSelected(null) inside the delay wiping it out.
   var pendingNavAccountRef = useRef(null);
   var welcomeShown = useRef(false);
+  var navTimerRef = useRef(null);
 
   function replayTour() {
     setShowOnboarding(true);
@@ -145,13 +146,16 @@ export default function App() {
   useEffect(function () {
     if (!userId) return;
     supabase.from("folio_tasks").select("*").eq("user_id", userId).is("project_id", null).then(function (r) {
-      if (!r.error) setAllItems((r.data || []).map(function (row) { return Object.assign({}, row, { text: row.title, owner: row.assignee_email }); }));
+      if (r.error) { console.warn("[App] failed to load folio_tasks:", r.error && r.error.message); return; }
+      setAllItems((r.data || []).map(function (row) { return Object.assign({}, row, { text: row.title, owner: row.assignee_email }); }));
     });
     supabase.from("folio_contacts").select("*").eq("user_id", userId).then(function (r) {
-      if (!r.error) setAllContacts(r.data || []);
+      if (r.error) { console.warn("[App] failed to load folio_contacts:", r.error && r.error.message); return; }
+      setAllContacts(r.data || []);
     });
     supabase.from("folio_account_updates").select("*").eq("user_id", userId).order("update_date", { ascending: false }).then(function (r) {
-      if (!r.error) setAllUpdates(r.data || []);
+      if (r.error) { console.warn("[App] failed to load folio_account_updates:", r.error && r.error.message); return; }
+      setAllUpdates(r.data || []);
     });
   }, [userId]);
   var { cadences, loading: cadenceLoading, addCadence, error: cadenceError, refetch: refetchCadencesApp } = useCadences(userId);
@@ -384,8 +388,11 @@ export default function App() {
 
   function handleSetView(v) {
     if (v === view) return;
+    // Cancel any pending nav timer so rapid nav events don't drop the last click.
+    if (navTimerRef.current) clearTimeout(navTimerRef.current);
     setPipTransition("out");
-    setTimeout(function () {
+    navTimerRef.current = setTimeout(function () {
+      navTimerRef.current = null;
       setView(v);
       if (pendingNavAccountRef.current) {
         setSelected(pendingNavAccountRef.current);
@@ -832,6 +839,8 @@ export default function App() {
               setSelected(acctForContact);
               setPendingPersonHubCadenceId(cadence.id);
               setView("accounts");
+            } else {
+              showToast("Couldn't open this 1:1 — the linked account wasn't found.", "warn");
             }
             return;
           }
