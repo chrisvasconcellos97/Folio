@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { C } from "../../lib/colors";
 import { TaskDetailPanel } from "./TaskDetailPanel";
+import { TaskEntityDetector } from "../../components/TaskEntityDetector";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
@@ -60,7 +61,7 @@ function SubStageIcon({ sub, onClick }) {
   );
 }
 
-export function ProjectStageEditor({ project, onUpdate, accounts, members, userEmail, logCorrection }) {
+export function ProjectStageEditor({ project, onUpdate, accounts, members, contacts, aliases, userEmail, logCorrection }) {
   var [expanded, setExpanded] = useState({});
   var [newStageTitle, setNewStageTitle] = useState("");
   var [addingSub, setAddingSub] = useState({}); // { stageIdx: "title text" }
@@ -137,6 +138,14 @@ export function ProjectStageEditor({ project, onUpdate, accounts, members, userE
 
   function removeStage(idx) {
     var next = stages.filter(function (_, i) { return i !== idx; });
+    commitStages(next);
+  }
+
+  function acceptStageSuggestion(idx, suggestion) {
+    var patch = suggestion.type === "account"
+      ? { account_id: suggestion.account.id }
+      : { assignee_email: suggestion.contact.email || suggestion.contact.name || "" };
+    var next = stages.map(function (s, i) { return i === idx ? Object.assign({}, s, patch) : s; });
     commitStages(next);
   }
 
@@ -220,6 +229,14 @@ export function ProjectStageEditor({ project, onUpdate, accounts, members, userE
                 ×
               </button>
             </div>
+
+            <TaskEntityDetector
+              task={s}
+              contacts={contacts}
+              accounts={accounts}
+              aliases={aliases}
+              onAccept={function (suggestion) { acceptStageSuggestion(idx, suggestion); }}
+            />
 
             {blocked && (
               <textarea

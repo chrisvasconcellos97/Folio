@@ -1,6 +1,7 @@
 import { useState, useMemo, useDeferredValue } from "react";
 import { C } from "../../lib/colors";
 import { usePipCorrections } from "../../hooks/usePipCorrections";
+import { useContactAliases } from "../../hooks/useContactAliases";
 import { GaugeIcon } from "../../components/GaugeIcon";
 import { useProjects } from "../../hooks/useProjects";
 import { ErrorBanner } from "../../components/ErrorBanner";
@@ -162,6 +163,7 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
   }
   // Phase 6 — V2 brain correction log for task edits that go through Gauge.
   var { logCorrection } = usePipCorrections(userId, null);
+  var { aliases } = useContactAliases(orgId || null);
   var [primaryView, setPrimaryView] = useState(
     (members || []).length >= 2 && lens === "leader" ? "leader" :
     lens === "admin"  ? "tasks"  :
@@ -1211,6 +1213,7 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
                     accounts={accounts}
                     members={members}
                     contacts={contacts}
+                    aliases={aliases}
                     userEmail={userEmail}
                     onUpdate={updateProject}
                     logCorrection={logCorrection}
@@ -1221,6 +1224,8 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
                     onUpdate={updateProject}
                     accounts={accounts}
                     members={members}
+                    contacts={contacts}
+                    aliases={aliases}
                     userEmail={userEmail}
                     logCorrection={logCorrection}
                   />
