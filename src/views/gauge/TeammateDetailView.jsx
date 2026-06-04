@@ -34,7 +34,9 @@ export function TeammateDetailView({ userId, memberEmail, projects, accounts, on
   // Pull their open tasks. Note: filtered by assignee_email on the server.
   // Org-scoped sharing happens at the RLS layer (folio_tasks visible to org
   // members) so the leader sees what they're supposed to see.
-  var { tasks } = useTasks(userId, { assigneeEmail: memberEmail, openOnly: true });
+  // orgScope drops the caller's user_id filter so a leader can read the
+  // teammate's tasks (by assignee_email) via the folio_tasks org-read RLS policy.
+  var { tasks } = useTasks(userId, { assigneeEmail: memberEmail, openOnly: true, orgScope: true });
 
   var accountsById = useMemo(function () {
     var m = {};

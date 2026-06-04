@@ -4,8 +4,9 @@ import { C, glass } from "../../lib/colors";
 import { Card } from "../../components/Card";
 import { FolioIcon } from "../../components/FolioIcon";
 import { PipMark } from "../../components/PipMark";
+import { gatherSignals, computeAccountHealth } from "../../lib/accountHealth";
 
-var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red };
+var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red, new: C.textMuted };
 
 var EVENT_LABELS = {
   meeting_logged:       "logged a meeting",
@@ -33,10 +34,10 @@ function daysSince(ts) {
   return Math.floor((Date.now() - new Date(ts).getTime()) / 86400000);
 }
 
-function AccountCard({ account, openItemCount }) {
+function AccountCard({ account, openItemCount, health }) {
   var days       = daysSince(account.last_interaction_at || account.last_meeting);
   var isGoing    = days !== null && days >= 30;
-  var statusColor = STATUS_COLORS[account.status] || C.textMuted;
+  var statusColor = STATUS_COLORS[health || account.status] || C.textMuted;
 
   return (
     <div
@@ -104,7 +105,7 @@ export function LeadershipView({ org, orgId, userMeta, onSignOut }) {
 
     var p2 = supabase
       .from("folio_tasks")
-      .select("account_id")
+      .select("account_id, due_date")
       .eq("done", false)
       .then(function (r) { return r.data || []; });
 
@@ -124,8 +125,17 @@ export function LeadershipView({ org, orgId, userMeta, onSignOut }) {
       .then(function (r) { return r.data || []; });
 
     Promise.all([p1, p2, p3, p4]).then(function (results) {
-      setAccounts(results[0]);
-      setItems(results[1]);
+      // Exclude archived + merged accounts so they don't inflate the portfolio,
+      // "going cold", or the grid (every other surface filters these).
+      var activeAccounts = (results[0] || []).filter(function (a) {
+        return !a.is_inactive && !a.merged_into_account_id;
+      });
+      var activeIds = {};
+      activeAccounts.forEach(function (a) { activeIds[a.id] = true; });
+      setAccounts(activeAccounts);
+      // Only count open items belonging to a visible account (cross-user team
+      // tasks become visible via the folio_tasks org-read RLS policy).
+      setItems((results[1] || []).filter(function (t) { return t.account_id && activeIds[t.account_id]; }));
       setActivity(results[2]);
       setMembers(results[3]);
       setLoading(false);
@@ -141,6 +151,19 @@ export function LeadershipView({ org, orgId, userMeta, onSignOut }) {
     return counts;
   }, [items]);
 
+  // Computed health per account (green/yellow/red/new) — matches what AMs see,
+  // instead of the legacy stored `status` column.
+  var healthByAccount = useMemo(function () {
+    var todayISO = new Date().toISOString().slice(0, 10);
+    var itemsAsTasks = items.map(function (t) { return { account_id: t.account_id, done: false, due_date: t.due_date }; });
+    var map = {};
+    accounts.forEach(function (a) {
+      var signals = gatherSignals(a, itemsAsTasks, [], todayISO);
+      map[a.id] = computeAccountHealth(a, signals).status;
+    });
+    return map;
+  }, [accounts, items]);
+
   var goingCold = useMemo(function () {
     return accounts.filter(function (a) {
       var d = daysSince(a.last_interaction_at || a.last_meeting);
@@ -150,10 +173,10 @@ export function LeadershipView({ org, orgId, userMeta, onSignOut }) {
 
   var sorted = useMemo(function () {
     var list = accounts.slice();
-    var STATUS_ORDER = { red: 0, yellow: 1, green: 2 };
+    var STATUS_ORDER = { red: 0, yellow: 1, green: 2, new: 3 };
     if (sortBy === "status") {
       list.sort(function (a, b) {
-        return (STATUS_ORDER[a.status] ?? 3) - (STATUS_ORDER[b.status] ?? 3);
+        return (STATUS_ORDER[healthByAccount[a.id]] ?? 3) - (STATUS_ORDER[healthByAccount[b.id]] ?? 3);
       });
     } else if (sortBy === "cold") {
       list.sort(function (a, b) {
@@ -167,7 +190,7 @@ export function LeadershipView({ org, orgId, userMeta, onSignOut }) {
       });
     }
     return list;
-  }, [accounts, sortBy, itemCounts]);
+  }, [accounts, sortBy, itemCounts, healthByAccount]);
 
   var totalOpen = items.length;
 
@@ -298,6 +321,7 @@ export function LeadershipView({ org, orgId, userMeta, onSignOut }) {
                           key={account.id}
                           account={account}
                           openItemCount={itemCounts[account.id] || 0}
+                          health={healthByAccount[account.id]}
                         />
                       );
                     })}

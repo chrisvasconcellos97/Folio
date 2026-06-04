@@ -18,6 +18,11 @@ export function useTasks(userId, opts) {
   var projectId     = opts.projectId     || null;
   var assigneeEmail = opts.assigneeEmail || null;
   var openOnly      = opts.openOnly      === true;
+  // When true, DON'T filter by the caller's user_id — used to read a teammate's
+  // tasks (by assignee_email) relying on the folio_tasks org-read RLS policy.
+  // Without the policy this simply returns the caller's own visible rows
+  // (no regression).
+  var orgScope      = opts.orgScope      === true;
 
   var [tasks, setTasks]     = useState([]);
   var [loading, setLoading] = useState(false);
@@ -26,7 +31,8 @@ export function useTasks(userId, opts) {
   var fetch = useCallback(function () {
     if (!userId) return;
     setLoading(true);
-    var q = supabase.from("folio_tasks").select("*").eq("user_id", userId);
+    var q = supabase.from("folio_tasks").select("*");
+    if (!orgScope)     q = q.eq("user_id", userId);
     if (accountId)     q = q.eq("account_id", accountId);
     if (projectId)     q = q.eq("project_id", projectId);
     if (assigneeEmail) q = q.eq("assignee_email", assigneeEmail);
@@ -38,7 +44,7 @@ export function useTasks(userId, opts) {
        if (r.error) setError(r.error.message);
        else { setError(null); setTasks(r.data || []); }
      });
-  }, [userId, accountId, projectId, assigneeEmail, openOnly]);
+  }, [userId, accountId, projectId, assigneeEmail, openOnly, orgScope]);
 
   useEffect(function () { fetch(); }, [fetch]);
   useRealtimeSync("folio_tasks", userId, fetch);
