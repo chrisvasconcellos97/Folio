@@ -1,6 +1,6 @@
 # Folios — Upgrade Log
 
-*Last updated: 2026-06-03 (Share sheet, voice dictation, Ask Pip recall polish)*
+*Last updated: 2026-06-04 (Full audit-fix pass + schema reconciliation)*
 
 Plain-English log of major upgrades shipped to Folios. Date, time, and
 a short explanation written in terms anyone can read — not technical
@@ -14,6 +14,29 @@ For the technical changelog with full release detail, see
 architectural changes, anything that meaningfully changes what Folios
 *does* or *is*. Not bug fixes, styling tweaks, or doc-only updates —
 those live in git history.
+
+---
+
+## 2026-06-04 — Full audit-fix pass + schema reconciliation
+
+**What I built:** A top-to-bottom audit of the whole app and fixes for everything it surfaced — correctness bugs, a couple of data-model gaps, security/RLS gaps, and theme/accessibility polish — with new automated tests so the same bugs can't silently come back.
+
+**Problem it solves:** A pile of small, quiet failures: project labels rendering blank, status pills tinted black in light mode, "how many overdue items?" always answering zero, completed tasks not syncing between the queue and the project board, 1:1 meetings vanishing from their hub, the leadership view under-counting the team's work, and onboarding/aliases breaking on a fresh deploy because the canonical schema had drifted.
+
+**What changed:**
+- **Correctness:** Pip chat now actually counts items and tracks commitments; project chips show titles; completing a task syncs the project board; status pills tint correctly in both themes; person-1:1 meetings are kept with their account; monthly cadences on the 29th–31st stop drifting into the next month; contact engagement matches informal names ("Mike" → "Michael Smith").
+- **Data model:** `schema.sql` is canonical again (folds in the profile, drip-question, contact-alias, theme, is_global, nickname, and relationship columns/tables); contact aliases now work for solo users; account "Updates" can be edited.
+- **Security:** new additive RLS so org peers can see each other's tasks (powers the leadership + teammate views); team invites now require you to actually belong to the org.
+- **Polish:** light-mode theme tokens, reduced-motion gating, date off-by-one fixes, and accessibility labels.
+
+**What you see today:** The home screen, Pip chat, Gauge board, leadership view, and account screens all show accurate, in-sync data; light mode looks right; and a fresh deploy comes up clean.
+
+**Why it matters:** This is the "never show stale or wrong data" foundation — the thing that makes the app trustworthy enough to run a book of business on.
+
+> Operator note: two SQL migrations must be run in Supabase for the new
+> capabilities — `supabase/folio_tasks_org_read.sql` (leadership/teammate task
+> visibility) and `supabase/folio_contact_aliases_user_scope.sql` (solo-user
+> aliases). Both are additive and idempotent; also captured in `schema.sql`.
 
 ---
 

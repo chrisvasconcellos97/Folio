@@ -24,10 +24,24 @@ export default async function handler(req, res) {
   try {
     var { data: org, error: orgError } = await adminClient
       .from("folio_orgs")
-      .select("name")
+      .select("name, owner_id")
       .eq("id", orgId)
       .single();
     if (orgError || !org) return res.status(400).json({ error: "Org not found" });
+
+    // Authorization: only the org owner or an accepted owner/member may invite.
+    // Without this any authenticated user could send invite emails for any org.
+    if (org.owner_id !== user.id) {
+      var { data: membership } = await adminClient
+        .from("folio_org_members")
+        .select("role")
+        .eq("org_id", orgId)
+        .eq("user_id", user.id)
+        .eq("accepted", true)
+        .in("role", ["owner", "member"])
+        .maybeSingle();
+      if (!membership) return res.status(403).json({ error: "Not authorized to invite to this org" });
+    }
 
     var orgName = org.name;
     var inviterEmail = user.email || "a teammate";
