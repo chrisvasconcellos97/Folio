@@ -168,7 +168,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
   var { cadences: personCadencesAll, addCadence: addPersonCadence, refetch: refetchPersonCadences } = useCadences(userId);
   var { projects, addProject, updateProject, deleteProject, error: projectsError, refetch: refetchProjects } = useProjects(userId, account.id, orgId, childAccountIds);
   var { updates, addUpdate, updateUpdate, deleteUpdate, error: updatesError, refetch: refetchUpdates } = useAccountUpdates(userId, account.id, orgId);
-  var contactAliasesApi = useContactAliases(orgId || null);
+  var contactAliasesApi = useContactAliases(orgId || null, userId);
 
   // Filter person cadences to those whose contact_id belongs to this account's contacts
   var personCadences = useMemo(function () {

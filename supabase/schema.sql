@@ -704,6 +704,133 @@ create trigger pip_glossary_updated_at
   for each row execute function update_updated_at();
 
 -- ──────────────────────────────────────────────────────────────────────
+-- June 2026 additions — folded in so schema.sql stays canonical. These
+-- previously lived only in per-feature migrations (folio_user_profile.sql,
+-- entity_detection.sql, folio_meeting_themes.sql, folio_contacts_nickname.sql,
+-- stakeholder_layer.sql, pip_drip_questions.sql, folio_tasks_org_read.sql).
+-- All idempotent.
+-- ──────────────────────────────────────────────────────────────────────
+
+-- folio_meetings: Pip-extracted one-word theme tag.
+alter table folio_meetings add column if not exists theme text;
+create index if not exists folio_meetings_theme_idx
+  on folio_meetings(user_id, theme, meeting_date) where theme is not null;
+
+-- folio_cadences: global task cadence (account_id null, is_global true → all accounts).
+alter table folio_cadences add column if not exists is_global boolean not null default false;
+create index if not exists folio_cadences_is_global_idx
+  on folio_cadences(user_id) where is_global = true;
+
+-- folio_contacts: nickname + stakeholder/relationship layer.
+alter table folio_contacts add column if not exists nickname text;
+alter table folio_contacts add column if not exists relationship_role text
+  check (relationship_role is null or relationship_role in ('champion','blocker','neutral','unknown'));
+alter table folio_contacts add column if not exists relationship_note text;
+
+-- Pip onboarding profile + question queue.
+create table if not exists folio_user_profile (
+  id                 uuid primary key default gen_random_uuid(),
+  user_id            uuid references auth.users not null unique,
+  org_id             uuid,
+  role_title         text,
+  company_name       text,
+  industry           text,
+  portfolio_shape    text,
+  primary_goal       text,
+  reporting_to       text,
+  working_style      text,
+  kpis               text,
+  profile_prose      text,
+  prose_generated_at timestamptz,
+  completeness       integer default 0,
+  onboarding_status  text default 'pending'
+                     check (onboarding_status in ('pending','in_progress','done','skipped')),
+  pip_questions_paused boolean not null default false,
+  created_at         timestamptz default now(),
+  updated_at         timestamptz default now()
+);
+alter table folio_user_profile add column if not exists pip_questions_paused boolean not null default false;
+alter table folio_user_profile enable row level security;
+drop policy if exists "User profile owner access" on folio_user_profile;
+create policy "User profile owner access" on folio_user_profile for all
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
+drop trigger if exists folio_user_profile_updated_at on folio_user_profile;
+create trigger folio_user_profile_updated_at before update on folio_user_profile
+  for each row execute function update_updated_at();
+
+create table if not exists folio_pip_questions (
+  id               uuid primary key default gen_random_uuid(),
+  user_id          uuid references auth.users not null,
+  question_text    text not null,
+  category         text check (category in ('role','company','portfolio','working_style','goals','gap','terminology')),
+  slot             text,
+  source           text default 'bank' check (source in ('bank','pip_generated','gap_observed')),
+  priority         integer default 5,
+  status           text default 'queued' check (status in ('queued','asked','answered','skipped','dismissed')),
+  answer_text      text,
+  trigger_context  text,
+  asked_at         timestamptz,
+  answered_at      timestamptz,
+  created_at       timestamptz default now()
+);
+alter table folio_pip_questions enable row level security;
+drop policy if exists "Pip questions owner access" on folio_pip_questions;
+create policy "Pip questions owner access" on folio_pip_questions for all
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
+create index if not exists folio_user_profile_user_id_idx on folio_user_profile(user_id);
+create index if not exists folio_pip_questions_user_id_status_idx on folio_pip_questions(user_id, status);
+
+-- Contact aliases for entity detection. user_id added so SOLO users (no org)
+-- get per-user aliases instead of a shared null-org pool. See entity_detection.sql.
+create table if not exists folio_contact_aliases (
+  id uuid primary key default gen_random_uuid(),
+  org_id uuid references folio_orgs(id) on delete cascade,
+  user_id uuid references auth.users(id),
+  contact_id uuid references folio_contacts(id) on delete cascade,
+  alias text not null,
+  created_by uuid references auth.users(id),
+  created_at timestamptz default now()
+);
+alter table folio_contact_aliases add column if not exists user_id uuid references auth.users(id);
+alter table folio_contact_aliases enable row level security;
+drop policy if exists "org members can read aliases"   on folio_contact_aliases;
+drop policy if exists "org members can insert aliases"  on folio_contact_aliases;
+drop policy if exists "alias creator can delete"        on folio_contact_aliases;
+drop policy if exists "aliases_read"   on folio_contact_aliases;
+drop policy if exists "aliases_insert" on folio_contact_aliases;
+drop policy if exists "aliases_delete" on folio_contact_aliases;
+-- Read/insert: an org member sees the org's aliases; a solo user sees their own.
+create policy "aliases_read" on folio_contact_aliases for select using (
+  (org_id is not null and org_id in (select org_id from folio_org_members where user_id = auth.uid() and accepted = true))
+  or (org_id is null and user_id = auth.uid())
+);
+create policy "aliases_insert" on folio_contact_aliases for insert with check (
+  (org_id is not null and org_id in (select org_id from folio_org_members where user_id = auth.uid() and accepted = true))
+  or (org_id is null and user_id = auth.uid())
+);
+-- Delete: the creator, or any org member for shared org aliases.
+create policy "aliases_delete" on folio_contact_aliases for delete using (
+  created_by = auth.uid()
+  or (org_id is null and user_id = auth.uid())
+  or (org_id is not null and org_id in (select org_id from folio_org_members where user_id = auth.uid() and accepted = true))
+);
+create index if not exists folio_contact_aliases_org_alias on folio_contact_aliases(org_id, lower(alias));
+create index if not exists folio_contact_aliases_user_idx  on folio_contact_aliases(user_id) where user_id is not null;
+
+-- folio_tasks org-read — org peers can read each other's tasks (leadership +
+-- teammate drill-in). See folio_tasks_org_read.sql for rationale.
+create or replace function folio_org_peer_user_ids()
+returns setof uuid language sql security definer stable set search_path = public as $$
+  select distinct them.user_id from folio_org_members me
+  join folio_org_members them on them.org_id = me.org_id
+  where me.user_id = auth.uid() and me.accepted = true and them.accepted = true and them.user_id is not null
+$$;
+grant execute on function folio_org_peer_user_ids() to authenticated;
+drop policy if exists "tasks_org_peer_read" on folio_tasks;
+create policy "tasks_org_peer_read" on folio_tasks for select
+  using (user_id in (select folio_org_peer_user_ids()));
+
+-- ──────────────────────────────────────────────────────────────────────
 -- Audit log (optional security feature)
 -- ──────────────────────────────────────────────────────────────────────
 create table if not exists folio_audit_log (

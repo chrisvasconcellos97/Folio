@@ -180,7 +180,7 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
   }
   // Phase 6 — V2 brain correction log for task edits that go through Gauge.
   var { logCorrection } = usePipCorrections(userId, null);
-  var { aliases } = useContactAliases(orgId || null);
+  var { aliases } = useContactAliases(orgId || null, userId);
   var [primaryView, setPrimaryView] = useState(
     (members || []).length >= 2 && lens === "leader" ? "leader" :
     lens === "admin"  ? "tasks"  :
