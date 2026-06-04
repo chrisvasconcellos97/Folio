@@ -52,6 +52,7 @@ export function TaskDetailPanel({
 
   var [title, setTitle]         = useState(task ? task.title || "" : "");
   var [assignee, setAssignee]   = useState(task ? task.assignee_email || "" : "");
+  var [recipient, setRecipient] = useState(task ? task.recipient || "" : "");
   var [accountId, setAccountId] = useState(task ? task.account_id || "" : "");
   var [taskStatus, setTaskStatus] = useState(task ? (task.task_status || statusColumns[0]) : statusColumns[0]);
   var [completed, setCompleted] = useState(task ? !!task.completed_at : false);
@@ -63,7 +64,6 @@ export function TaskDetailPanel({
   var [saving, setSaving]       = useState(false);
   var [confirmDel, setConfirmDel] = useState(false);
   var [suggestionDismissed, setSuggestionDismissed] = useState(false);
-  var [recipientNote, setRecipientNote] = useState(null);
 
   var entitySuggestion = useEntityDetection(title, contacts || [], aliases || [], accounts || []);
 
@@ -112,6 +112,60 @@ export function TaskDetailPanel({
     setCustomFields(function (prev) { return Object.assign({}, prev, { [key]: val }); });
   }
 
+  // Shared person picker — used by both Assignee and Recipient so the two
+  // stay consistent. Falls back to a free-text field when no team members or
+  // contacts are available to choose from.
+  var hasPeopleOptions =
+    (members && members.length > 0) ||
+    projectContacts.length > 0 ||
+    linkedAccountContacts.length > 0 ||
+    internalTeamContacts.length > 0;
+
+  function personSelect(value, setValue, noneLabel) {
+    if (!hasPeopleOptions) {
+      return (
+        <InputField
+          value={value}
+          onChange={function (e) { setValue(e.target.value); }}
+          placeholder="Email or name"
+        />
+      );
+    }
+    return (
+      <SelectField value={value} onChange={function (e) { setValue(e.target.value); }}>
+        <option value="">{noneLabel}</option>
+        {members && members.length > 0 && (
+          <optgroup label="Team">
+            {members.map(function (m) {
+              return <option key={m.email || m.id} value={m.email || ""}>{memberLabel(m)}</option>;
+            })}
+          </optgroup>
+        )}
+        {projectContacts.length > 0 && (
+          <optgroup label="Account Contacts">
+            {projectContacts.map(function (c) {
+              return <option key={c.id} value={c.name}>{c.name}{c.role ? " · " + c.role : ""}</option>;
+            })}
+          </optgroup>
+        )}
+        {linkedAccountContacts.length > 0 && linkedAccount && (
+          <optgroup label={linkedAccount.name}>
+            {linkedAccountContacts.map(function (c) {
+              return <option key={c.id} value={c.name}>{c.name}{c.role ? " · " + c.role : ""}</option>;
+            })}
+          </optgroup>
+        )}
+        {internalTeamContacts.length > 0 && (
+          <optgroup label="Internal Teams">
+            {internalTeamContacts.map(function (c) {
+              return <option key={c.id} value={c.name}>{c.name}{c.role ? " · " + c.role : ""}</option>;
+            })}
+          </optgroup>
+        )}
+      </SelectField>
+    );
+  }
+
   function handleSave() {
     if (!title.trim() || saving) return;
     setSaving(true);
@@ -119,6 +173,7 @@ export function TaskDetailPanel({
     var taskShape = Object.assign({}, task || {}, {
       title:          newTitle,
       assignee_email: assignee || null,
+      recipient:      recipient || null,
       account_id:     accountId || null,
       task_status:    taskStatus,
       completed_at:   completed ? (task && task.completed_at ? task.completed_at : new Date().toISOString()) : null,
@@ -332,7 +387,7 @@ export function TaskDetailPanel({
             }}
             onAcceptRecipient={function () {
               if (entitySuggestion && entitySuggestion.contact) {
-                setRecipientNote(entitySuggestion.contact.name || "");
+                setRecipient(entitySuggestion.contact.email || entitySuggestion.contact.name || "");
               }
               setSuggestionDismissed(true);
             }}
@@ -355,51 +410,21 @@ export function TaskDetailPanel({
           </div>
         )}
 
-        {/* Assignee — drives admin queue surfacing */}
+        {/* Assignee — who does the work; drives admin queue surfacing */}
         <div>
           <FL>Assignee</FL>
-          {(members && members.length > 0) || projectContacts.length > 0 || linkedAccountContacts.length > 0 || internalTeamContacts.length > 0 ? (
-            <SelectField
-              value={assignee}
-              onChange={function (e) { setAssignee(e.target.value); }}
-            >
-              <option value="">— Unassigned —</option>
-              {members && members.length > 0 && (
-                <optgroup label="Team">
-                  {members.map(function (m) {
-                    return <option key={m.email || m.id} value={m.email || ""}>{memberLabel(m)}</option>;
-                  })}
-                </optgroup>
-              )}
-              {projectContacts.length > 0 && (
-                <optgroup label="Account Contacts">
-                  {projectContacts.map(function (c) {
-                    return <option key={c.id} value={c.name}>{c.name}{c.role ? " · " + c.role : ""}</option>;
-                  })}
-                </optgroup>
-              )}
-              {linkedAccountContacts.length > 0 && linkedAccount && (
-                <optgroup label={linkedAccount.name}>
-                  {linkedAccountContacts.map(function (c) {
-                    return <option key={c.id} value={c.name}>{c.name}{c.role ? " · " + c.role : ""}</option>;
-                  })}
-                </optgroup>
-              )}
-              {internalTeamContacts.length > 0 && (
-                <optgroup label="Internal Teams">
-                  {internalTeamContacts.map(function (c) {
-                    return <option key={c.id} value={c.name}>{c.name}{c.role ? " · " + c.role : ""}</option>;
-                  })}
-                </optgroup>
-              )}
-            </SelectField>
-          ) : (
-            <InputField
-              value={assignee}
-              onChange={function (e) { setAssignee(e.target.value); }}
-              placeholder="Email"
-            />
-          )}
+          {personSelect(assignee, setAssignee, "— Unassigned —")}
+        </div>
+
+        {/* Recipient — who the task is for / who you'll send something to.
+            Distinct from assignee: the assignee does it, the recipient
+            receives the output. Pre-fillable from the entity-detection chip. */}
+        <div>
+          <FL>Recipient</FL>
+          {personSelect(recipient, setRecipient, "— No recipient —")}
+          <div style={{ fontFamily: INTER, fontSize: 11, color: C.textMuted, marginTop: 4 }}>
+            Who this is for — who you’ll send something to or do this for.
+          </div>
         </div>
 
         {/* Task status (kanban column for standing; reference for discrete) */}

@@ -381,6 +381,13 @@ export function FlatTaskQueue({ tasks, accounts, projects, members, userEmail, o
                 </div>
               )}
 
+              {dt.recipient && (
+                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                  <span style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", width: 72, flexShrink: 0 }}>Recipient</span>
+                  <span style={{ fontFamily: MONO, fontSize: 12, color: C.text }}>{resolveAssignee(dt.recipient, members)}</span>
+                </div>
+              )}
+
               {dt.task_status && (
                 <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                   <span style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", width: 72, flexShrink: 0 }}>Status</span>

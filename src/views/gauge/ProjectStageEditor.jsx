@@ -207,6 +207,18 @@ export function ProjectStageEditor({ project, onUpdate, accounts, members, conta
                   {s.assignee_email.includes("@") ? s.assignee_email.split("@")[0] : s.assignee_email}
                 </div>
               )}
+              {s.recipient && (
+                <div
+                  title={"For: " + s.recipient}
+                  style={{
+                    fontFamily: MONO, fontSize: 9, color: C.textSoft,
+                    border: "1px solid " + C.rule,
+                    borderRadius: 999, padding: "1px 7px", whiteSpace: "nowrap",
+                  }}
+                >
+                  → {s.recipient.includes("@") ? s.recipient.split("@")[0] : s.recipient}
+                </div>
+              )}
               {subs.length > 0 && (
                 <button
                   onClick={function () { setExpanded(function (prev) { return Object.assign({}, prev, { [idx]: !prev[idx] }); }); }}

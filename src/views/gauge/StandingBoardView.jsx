@@ -211,6 +211,14 @@ function openNew(forStatus) {
                         → {resolveAssignee(t.assignee_email, members)}
                       </div>
                     )}
+                    {t.recipient && (
+                      <div style={{
+                        fontFamily: MONO, fontSize: 9.5, color: C.textSoft,
+                        marginTop: 2,
+                      }}>
+                        for: {resolveAssignee(t.recipient, members)}
+                      </div>
+                    )}
                   </div>
                 );
               })}
