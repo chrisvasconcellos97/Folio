@@ -7,6 +7,8 @@ git push origin HEAD:main
 ```
 **Do NOT push to any other branches** — every branch push triggers a Vercel deployment. Worktree agent branches are ephemeral and never pushed to remote directly; their commits are cherry-picked into `main`.
 
+**Never push unless Chris explicitly says "push", "ship it", or "deploy."** Commits should accumulate locally between sessions. One push = one Vercel deployment. Every unnecessary push costs Chris money.
+
 ## API Module Import Rule (prevent FUNCTION_INVOCATION_FAILED)
 
 With `"type":"module"` in `package.json`, Node.js ESM requires **explicit `.js` extensions** on all relative imports. Vercel's bundler (nft) follows the same resolution rules — a missing `.js` means the file is excluded from the serverless bundle, and the function crashes at load time with `FUNCTION_INVOCATION_FAILED` before any handler code runs.
