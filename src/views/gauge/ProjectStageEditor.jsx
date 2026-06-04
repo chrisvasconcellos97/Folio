@@ -154,10 +154,13 @@ export function ProjectStageEditor({ project, onUpdate, accounts, members, conta
     commitStages(next);
   }
 
-  function acceptStageSuggestion(idx, suggestion) {
+  function acceptStageSuggestion(idx, suggestion, kind) {
+    var contactVal = suggestion.type !== "account"
+      ? (suggestion.contact.email || suggestion.contact.name || "")
+      : "";
     var patch = suggestion.type === "account"
       ? { account_id: suggestion.account.id }
-      : { assignee_email: suggestion.contact.email || suggestion.contact.name || "" };
+      : (kind === "recipient" ? { recipient: contactVal } : { assignee_email: contactVal });
     // Read from the optimistic `stages` (localStages ?? project.stages), not
     // project.stages directly, or unsaved stage edits get discarded.
     var next = (stages || []).map(function (s, i) { return i === idx ? Object.assign({}, s, patch) : s; });
@@ -273,7 +276,7 @@ export function ProjectStageEditor({ project, onUpdate, accounts, members, conta
                 contacts={contacts}
                 accounts={accounts}
                 aliases={aliases}
-                onAccept={function (suggestion) { acceptStageSuggestion(idx, suggestion); setLastAddedIdx(null); }}
+                onAccept={function (suggestion, kind) { acceptStageSuggestion(idx, suggestion, kind); setLastAddedIdx(null); }}
                 onDismiss={function () { setLastAddedIdx(null); }}
               />
             )}

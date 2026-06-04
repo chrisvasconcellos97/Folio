@@ -30,8 +30,8 @@ export function TaskEntityDetector({ task, contacts, accounts, aliases, onAccept
     <div onClick={function (e) { e.stopPropagation(); }}>
       <EntitySuggestionChip
         suggestion={suggestion}
-        onAcceptAssignee={function () { onAccept(suggestion); setDismissed(true); }}
-        onAcceptRecipient={function () { onAccept(suggestion); setDismissed(true); }}
+        onAcceptAssignee={function () { onAccept(suggestion, "assignee"); setDismissed(true); }}
+        onAcceptRecipient={function () { onAccept(suggestion, "recipient"); setDismissed(true); }}
         onDismiss={handleDismiss}
       />
     </div>
