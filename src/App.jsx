@@ -150,12 +150,16 @@ export default function App() {
   var [allItems, setAllItems]       = useState([]);
   var [allContacts, setAllContacts] = useState([]);
   var [allUpdates, setAllUpdates]   = useState([]);
-  useEffect(function () {
+  function fetchAllItems() {
     if (!userId) return;
     supabase.from("folio_tasks").select("*").eq("user_id", userId).is("project_id", null).then(function (r) {
       if (r.error) { console.warn("[App] failed to load folio_tasks:", r.error && r.error.message); return; }
       setAllItems((r.data || []).map(function (row) { return Object.assign({}, row, { text: row.title, owner: row.assignee_email }); }));
     });
+  }
+  useEffect(function () {
+    if (!userId) return;
+    fetchAllItems();
     supabase.from("folio_contacts").select("*").eq("user_id", userId).then(function (r) {
       if (r.error) { console.warn("[App] failed to load folio_contacts:", r.error && r.error.message); return; }
       setAllContacts(r.data || []);
@@ -164,6 +168,27 @@ export default function App() {
       if (r.error) { console.warn("[App] failed to load folio_account_updates:", r.error && r.error.message); return; }
       setAllUpdates(r.data || []);
     });
+
+    // Realtime subscription so allItems stays fresh when Pip applies a plan
+    // and creates/updates tasks without a full page reload.
+    var debounceRef = null;
+    var channel = supabase
+      .channel("app-all-items-" + userId)
+      .on("postgres_changes", {
+        event: "*",
+        schema: "public",
+        table: "folio_tasks",
+        filter: "user_id=eq." + userId,
+      }, function () {
+        if (debounceRef) clearTimeout(debounceRef);
+        debounceRef = setTimeout(function () { fetchAllItems(); }, 500);
+      })
+      .subscribe();
+
+    return function cleanup() {
+      if (debounceRef) clearTimeout(debounceRef);
+      try { supabase.removeChannel(channel); } catch (e) { /* swallow */ }
+    };
   }, [userId]);
   var { cadences, loading: cadenceLoading, addCadence, error: cadenceError, refetch: refetchCadencesApp } = useCadences(userId);
   useCadenceSync(userId, cadences, cadenceLoading);

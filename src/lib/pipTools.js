@@ -146,12 +146,13 @@ export var PIP_TOOLS = [
   },
   {
     name: "update_account_health",
-    description: "Update an account's manual health status.",
+    description: "Update an account's manual health override status.",
     input_schema: {
       type: "object",
       properties: {
         account_id: { type: "string" },
         status:     { type: "string", enum: ["active", "at_risk", "cold"] },
+        reason:     { type: "string", description: "Optional short reason for the override." },
       },
       required: ["account_id", "status"],
     },
@@ -520,11 +521,21 @@ export function routeToolCall(tool, ctx) {
         .then(function () { return { kind: "executed", label: label }; })
         .catch(err);
 
-    case "update_account_health":
+    case "update_account_health": {
       if (!ctx.updateAccount) return Promise.resolve(err(new Error("updateAccount unavailable")));
-      return ctx.updateAccount(input.account_id, { status: input.status })
+      // Map tool status values to the override columns used by the health system.
+      // "active" clears the override (computed health takes over).
+      // "at_risk" / "cold" both pin the account to red.
+      var overrideStatus = input.status === "active" ? null : "red";
+      var overrideReason = input.reason || (input.status === "cold" ? "Marked cold via Pip" : "Set via Pip");
+      var overridePayload = {
+        status_override:        overrideStatus,
+        status_override_reason: overrideStatus ? overrideReason : null,
+      };
+      return ctx.updateAccount(input.account_id, overridePayload)
         .then(function () { return { kind: "executed", label: label }; })
         .catch(err);
+    }
 
     case "schedule_cadence": {
       if (!ctx.addCadence) return Promise.resolve(err(new Error("addCadence unavailable")));

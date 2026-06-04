@@ -3,6 +3,20 @@ import { createClient } from "@supabase/supabase-js";
 
 var MODEL = "claude-haiku-4-5-20251001";
 
+// In-memory per-user rate limit: 20 requests per 60-second window.
+var rateLimitMap = new Map();
+var WINDOW_MS    = 60 * 1000;
+var MAX_REQUESTS = 20;
+
+function isRateLimited(userId) {
+  var now = Date.now();
+  var timestamps = (rateLimitMap.get(userId) || []).filter(function (t) { return now - t < WINDOW_MS; });
+  if (timestamps.length >= MAX_REQUESTS) return true;
+  timestamps.push(now);
+  rateLimitMap.set(userId, timestamps);
+  return false;
+}
+
 var SYSTEM_PROMPT = [
   "You are a business review assistant for an Account Manager. Your job is to generate sections for a Quarterly Business Review (QBR) slide deck.",
   "",
@@ -122,6 +136,8 @@ export default async function handler(req, res) {
     var { data: authData, error: authError } = await supabase.auth.getUser(token);
     var user = authData && authData.user ? authData.user : null;
     if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
+
+    if (isRateLimited(user.id)) return res.status(429).json({ error: "rate_limited" });
 
     var body = req.body || {};
     var contextStr = buildContext(body);

@@ -161,13 +161,17 @@ export function classifyIntent(message, context) {
   if (ACTION_RE.test(msg)) {
     return { mode: "action" };
   }
-  if (EMAIL_RE.test(msg)) {
+  // email and summary modes strip Pip's persona and expect JSON output — they only
+  // work correctly when there's a specific account in scope. Without an identified
+  // account the response is terse/broken. Gate both behind account detection
+  // the same way brief is gated.
+  if (EMAIL_RE.test(msg) && mentionsAccount(msg, (context || {}).accounts)) {
     return { mode: "email" };
   }
   if (BRIEF_RE.test(msg) && mentionsAccount(msg, (context || {}).accounts)) {
     return { mode: "brief" };
   }
-  if (SUMMARY_RE.test(msg)) {
+  if (SUMMARY_RE.test(msg) && mentionsAccount(msg, (context || {}).accounts)) {
     return { mode: "summary" };
   }
 

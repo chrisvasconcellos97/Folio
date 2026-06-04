@@ -57,6 +57,11 @@ export default async function handler(req, res) {
     var parsed = {};
     try { parsed = JSON.parse(raw.replace(/^```json\n?/, "").replace(/\n?```$/, "")); } catch (e) { /* use empty */ }
 
+    // Always include onboarding_status: "done" so clients can apply it in one
+    // upsert without needing a separate fallback. detectKnowledgeGaps gates on
+    // this field — if it's missing from the profile row, gap drip never fires.
+    parsed.onboarding_status = "done";
+
     return res.status(200).json(parsed);
   } catch (err) {
     console.error("profile-synthesis error:", err);

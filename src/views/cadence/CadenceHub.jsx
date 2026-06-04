@@ -1299,9 +1299,21 @@ export function CadenceHub({
     setPortfolioBriefLoading(true);
     setPortfolioBriefError(null);
     var rawSnapshots = snapshotsApi.snapshots || [];
+    var todayStr = new Date().toISOString().slice(0, 10);
+    // Build overdue item text per account so Pip can name them specifically
+    var overdueByAccount = {};
+    (openItems || []).forEach(function (item) {
+      if (!item.done && item.due_date && item.due_date < todayStr) {
+        if (!overdueByAccount[item.account_id]) overdueByAccount[item.account_id] = [];
+        overdueByAccount[item.account_id].push(item.text || item.title || "Unnamed item");
+      }
+    });
     var enrichedSnapshots = rawSnapshots.map(function (s) {
       var acct = (accounts || []).find(function (a) { return a.id === s.account_id; });
-      return Object.assign({}, s, { account_name: acct ? acct.name : s.account_id });
+      return Object.assign({}, s, {
+        account_name: acct ? acct.name : s.account_id,
+        overdue_items: (overdueByAccount[s.account_id] || []).slice(0, 3),
+      });
     });
     callPortfolioBriefPip({ snapshots: enrichedSnapshots, userId: userId })
       .then(function (out) {

@@ -197,7 +197,7 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
         return p.status === "in_progress";
       }).map(function (p) {
         var stages = p.stages || [];
-        var hasRecent = stages.some(function (s) { return s.done && s.done_at && s.done_at > sevenDaysAgo; });
+        var hasRecent = stages.some(function (s) { return s.completed_at && s.completed_at > sevenDaysAgo; });
         return Object.assign({}, p, { is_stuck: !hasRecent });
       });
 
