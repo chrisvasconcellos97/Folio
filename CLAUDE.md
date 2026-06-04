@@ -416,6 +416,14 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 30. *(shipped — see Already shipped: In-meeting flow — interactive sidebar)*
 
+31. **Gauge project "Latest update" pulse log** — a quick status-update field on each Gauge project, distinct from the existing `notes` blob (notes = durable scratchpad; updates = timestamped running heartbeat). **Design locked:**
+    - **Storage:** `status_updates jsonb default '[]'` on `gauge_projects` — array of `{ body, at (ISO), by (user email) }`, newest-first. No new table, no join; rides the existing `updateProject` path. The array *is* the history.
+    - **Model: append-only.** Each save prepends a new timestamped entry; the previous becomes history. `at` auto-stamped on save; `by` auto-captured (matters for Leader view). Typo fixes happen in the project edit box, not inline.
+    - **Expanded card (GaugeView):** one-line "Latest update" field showing the current pulse + muted relative timestamp ("Updated 2h ago · Jun 4"). Type + Enter/Save prepends.
+    - **Edit box (ProjectModal):** "Status history" read-only list — every past update with timestamp + author.
+    - **Pip wiring (parity rule — both paths):** inject latest + the prior two (for momentum sense) into `pipContext.js` (chat) AND `pip.js` (summarize), plus daily/portfolio brief, leadership readout, and cadence pre-call brief. Lets briefs say "All Star — latest: 'waiting on legal sign-off' (Jun 3)." Keep it cheap: latest + last 2 only.
+    - SQL: new `supabase/gauge_project_status_updates.sql` + fold into canonical `schema.sql`. Docs: update `docs/product-overview.md` (Gauge capability) + `docs/upgrades.md` entry on ship.
+
 15. *(shipped — see Already shipped)*
 
 16. *(ripped — Route Builder removed, not needed)*
