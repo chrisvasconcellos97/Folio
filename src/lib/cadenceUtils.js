@@ -35,6 +35,20 @@ export function getFrequencyLabel(cadence) {
   return '';
 }
 
+// Number of days in a given month (month is 0-indexed). Day 0 of the next
+// month is the last day of this month.
+export function daysInMonth(year, month) {
+  return new Date(year, month + 1, 0).getDate();
+}
+
+// Build a Date for (year, month, dayOfMonth) but CLAMP the day to the last day
+// of the month so "monthly on the 31st" lands on Feb 28/29 instead of silently
+// rolling forward into March (new Date(2026,1,31) → Mar 3).
+function monthlyDate(year, month, dayOfMonth) {
+  var d = Math.min(dayOfMonth || 1, daysInMonth(year, month));
+  return new Date(year, month, d);
+}
+
 export function getNextOccurrence(cadence, fromDate) {
   var from = new Date(fromDate);
   from.setHours(0, 0, 0, 0);
@@ -81,9 +95,12 @@ export function getNextOccurrence(cadence, fromDate) {
       }
       return next;
     }
-    var target = cadence.day_of_month;
-    var next = new Date(from.getFullYear(), from.getMonth(), target);
-    if (next < from) next = new Date(from.getFullYear(), from.getMonth() + 1, target);
+    var next = monthlyDate(from.getFullYear(), from.getMonth(), cadence.day_of_month);
+    if (next < from) {
+      var nmo = from.getMonth() + 1, nyr = from.getFullYear();
+      if (nmo > 11) { nmo = 0; nyr++; }
+      next = monthlyDate(nyr, nmo, cadence.day_of_month);
+    }
     return next;
   }
 
@@ -112,7 +129,7 @@ export function getOccurrencesInRange(cadence, startDate, endDate) {
         current = nd ? new Date(ny, nm, nd) : null;
         if (!current) break;
       } else {
-        current = new Date(ny, nm, cadence.day_of_month);
+        current = monthlyDate(ny, nm, cadence.day_of_month);
       }
     } else break;
   }

@@ -1,3 +1,5 @@
+import { buildContactIndex, resolveAttendeeToContact } from "./contactEngagement.js";
+
 // detectKnowledgeGaps — pure JS, zero LLM cost.
 // Computes structural gaps in the user's Pip profile and inserts
 // folio_pip_questions rows (source='gap_observed', status='queued').
@@ -71,15 +73,19 @@ export async function detectKnowledgeGaps({ userId, supabase, accounts, meetings
 
   // ── 1. Contacts missing role who appear in ≥3 meetings ──────────────────
   if (contacts && contacts.length && meetings && meetings.length) {
-    // Build map: contact name → appearance count across meeting attendees.
-    var nameCounts = {};
+    // Count meetings per canonical contact, resolving informal attendee strings
+    // ("Mike" → "Michael Smith") via the shared resolver so the threshold
+    // actually fires instead of being defeated by name-format drift.
+    var index = buildContactIndex(contacts);
+    var countsByName = {};
     meetings.forEach(function (m) {
       if (!Array.isArray(m.attendees)) return;
-      m.attendees.forEach(function (name) {
-        if (!name || typeof name !== "string") return;
-        var n = name.trim();
-        if (!n) return;
-        nameCounts[n] = (nameCounts[n] || 0) + 1;
+      var seen = {};
+      m.attendees.forEach(function (att) {
+        var canonical = resolveAttendeeToContact(att, index);
+        if (!canonical || seen[canonical]) return;
+        seen[canonical] = true;
+        countsByName[canonical] = (countsByName[canonical] || 0) + 1;
       });
     });
 
@@ -88,7 +94,7 @@ export async function detectKnowledgeGaps({ userId, supabase, accounts, meetings
       if (hasRole) return;
       var name = c.name && c.name.trim();
       if (!name) return;
-      var count = nameCounts[name] || 0;
+      var count = countsByName[c.name] || 0;
       if (count < 3) return;
       candidates.push({
         question_text:   "You’ve sat down with " + name + " a few times but I don’t have their role — who are they to the account?",
