@@ -7,7 +7,6 @@ import { MarkdownText } from "../../components/MarkdownText";
 import { SecBtn, DangerBtn } from "../../components/Buttons";
 import { getFrequencyLabel, getNextOccurrence, daysUntil, formatTime } from "../../lib/cadenceUtils";
 import { summarizeDraftPip, callCadenceBriefPip, callPortfolioBriefPip } from "../../lib/pip";
-import { CadenceBackfillBanner } from "./CadenceBackfillBanner";
 import { AddToTasksButton } from "../../components/AddToTasksButton";
 import { CadenceMeetingMode } from "./CadenceMeetingMode";
 import { PipSummarizePreview } from "./PipSummarizePreview";
@@ -1948,13 +1947,6 @@ export function CadenceHub({
     return (
       <div>
         {header}
-        <CadenceBackfillBanner
-          account={account}
-          cadences={cadences}
-          meetings={meetings}
-          onUpdateMeeting={updateMeeting}
-          defaultCadenceId={cadence.id}
-        />
         {briefSection}
         <div style={{ marginTop: 14 }}>{startMeetingSection}</div>
         <div style={{
@@ -2009,13 +2001,6 @@ export function CadenceHub({
   return (
     <div>
       {header}
-      {account && <CadenceBackfillBanner
-        account={account}
-        cadences={cadences}
-        meetings={meetings}
-        onUpdateMeeting={updateMeeting}
-        defaultCadenceId={cadence.id}
-      />}
       <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
         {briefSection}
         {startMeetingSection}

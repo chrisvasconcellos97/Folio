@@ -36,7 +36,6 @@ import { PrintAccountSheet } from "../../components/PrintAccountSheet";
 import { CadenceHub } from "../cadence/CadenceHub";
 import { CadenceMeetingMode } from "../cadence/CadenceMeetingMode";
 import { PipSummarizePreview } from "../cadence/PipSummarizePreview";
-import { CadenceBackfillBanner } from "../cadence/CadenceBackfillBanner";
 import { summarizeDraftPip } from "../../lib/pip";
 import { applyPipPlan } from "../../lib/pipPlanApply";
 import { usePipAssignmentHints } from "../../hooks/usePipAssignmentHints";
@@ -517,14 +516,6 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
         confirmDelete={confirmDelete}
         onConfirmDelete={function () { setConfirmDelete(true); }}
         onCancelDelete={function () { setConfirmDelete(false); }}
-      />
-
-      {/* Backfill prompt — surfaces once per account when cadences exist with un-tagged meetings */}
-      <CadenceBackfillBanner
-        account={account}
-        cadences={cadences}
-        meetings={meetings}
-        onUpdateMeeting={updateMeeting}
       />
 
       <AccountDetailTabs
