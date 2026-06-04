@@ -153,10 +153,9 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
   // Daily brief — generated once per calendar day, cached in localStorage.
   // Only fires when snapshots are ready and the brief hasn't been generated today.
   useEffect(function () {
-    if (!snapshots || snapshots.length === 0) return;
-
     var todayStr = new Date().toISOString().slice(0, 10);
-    var cacheKey = "folio_daily_brief_v3_" + todayStr;
+    // v4: cache key bumped so brief includes workload data (tasks/commitments/cadences)
+    var cacheKey = "folio_daily_brief_v4_" + todayStr;
 
     // Check localStorage cache first — if we have a brief for today, use it.
     try {
@@ -175,16 +174,44 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
     setBriefLoading(function (already) {
       if (already) return already;
 
+      var sevenDaysOut = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+
       // Build overdue item text per account so Pip can name them specifically
       var overdueByAccount = {};
+      var overdueTasks = [];
       (items || []).forEach(function (item) {
         if (!item.done && item.due_date && item.due_date < todayStr) {
           if (!overdueByAccount[item.account_id]) overdueByAccount[item.account_id] = [];
-          overdueByAccount[item.account_id].push(item.text || item.title || item.description || "Unnamed item");
+          var label = item.text || item.title || item.description || "Unnamed item";
+          overdueByAccount[item.account_id].push(label);
+          overdueTasks.push(label);
         }
       });
 
-      var snapshotsWithDetails = snapshots.map(function (s) {
+      // Commitments due in the next 7 days
+      var commitmentsDue = (items || []).filter(function (item) {
+        return item.is_commitment && !item.done && item.due_date && item.due_date >= todayStr && item.due_date <= sevenDaysOut;
+      }).map(function (item) {
+        return { text: item.text || item.title || "Unnamed commitment", due_date: item.due_date };
+      });
+
+      // Overdue commitments
+      var commitmentsOverdue = (items || []).filter(function (item) {
+        return item.is_commitment && !item.done && item.due_date && item.due_date < todayStr;
+      }).map(function (item) {
+        return { text: item.text || item.title || "Unnamed commitment", due_date: item.due_date };
+      });
+
+      // Today's cadences
+      var todayCadences = (cadences || []).filter(function (c) {
+        if (!c.next_date) return false;
+        return c.next_date.slice(0, 10) === todayStr;
+      }).map(function (c) {
+        var acc = (accounts || []).find(function (a) { return a.id === c.account_id; });
+        return acc ? acc.name : "Unknown account";
+      });
+
+      var snapshotsWithDetails = (snapshots || []).map(function (s) {
         var acc = (accounts || []).find(function (a) { return a.id === s.account_id; });
         return Object.assign({}, s, {
           account_name: acc ? acc.name : "Unknown",
@@ -208,6 +235,10 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
       callPortfolioBriefPip({
         snapshots: snapshotsWithDetails,
         projects: activeProjects.concat(recentWins),
+        overdueTasks: overdueTasks,
+        commitmentsDue: commitmentsDue,
+        commitmentsOverdue: commitmentsOverdue,
+        todayCadences: todayCadences,
       }).then(function (result) {
         setBriefLoading(false);
         if (result && result.brief) {
@@ -224,10 +255,8 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
 
       return true; // mark loading
     });
-  // Trigger only when snapshot count changes (i.e., when they first arrive).
-  // accounts/projects are stable refs from parent hooks.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [snapshots.length]);
+  }, [snapshots.length, (items || []).length]);
 
   var accountById = useMemo(function () {
     var m = {};
