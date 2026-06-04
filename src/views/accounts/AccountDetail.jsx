@@ -292,6 +292,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
       isPersonCadence:     false,
       profileProse:        profileProse,
       facts:               pipFactsApi.activeFactStrings || [],
+      servicedStates:      account.serviced_states || null,
       discussedProjectIds: discussedProjectIds || [],
       discussedItemIds:    discussedItemIds    || [],
     }).then(function (out) {

@@ -76,6 +76,7 @@ export default function App() {
   var [pipTransition, setPipTransition] = useState("idle");
   var [showPalette, setShowPalette]     = useState(false);
   var [showStartConv, setShowStartConv] = useState(false);
+  var [convPrefillDate, setConvPrefillDate] = useState(null); // ISO date string from calendar click
   var [adHocFlow, setAdHocFlow]         = useState(null); // { accountId, draftId }
   // Ref so handleSetView's setTimeout can pick up the intended account without
   // the setSelected(null) inside the delay wiping it out.
@@ -360,6 +361,19 @@ export default function App() {
         var mapped = (r.data || []).map(function (row) { return Object.assign({}, row, { text: row.title, owner: row.assignee_email }); });
         setAllItems(function (prev) { return prev.concat(mapped); });
         return mapped[0];
+      });
+  }
+
+  function closeItem(id) {
+    var closedAt = new Date().toISOString();
+    return supabase
+      .from("folio_tasks")
+      .update({ done: true, status: "complete", closed_at: closedAt })
+      .eq("id", id)
+      .eq("user_id", userId)
+      .then(function (result) {
+        if (result.error) throw result.error;
+        setAllItems(function (prev) { return prev.filter(function (item) { return item.id !== id; }); });
       });
   }
 
@@ -924,8 +938,7 @@ export default function App() {
             handleSetView("accounts");
           }
         }}
-        onOpenConversation={function (opts) { setShowStartConv(true); }}
-        onAddItem={function (opts) {}}
+        onOpenConversation={function (opts) { setConvPrefillDate((opts && opts.prefillDate) || null); setShowStartConv(true); }}
       />
     );
   }
@@ -1115,6 +1128,7 @@ export default function App() {
       userId={userId}
       orgId={orgId}
       members={members}
+      defaultDate={convPrefillDate}
       onStart={function (data) {
         return addMeeting(data).then(function (m) {
           if (data.status === "summarized") {
@@ -1125,6 +1139,7 @@ export default function App() {
             // Real-time conversation → open the meeting overlay and close
             // the modal here so we get a clean handoff.
             setShowStartConv(false);
+            setConvPrefillDate(null);
             setAdHocFlow({ accountId: data.account_id, draftId: m.id });
           }
           return m;
@@ -1148,7 +1163,7 @@ export default function App() {
           status: "in_progress",
         }));
       } : null}
-      onClose={function () { setShowStartConv(false); }}
+      onClose={function () { setShowStartConv(false); setConvPrefillDate(null); }}
     />
   );
 

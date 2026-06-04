@@ -50,7 +50,7 @@ function formatDateLong(iso) {
  *               → Promise<meeting>
  *  - onClose
  */
-export function StartConversationModal({ accountId, accounts, userId, orgId, members, onStart, onAddItems, onCreateProject, allGaugeProjects, onClose }) {
+export function StartConversationModal({ accountId, accounts, userId, orgId, members, onStart, onAddItems, onCreateProject, allGaugeProjects, onClose, defaultDate }) {
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
   var needsAccountPicker = !accountId;
@@ -63,7 +63,7 @@ export function StartConversationModal({ accountId, accounts, userId, orgId, mem
   var [selectedAccountId, setSelectedAccountId] = useState(accountId || "");
   var [search, setSearch]   = useState("");
   var [method, setMethod]   = useState("");
-  var [date, setDate]       = useState(todayISO());
+  var [date, setDate]       = useState(defaultDate || todayISO());
   var [quickNote, setQuickNote] = useState("");
   var [bulletsOn, setBulletsOn] = useState(function () {
     try { var v = localStorage.getItem(BULLET_KEY); return v === null ? true : v === "1"; } catch (e) { return true; }

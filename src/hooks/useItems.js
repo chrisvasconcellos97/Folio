@@ -73,7 +73,7 @@ export function useItems(userId, accountId, orgId) {
     var closedAt = new Date().toISOString();
     return supabase
       .from("folio_tasks")
-      .update({ done: true, closed_at: closedAt })
+      .update({ done: true, status: "complete", closed_at: closedAt })
       .eq("id", id)
       .then(function (result) {
         if (result.error) throw result.error;

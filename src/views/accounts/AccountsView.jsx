@@ -542,7 +542,7 @@ export function AccountsView({ accounts, allAccounts, loading, onSelect, onAddAc
                   gap: 10,
                 }}>
                   <button
-                    onClick={function () { updateTask(t.id, { done: true }); }}
+                    onClick={function () { updateTask(t.id, { done: true, status: "complete" }); }}
                     title="Mark done"
                     style={{
                       width: 18,

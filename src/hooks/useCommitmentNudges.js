@@ -51,7 +51,7 @@ export function useCommitmentNudges(userId, accounts) {
   function markDone(taskId) {
     supabase
       .from("folio_tasks")
-      .update({ status: "complete" })
+      .update({ done: true, status: "complete" })
       .eq("id", taskId)
       .eq("user_id", userId)
       .then(function () {

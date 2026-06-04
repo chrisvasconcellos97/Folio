@@ -200,7 +200,7 @@ export function PipView(props) {
         var openItems = allItems.filter(function (i) { return i.account_id === a.id && !i.done; })
           .map(function (i) { return { text: i.text, due: i.due_date, owner: i.owner, is_commitment: !!i.is_commitment }; });
         var acctContacts = allContacts.filter(function (c) { return c.account_id === a.id; })
-          .map(function (c) { return { name: c.name, title: c.title, email: c.email, phone: c.phone, is_poc: c.is_poc }; });
+          .map(function (c) { return { name: c.name, title: c.title, email: c.email, phone: c.phone, is_poc: c.is_poc, is_primary: c.is_primary || false, is_leader: c.is_leader || false, relationship_role: c.relationship_role || null, relationship_note: c.relationship_note || null }; });
         var acctProjects = (projects || [])
           .filter(function (p) { return p.account_id === a.id && p.status !== "complete" && p.status !== "on_hold"; })
           .map(function (p) { return { title: p.title, status: p.status, due_date: p.due_date }; });
@@ -238,6 +238,8 @@ export function PipView(props) {
           region:  a.region,
           tags:    a.tags,
           owner_user_id: a.owner_user_id || null,
+          status_override: a.status_override || null,
+          status_override_reason: a.status_override_reason || null,
           meetings:       acctMeetings,
           openItems:      openItems,
           contacts:       acctContacts,

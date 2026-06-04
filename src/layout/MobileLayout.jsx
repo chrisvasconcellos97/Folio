@@ -22,10 +22,11 @@ var WORKSPACE_IDS = ["accounts", "departments", "partners"];
 var WORKSPACE_LABELS = { accounts: "Accounts", departments: "Departments", partners: "Partners" };
 
 var NAV_ITEMS = [
-  { id: "home",       label: "Home",       icon: "◉"     },
-  { id: "workspaces", label: "Accounts",   icon: "▣",  isWorkspaces: true },
-  { id: "meetings",   label: "Calendar",   icon: "◷"     },
-  { id: "gauge",      label: "Gauge",      icon: "gauge"  },
+  { id: "home",        label: "Home",        icon: "◉"     },
+  { id: "workspaces",  label: "Accounts",    icon: "▣",  isWorkspaces: true },
+  { id: "meetings",    label: "Calendar",    icon: "◷"     },
+  { id: "gauge",       label: "Gauge",       icon: "gauge"  },
+  { id: "commitments", label: "Commitments", icon: "◇"     },
 ];
 
 export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, onSettings, onTeam, onDiagnostics, diagnosticsCount, userMeta, children }) {
@@ -199,7 +200,7 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
+            gridTemplateColumns: "repeat(5, 1fr)",
             width: "100%",
           }}
         >

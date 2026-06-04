@@ -2,11 +2,24 @@
 // Returns a map of contactName → { lastSeenAt, daysSince, meetingCount }.
 
 export function computeContactEngagement(contacts, meetings) {
+  // map keyed by canonical contact name (original case preserved)
   var map = {};
   var now = Date.now();
 
+  // Build a lowercase → canonicalName reverse-lookup for case-insensitive matching.
+  // Also supports nickname (if present) as an alternate match key.
+  var lowerToName = {};
+
   (contacts || []).forEach(function (c) {
+    if (!c.name) return;
     map[c.name] = { lastSeenAt: null, daysSince: null, meetingCount: 0 };
+    lowerToName[c.name.toLowerCase().trim()] = c.name;
+    if (c.nickname) {
+      var nickLower = c.nickname.toLowerCase().trim();
+      if (nickLower && !lowerToName[nickLower]) {
+        lowerToName[nickLower] = c.name;
+      }
+    }
   });
 
   (meetings || []).forEach(function (m) {
@@ -14,11 +27,13 @@ export function computeContactEngagement(contacts, meetings) {
     var meetingDate = m.date || m.meeting_date || m.created_at;
     if (!meetingDate) return;
     var t = new Date(meetingDate).getTime();
-    m.attendees.forEach(function (name) {
-      if (!map[name]) return;
-      map[name].meetingCount++;
-      if (!map[name].lastSeenAt || t > new Date(map[name].lastSeenAt).getTime()) {
-        map[name].lastSeenAt = meetingDate;
+    m.attendees.forEach(function (attendee) {
+      var aLower = (attendee || "").toLowerCase().trim();
+      var canonicalName = lowerToName[aLower];
+      if (!canonicalName || !map[canonicalName]) return;
+      map[canonicalName].meetingCount++;
+      if (!map[canonicalName].lastSeenAt || t > new Date(map[canonicalName].lastSeenAt).getTime()) {
+        map[canonicalName].lastSeenAt = meetingDate;
       }
     });
   });
