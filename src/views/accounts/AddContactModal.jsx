@@ -12,6 +12,7 @@ export function AddContactModal({ accountId, userId, onSave, onClose }) {
   var [email, setEmail]       = useState("");
   var [linkedin, setLinkedin] = useState("");
   var [poc, setPoc]           = useState(false);
+  var [leader, setLeader]     = useState(false);
   var [notes, setNotes]       = useState("");
   var [loading, setLoading]   = useState(false);
   var [error, setError]       = useState(null);
@@ -29,6 +30,7 @@ export function AddContactModal({ accountId, userId, onSave, onClose }) {
       email:      email.trim()    || null,
       linkedin:   linkedin.trim() || null,
       is_poc:     poc,
+      is_leader:  leader,
       notes:      notes.trim()    || null,
     })
       .then(function () {
@@ -107,43 +109,53 @@ export function AddContactModal({ accountId, userId, onSave, onClose }) {
           />
         </div>
 
-        <div
-          onClick={function () { setPoc(!poc); }}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            cursor: "pointer",
-            padding: "10px 14px",
-            background: poc ? C.accentFaint : C.bgDark,
-            border: "1px solid " + (poc ? C.accentSubtle : C.border),
-            borderRadius: 10,
-            userSelect: "none",
-          }}
-        >
-          <div
-            style={{
-              width: 18,
-              height: 18,
-              borderRadius: 4,
-              border: "1.5px solid " + (poc ? C.accent : C.accentDim),
-              background: poc ? C.accent : "transparent",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-            }}
-          >
-            {poc && <span style={{ fontSize: 11, color: "#fff" }}>✓</span>}
-          </div>
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: poc ? C.accent : C.text }}>
-              Primary Point of Contact
-            </div>
-            <div style={{ fontSize: 10, color: C.textMuted, marginTop: 1 }}>
-              Main person at this account
-            </div>
-          </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {[
+            { key: "poc",    label: "Primary Point of Contact", desc: "Main person at this account",   color: C.accent,  val: poc,    set: setPoc    },
+            { key: "leader", label: "Leader / Decision Maker",  desc: "Has authority to approve deals", color: C.yellow, val: leader, set: setLeader },
+          ].map(function (t) {
+            return (
+              <div
+                key={t.key}
+                onClick={function () { t.set(!t.val); }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  cursor: "pointer",
+                  padding: "10px 14px",
+                  background: t.val ? "rgba(74,155,130,0.07)" : C.bgDark,
+                  border: "1px solid " + (t.val ? t.color : C.border),
+                  borderRadius: 10,
+                  userSelect: "none",
+                }}
+              >
+                <div
+                  style={{
+                    width: 18,
+                    height: 18,
+                    borderRadius: 4,
+                    border: "1.5px solid " + (t.val ? t.color : C.accentDim),
+                    background: t.val ? t.color : "transparent",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  {t.val && <span style={{ fontSize: 11, color: "#fff" }}>✓</span>}
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: t.val ? t.color : C.text }}>
+                    {t.label}
+                  </div>
+                  <div style={{ fontSize: 10, color: C.textMuted, marginTop: 1 }}>
+                    {t.desc}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         {error && (
