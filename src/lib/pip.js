@@ -515,7 +515,7 @@ export function callBriefMePip(payload) {
         };
       }),
       openItems: openItems.map(function (i) {
-        return { text: i.text, due: i.due_date, owner: i.owner };
+        return { text: i.text, due: i.due_date, owner: i.owner, created_at: i.created_at, is_commitment: !!i.is_commitment };
       }),
       contacts: contacts.map(function (c) {
         return { name: c.name, title: c.title, email: c.email, is_poc: c.is_poc };

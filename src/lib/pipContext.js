@@ -263,13 +263,20 @@ function renderAccountFull(a, userId) {
     var today = new Date(); today.setHours(0, 0, 0, 0);
     items.forEach(function (i) {
       var prefix = "- ";
+      var ageDays = i.created_at ? Math.max(0, Math.round((today - new Date(i.created_at)) / 86400000)) : null;
       if (i.due) {
         var due = new Date(i.due);
         var diff = Math.round((due - today) / 86400000);
         if (diff < 0) prefix = "- [overdue " + Math.abs(diff) + "d] ";
         else if (diff <= 7) prefix = "- [due in " + diff + "d] ";
+      } else if (ageDays != null && ageDays >= 14) {
+        // No due date but open a long time — flag as stale so Pip surfaces it
+        // and nudges the user to set a date or close it out.
+        prefix = "- [open " + ageDays + "d, no due date] ";
       }
-      var tail = i.due ? " (due " + i.due + ")" : "";
+      var tail = i.due
+        ? " (due " + i.due + ")"
+        : (ageDays != null ? " · opened " + ageDays + "d ago, no due date" : "");
       if (i.owner) tail += " · owner: " + i.owner;
       lines.push(prefix + (i.text || "—") + tail);
     });

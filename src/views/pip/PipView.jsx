@@ -198,7 +198,7 @@ export function PipView(props) {
             };
           });
         var openItems = allItems.filter(function (i) { return i.account_id === a.id && !i.done; })
-          .map(function (i) { return { text: i.text, due: i.due_date, owner: i.owner, is_commitment: !!i.is_commitment }; });
+          .map(function (i) { return { text: i.text, due: i.due_date, owner: i.owner, created_at: i.created_at, is_commitment: !!i.is_commitment }; });
         var acctContacts = allContacts.filter(function (c) { return c.account_id === a.id; })
           .map(function (c) { return { name: c.name, title: c.title, email: c.email, phone: c.phone, is_poc: c.is_poc, is_primary: c.is_primary || false, is_leader: c.is_leader || false, relationship_role: c.relationship_role || null, relationship_note: c.relationship_note || null }; });
         var acctProjects = (projects || [])

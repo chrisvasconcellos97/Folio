@@ -81,4 +81,25 @@ describe("renderContextProse", function () {
     expect(text).toMatch(/OPEN QUICK TASKS/);
     expect(text).toMatch(/Call Lisa back/);
   });
+
+  it("flags open items with no due date that have been open a long time", function () {
+    var old = new Date(Date.now() - 40 * 86400000).toISOString();
+    var staleRaw = {
+      accounts: [{
+        id: "p1", name: "Parts Authority", status: "active", health: "green",
+        last_interaction_at: "2026-05-01", meetings: [], contacts: [], activeProjects: [],
+        openItems: [
+          { text: "Send updated pricing sheet", created_at: old },          // 40d, no due
+          { text: "Schedule onboarding", created_at: new Date().toISOString() }, // fresh, no due
+        ],
+      }],
+    };
+    var curated = curateContext(staleRaw, "brief me on Parts Authority", ["p1"]);
+    var text = renderContextProse(curated);
+    // Stale item gets the [open Nd, no due date] flag so Pip surfaces it.
+    expect(text).toMatch(/\[open \d+d, no due date\] Send updated pricing sheet/);
+    // Fresh item shows its age but no stale flag.
+    expect(text).toMatch(/Schedule onboarding · opened 0d ago, no due date/);
+    expect(text).not.toMatch(/\[open \d+d, no due date\] Schedule onboarding/);
+  });
 });
