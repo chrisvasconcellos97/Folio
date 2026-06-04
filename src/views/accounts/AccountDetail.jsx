@@ -443,7 +443,15 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
         projects={allActiveProjects}
         contacts={contacts}
         addContact={addContact}
-        addMeeting={addMeeting}
+        addMeeting={function (data) {
+          // The 1:1 contact belongs to THIS account, so tag person-cadence
+          // meetings with it instead of the null CadenceHub passes for a person
+          // scope. Otherwise they're orphaned (account_id null), invisible to
+          // the account-scoped `meetings` array, and the hub re-creates a fresh
+          // draft every time. With the account_id set, CadenceHub's cadence_id
+          // filter surfaces them as the 1:1's history.
+          return addMeeting(Object.assign({}, data, { account_id: account.id }));
+        }}
         updateMeeting={updateMeeting}
         deleteMeeting={deleteMeeting}
         updateProject={function () { return Promise.resolve(); }}

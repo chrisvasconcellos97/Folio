@@ -1182,14 +1182,17 @@ export function CadenceHub({
       });
   }, [cadenceMeetings]);
 
-  // History — widened to ALL meetings on the account, not just this cadence
+  // History — for an account hub, widened to ALL meetings on the account; for a
+  // person 1:1 hub, scoped to this cadence so it shows the 1:1's history, not
+  // the parent account's unrelated meetings.
   var history = useMemo(function () {
-    return (meetings || [])
+    var source = isPersonCadence ? cadenceMeetings : (meetings || []);
+    return source
       .filter(function (m) { return m.status !== "draft"; })
       .sort(function (a, b) {
         return (b.meeting_date || "") > (a.meeting_date || "") ? 1 : -1;
       });
-  }, [meetings]);
+  }, [meetings, cadenceMeetings, isPersonCadence]);
 
   var openItems = useMemo(function () {
     return (items || []).filter(function (i) { return !i.done; });

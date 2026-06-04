@@ -788,14 +788,16 @@ export function PipSummarizePreview({
     Promise.resolve(onApply(selected))
       .then(function (result) {
         setApplying(false);
+        // Persist the title the user kept/edited regardless of row errors — the
+        // meeting was summarized either way, and a partial-error apply shouldn't
+        // silently discard the title.
+        if (showTitleField && titleDraft && titleDraft.trim() && onTitleSave) {
+          onTitleSave(titleDraft.trim());
+        }
         if (result && result.errors && Object.keys(result.errors).length) {
           setRowErrors(result.errors);
           showToast("Applied with some errors — check rows below", "warn");
           return;
-        }
-        // Save the proposed title after a clean apply, if the user kept/edited it.
-        if (showTitleField && titleDraft && titleDraft.trim() && onTitleSave) {
-          onTitleSave(titleDraft.trim());
         }
         var n = selected.length;
         showToast("Applied " + n + " change" + (n === 1 ? "" : "s"));

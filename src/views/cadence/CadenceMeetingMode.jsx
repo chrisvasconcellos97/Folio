@@ -248,7 +248,9 @@ export function CadenceMeetingMode({
     return function () { clearTimeout(timer); };
   }, [notes, projects, openItems]);
 
-  // ESC closes
+  // ESC closes. Depend on notes AND attendees so handleClose/flushPendingSave
+  // close over the latest values — pressing ESC right after toggling an
+  // attendee (with no subsequent keystroke) previously flushed a stale list.
   useEffect(function () {
     function onKey(e) {
       if (e.key === "Escape") handleClose();
@@ -256,7 +258,7 @@ export function CadenceMeetingMode({
     window.addEventListener("keydown", onKey);
     return function () { window.removeEventListener("keydown", onKey); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notes]);
+  }, [notes, attendees]);
 
   // Stop recognition on unmount so the mic doesn't stay open if the overlay closes.
   useEffect(function () {
