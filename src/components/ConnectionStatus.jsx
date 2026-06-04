@@ -64,6 +64,7 @@ export function ConnectionStatus() {
     >
       <span
         aria-hidden="true"
+        className="rt-pulse-dot"
         style={{
           width: 8,
           height: 8,
@@ -74,7 +75,8 @@ export function ConnectionStatus() {
       />
       Reconnecting…
       <style>{
-        "@keyframes rt-pulse { 0%,100% { opacity: 1 } 50% { opacity: 0.35 } }"
+        "@keyframes rt-pulse { 0%,100% { opacity: 1 } 50% { opacity: 0.35 } }" +
+        "@media (prefers-reduced-motion: reduce) { .rt-pulse-dot { animation: none !important; } }"
       }</style>
     </div>
   );

@@ -72,14 +72,22 @@ export function MeetingReminderBanner({ reminders, onDismiss, onOpen }) {
           0%, 100% { box-shadow: 0 0 0 1px ${tone.barColor}, 0 0 18px ${tone.barColor}80, 0 0 36px ${tone.barColor}55, 0 6px 24px rgba(0,0,0,0.35); }
           50%      { box-shadow: 0 0 0 1px ${tone.barColor}, 0 0 24px ${tone.barColor}aa, 0 0 48px ${tone.barColor}66, 0 6px 24px rgba(0,0,0,0.35); }
         }
+        @media (prefers-reduced-motion: reduce) {
+          .remind-pill { animation: none !important; }
+        }
       `}</style>
       <div
+        className="remind-pill"
         role="status"
         aria-live="polite"
         style={{
           position: "fixed",
           top: 14,
           left: "50%",
+          // Base centering transform — the keyframes also carry -50% X, but once
+          // remindPillIn finishes only the glow animation runs (no transform),
+          // so without this base the pill jumps off-center.
+          transform: "translateX(-50%)",
           zIndex: 180,
           display: "inline-flex",
           alignItems: "center",

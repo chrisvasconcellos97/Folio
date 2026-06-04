@@ -71,7 +71,7 @@ export function WeekView({ weekStart, weekEnd, events, onPrev, onNext, onSelectA
                     <div key={ev.cadence.id + "-" + j}
                       onClick={function () {
                         if (ev.cadence.type !== 'task' && onOpenHub) onOpenHub(ev.cadence);
-                        else if (onSelectAccount) onSelectAccount(ev.cadence.account_id);
+                        else if (onSelectAccount && ev.cadence.account_id) onSelectAccount(ev.cadence.account_id);
                       }}
                       role="button"
                       tabIndex={0}
@@ -79,7 +79,7 @@ export function WeekView({ weekStart, weekEnd, events, onPrev, onNext, onSelectA
                         if (e.key !== 'Enter' && e.key !== ' ') return;
                         e.preventDefault();
                         if (ev.cadence.type !== 'task' && onOpenHub) onOpenHub(ev.cadence);
-                        else if (onSelectAccount) onSelectAccount(ev.cadence.account_id);
+                        else if (onSelectAccount && ev.cadence.account_id) onSelectAccount(ev.cadence.account_id);
                       }}
                       style={{
                         background: col + '18', border: '1px solid ' + col + '44',

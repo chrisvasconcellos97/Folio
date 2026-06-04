@@ -12,8 +12,8 @@ export function ErrorBanner({ message, onRetry }) {
       role="alert"
       aria-live="polite"
       style={{
-        background: "rgba(232,88,88,0.10)",
-        border: "1px solid rgba(232,88,88,0.30)",
+        background: C.redFaint,
+        border: "1px solid " + C.redLine,
         borderLeft: "3px solid " + C.red,
         borderRadius: 8,
         padding: "10px 13px",
@@ -32,7 +32,7 @@ export function ErrorBanner({ message, onRetry }) {
           onClick={onRetry}
           style={{
             background: "transparent",
-            border: "1px solid rgba(232,88,88,0.45)",
+            border: "1px solid " + C.redLine,
             borderRadius: 6,
             padding: "4px 12px",
             color: C.red,

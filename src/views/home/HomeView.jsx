@@ -974,8 +974,8 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
           <div style={{
             maxWidth: 600,
             margin: isMobile ? "0 16px 12px" : "0 auto 12px",
-            background: "rgba(251,191,36,0.07)",
-            border: "1px solid rgba(251,191,36,0.25)",
+            background: C.yellowFaint,
+            border: "1px solid " + C.yellow,
             borderRadius: 10,
             padding: "14px 16px",
           }}>

@@ -68,6 +68,7 @@ export function CommitmentsView({ items, accounts, onOpenAccount, onMarkDone }) 
         <button
           onClick={function () { onMarkDone && onMarkDone(item.id); }}
           title="Mark done"
+          aria-label="Mark commitment done"
           style={{
             width: 20, height: 20, borderRadius: "50%", flexShrink: 0, marginTop: 2,
             border: "1.5px solid " + C.accentLine,
@@ -90,7 +91,7 @@ export function CommitmentsView({ items, accounts, onOpenAccount, onMarkDone }) 
             <button
               onClick={function () { onOpenAccount && onOpenAccount(acct); }}
               style={{
-                background: "rgba(74,155,130,0.1)",
+                background: C.accentFaint,
                 border: "1px solid " + C.accentLine,
                 borderRadius: 12,
                 padding: "2px 8px",

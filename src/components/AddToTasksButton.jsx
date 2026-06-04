@@ -35,8 +35,8 @@ export function AddToTasksButton({ actionItemsText, accountId, openItems, addIte
       onClick={handleClick}
       title="Add each action item as a task"
       style={Object.assign({
-        background: "rgba(232,168,56,0.10)",
-        border: "1px solid rgba(232,168,56,0.28)",
+        background: C.yellowFaint,
+        border: "1px solid " + C.yellow,
         borderRadius: 6,
         padding: "3px 9px",
         fontSize: 10,
