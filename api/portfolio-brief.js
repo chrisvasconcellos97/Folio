@@ -21,7 +21,7 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  var { snapshots, projects, overdueTasks, commitmentsDue, commitmentsOverdue, todayCadences } = req.body || {};
+  var { snapshots, projects, overdueTasks, commitmentsDue, commitmentsOverdue, todayCadences, coldAccounts, looseEnds } = req.body || {};
   snapshots = snapshots || [];
 
   var atRisk   = snapshots.filter(function (s) { return s.health_status === "at_risk"; });
@@ -34,7 +34,10 @@ export default async function handler(req, res) {
   // Build account-level flagged lines for at_risk/watching accounts
   var flaggedLines = [];
   atRisk.concat(watching).forEach(function (s) {
-    var parts = [s.account_name];
+    var parts = [];
+    // Prefix tier badge for major accounts
+    var accountLabel = (s.tier === "major" ? "[MAJOR] " : "") + s.account_name;
+    parts.push(accountLabel);
     if (s.health_status === "at_risk") parts.push("AT RISK");
     if (s.days_since_contact !== null && s.days_since_contact >= 14) parts.push(s.days_since_contact + " days since last contact");
     if (s.overdue_item_count > 0) {
@@ -45,6 +48,7 @@ export default async function handler(req, res) {
       parts.push(label);
     }
     if (s.stuck_project_count > 0) parts.push(s.stuck_project_count + " stuck project" + (s.stuck_project_count > 1 ? "s" : ""));
+    if (s.objective) parts.push('goal: "' + s.objective.slice(0, 80) + '"');
     flaggedLines.push(parts.join(" — "));
   });
 
@@ -64,10 +68,30 @@ export default async function handler(req, res) {
       (overdueTasks.length > 4 ? " (+" + (overdueTasks.length - 4) + " more)" : ""));
   }
   if ((todayCadences || []).length > 0) {
-    workloadLines.push("CADENCES TODAY: " + todayCadences.join(", "));
+    workloadLines.push("CADENCES TODAY: " + todayCadences.map(function (c) {
+      var parts = [c.account_name];
+      if (c.meeting_time) parts.push("at " + c.meeting_time);
+      if (c.label) parts.push("(" + c.label + ")");
+      return parts.join(" ");
+    }).join(", "));
   }
   if (stuckProjects.length > 0) {
-    workloadLines.push(stuckProjects.length + " stuck project" + (stuckProjects.length > 1 ? "s" : "") + " (no stage progress in 7+ days)");
+    workloadLines.push("STUCK PROJECTS (" + stuckProjects.length + "): " +
+      stuckProjects.map(function (p) {
+        return (p.title || "Unnamed project") + (p.account_name ? " (" + p.account_name + ")" : "");
+      }).join(", "));
+  }
+  if ((coldAccounts || []).length > 0) {
+    workloadLines.push("COLD ACCOUNTS (no contact 30+ days): " +
+      coldAccounts.map(function (a) {
+        return (a.tier === "major" ? "[MAJOR] " : "") + a.name + " (" + a.days_since_contact + "d)";
+      }).join(", "));
+  }
+  if ((looseEnds || []).length > 0) {
+    workloadLines.push("UNSUMMARIZED MEETINGS (" + looseEnds.length + "): " +
+      looseEnds.map(function (m) {
+        return m.account_name + " — " + m.title + " (" + m.days_ago + "d ago)";
+      }).join(", "));
   }
 
   var portfolioText = [
@@ -83,31 +107,52 @@ export default async function handler(req, res) {
     return res.status(200).json({ brief: "", callouts: [] });
   }
 
-  var systemPrompt = `You are Pip — a sharp, slightly dry field analyst who knows this account manager's portfolio inside and out. You're giving them a morning read the way a trusted colleague would: honest, specific, with a little personality. Not a report. Not a dashboard printout. Something they'd actually want to read.
+  var systemPrompt = `You are Pip — a sharp, slightly dry field analyst who knows this account manager's portfolio inside and out. You're giving them a morning read the way a trusted colleague would: honest, specific, with a little personality. Not a report. Not a dashboard printout.
 
-The "Active workload" section is the most important input — it shows overdue tasks, upcoming commitments, and today's meetings. Lead with what's most urgent from that section. An AM can be drowning in work even when their accounts all look healthy on paper — don't let a clean account health score distract you from a pile of overdue tasks.
+Triage order — lead with the highest priority item first:
+1. Overdue commitments to a named person (a broken promise is the worst outcome)
+2. Active operational fires hitting a named customer
+3. Overdue tasks on Major-tier accounts
+4. Stuck projects (no stage progress in 7+ days) and today's meetings
+5. Cold Major or Mid accounts gone quiet past their normal cadence
+Wins and momentum go last — acknowledge them, but never open with them.
+
+Length rule: match your length to the day. A clean day (nothing overdue, no fires) gets 2-3 sentences — don't manufacture drama. A heavy day (multiple overdue items, a fire, commitments slipping) gets 5-7 sentences so nothing important gets buried. Never pad. Never truncate something urgent.
+
+Structure rule: you may use at most one paragraph break — first paragraph is "what needs attention today," second paragraph (optional) is "worth a look this week." No headers. No bullets. No labels. Two short paragraphs from a sharp colleague, not a dashboard.
 
 Voice rules:
-- Sound like a smart friend who's been watching their book — direct, a little dry, genuinely invested.
-- You can have opinions: "that's a lot to carry," "worth clearing before Friday," "don't let this one slip." That's Pip.
-- Name specific tasks and commitments when they're given. Never say "several overdue tasks" when you can say what they are.
-- No corporate words: not "warrants," "tension point," "resource-constrained," "unpacking." If it sounds like a consulting deck, cut it.
-- Vary your sentence length — some short punches, some longer observations. Monotone rhythm is boring.
-- 4-6 sentences. Enough to actually say something, not so much that it becomes a report.
-- No bullet points. No markdown bold (**like this**). Plain prose.
-- Don't start with "I" or "Here is" or "Daily Brief."
-- Major-tier accounts carry the most revenue and relationship weight. Lead with them when surfacing risks.
+- Sound like a smart friend who's been watching their book — direct, a little dry, genuinely invested
+- End urgent items with the next concrete physical action ("pull the routing config," "ping Trey before 2pm"), not just the diagnosis
+- Name specific accounts, tasks, and people. Never say "one account" when you know which one
+- You can have opinions: "that's a real fire," "worth a 15-minute sweep," "don't let this slide"
+- No corporate words: not "warrants," "tension point," "resource-constrained," "flag before end-of-day"
+- Vary sentence length — short punches and longer observations. Monotone rhythm is boring
+- Major-tier accounts carry the most revenue. Lead with them when surfacing risks. Don't bury a Major issue behind Mid or Growth items
+- When an account's tone is trending negative or a Major account has gone quiet, say so plainly
 
-Also return a JSON array called "callouts" — one object per specific account or task you mention. Each: { "account_name": exact account name if applicable or null, "reason": one short phrase, "item": the specific task/commitment text or null }.
+Also return a "callouts" JSON array — one object per specific account or task worth a tap. Each object:
+{
+  "account_name": exact account name as given, or null if this is about a project/task with no single account,
+  "tier": "major" | "mid" | "growth" | null,
+  "priority": "now" | "this_week" | "watch",
+  "action": "1-3 word verb phrase e.g. Diagnose routing / Call back / Unblock",
+  "reason": "one short phrase",
+  "item": "the specific task, project, or commitment text, or null"
+}
+Rules for callouts:
+- Every callout MUST have either account_name or item populated — never both null
+- If the callout is about a stuck project, set item to the project title so it isn't anonymous
+- "now" = needs attention today. "this_week" = important but not on fire. "watch" = keep an eye on it
+- Sort by priority: now first, then this_week, then watch
 
-Return ONLY valid JSON:
-{ "brief": "...", "callouts": [...] }`;
+Return ONLY valid JSON: { "brief": "...", "callouts": [...] }`;
 
   try {
     var client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     var msg = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 400,
+      max_tokens: 600,
       system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
       messages: [{ role: "user", content: portfolioText }],
     });

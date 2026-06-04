@@ -154,8 +154,8 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
   // Only fires when snapshots are ready and the brief hasn't been generated today.
   useEffect(function () {
     var todayStr = new Date().toISOString().slice(0, 10);
-    // v4: cache key bumped so brief includes workload data (tasks/commitments/cadences)
-    var cacheKey = "folio_daily_brief_v4_" + todayStr;
+    // v5: cache key bumped so brief includes tier, stuck project names, cadence times, cold accounts, loose ends, objectives
+    var cacheKey = "folio_daily_brief_v5_" + todayStr;
 
     // Check localStorage cache first — if we have a brief for today, use it.
     try {
@@ -202,20 +202,27 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
         return { text: item.text || item.title || "Unnamed commitment", due_date: item.due_date };
       });
 
-      // Today's cadences
+      // Today's cadences — richer objects so Pip can mention times + labels
       var todayCadences = (cadences || []).filter(function (c) {
         if (!c.next_date) return false;
         return c.next_date.slice(0, 10) === todayStr;
       }).map(function (c) {
         var acc = (accounts || []).find(function (a) { return a.id === c.account_id; });
-        return acc ? acc.name : "Unknown account";
+        return {
+          account_name: acc ? acc.name : "Unknown",
+          meeting_time: c.meeting_time || null,
+          label: c.label || c.frequency || null,
+        };
       });
 
       var snapshotsWithDetails = (snapshots || []).map(function (s) {
         var acc = (accounts || []).find(function (a) { return a.id === s.account_id; });
+        var isFlagged = s.health_status === "at_risk" || s.health_status === "watching";
         return Object.assign({}, s, {
           account_name: acc ? acc.name : "Unknown",
           overdue_items: (overdueByAccount[s.account_id] || []).slice(0, 3),
+          tier: acc ? acc.tier : null,
+          objective: (acc && isFlagged) ? (acc.objective || null) : null,
         });
       });
 
@@ -225,12 +232,47 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
       }).map(function (p) {
         var stages = p.stages || [];
         var hasRecent = stages.some(function (s) { return s.completed_at && s.completed_at > sevenDaysAgo; });
-        return Object.assign({}, p, { is_stuck: !hasRecent });
+        var acc = (accounts || []).find(function (a) { return a.id === p.account_id; });
+        return Object.assign({}, p, {
+          is_stuck: !hasRecent,
+          title: p.title,
+          account_name: acc ? acc.name : null,
+        });
       });
 
       var recentWins = (projects || []).filter(function (p) {
         return p.status === "complete" && p.updated_at && p.updated_at > sevenDaysAgo;
       }).map(function (p) { return Object.assign({}, p, { completed_recently: true }); });
+
+      // Cold accounts — healthy/watching accounts with no contact in 30+ days (cap 5)
+      var coldAccounts = (accounts || []).filter(function (a) {
+        if (a.is_inactive) return false;
+        var snap = (snapshots || []).find(function (s) { return s.account_id === a.id; });
+        if (!snap) return false;
+        return snap.days_since_contact !== null && snap.days_since_contact >= 30 &&
+          snap.health_status !== "at_risk";
+      }).map(function (a) {
+        var snap = (snapshots || []).find(function (s) { return s.account_id === a.id; });
+        return {
+          name: a.name,
+          tier: a.tier,
+          days_since_contact: snap ? snap.days_since_contact : null,
+        };
+      }).slice(0, 5);
+
+      // Loose ends — meetings with notes but no pip_summary, older than 3 days (cap 3)
+      var threeDaysAgo = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10);
+      var looseEndsForPip = (meetings || []).filter(function (m) {
+        return !m.pip_summary && m.notes && m.notes.trim().length > 20 &&
+          m.created_at && m.created_at.slice(0, 10) < threeDaysAgo;
+      }).map(function (m) {
+        var acc = (accounts || []).find(function (a) { return a.id === m.account_id; });
+        return {
+          account_name: acc ? acc.name : "Unknown",
+          title: m.title || "Untitled meeting",
+          days_ago: Math.floor((Date.now() - new Date(m.created_at).getTime()) / 86400000),
+        };
+      }).slice(0, 3);
 
       callPortfolioBriefPip({
         snapshots: snapshotsWithDetails,
@@ -239,6 +281,8 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
         commitmentsDue: commitmentsDue,
         commitmentsOverdue: commitmentsOverdue,
         todayCadences: todayCadences,
+        coldAccounts: coldAccounts,
+        looseEnds: looseEndsForPip,
       }).then(function (result) {
         setBriefLoading(false);
         if (result && result.brief) {
@@ -791,19 +835,35 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
                     {renderBriefWithGlows(dailyBrief, accounts, onOpenAccount)}
                   </div>
                   {briefCallouts && briefCallouts.length > 0 && (
-                    <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 7 }}>
                       {briefCallouts.map(function (c, i) {
                         var acc = (accounts || []).find(function (a) { return a.name === c.account_name; });
+                        // Priority dot color
+                        var dotColor = c.priority === "now" ? C.red
+                          : c.priority === "this_week" ? C.yellow
+                          : C.textMuted;
                         return (
                           <div key={i} style={{ display: "flex", alignItems: "baseline", gap: 6, flexWrap: "wrap" }}>
-                            <span style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.07em", flexShrink: 0 }}>↳</span>
-                            {acc
+                            {/* Priority dot */}
+                            <span style={{ color: dotColor, fontSize: 14, lineHeight: 1, flexShrink: 0 }}>•</span>
+                            {/* Major tier badge */}
+                            {c.tier === "major" && (
+                              <span style={{ fontFamily: MONO, fontSize: 9, color: C.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 }}>[M]</span>
+                            )}
+                            {/* Account name — clickable if we can find it */}
+                            {c.account_name && (acc
                               ? <Glow onClick={function () { onOpenAccount(acc.id); }}>{c.account_name}</Glow>
                               : <span style={{ fontFamily: INTER, fontSize: 13, color: C.accent }}>{c.account_name}</span>
-                            }
+                            )}
+                            {/* Action verb — bold */}
+                            {c.action && (
+                              <span style={{ fontFamily: INTER, fontSize: 13, color: C.text, fontWeight: 600 }}>→ {c.action}</span>
+                            )}
+                            {/* Reason */}
                             {c.reason && (
                               <span style={{ fontFamily: INTER, fontSize: 13, color: C.textMuted }}>— {c.reason}</span>
                             )}
+                            {/* Specific item */}
                             {c.item && (
                               <span style={{ fontFamily: INTER, fontSize: 13, color: C.textMuted, fontStyle: "italic" }}>· "{c.item}"</span>
                             )}
