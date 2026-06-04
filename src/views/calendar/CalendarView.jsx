@@ -598,7 +598,7 @@ function CalendarHeader({
 
 // ── Daily View ───────────────────────────────────────────────────────────────
 
-function DailyView({ focusedDate, events, onOpenAccount, onOpenCadenceHub, onOpenConversation, onAddItem }) {
+function DailyView({ focusedDate, events, onOpenAccount, onOpenCadenceHub, onOpenConversation }) {
   var meetings  = events.filter(function (e) { return e.type === "meeting" || e.type === "cadence"; });
   var items     = events.filter(function (e) { return e.type === "item"; });
   var tasks     = events.filter(function (e) { return e.type === "task"; });
@@ -1090,7 +1090,7 @@ function MonthlyView({ focusedDate, allEvents, onSetDailyDate, isMobile }) {
 
 export function CalendarView({
   meetings, cadences, items, projects, quickTasks, accounts,
-  onOpenAccount, onOpenCadenceHub, onOpenConversation, onAddItem,
+  onOpenAccount, onOpenCadenceHub, onOpenConversation,
 }) {
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
@@ -1200,7 +1200,6 @@ export function CalendarView({
           onOpenAccount={onOpenAccount}
           onOpenCadenceHub={onOpenCadenceHub}
           onOpenConversation={onOpenConversation}
-          onAddItem={onAddItem}
         />
       )}
 

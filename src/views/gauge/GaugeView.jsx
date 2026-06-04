@@ -157,7 +157,8 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
   // Phase 3 — flat task queue. Defaults to Tasks tab for Admin lens, Projects for everyone else.
   var { tasks: flatTasks, refetch: refetchTasks } = useTasks(userId);
   function handleToggleDone(task) {
-    updateTask(userId, task.id, { done: !task.done })
+    var newDone = !task.done;
+    updateTask(userId, task.id, { done: newDone, status: newDone ? "complete" : "open" })
       .then(function () { refetchTasks(); })
       .catch(function () {});
   }
@@ -859,6 +860,8 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
           projects={projects}
           accounts={accounts}
           members={members}
+          contacts={contacts}
+          aliases={aliases}
           userEmail={userEmail}
           onUpdate={updateProject}
           logCorrection={logCorrection}

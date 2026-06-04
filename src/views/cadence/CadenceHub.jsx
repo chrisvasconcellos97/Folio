@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { supabase } from "../../lib/supabase";
 import { C, glass } from "../../lib/colors";
 import { showToast } from "../../components/Toast";
 import { PipMark } from "../../components/PipMark";
@@ -1482,19 +1483,24 @@ export function CadenceHub({
     setReadoutMeetingId(meeting.id);
     setReadoutEmail("");
     setReadoutLoading(true);
-    fetch("/api/leadership-readout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        userId: userId,
-        meetingSummary: meeting.pip_summary || meeting.notes || "",
-        actionItems: [],
-        contactName: contact ? contact.name : null,
-        portfolioState: (snapshotsApi.snapshots || []).map(function (s) {
-          var acc = (accounts || []).find(function (a) { return a.id === s.account_id; });
-          return Object.assign({}, s, { account_name: acc ? acc.name : "Account" });
+    supabase.auth.getSession().then(function (result) {
+      var token = result.data.session ? result.data.session.access_token : null;
+      var headers = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = "Bearer " + token;
+      return fetch("/api/leadership-readout", {
+        method: "POST",
+        headers: headers,
+        body: JSON.stringify({
+          userId: userId,
+          meetingSummary: meeting.pip_summary || meeting.notes || "",
+          actionItems: [],
+          contactName: contact ? contact.name : null,
+          portfolioState: (snapshotsApi.snapshots || []).map(function (s) {
+            var acc = (accounts || []).find(function (a) { return a.id === s.account_id; });
+            return Object.assign({}, s, { account_name: acc ? acc.name : "Account" });
+          }),
         }),
-      }),
+      });
     })
       .then(function (r) { return r.json(); })
       .then(function (data) {
