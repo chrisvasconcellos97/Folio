@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { C } from "../../lib/colors";
 import { TaskDetailPanel } from "./TaskDetailPanel";
 import { TaskEntityDetector } from "../../components/TaskEntityDetector";
+import { autoStatusPatch } from "../../lib/gaugeStatus";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
@@ -76,11 +77,11 @@ export function ProjectStageEditor({ project, onUpdate, accounts, members, conta
   var hasSchema = (project.custom_field_schema || []).length > 0;
 
   function commitStages(next) {
-    // Auto-flip project status when all stages are complete / any stage is unchecked.
-    var allDone = next.length > 0 && next.every(function (s) { return !!s.completed_at; });
+    // Auto-flip project status when all stages are complete / any stage is
+    // unchecked. Shared helper so every completion path agrees.
     var payload = { stages: next };
-    if (allDone && project.status !== "complete") payload.status = "complete";
-    if (!allDone && project.status === "complete") payload.status = "in_progress";
+    var sp = autoStatusPatch(next, project.status, project.is_standing);
+    if (sp) Object.assign(payload, sp);
     return onUpdate(project.id, payload);
   }
 

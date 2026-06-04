@@ -7,6 +7,7 @@ import { useBreakpoint } from "../../hooks/useBreakpoint";
 import { getNextOccurrence, formatTime } from "../../lib/cadenceUtils";
 import { useAccountSnapshots } from "../../hooks/useAccountSnapshots";
 import { callPortfolioBriefPip } from "../../lib/pip";
+import { isProjectComplete } from "../../lib/gaugeStatus";
 
 var SERIF = "'Fraunces', Georgia, serif";
 var INTER = "'Inter', system-ui, sans-serif";
@@ -438,8 +439,11 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
     (projects || []).forEach(function (p) {
       var acct = accountById[p.account_id];
       if (!acct) return;
+      // Treat all-tasks-done projects as complete even if the status field
+      // never flipped — otherwise a finished project burns forever.
+      if (isProjectComplete(p)) return;
       var isBlocked = p.status === "blocked";
-      var isOverdue = p.status !== "complete" && p.due_date && p.due_date < todayISO;
+      var isOverdue = p.due_date && p.due_date < todayISO;
       if (!isBlocked && !isOverdue) return;
       var daysOver = isOverdue ? Math.floor((Date.now() - new Date(p.due_date + "T00:00:00").getTime()) / 86400000) : 0;
       rows.push({

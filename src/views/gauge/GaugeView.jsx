@@ -1,4 +1,4 @@
-import { useState, useMemo, useDeferredValue } from "react";
+import { useState, useMemo, useDeferredValue, useEffect, useRef } from "react";
 import { C } from "../../lib/colors";
 import { usePipCorrections } from "../../hooks/usePipCorrections";
 import { useContactAliases } from "../../hooks/useContactAliases";
@@ -22,6 +22,7 @@ import { useTasks, updateTask } from "../../hooks/useTasks";
 import { FlatTaskQueue } from "./FlatTaskQueue";
 import { LeaderProjectsView } from "./LeaderProjectsView";
 import { TeammateDetailView } from "./TeammateDetailView";
+import { autoStatusPatch } from "../../lib/gaugeStatus";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
@@ -174,10 +175,35 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
             ? Object.assign({}, s, { completed_at: newDone ? new Date().toISOString() : null })
             : s;
         });
-        updateProject(proj.id, { stages: nextStages }).catch(function () {});
+        // Re-evaluate project status: completing the last task here must flip
+        // the project to complete (and un-completing one reverts it), same as
+        // the discrete editor does. Without this the project burns forever.
+        var projPatch = { stages: nextStages };
+        var sp = autoStatusPatch(nextStages, proj.status, proj.is_standing);
+        if (sp) Object.assign(projPatch, sp);
+        updateProject(proj.id, projPatch).catch(function () {});
       }
     }
   }
+  // One-time heal: discrete projects whose tasks are all done but whose
+  // status never flipped to "complete" (older data, or completing the last
+  // task via a path that didn't update project status). Fix them in the DB
+  // so every surface — Gauge, Home "burning", Pip, snapshots — agrees.
+  // Guarded so it runs once per mount; the refetch it triggers won't re-fire.
+  var healedRef = useRef(false);
+  useEffect(function () {
+    if (healedRef.current || !projects || projects.length === 0) return;
+    healedRef.current = true;
+    projects.forEach(function (p) {
+      if (p.is_standing || p.status === "complete" || p.status === "draft") return;
+      var st = p.stages || [];
+      if (st.length > 0 && st.every(function (s) { return !!s.completed_at; })) {
+        updateProject(p.id, { status: "complete" }).catch(function () {});
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projects]);
+
   // Phase 6 — V2 brain correction log for task edits that go through Gauge.
   var { logCorrection } = usePipCorrections(userId, null);
   var { aliases } = useContactAliases(orgId || null, userId);
