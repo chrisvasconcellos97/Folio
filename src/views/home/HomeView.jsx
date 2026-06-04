@@ -128,7 +128,7 @@ function renderBriefWithGlows(text, accounts, onOpenAccount) {
   return segments;
 }
 
-export function HomeView({ userName, userId, accounts, meetings, items, cadences, projects, onOpenAccount, onOpenAccountTab, onOpenCadenceHub, onOpenConversation, onOpenQuickTask, showOnboardingCard, onStartInterview, onDismissOnboardingCard, dripQuestion, onAnswerDrip, onSkipDrip, onDismissDrip, commitmentNudges, onSnoozeNudge, onMarkNudgeDone }) {
+export function HomeView({ userName, userId, accounts, meetings, items, cadences, projects, contacts, themes, onOpenAccount, onOpenAccountTab, onOpenCadenceHub, onOpenConversation, onOpenQuickTask, showOnboardingCard, onStartInterview, onDismissOnboardingCard, dripQuestion, onAnswerDrip, onSkipDrip, onDismissDrip, commitmentNudges, onSnoozeNudge, onMarkNudgeDone }) {
   commitmentNudges = commitmentNudges || [];
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
@@ -143,7 +143,7 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
   // Reset textarea when the active question changes.
   useEffect(function () { setDripAnswer(""); }, [dripQuestion && dripQuestion.id]);
 
-  var { snapshots } = useAccountSnapshots(userId);
+  var { snapshots, snapshotHistory } = useAccountSnapshots(userId);
 
   useEffect(function () {
     var t = setTimeout(function () { setMounted(true); }, 60);
@@ -154,8 +154,8 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
   // Only fires when snapshots are ready and the brief hasn't been generated today.
   useEffect(function () {
     var todayStr = new Date().toISOString().slice(0, 10);
-    // v5: cache key bumped so brief includes tier, stuck project names, cadence times, cold accounts, loose ends, objectives
-    var cacheKey = "folio_daily_brief_v5_" + todayStr;
+    // v6: cache key bumped so brief includes health momentum, tone trend, champions/blockers, cross-account themes
+    var cacheKey = "folio_daily_brief_v6_" + todayStr;
 
     // Check localStorage cache first — if we have a brief for today, use it.
     try {
@@ -274,6 +274,82 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
         };
       }).slice(0, 3);
 
+      // Health momentum: compare today's status vs earliest status in the 8-day window
+      var healthDeltas = [];
+      (snapshots || []).forEach(function (todaySnap) {
+        var history = (snapshotHistory || []).filter(function (s) {
+          return s.account_id === todaySnap.account_id && s.snapshot_date !== todayStr;
+        });
+        if (history.length === 0) return;
+        var oldest = history[history.length - 1]; // already ordered desc, so last = oldest
+        var prev = oldest.health_status;
+        var curr = todaySnap.health_status;
+        if (prev === curr) return;
+        var wasWorse = (prev === "at_risk" && (curr === "watching" || curr === "healthy")) ||
+                       (prev === "watching" && curr === "healthy");
+        var isWorse  = (prev === "healthy" && (curr === "watching" || curr === "at_risk")) ||
+                       (prev === "watching" && curr === "at_risk");
+        if (!wasWorse && !isWorse) return;
+        var acc = (accounts || []).find(function (a) { return a.id === todaySnap.account_id; });
+        healthDeltas.push({
+          account_name: acc ? acc.name : "Unknown",
+          tier: acc ? acc.tier : null,
+          direction: wasWorse ? "recovering" : "slipping",
+          from: prev,
+          to: curr,
+        });
+      });
+
+      // Champions and blockers per account (from contacts with relationship_role set)
+      var relationshipSignals = [];
+      (snapshots || []).forEach(function (snap) {
+        var acctContacts = (contacts || []).filter(function (c) {
+          return c.account_id === snap.account_id;
+        });
+        var champions = acctContacts.filter(function (c) { return c.relationship_role === "champion"; });
+        var blockers  = acctContacts.filter(function (c) { return c.relationship_role === "blocker"; });
+        if (champions.length === 0 && blockers.length === 0) return;
+        var acc = (accounts || []).find(function (a) { return a.id === snap.account_id; });
+        relationshipSignals.push({
+          account_name: acc ? acc.name : "Unknown",
+          tier: acc ? acc.tier : null,
+          champions: champions.map(function (c) { return c.name; }),
+          blockers: blockers.map(function (c) { return c.name; }),
+        });
+      });
+
+      // Tone trend per account: look at pip_tone across the last 8 days of snapshots
+      // "cooling" = last 3 days mixed/negative; "warming" = last 3 days positive
+      var toneSignals = [];
+      (snapshots || []).forEach(function (todaySnap) {
+        var history = (snapshotHistory || []).filter(function (s) {
+          return s.account_id === todaySnap.account_id;
+        }).slice(0, 5); // last 5 days including today
+        if (history.length < 3) return;
+        var recent = history.slice(0, 3).map(function (s) { return s.pip_tone; }).filter(Boolean);
+        if (recent.length < 2) return;
+        var negCount = recent.filter(function (t) { return t === "negative" || t === "mixed"; }).length;
+        var posCount = recent.filter(function (t) { return t === "positive"; }).length;
+        if (negCount >= 2) {
+          var acc = (accounts || []).find(function (a) { return a.id === todaySnap.account_id; });
+          toneSignals.push({ account_name: acc ? acc.name : "Unknown", tier: acc ? acc.tier : null, trend: "cooling" });
+        } else if (posCount >= 2) {
+          var acc2 = (accounts || []).find(function (a) { return a.id === todaySnap.account_id; });
+          toneSignals.push({ account_name: acc2 ? acc2.name : "Unknown", tier: acc2 ? acc2.tier : null, trend: "warming" });
+        }
+      });
+
+      // Cross-account theme signals: themes appearing on 3+ accounts
+      var portfolioThemes = (themes || []).filter(function (t) {
+        return t.count >= 3;
+      }).slice(0, 3).map(function (t) {
+        return {
+          theme: t.theme,
+          count: t.count,
+          accounts: (t.accounts || []).slice(0, 3),
+        };
+      });
+
       callPortfolioBriefPip({
         snapshots: snapshotsWithDetails,
         projects: activeProjects.concat(recentWins),
@@ -283,6 +359,10 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
         todayCadences: todayCadences,
         coldAccounts: coldAccounts,
         looseEnds: looseEndsForPip,
+        healthDeltas: healthDeltas,
+        relationshipSignals: relationshipSignals,
+        toneSignals: toneSignals,
+        portfolioThemes: portfolioThemes,
       }).then(function (result) {
         setBriefLoading(false);
         if (result && result.brief) {

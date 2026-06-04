@@ -21,7 +21,7 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  var { snapshots, projects, overdueTasks, commitmentsDue, commitmentsOverdue, todayCadences, coldAccounts, looseEnds } = req.body || {};
+  var { snapshots, projects, overdueTasks, commitmentsDue, commitmentsOverdue, todayCadences, coldAccounts, looseEnds, healthDeltas, relationshipSignals, toneSignals, portfolioThemes } = req.body || {};
   snapshots = snapshots || [];
 
   var atRisk   = snapshots.filter(function (s) { return s.health_status === "at_risk"; });
@@ -93,16 +93,58 @@ export default async function handler(req, res) {
         return m.account_name + " — " + m.title + " (" + m.days_ago + "d ago)";
       }).join(", "));
   }
+  if ((healthDeltas || []).length > 0) {
+    var slipping   = healthDeltas.filter(function (d) { return d.direction === "slipping"; });
+    var recovering = healthDeltas.filter(function (d) { return d.direction === "recovering"; });
+    if (slipping.length > 0) {
+      workloadLines.push("TRENDING WORSE: " + slipping.map(function (d) {
+        return (d.tier === "major" ? "[MAJOR] " : "") + d.account_name + " (" + d.from + " → " + d.to + ")";
+      }).join(", "));
+    }
+    if (recovering.length > 0) {
+      workloadLines.push("RECOVERING: " + recovering.map(function (d) {
+        return d.account_name + " (" + d.from + " → " + d.to + ")";
+      }).join(", "));
+    }
+  }
+  if ((toneSignals || []).length > 0) {
+    var cooling = toneSignals.filter(function (t) { return t.trend === "cooling"; });
+    var warming = toneSignals.filter(function (t) { return t.trend === "warming"; });
+    if (cooling.length > 0) {
+      workloadLines.push("COOLING TONE (last 3 meetings): " +
+        cooling.map(function (t) { return (t.tier === "major" ? "[MAJOR] " : "") + t.account_name; }).join(", "));
+    }
+    if (warming.length > 0) {
+      workloadLines.push("WARMING TONE: " + warming.map(function (t) { return t.account_name; }).join(", "));
+    }
+  }
+  if ((relationshipSignals || []).length > 0) {
+    relationshipSignals.forEach(function (r) {
+      var parts = [(r.tier === "major" ? "[MAJOR] " : "") + r.account_name];
+      if (r.champions.length > 0) parts.push("champion: " + r.champions.join(", "));
+      if (r.blockers.length > 0) parts.push("BLOCKER: " + r.blockers.join(", "));
+      workloadLines.push("RELATIONSHIP: " + parts.join(" — "));
+    });
+  }
+
+  var themesText = (portfolioThemes || []).length > 0
+    ? "Portfolio-wide themes (appearing on 3+ accounts): " +
+      portfolioThemes.map(function (t) {
+        return t.theme + " (" + t.count + " accounts" +
+          (t.accounts && t.accounts.length > 0 ? ": " + t.accounts.join(", ") : "") + ")";
+      }).join("; ")
+    : null;
 
   var portfolioText = [
     snapshots.length > 0 ? snapshots.length + " accounts total." : null,
     flaggedLines.length > 0 ? "Account flags:\n" + flaggedLines.join("\n") : "No accounts flagged at the account level.",
     workloadLines.length > 0 ? "Active workload:\n" + workloadLines.join("\n") : "No overdue tasks or upcoming commitments.",
     recentWins.length > 0 ? "Recent wins: " + recentWins.map(function (p) { return p.title; }).join(", ") + "." : "No recent project wins.",
+    themesText,
   ].filter(Boolean).join("\n\n");
 
   // If there's genuinely nothing to report, return empty so the UI skips the card
-  var hasAnything = flaggedLines.length > 0 || workloadLines.length > 0 || recentWins.length > 0;
+  var hasAnything = flaggedLines.length > 0 || workloadLines.length > 0 || recentWins.length > 0 || (portfolioThemes || []).length > 0;
   if (!hasAnything) {
     return res.status(200).json({ brief: "", callouts: [] });
   }
@@ -130,6 +172,12 @@ Voice rules:
 - Vary sentence length — short punches and longer observations. Monotone rhythm is boring
 - Major-tier accounts carry the most revenue. Lead with them when surfacing risks. Don't bury a Major issue behind Mid or Growth items
 - When an account's tone is trending negative or a Major account has gone quiet, say so plainly
+- When an account is trending worse (slipping from healthy to watching or at-risk), treat it as more urgent than a stable at-risk account. Momentum matters.
+- When an account is recovering, briefly acknowledge the positive direction — it's worth noting.
+- "COOLING TONE" means the last few meetings had mixed or negative sentiment — treat this as an early warning, especially on Major accounts. Mention it without alarm.
+- "BLOCKER" in the relationship signals means someone is actively working against the deal or relationship — always surface a blocker if present.
+- "Champion" means an advocate — useful context when discussing next steps on that account.
+- "Portfolio-wide themes" means the same topic came up across multiple accounts in recent meetings. This is a signal worth naming — e.g., "pricing came up on 4 accounts this month" is a portfolio pattern worth raising to management.
 
 Also return a "callouts" JSON array — one object per specific account or task worth a tap. Each object:
 {

@@ -52,6 +52,7 @@ import { detectKnowledgeGaps, seedEvergreenIfEmpty } from "./lib/detectKnowledge
 import { usePipDripQuestions } from "./hooks/usePipDripQuestions.js";
 import { usePipFacts as usePipFactsApp } from "./hooks/usePipFacts.js";
 import { useCommitmentNudges } from "./hooks/useCommitmentNudges.js";
+import { useRecentThemes } from "./hooks/useRecentThemes";
 import { C } from "./lib/colors";
 import { QuickTaskModal } from "./views/quicktasks/QuickTaskModal";
 
@@ -607,6 +608,7 @@ export default function App() {
   }, [userId, dripHook.answeredSinceSynthesis]);
 
   var commitmentNudgesHook = useCommitmentNudges(userId, accounts);
+  var recentThemes         = useRecentThemes(userId);
 
   // Share Target — detect when the app is launched via the PWA Web Share Target.
   // GET params title/text/url are set by the OS share sheet. Initialized once from
@@ -938,6 +940,8 @@ export default function App() {
         commitmentNudges={commitmentNudgesHook.nudges}
         onSnoozeNudge={commitmentNudgesHook.snooze}
         onMarkNudgeDone={commitmentNudgesHook.markDone}
+        contacts={allContacts}
+        themes={recentThemes}
       />
     );
   }
