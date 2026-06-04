@@ -976,6 +976,7 @@ export default function App() {
             items={allItems}
             accounts={accounts}
             onOpenAccount={function (acct) { setSelected(acct); setView("accounts"); }}
+            onMarkDone={closeItem}
           />
         </Suspense>
       </ErrorBoundary>

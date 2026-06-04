@@ -14,7 +14,7 @@ function formatDueDate(dueDate) {
   return new Date(dueDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-export function CommitmentsView({ items, accounts, onOpenAccount }) {
+export function CommitmentsView({ items, accounts, onOpenAccount, onMarkDone }) {
   var today = new Date().toISOString().slice(0, 10);
   var sevenDaysOut = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
 
@@ -60,10 +60,24 @@ export function CommitmentsView({ items, accounts, onOpenAccount }) {
           borderRadius: 8,
           padding: "11px 14px",
           display: "flex",
-          flexDirection: "column",
-          gap: 5,
+          gap: 12,
+          alignItems: "flex-start",
         }}
       >
+        {/* Complete button */}
+        <button
+          onClick={function () { onMarkDone && onMarkDone(item.id); }}
+          title="Mark done"
+          style={{
+            width: 20, height: 20, borderRadius: "50%", flexShrink: 0, marginTop: 2,
+            border: "1.5px solid " + C.accentLine,
+            background: "transparent", cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}
+        />
+
+        {/* Content */}
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 5 }}>
         {/* Title row */}
         <div style={{ fontSize: 14, color: C.text, lineHeight: 1.55 }}>
           {item.text || item.title || "—"}
@@ -117,6 +131,7 @@ export function CommitmentsView({ items, accounts, onOpenAccount }) {
               {dayOpen}d open
             </span>
           )}
+        </div>
         </div>
       </div>
     );
