@@ -618,7 +618,7 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
             width: "100%", boxSizing: "border-box",
             background: C.surface, border: "1px solid " + C.rule,
             borderRadius: 6, padding: "7px 32px 7px 30px",
-            fontFamily: MONO, fontSize: 12, color: C.text,
+            fontFamily: MONO, fontSize: 16, color: C.text,
             outline: "none",
           }}
           onFocus={function (e) { e.target.style.borderColor = C.accent; }}
@@ -999,7 +999,7 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
                       style={{
                         display: "inline-flex", alignItems: "center", justifyContent: "center",
                         width: 18, height: 18, borderRadius: "50%",
-                        background: "rgba(232,88,88,0.18)", border: "1px solid " + C.red,
+                        background: C.redFaint, border: "1px solid " + C.red,
                         color: C.red, fontFamily: MONO, fontWeight: 700, fontSize: 11,
                         flexShrink: 0,
                       }}
@@ -1101,7 +1101,7 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
                     <div style={{
                       fontFamily: MONO, fontSize: 9.5, fontFeatureSettings: '"tnum"',
                       padding: "2px 8px", borderRadius: 999,
-                      background: overdue ? "rgba(239,68,68,0.15)" : dueSoon ? "rgba(234,179,8,0.12)" : C.surface3,
+                      background: overdue ? C.redFaint : dueSoon ? C.yellowFaint : C.surface3,
                       border: "1px solid " + (overdue ? C.red : dueSoon ? C.yellow : C.rule),
                       color: overdue ? C.red : dueSoon ? C.yellow : C.textMuted,
                       whiteSpace: "nowrap",
@@ -1151,7 +1151,7 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
                     <div style={{
                       fontFamily: MONO, fontSize: 9.5, fontFeatureSettings: '"tnum"',
                       padding: "3px 10px", borderRadius: 999,
-                      background: overdue ? "rgba(239,68,68,0.15)" : dueSoon ? "rgba(234,179,8,0.12)" : C.surface3,
+                      background: overdue ? C.redFaint : dueSoon ? C.yellowFaint : C.surface3,
                       border: "1px solid " + (overdue ? C.red : dueSoon ? C.yellow : C.rule),
                       color: overdue ? C.red : dueSoon ? C.yellow : C.textMuted,
                       whiteSpace: "nowrap",
