@@ -29,6 +29,7 @@ import { UpdatesTab } from "./tabs/UpdatesTab";
 import { AddAccountModal } from "./AddAccountModal";
 import { AccountMergeModal } from "./AccountMergeModal";
 import { StartConversationModal } from "./StartConversationModal";
+import { updateTask as updateGaugeTask, insertTask as insertGaugeTask } from "../../hooks/useTasks";
 import { AddItemModal } from "./AddItemModal";
 import { AddContactModal } from "./AddContactModal";
 import { PrintAccountSheet } from "../../components/PrintAccountSheet";
@@ -747,6 +748,8 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
         <StartConversationModal
           accountId={account.id}
           userId={userId}
+          orgId={orgId}
+          members={members}
           onStart={function (data) {
             return addMeeting(data).then(function (m) {
               setMeetingModal(false);
@@ -754,6 +757,26 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
               return m;
             });
           }}
+          onAddItems={function (acctId, newItems) {
+            // Quick email-touchpoint path: persist Pip-extracted action items.
+            // Without onAddItems they were silently dropped despite a success toast.
+            var creations = (newItems || []).map(function (it) {
+              return addItem(Object.assign({ account_id: acctId || account.id }, {
+                text:       it.text,
+                due_date:   it.due_date || null,
+                owner:      it.owner || null,
+                project_id: it.project_id || null,
+              }));
+            });
+            return Promise.all(creations);
+          }}
+          allGaugeProjects={projects}
+          onCreateProject={addProject ? function (acctId, data) {
+            return addProject(Object.assign({}, data, {
+              account_id: acctId || account.id,
+              status: "in_progress",
+            }));
+          } : null}
           onClose={function () { setMeetingModal(false); }}
         />
       )}
@@ -777,6 +800,9 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
           onAddItem={function (data) { return addItem(Object.assign({ account_id: account.id }, data)); }}
           onCloseItem={closeItem}
           onUpdateProject={updateProject}
+          onAddContact={addContact || undefined}
+          onUpdateTask={userId ? function (taskId, fields) { return updateGaugeTask(userId, taskId, fields); } : undefined}
+          onAddTask={userId ? function (payload) { return insertGaugeTask(userId, payload); } : undefined}
           onClose={function () { setAdHocDraftId(null); }}
           onSummarizeRequest={handleAdHocSummarize}
           summarizing={adHocSummarizing}

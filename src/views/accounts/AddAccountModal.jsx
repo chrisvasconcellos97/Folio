@@ -500,7 +500,7 @@ export function AddAccountModal({ userId, onSave, onAddContacts, onClose, existi
                 top: "calc(100% + 4px)",
                 left: 0,
                 right: 0,
-                background: "#1c1912",
+                background: C.bgDropdown,
                 border: "1px solid " + C.border,
                 borderRadius: 10,
                 padding: 12,

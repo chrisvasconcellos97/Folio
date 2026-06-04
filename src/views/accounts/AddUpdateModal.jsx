@@ -120,13 +120,14 @@ function OwnerInput({ value, onChange, members }) {
   );
 }
 
-export function AddUpdateModal({ orgMembers, onSave, onClose }) {
-  var [title, setTitle]               = useState("");
-  var [updateDate, setUpdateDate]     = useState(todayIso());
-  var [updateType, setUpdateType]     = useState(null);
-  var [owner, setOwner]               = useState("");
-  var [impact, setImpact]             = useState(null);
-  var [description, setDescription]   = useState("");
+export function AddUpdateModal({ orgMembers, existing, onSave, onClose }) {
+  var isEdit = !!existing;
+  var [title, setTitle]               = useState(existing ? existing.title || "" : "");
+  var [updateDate, setUpdateDate]     = useState(existing ? existing.update_date || todayIso() : todayIso());
+  var [updateType, setUpdateType]     = useState(existing ? existing.update_type || null : null);
+  var [owner, setOwner]               = useState(existing ? existing.owner || "" : "");
+  var [impact, setImpact]             = useState(existing ? existing.observed_impact || null : null);
+  var [description, setDescription]   = useState(existing ? existing.description || "" : "");
   var [loading, setLoading]           = useState(false);
   var [error, setError]               = useState(null);
 
@@ -155,7 +156,7 @@ export function AddUpdateModal({ orgMembers, onSave, onClose }) {
   }
 
   return (
-    <Modal title="Log Update" onClose={onClose} width={440}>
+    <Modal title={isEdit ? "Edit Update" : "Log Update"} onClose={onClose} width={440}>
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <div>
           <FL htmlFor="update-title">Title</FL>
@@ -244,7 +245,7 @@ export function AddUpdateModal({ orgMembers, onSave, onClose }) {
 
         <div style={{ display: "flex", gap: 8 }}>
           <AmberBtn style={{ flex: 1 }} onClick={handleSave} disabled={loading}>
-            {loading ? "Saving..." : "Log Update"}
+            {loading ? "Saving..." : (isEdit ? "Save changes" : "Log Update")}
           </AmberBtn>
           <SecBtn style={{ flex: 1 }} onClick={onClose}>
             Cancel

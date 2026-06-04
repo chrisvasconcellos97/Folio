@@ -251,7 +251,7 @@ export function MeetingsTab({ meetings, accountName, accountId, userId, openItem
                 </div>
                 <div style={{ fontFamily: MT_MONO, fontSize: 10, color: C.textMuted, marginTop: 4, letterSpacing: "0.04em", fontFeatureSettings: '"tnum"' }}>
                   {m.meeting_date
-                    ? new Date(m.meeting_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                    ? new Date(m.meeting_date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
                     : ""}
                 </div>
                 {m.attendees && m.attendees.length > 0 && (

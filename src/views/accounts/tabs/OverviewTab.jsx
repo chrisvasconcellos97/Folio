@@ -83,15 +83,20 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
 
   useEffect(function () { setNotesDraft(savedNotes || account.objective || ""); }, [account.id, savedNotes]);
 
-  // Fetch external stages from gauge_projects for this account
+  // Fetch external stages from gauge_projects for this account.
+  // `cancelled` guards against a slow response for a previous account landing
+  // after the user switched, which would briefly show the wrong account's rows.
   useEffect(function () {
     if (!account || !account.id) return;
-    supabase
+    var cancelled = false;
+    var q = supabase
       .from("gauge_projects")
       .select("id, title, stages, account_id, account_ids")
-      .or("account_id.eq." + account.id + ",account_ids.cs.{" + account.id + "}")
-      .then(function (result) {
-        if (result.error || !result.data) return;
+      .or("account_id.eq." + account.id + ",account_ids.cs.{" + account.id + "}");
+    if (userId) q = q.eq("user_id", userId);
+    q.then(function (result) {
+        if (cancelled) return;
+        if (result.error || !result.data) { setExternalStages([]); return; }
         var rows = [];
         result.data.forEach(function (proj) {
           var stages = proj.stages || [];
@@ -108,7 +113,8 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
         });
         setExternalStages(rows);
       });
-  }, [account.id]);
+    return function () { cancelled = true; };
+  }, [account.id, userId]);
 
   var openCount = openItems.filter(function (i) { return !i.done; }).length;
 
@@ -397,7 +403,7 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
           <FL>Last Meeting</FL>
           <div style={{ fontSize: 14, color: C.text, fontVariantNumeric: "tabular-nums" }}>
             {account.last_meeting
-              ? new Date(account.last_meeting).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+              ? new Date(account.last_meeting + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
               : "—"}
           </div>
         </Card>
@@ -405,7 +411,7 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
           <FL>Next Meeting</FL>
           <div style={{ fontSize: 14, color: account.next_meeting ? C.accent : C.textMuted, fontVariantNumeric: "tabular-nums" }}>
             {account.next_meeting
-              ? new Date(account.next_meeting).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+              ? new Date(account.next_meeting + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
               : "Not scheduled"}
           </div>
         </Card>
@@ -438,7 +444,7 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
             <span style={{ fontSize: 14, color: healthScore === "green" ? C.green : healthScore === "yellow" ? C.yellow : C.red, fontWeight: 500, textTransform: "capitalize" }}>
               {healthScore === "green" ? "Healthy" : healthScore === "yellow" ? "Watch" : "At Risk"}
             </span>
-            <InfoTip text="Auto-computed from meeting recency, overdue items, and project health. Updates daily. Click 'Override' to pin it manually if Pip has it wrong." />
+            <InfoTip text="Auto-computed from meeting recency, overdue items, and project health. Updates daily. Click the health pill at the top of the account to pin it manually if Pip has it wrong." />
           </div>
           {healthHistory.length >= 2 && (
             <div style={{ marginTop: 10 }}>

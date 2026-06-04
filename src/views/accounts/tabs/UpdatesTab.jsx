@@ -64,8 +64,9 @@ function TypePill({ type }) {
   );
 }
 
-export function UpdatesTab({ account, updates, orgMembers, addUpdate, deleteUpdate }) {
+export function UpdatesTab({ account, updates, orgMembers, addUpdate, updateUpdate, deleteUpdate }) {
   var [showModal, setShowModal]               = useState(false);
+  var [editingUpdate, setEditingUpdate]       = useState(null);
   var [confirmDeleteId, setConfirmDeleteId]   = useState(null);
 
   var groups = groupByMonth(updates || []);
@@ -162,6 +163,14 @@ export function UpdatesTab({ account, updates, orgMembers, addUpdate, deleteUpda
                     </div>
 
                     <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
+                      {!confirmDel && updateUpdate && (
+                        <SecBtn
+                          onClick={function () { setEditingUpdate(u); }}
+                          style={{ fontSize: 10, padding: "4px 10px" }}
+                        >
+                          Edit
+                        </SecBtn>
+                      )}
                       {!confirmDel && deleteUpdate && (
                         <DangerBtn
                           onClick={function () { setConfirmDeleteId(u.id); }}
@@ -206,6 +215,20 @@ export function UpdatesTab({ account, updates, orgMembers, addUpdate, deleteUpda
             });
           }}
           onClose={function () { setShowModal(false); }}
+        />
+      )}
+
+      {editingUpdate && (
+        <AddUpdateModal
+          orgMembers={orgMembers}
+          existing={editingUpdate}
+          onSave={function (data) {
+            return updateUpdate(editingUpdate.id, data).then(function (u) {
+              showToast("Update saved");
+              return u;
+            });
+          }}
+          onClose={function () { setEditingUpdate(null); }}
         />
       )}
     </div>
