@@ -158,9 +158,25 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
   var { tasks: flatTasks, refetch: refetchTasks } = useTasks(userId);
   function handleToggleDone(task) {
     var newDone = !task.done;
-    updateTask(userId, task.id, { done: newDone, status: newDone ? "complete" : "open" })
+    // status must satisfy the folio_tasks check constraint
+    // (planned|in_progress|blocked|complete) — "open" would violate it and
+    // silently fail the un-complete.
+    updateTask(userId, task.id, { done: newDone, status: newDone ? "complete" : "planned" })
       .then(function () { refetchTasks(); })
       .catch(function () {});
+    // Dual-store bridge: if this task mirrors a project stage, keep the stage's
+    // completed_at in sync so the board/progress bar reflects the same state.
+    if (task.project_id && typeof task.parent_step_index === "number") {
+      var proj = (projects || []).find(function (p) { return p.id === task.project_id; });
+      if (proj && Array.isArray(proj.stages) && proj.stages[task.parent_step_index]) {
+        var nextStages = proj.stages.map(function (s, i) {
+          return i === task.parent_step_index
+            ? Object.assign({}, s, { completed_at: newDone ? new Date().toISOString() : null })
+            : s;
+        });
+        updateProject(proj.id, { stages: nextStages }).catch(function () {});
+      }
+    }
   }
   // Phase 6 — V2 brain correction log for task edits that go through Gauge.
   var { logCorrection } = usePipCorrections(userId, null);

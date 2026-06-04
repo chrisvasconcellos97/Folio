@@ -123,7 +123,10 @@ export function LeaderProjectsView({ projects, accounts, members, userEmail, onO
       list = list.filter(function (p) {
         if (p.status !== "in_progress") return false;
         var last = lastStepCompletedAt(p.stages);
-        var ref  = last || p.updated_at || p.created_at;
+        // Fall back to work-age (start_date/created_at), NOT updated_at — a
+        // notes autosave bumps updated_at and would reset the stuck clock,
+        // masking genuinely stalled projects.
+        var ref  = last || p.start_date || p.created_at;
         var d    = daysSince(ref);
         return d !== null && d > 7;
       });
@@ -145,8 +148,8 @@ export function LeaderProjectsView({ projects, accounts, members, userEmail, onO
         return pa - pb;
       }
       if (sort === "stuck") {
-        var la = daysSince(lastStepCompletedAt(a.stages) || a.updated_at);
-        var lb = daysSince(lastStepCompletedAt(b.stages) || b.updated_at);
+        var la = daysSince(lastStepCompletedAt(a.stages) || a.start_date || a.created_at);
+        var lb = daysSince(lastStepCompletedAt(b.stages) || b.start_date || b.created_at);
         return (lb || 0) - (la || 0);
       }
       return 0;
@@ -267,7 +270,7 @@ export function LeaderProjectsView({ projects, accounts, members, userEmail, onO
           var statusStyle = C["status" + statusKey] || C.statusPlanned;
           var leftEdge    = PRIORITY_COLORS[p.priority];
           var lastDone    = lastStepCompletedAt(p.stages);
-          var sinceMove   = daysSince(lastDone || p.updated_at);
+          var sinceMove   = daysSince(lastDone || p.start_date || p.created_at);
           var isStuck     = p.status === "in_progress" && sinceMove !== null && sinceMove > 7;
           var isOpen      = !!expanded[p.id];
 

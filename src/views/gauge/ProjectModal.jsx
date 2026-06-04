@@ -186,7 +186,7 @@ export function ProjectModal({
     if (accountIds.length === 0) { setContacts([]); return; }
     supabase
       .from("folio_contacts")
-      .select("id, name, account_id")
+      .select("id, name, email, account_id")
       .in("account_id", accountIds)
       .then(function (result) {
         if (!result.error) setContacts(result.data || []);
@@ -889,8 +889,11 @@ export function ProjectModal({
                           )}
                           {contacts.length > 0 && (
                             <optgroup label="Account Contacts">
+                              {/* Prefer the contact's email so the value stays
+                                  an email (queue/Mine filters are email-keyed);
+                                  fall back to the name only when no email. */}
                               {contacts.map(function (c) {
-                                return <option key={c.id} value={c.name}>{c.name}</option>;
+                                return <option key={c.id} value={c.email || c.name}>{c.name}</option>;
                               })}
                             </optgroup>
                           )}

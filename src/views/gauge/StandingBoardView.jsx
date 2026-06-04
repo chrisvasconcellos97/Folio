@@ -36,11 +36,16 @@ export function StandingBoardView({ project, accounts, members, contacts, aliase
   var columns = project.task_status_columns || ["intake", "in_progress", "done"];
   var tasks   = project.stages || [];
 
+  var lastCol = columns[columns.length - 1];
+
   function bucketize() {
     var buckets = {};
     columns.forEach(function (c) { buckets[c] = []; });
     tasks.forEach(function (t, idx) {
-      var col = t.task_status || columns[0];
+      // A completed task lands in the terminal ("done") column regardless of
+      // its task_status, so marking complete actually moves the card instead of
+      // leaving it dimmed in its original lane.
+      var col = t.completed_at ? lastCol : (t.task_status || columns[0]);
       if (!buckets[col]) buckets[col] = [];
       buckets[col].push({ task: t, idx: idx });
     });

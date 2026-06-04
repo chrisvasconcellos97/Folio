@@ -158,7 +158,9 @@ export function ProjectStageEditor({ project, onUpdate, accounts, members, conta
     var patch = suggestion.type === "account"
       ? { account_id: suggestion.account.id }
       : { assignee_email: suggestion.contact.email || suggestion.contact.name || "" };
-    var next = (project.stages || []).map(function (s, i) { return i === idx ? Object.assign({}, s, patch) : s; });
+    // Read from the optimistic `stages` (localStages ?? project.stages), not
+    // project.stages directly, or unsaved stage edits get discarded.
+    var next = (stages || []).map(function (s, i) { return i === idx ? Object.assign({}, s, patch) : s; });
     setLocalStages(next); // optimistic — detail panel sees it immediately
     commitStages(next);
   }
