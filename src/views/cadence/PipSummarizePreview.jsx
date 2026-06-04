@@ -1,9 +1,32 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Modal } from "../../components/Modal";
 import { C } from "../../lib/colors";
 import { PipMark } from "../../components/PipMark";
 import { showToast } from "../../components/Toast";
 import { InfoTip } from "../../components/InfoTip";
+import { useEntityDetection } from "../../hooks/useEntityDetection";
+import { EntitySuggestionChip } from "../../components/EntitySuggestionChip";
+
+// Recognizes a person named in a plan row's title and offers to drop them
+// into the Assignee or Recipient field — the post-meeting equivalent of the
+// old in-meeting chip, surfaced here where tasks are actually chosen.
+function PlanPeopleChip({ title, contacts, onAssignee, onRecipient }) {
+  var suggestion = useEntityDetection(title || "", contacts || [], [], []);
+  var [dismissed, setDismissed] = useState(false);
+  var key = suggestion && suggestion.contact ? (suggestion.contact.id || suggestion.contact.name) : null;
+  useEffect(function () { setDismissed(false); }, [key]);
+  if (!suggestion || suggestion.type === "account" || dismissed) return null;
+  var c = suggestion.contact;
+  var val = c.email || c.name || "";
+  return (
+    <EntitySuggestionChip
+      suggestion={suggestion}
+      onAcceptAssignee={function () { onAssignee(val); setDismissed(true); }}
+      onAcceptRecipient={function () { onRecipient(val); setDismissed(true); }}
+      onDismiss={function () { setDismissed(true); }}
+    />
+  );
+}
 
 var INTER = "'Inter', system-ui, sans-serif";
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
@@ -148,7 +171,7 @@ function RowCheckbox({ checked, onChange, lowConfidence, ariaLabel }) {
   );
 }
 
-function AssigneeSelect({ value, memberOptions, contactOptions, onChange }) {
+function AssigneeSelect({ value, memberOptions, contactOptions, onChange, noneLabel }) {
   return (
     <select
       value={value || ""}
@@ -160,7 +183,7 @@ function AssigneeSelect({ value, memberOptions, contactOptions, onChange }) {
         maxWidth: 180,
       }}
     >
-      <option value="">— Unassigned —</option>
+      <option value="">{noneLabel || "— Unassigned —"}</option>
       {memberOptions && memberOptions.length > 0 && (
         <optgroup label="Team">
           {memberOptions.map(function (o) {
@@ -555,6 +578,7 @@ export function PipSummarizePreview({
       return {
         checked: r.confidence !== "low",
         assignee: r.suggested_assignee || null,
+        recipient: r.suggested_recipient || null,
         suggestedAssignee: r.suggested_assignee || null,
         due_date: hasDueEdit(r.kind) ? (r.due_date || null) : null,
         title: t,
@@ -599,7 +623,7 @@ export function PipSummarizePreview({
       ? crypto.randomUUID()
       : ("u-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8));
     setUserRows(function (prev) {
-      return prev.concat([{ id: rid, title: "", assignee: null, due_date: null, targetAccountId: null }]);
+      return prev.concat([{ id: rid, title: "", assignee: null, recipient: null, due_date: null, targetAccountId: null }]);
     });
   }
   function patchUserRow(rid, fields) {
@@ -694,6 +718,7 @@ export function PipSummarizePreview({
       merged.source_excerpt_edited = typedExcerpt || null;
       if (row.kind === "new_item" || row.kind === "new_task") {
         merged.target_account_id = state[idx].targetAccountId || null;
+        merged.recipient = state[idx].recipient || null;
         merged.is_commitment = state[idx].isCommitment || false;
         if (state[idx].gaugeProjectId) merged.gaugeProjectId = state[idx].gaugeProjectId;
       }
@@ -755,6 +780,7 @@ export function PipSummarizePreview({
         text:               typedTitle,
         due_date:           ur.due_date || null,
         assignee:           ur.assignee || null,
+        recipient:          ur.recipient || null,
         suggestedAssignee:  null,
         target_account_id:  urTargetAccountId,
         confidence:         "high",  // user wrote it themselves
@@ -1020,6 +1046,14 @@ export function PipSummarizePreview({
               )}
             </div>
           )}
+          {(row.kind === "new_item" || row.kind === "new_task") && (
+            <PlanPeopleChip
+              title={s.title || ""}
+              contacts={accountContacts}
+              onAssignee={function (v) { patch(idx, { assignee: v }); }}
+              onRecipient={function (v) { patch(idx, { recipient: v }); }}
+            />
+          )}
           {(hasAssignee(row.kind) || hasDueEdit(row.kind)) && row.kind !== "skip" && (
             <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
               {hasAssignee(row.kind) && (
@@ -1032,6 +1066,20 @@ export function PipSummarizePreview({
                     memberOptions={memberOptions}
                     contactOptions={contactOptions}
                     onChange={function (v) { patch(idx, { assignee: v }); }}
+                  />
+                </div>
+              )}
+              {hasAssignee(row.kind) && (
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: 10, color: C.textMuted, fontFamily: MONO, textTransform: "uppercase", letterSpacing: "0.07em" }}>
+                    Recipient
+                  </span>
+                  <AssigneeSelect
+                    value={s.recipient}
+                    memberOptions={memberOptions}
+                    contactOptions={contactOptions}
+                    onChange={function (v) { patch(idx, { recipient: v }); }}
+                    noneLabel="— No recipient —"
                   />
                 </div>
               )}
@@ -1130,6 +1178,12 @@ export function PipSummarizePreview({
               />
             </div>
           )}
+          <PlanPeopleChip
+            title={ur.title || ""}
+            contacts={accountContacts}
+            onAssignee={function (v) { patchUserRow(ur.id, { assignee: v }); }}
+            onRecipient={function (v) { patchUserRow(ur.id, { recipient: v }); }}
+          />
           <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{ fontSize: 10, color: C.textMuted, fontFamily: MONO, textTransform: "uppercase", letterSpacing: "0.07em" }}>
@@ -1140,6 +1194,18 @@ export function PipSummarizePreview({
                 memberOptions={memberOptions}
                 contactOptions={contactOptions}
                 onChange={function (v) { patchUserRow(ur.id, { assignee: v }); }}
+              />
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 10, color: C.textMuted, fontFamily: MONO, textTransform: "uppercase", letterSpacing: "0.07em" }}>
+                Recipient
+              </span>
+              <AssigneeSelect
+                value={ur.recipient}
+                memberOptions={memberOptions}
+                contactOptions={contactOptions}
+                onChange={function (v) { patchUserRow(ur.id, { recipient: v }); }}
+                noneLabel="— No recipient —"
               />
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>

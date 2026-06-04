@@ -249,6 +249,9 @@ export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAd
                     {item.owner && (
                       <div style={{ fontFamily: IT_MONO, fontSize: 10, color: C.textMuted, letterSpacing: "0.04em" }}>{"Owner: " + item.owner}</div>
                     )}
+                    {item.recipient && (
+                      <div style={{ fontFamily: IT_MONO, fontSize: 10, color: C.textMuted, letterSpacing: "0.04em" }}>{"For: " + (item.recipient.includes("@") ? item.recipient.split("@")[0] : item.recipient)}</div>
+                    )}
                   </div>
                 </div>
                 {onUpdate && (

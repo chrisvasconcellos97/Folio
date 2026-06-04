@@ -232,6 +232,7 @@ create table if not exists folio_tasks (
                       check (status in ('planned','in_progress','blocked','complete')),
   task_status         text,
   assignee_email      text,
+  recipient           text,        -- who the task is for / who you'll send to
   due_date            date,
   done                boolean not null default false,
   closed_at           timestamptz,
