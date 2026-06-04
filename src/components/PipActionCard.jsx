@@ -85,7 +85,7 @@ function HealthChips({ value, onChange }) {
             type="button"
             onClick={function () { onChange(opt.value); }}
             style={{
-              background: selected ? "rgba(77,184,150,0.15)" : "transparent",
+              background: selected ? C.accentFaint : "transparent",
               border: "1px solid " + (selected ? opt.color : C.rule),
               borderRadius: 999,
               padding: "5px 12px",
@@ -301,7 +301,7 @@ export function PipActionCard(props) {
 
   var outerStyle = compact
     ? {
-        background: skipped ? "transparent" : "rgba(255,255,255,0.015)",
+        background: skipped ? "transparent" : "var(--c-input-fill)",
         border: "1px solid " + (skipped ? C.ruleSoft : C.rule),
         borderRadius: 8,
         padding: "10px 12px",

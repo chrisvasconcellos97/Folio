@@ -53,9 +53,11 @@ export function Toast() {
         pointerEvents: "none",
       }}>
       {toasts.map(function(t) {
-        var borderColor = t.type === "error" ? "rgba(224,92,92,0.5)" : t.type === "warning" ? "rgba(232,168,56,0.5)" : "rgba(74,155,130,0.5)";
-        var textColor   = t.type === "error" ? "#e05c5c" : t.type === "warning" ? "#e8a838" : C.accent;
-        var bg          = t.type === "error" ? "rgba(30,10,10,0.95)" : t.type === "warning" ? "rgba(30,25,10,0.95)" : "rgba(10,30,25,0.95)";
+        // Theme-aware: solid card background + colored border/text per type, so
+        // toasts render correctly in light mode (was theme-blind dark rgba).
+        var borderColor = t.type === "error" ? C.redLine : t.type === "warning" ? C.yellow : C.accentLine;
+        var textColor   = t.type === "error" ? C.red : t.type === "warning" ? C.yellow : C.accent;
+        var bg          = C.bgCard;
         return (
           <div key={t.id} className="fade-in" style={{
             background: bg,
@@ -81,9 +83,9 @@ export function Toast() {
                   setToasts(function(prev) { return prev.filter(function(x) { return x.id !== t.id; }); });
                 }}
                 style={{
-                  background: "rgba(255,255,255,0.12)",
-                  border: "1px solid rgba(255,255,255,0.22)",
-                  color: "#fff",
+                  background: C.surface,
+                  border: "1px solid " + C.border,
+                  color: C.text,
                   borderRadius: 6,
                   padding: "3px 10px",
                   fontSize: 12,
@@ -103,9 +105,9 @@ export function Toast() {
                   setToasts(function(prev) { return prev.filter(function(x) { return x.id !== t.id; }); });
                 }}
                 style={{
-                  background: "rgba(255,255,255,0.12)",
-                  border: "1px solid rgba(255,255,255,0.22)",
-                  color: "#fff",
+                  background: C.surface,
+                  border: "1px solid " + C.border,
+                  color: C.text,
                   borderRadius: 6,
                   padding: "3px 10px",
                   fontSize: 12,

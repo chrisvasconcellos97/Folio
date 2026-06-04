@@ -1077,7 +1077,7 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
             </button>
             <button
               type="button"
-              onClick={function () { if (onSkipDrip) onSkipDrip(dripQuestion.id); }}
+              onClick={function () { setDripAnswer(""); setDripSaving(false); if (onSkipDrip) onSkipDrip(dripQuestion.id); }}
               style={{
                 background: "none", border: "none",
                 color: C.textMuted, fontSize: 12,
@@ -1088,7 +1088,7 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
             </button>
             <button
               type="button"
-              onClick={function () { if (onDismissDrip) onDismissDrip(dripQuestion.id); }}
+              onClick={function () { setDripAnswer(""); setDripSaving(false); if (onDismissDrip) onDismissDrip(dripQuestion.id); }}
               style={{
                 background: "none", border: "none",
                 color: C.textMuted, fontSize: 12,

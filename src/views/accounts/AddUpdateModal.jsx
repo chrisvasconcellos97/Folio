@@ -26,8 +26,10 @@ function OwnerInput({ value, onChange, members }) {
 
   var memberOptions = (members || [])
     .map(function (m) {
-      var name  = m.display_name || m.full_name || m.name || m.email || "";
-      var email = m.email || "";
+      // Org members carry invited_email, not email — include it or the
+      // typeahead shows blank/filtered-out members.
+      var email = m.email || m.invited_email || "";
+      var name  = m.display_name || m.full_name || m.name || (email ? email.split("@")[0] : "");
       return { name: name, email: email };
     })
     .filter(function (m) { return m.name; });
