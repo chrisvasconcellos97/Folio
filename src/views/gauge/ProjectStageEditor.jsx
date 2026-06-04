@@ -75,7 +75,14 @@ export function ProjectStageEditor({ project, onUpdate, accounts, members, conta
   var stages = localStages !== null ? localStages : (project.stages || []);
   var hasSchema = (project.custom_field_schema || []).length > 0;
 
-  function commitStages(next) { return onUpdate(project.id, { stages: next }); }
+  function commitStages(next) {
+    // Auto-flip project status when all stages are complete / any stage is unchecked.
+    var allDone = next.length > 0 && next.every(function (s) { return !!s.completed_at; });
+    var payload = { stages: next };
+    if (allDone && project.status !== "complete") payload.status = "complete";
+    if (!allDone && project.status === "complete") payload.status = "in_progress";
+    return onUpdate(project.id, payload);
+  }
 
   function toggleStageComplete(idx) {
     var next = stages.map(function (s, i) {
