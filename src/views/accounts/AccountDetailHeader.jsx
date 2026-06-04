@@ -331,13 +331,10 @@ export function AccountDetailHeader({
           <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 12 }}>
           <button
             onClick={onBriefMe}
+            className="cta-secondary"
             style={{
-              background: "oklch(0.32 0.05 178 / 0.5)",
-              border: "1px solid " + C.accentBorder,
-              borderRadius: 6, padding: "6px 14px",
-              fontFamily: "'Inter', system-ui, sans-serif",
+              padding: "6px 14px",
               fontSize: 12, fontWeight: 500,
-              color: C.accent, cursor: "pointer",
               display: "flex", alignItems: "center", gap: 5,
             }}
           >
@@ -348,13 +345,10 @@ export function AccountDetailHeader({
           <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 6 }}>
           <button
             onClick={onBusinessReview}
+            className="cta-secondary"
             style={{
-              background: "transparent",
-              border: "1px solid " + C.accentLine,
-              borderRadius: 6, padding: "6px 14px",
-              fontFamily: "'Inter', system-ui, sans-serif",
+              padding: "6px 14px",
               fontSize: 12, fontWeight: 500,
-              color: C.accent, cursor: "pointer",
               display: "flex", alignItems: "center", gap: 5,
             }}
           >
@@ -382,13 +376,10 @@ export function AccountDetailHeader({
           <button
             onClick={onPipMemory}
             title="See everything Pip has learned about this account — lessons, corrections, and tone history."
+            className="cta-secondary"
             style={{
-              background: "transparent",
-              border: "1px solid " + C.accentLine,
-              borderRadius: 6, padding: "6px 12px",
-              fontFamily: "'Inter', system-ui, sans-serif",
+              padding: "6px 12px",
               fontSize: 11, fontWeight: 500,
-              color: C.accent, cursor: "pointer",
               marginTop: 8, marginLeft: 6, display: "inline-flex", alignItems: "center", gap: 5,
             }}
           >

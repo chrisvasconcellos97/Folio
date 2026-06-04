@@ -1,4 +1,5 @@
 import { C } from "../lib/colors";
+import { LitPill } from "./LitPill";
 
 var btnBase = {
   cursor: "pointer",
@@ -11,11 +12,19 @@ var btnBase = {
   transition: "opacity 0.15s",
 };
 
-export function AmberBtn({ onClick, children, style, disabled }) {
+// Primary CTA — solid teal fill + teal glow (.cta-glow). THE main action on
+// a screen / the confirm action in a modal. The glow ties it into the same
+// family as the secondary CTA and the rail's lit-pill so users learn
+// "teal glow = action" everywhere.
+export function AmberBtn({ onClick, children, style, disabled, type, title, ariaLabel }) {
   return (
     <button
+      type={type || "button"}
       onClick={onClick}
       disabled={disabled}
+      title={title}
+      aria-label={ariaLabel}
+      className="cta-glow"
       style={Object.assign({}, btnBase, {
         background: disabled ? C.accentDim : C.accent,
         color: "#fff",
@@ -24,6 +33,27 @@ export function AmberBtn({ onClick, children, style, disabled }) {
     >
       {children}
     </button>
+  );
+}
+
+// Secondary CTA — mist fill + teal border + soft glow, no pulse dot. For
+// supporting positive actions (Brief Me, Edit, + Add). One notch below the
+// primary: framed, not filled. (The rail's "+ Account" keeps its pulsing
+// dot via LitPill directly — the dot signals a standing invitation, which
+// is not what a normal secondary button means.)
+export function SecondaryCTA({ onClick, children, style, disabled, type, title, ariaLabel }) {
+  return (
+    <LitPill
+      onClick={onClick}
+      disabled={disabled}
+      showDot={false}
+      type={type}
+      title={title}
+      ariaLabel={ariaLabel}
+      style={style}
+    >
+      {children}
+    </LitPill>
   );
 }
 

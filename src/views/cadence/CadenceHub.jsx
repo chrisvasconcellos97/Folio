@@ -1564,6 +1564,7 @@ export function CadenceHub({
     <button
       onClick={handleStartMeeting}
       disabled={startingMeeting}
+      className="cta-glow"
       style={{
         width: "100%",
         background: C.accentDeep,

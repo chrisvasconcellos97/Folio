@@ -648,6 +648,39 @@
         50%      { box-shadow: 0 0 12px var(--c-folio-shadow), 0 0 3px var(--c-folio); }
       }
 
+      /* ── Unified CTA system ────────────────────────────────────────────
+         One visual language for actions so users always know where to look:
+           • Primary   = solid teal fill + glow  (.cta-glow on a filled teal
+                         button — the single main action per screen)
+           • Secondary = mist fill + teal border + soft glow, no pulse dot
+                         (.cta-secondary — supporting positive actions)
+         Both share the --c-folio-shadow teal glow so they read as one
+         family; fill-vs-frame sets the hierarchy. The glow is a static
+         box-shadow (no keyframe) so it's inherently reduced-motion-safe;
+         only hover/active add motion, which the reduce block neutralizes. */
+      .cta-glow {
+        box-shadow: 0 0 16px var(--c-folio-shadow);
+        transition: box-shadow 0.18s ease, transform 0.12s ease, filter 0.15s ease;
+      }
+      .cta-glow:hover:not([disabled]) { box-shadow: 0 0 26px var(--c-folio-shadow); filter: brightness(1.04); }
+      .cta-glow:active:not([disabled]) { transform: scale(0.98); }
+      .cta-glow[disabled] { box-shadow: none; }
+
+      .cta-secondary {
+        background: var(--c-rail);
+        color: var(--c-accent);
+        border: 1px solid var(--c-folio-border);
+        border-radius: 999px;
+        box-shadow: 0 0 11px var(--c-folio-shadow);
+        cursor: pointer;
+        font-family: 'Inter', system-ui, sans-serif;
+        font-weight: 500;
+        transition: box-shadow 0.18s ease, transform 0.12s ease;
+      }
+      .cta-secondary:hover:not([disabled]) { box-shadow: 0 0 18px var(--c-folio-shadow); }
+      .cta-secondary:active:not([disabled]) { transform: scale(0.98); }
+      .cta-secondary[disabled] { opacity: 0.6; cursor: not-allowed; }
+
       /* ── L-connector for nested child accounts (light + dark) ──────────
          Replaces the old faded `↳` arrow. The child card is the sibling
          element; the L is drawn by this pseudo-element off the child's
