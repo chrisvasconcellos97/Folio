@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { C } from "../lib/colors";
 import { PipOrb } from "./PipMark";
 import { Glow } from "./Glow";
@@ -43,11 +43,14 @@ export function computeBannerStats(accounts, items, meetings, nowMs) {
 
 export function StatusBanner({ accounts, items, meetings, onColdClick, onOverdueClick, onFollowUpClick }) {
   // One-time purge of leftover per-day dismiss flags from the prior behavior.
-  try {
-    Object.keys(localStorage).forEach(function (k) {
-      if (k.indexOf("folio_banner_dismissed_") === 0) localStorage.removeItem(k);
-    });
-  } catch (e) {}
+  // Runs once on mount — was previously in the render body, firing every render.
+  useEffect(function () {
+    try {
+      Object.keys(localStorage).forEach(function (k) {
+        if (k.indexOf("folio_banner_dismissed_") === 0) localStorage.removeItem(k);
+      });
+    } catch (e) { /* ignore */ }
+  }, []);
 
   var stats = useMemo(function () {
     return computeBannerStats(accounts, items, meetings);

@@ -60,6 +60,16 @@ export class ErrorBoundary extends React.Component {
     };
   }
 
+  componentDidUpdate(prevProps) {
+    // If a resetKey prop changes while we're showing the fallback, clear the
+    // error so the boundary can recover without a full reload (the per-view
+    // boundaries also reset via their `key`, but this covers in-place changes).
+    if (this.state.hasError && this.props.resetKey !== undefined &&
+        prevProps.resetKey !== this.props.resetKey) {
+      this.setState({ hasError: false, message: "", errorId: null, noteOpen: false, noteText: "", noteSent: false });
+    }
+  }
+
   componentDidCatch(error, info) {
     var stack = (error && error.stack) || (info && info.componentStack) || null;
     var msg = error && error.message ? error.message : "react render error";

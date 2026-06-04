@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { C } from "../../lib/colors";
 import { PipOrb } from "../../components/PipMark";
 import { LitPill } from "../../components/LitPill";
@@ -137,6 +137,7 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
   var [captureMenuOpen, setCaptureMenuOpen] = useState(false);
   var [briefCallouts, setBriefCallouts] = useState([]);
   var [briefLoading, setBriefLoading] = useState(false);
+  var briefFiredRef = useRef(false);
   var [dripAnswer, setDripAnswer]     = useState("");
   var [dripSaving, setDripSaving]     = useState(false);
 
@@ -170,10 +171,14 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
       }
     } catch (_) { /* ignore localStorage parse errors */ }
 
-    // Not cached — generate via Pip API. Guard against double-fire.
-    setBriefLoading(function (already) {
-      if (already) return already;
-
+    // Not cached — generate via Pip API. Guard against double-fire with a ref
+    // (was a side-effect inside a setState updater, which StrictMode double-
+    // invokes). Wait for snapshots so the brief isn't built from empty data.
+    if (briefFiredRef.current) return;
+    if (!snapshots || snapshots.length === 0) return;
+    briefFiredRef.current = true;
+    setBriefLoading(true);
+    (function () {
       var sevenDaysOut = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
 
       // Build overdue item text per account so Pip can name them specifically
@@ -376,9 +381,7 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
         setBriefLoading(false);
         console.warn("[HomeView] daily brief failed:", err && err.message);
       });
-
-      return true; // mark loading
-    });
+    })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshots.length, (items || []).length]);
 

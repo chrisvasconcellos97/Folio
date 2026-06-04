@@ -23,9 +23,15 @@ export function PipOrb({ size = "lg", sonar = false, isStatic = false, state, cl
   );
 }
 
-// PipMark kept as backward-compat alias so existing imports don't break
+// PipMark kept as backward-compat alias so existing imports don't break.
+// Forwards color/pulse/glow/opacity to PipOrb so callers like
+// MeetingReminderBanner (urgency-tinted, pulsing orb) actually render that
+// state instead of a default idle orb.
 export function PipMark({ size = 12, color, pulse = false, glow = false, opacity = 1 }) {
   // Map old numeric size to new CSS size classes
   var sizeClass = size <= 8 ? "xs" : size <= 16 ? "sm" : size <= 24 ? "md" : "lg";
-  return <PipOrb size={sizeClass} sonar={false} />;
+  var style = { opacity: opacity };
+  if (color) style.color = color; // orb circles inherit currentColor
+  if (glow)  style.filter = "drop-shadow(0 0 4px " + (color || "var(--c-accent)") + ")";
+  return <PipOrb size={sizeClass} sonar={false} state={pulse ? "alert" : undefined} style={style} />;
 }

@@ -11,7 +11,9 @@ var baseStyle = {
   fontFamily: "'Inter', system-ui, sans-serif",
   outline: "none",
   boxSizing: "border-box",
-  colorScheme: "dark",
+  // "light dark" so native date/time pickers follow the app theme instead of
+  // always rendering dark chrome on a light page.
+  colorScheme: "light dark",
 };
 
 export function InputField({ id, value, onChange, placeholder, type, style, onKeyDown, autoFocus, onFocus, onBlur, ariaLabel }) {
