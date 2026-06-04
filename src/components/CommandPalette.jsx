@@ -23,7 +23,7 @@ export function CommandPalette({ accounts, contacts, userId, onSelectAccount, on
   var q = query.trim().toLowerCase();
   var accountResults = q
     ? (accounts || []).filter(function(a) {
-        return a.name.toLowerCase().includes(q)
+        return (a.name || "").toLowerCase().includes(q)
           || (a.tags && a.tags.some(function(t) { return t.toLowerCase().includes(q); }))
           || (a.region && a.region.toLowerCase().includes(q));
       }).slice(0, 6).map(function(a) {

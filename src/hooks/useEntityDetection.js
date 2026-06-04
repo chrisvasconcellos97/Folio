@@ -30,6 +30,7 @@ export function useEntityDetection(text, contacts, aliases, accounts) {
         if (aliases) {
           for (var i = 0; i < aliases.length; i++) {
             var a = aliases[i];
+            if (!a || !a.alias) continue;
             var idx = lower.indexOf(a.alias.toLowerCase());
             if (idx !== -1) {
               var contact = contacts.find(function (c) { return c.id === a.contact_id; });

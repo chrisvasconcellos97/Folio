@@ -265,7 +265,10 @@ export function AccountDetailHeader({
               return (
                 <select
                   value={account.owner_user_id || userId}
-                  onChange={function (e) { onUpdate && onUpdate({ owner_user_id: e.target.value }); }}
+                  // Coerce "" → null so a pending-invite member (no user_id)
+                  // never writes an empty string into the owner_user_id UUID
+                  // column (which Postgres rejects, silently failing the update).
+                  onChange={function (e) { onUpdate && onUpdate({ owner_user_id: e.target.value || null }); }}
                   title="Account owner"
                   style={{
                     background: C.surface, border: "1px solid " + C.rule,
@@ -274,8 +277,9 @@ export function AccountDetailHeader({
                     cursor: "pointer", appearance: "none",
                   }}
                 >
-                  {members.map(function (m) {
-                    return <option key={m.user_id || m.id} value={m.user_id || ""}>Owner: {ownerInitials(m)}</option>;
+                  {/* Only members with a real user_id can own an account. */}
+                  {members.filter(function (m) { return m.user_id; }).map(function (m) {
+                    return <option key={m.user_id} value={m.user_id}>Owner: {ownerInitials(m)}</option>;
                   })}
                 </select>
               );

@@ -249,9 +249,34 @@ export function PipView(props) {
           portfolioThemes: recentThemes,
         };
       }),
+      // Flat item arrays so the deterministic intent classifier (which reads
+      // context.openItems / context.items) can answer "how many overdue/open
+      // items" without an API call. Without these it always returned 0.
+      items: allItems.map(function (i) {
+        var acct = i.account_id ? accounts.find(function (a) { return a.id === i.account_id; }) : null;
+        return { text: i.text, account_id: i.account_id, account: acct ? acct.name : null, due_date: i.due_date, done: !!i.done, is_commitment: !!i.is_commitment };
+      }),
+      openItems: allItems.filter(function (i) { return !i.done; }).map(function (i) {
+        var acct = i.account_id ? accounts.find(function (a) { return a.id === i.account_id; }) : null;
+        return { text: i.text, account_id: i.account_id, account: acct ? acct.name : null, due_date: i.due_date, done: false, is_commitment: !!i.is_commitment };
+      }),
+      // Flat commitment ledger (overdue-flagged) so "what did I promise?" is
+      // reliable instead of relying on Pip spotting is_commitment flags nested
+      // per account.
+      commitments: (function () {
+        var todayStr = new Date().toISOString().slice(0, 10);
+        return allItems
+          .filter(function (i) { return i.is_commitment && !i.done; })
+          .map(function (i) {
+            var acct = i.account_id ? accounts.find(function (a) { return a.id === i.account_id; }) : null;
+            return { text: i.text, account: acct ? acct.name : null, due: i.due_date || null, overdue: !!(i.due_date && i.due_date < todayStr) };
+          });
+      })(),
       recentMeetings: meetings.slice(0, 10).map(function (m) {
+        var acct = accounts.find(function (a) { return a.id === m.account_id; });
         return {
-          account:      m.folio_accounts ? m.folio_accounts.name : "Unknown",
+          account_id:   m.account_id,
+          account:      (m.folio_accounts && m.folio_accounts.name) || (acct && acct.name) || "Unknown",
           title:        m.title,
           date:         m.meeting_date,
           action_items: m.action_items,

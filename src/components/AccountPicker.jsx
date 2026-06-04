@@ -21,8 +21,10 @@ export function AccountPicker({ accounts, value, onChange, placeholder, allowNon
 
   var activeAccounts = (accounts || []).filter(function (a) { return !a.is_inactive; });
 
-  // Find the selected account name for display
-  var selectedAccount = value ? activeAccounts.find(function (a) { return a.id === value; }) : null;
+  // Resolve the selected account for display against the FULL list (not just
+  // active) so a task/cadence tied to a since-archived account still shows its
+  // name instead of falling back to the placeholder.
+  var selectedAccount = value ? (accounts || []).find(function (a) { return a.id === value; }) : null;
 
   var [open, setOpen]         = useState(false);
   var [query, setQuery]       = useState("");
@@ -47,7 +49,7 @@ export function AccountPicker({ accounts, value, onChange, placeholder, allowNon
 
   // Filtered list
   var filtered = query.trim()
-    ? activeAccounts.filter(function (a) { return a.name.toLowerCase().includes(query.toLowerCase()); })
+    ? activeAccounts.filter(function (a) { return (a.name || "").toLowerCase().includes(query.toLowerCase()); })
     : activeAccounts;
 
   function openPicker() {

@@ -67,10 +67,22 @@ function fmtDate(iso) {
   }
 }
 
+// Extract a display string from a correction's JSONB value. The columns store
+// objects ({text:...}, {kind, original, ...}) or occasionally a bare string —
+// reading them directly rendered "[object Object]" or crashed on .length.
+function valueToText(v) {
+  if (v == null) return "";
+  if (typeof v === "string") return v;
+  if (typeof v === "object") {
+    return v.text || v.title || v.corrected || v.original || v.proposed || v.reason || "";
+  }
+  return String(v);
+}
+
 function correctionText(row) {
-  // Show the corrected value when available, fall back to original.
-  var text = row.corrected_value || row.original_value || "";
-  if (!text) return null;
+  // Prefer the corrected value, fall back to the original.
+  var text = valueToText(row.corrected_value) || valueToText(row.original_value);
+  if (!text || typeof text !== "string") return null;
   if (text.length > 120) return text.slice(0, 117) + "…";
   return text;
 }

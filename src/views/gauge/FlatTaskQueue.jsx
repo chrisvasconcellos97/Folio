@@ -111,7 +111,7 @@ export function FlatTaskQueue({ tasks, accounts, projects, members, userEmail, o
       bucket[key].push(t);
     });
     return order.map(function (k) {
-      return { key: k, label: k === "__loose__" ? "No project" : (projectsById[k] ? projectsById[k].name : "Project"), tasks: bucket[k] };
+      return { key: k, label: k === "__loose__" ? "No project" : (projectsById[k] ? (projectsById[k].title || projectsById[k].name) : "Project"), tasks: bucket[k] };
     });
   }, [filtered, groupByProject, projectsById]);
 
@@ -199,7 +199,7 @@ export function FlatTaskQueue({ tasks, accounts, projects, members, userEmail, o
                 textTransform: "uppercase", letterSpacing: "0.06em",
                 fontWeight: 600,
               }}>
-                {proj.name}
+                {proj.title || proj.name}
               </span>
             )}
             {stepBadge && (
