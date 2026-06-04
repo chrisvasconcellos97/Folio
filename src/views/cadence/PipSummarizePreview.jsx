@@ -6,6 +6,7 @@ import { showToast } from "../../components/Toast";
 import { InfoTip } from "../../components/InfoTip";
 import { useEntityDetection } from "../../hooks/useEntityDetection";
 import { EntitySuggestionChip } from "../../components/EntitySuggestionChip";
+import { isDefaultMeetingTitle } from "../../lib/meetingTitle";
 
 // Recognizes a person named in a plan row's title and offers to drop them
 // into the Assignee or Recipient field — the post-meeting equivalent of the
@@ -1236,11 +1237,7 @@ export function PipSummarizePreview({
     );
   }
 
-  var isDefaultTitle = !meetingTitle
-    || /—\s*\w+\s+\d+$/.test(meetingTitle)
-    || /—\s*\d{4}-\d{2}-\d{2}$/.test(meetingTitle)
-    || /^(Email|Phone|In Person|Video|Conversation) — /.test(meetingTitle);
-  var showTitleField = !!(suggestedTitle && isDefaultTitle);
+  var showTitleField = !!(suggestedTitle && isDefaultMeetingTitle(meetingTitle));
 
   var visibleUnknownPeople = (unknownPeople || []).filter(function (p) {
     return dismissedPeople.indexOf(p.name) === -1;

@@ -243,6 +243,11 @@ export function AdHocConversationFlow({
           skippedByPip={!!previewPlan.skippedByPip}
           suggestedTitle={previewPlan.suggestedTitle || null}
           meetingTitle={previewPlan.meetingTitle || null}
+          onTitleSave={function (title) {
+            if (previewPlan && previewPlan.draftId) {
+              updateMeeting(previewPlan.draftId, { title: title }).catch(function () {});
+            }
+          }}
           unknownPeople={previewPlan.unknownPeople || []}
           accountContacts={contacts || []}
         />

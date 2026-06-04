@@ -568,14 +568,17 @@ export function callAskPip(payload) {
     renderGlossaryBlock(glossary) +
     renderAccountObjectiveBlock(accountObjective) +
     "Summarize this meeting, extract action items aggressively, and draft a follow-up email. " +
-    "Return ONLY valid JSON: {\"summary\":\"...\",\"action_items\":[\"...\"],\"email\":\"...\"}.\n\n" +
+    "Return ONLY valid JSON: {\"short_title\":\"...\",\"summary\":\"...\",\"action_items\":[\"...\"],\"email\":\"...\"}.\n\n" +
     "Account: " + (payload.accountName || "—") + "\n" +
     "Meeting: " + (m.title || "Untitled") + " (" + (m.meeting_date || "") + ")\n" +
     (m.notes          ? "Notes: " + m.notes + "\n" : "") +
     (m.talking_points ? "Talking points: " + m.talking_points + "\n" : "") +
     (m.action_items   ? "Existing action items: " + m.action_items + "\n" : "") +
     (m.commitments    ? "Commitments: " + m.commitments + "\n" : "") +
-    "\nSummary: 2-3 sentences capturing what was discussed.\n" +
+    "\nshort_title: a 4-8 word summary of what this meeting was actually about, " +
+    "email-subject style (e.g. 'Invoice feed delay + integration timeline'). No date, " +
+    "no 'Email'/'Call' prefix. This replaces a placeholder title, so make it specific to the content.\n" +
+    "Summary: 2-3 sentences capturing what was discussed.\n" +
     "action_items: Be GENEROUS, not strict. Include ANY of the following you can find or reasonably infer from the notes:\n" +
     "  - tasks Chris committed to (send, follow up, draft, prepare, call, schedule, etc.)\n" +
     "  - commitments the other party made (they will send X, get back on Y)\n" +
@@ -604,6 +607,8 @@ export function callAskPip(payload) {
         summary:      parsed.summary || "",
         email:        parsed.email || "",
         action_items: items,
+        short_title:  (parsed.short_title && typeof parsed.short_title === "string")
+          ? parsed.short_title.trim().slice(0, 80) : null,
       };
     } catch (e) {
       return { summary: text, email: "", action_items: "" };

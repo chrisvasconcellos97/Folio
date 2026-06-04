@@ -11,6 +11,7 @@ import { PipMark } from "../../../components/PipMark";
 import { PipInsightCard } from "../../../components/PipInsightCard";
 import { AddToTasksButton } from "../../../components/AddToTasksButton";
 import { callAskPip } from "../../../lib/pip";
+import { isDefaultMeetingTitle } from "../../../lib/meetingTitle";
 import { pickV } from "../../../lib/metricsUtils";
 import { showToast } from "../../../components/Toast";
 import { EditMeetingModal } from "../EditMeetingModal";
@@ -175,6 +176,12 @@ export function MeetingsTab({ meetings, accountName, accountId, userId, openItem
         var patch = { pip_summary: data.summary, pip_email: data.email || null };
         if (data.action_items && data.action_items.trim()) {
           patch.action_items = data.action_items;
+        }
+        // Rename placeholder titles ("Email — May 29") to Pip's short summary
+        // title so meeting lists read at a glance. Never overwrite a title the
+        // user/Pip already set deliberately.
+        if (data.short_title && isDefaultMeetingTitle(m.title)) {
+          patch.title = data.short_title;
         }
         onUpdateMeeting(m.id, patch)
           .then(function () {
