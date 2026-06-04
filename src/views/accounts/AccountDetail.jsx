@@ -257,6 +257,11 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
   var allActiveProjects = allProjects
     ? (allProjects || []).filter(function (p) { return p.status !== "complete"; })
     : activeProjects;
+  // Meeting-hub sidebar scoping: a customer cadence should show only THIS
+  // account's (and child accounts') projects. Internal-team (department) and
+  // partner meetings are inherently cross-account, so they show the whole
+  // portfolio. (Person 1:1 hubs keep the portfolio-wide view below.)
+  var hubProjects = (isInternalTeam || isPartner) ? allActiveProjects : activeProjects;
   var lastNonDraftMeetingAt = (meetings || [])
     .filter(function (m) { return m.status !== "draft" && m.id !== adHocDraftId; })
     .map(function (m) { return m.meeting_date; })
@@ -395,7 +400,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
         meetings={meetings}
         items={items}
         cadences={cadences}
-        projects={allActiveProjects}
+        projects={hubProjects}
         contacts={contacts}
         addContact={addContact}
         addMeeting={addMeeting}
@@ -788,7 +793,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
           cadenceLabel={null}
           brief={null}
           briefAt={null}
-          projects={allActiveProjects}
+          projects={hubProjects}
           openItems={openItemsList}
           contacts={contacts || []}
           contactAliases={contactAliasesApi.aliases}
