@@ -962,7 +962,11 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
             <div
               key={p.id}
               data-project-id={p.id}
-              className="hover-lift"
+              /* hover-lift only while collapsed. When expanded the card is
+                 tall (holds the inline editor); the :hover translateY(-2px)
+                 shifts the bottom edge under the cursor on mouse-leave →
+                 hover re-fires → lift toggles → visible flicker loop. */
+              className={isOpen ? undefined : "hover-lift"}
               style={{
                 background: C.surface,
                 border: "1px solid " + (p.status === "blocked" ? C.statusBlocked.border : isDraft ? C.statusDraft.border : C.rule),
