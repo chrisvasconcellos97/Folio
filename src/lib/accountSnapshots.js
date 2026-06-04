@@ -105,7 +105,7 @@ export async function computeAndSaveSnapshots(userId) {
         if (p.status !== "in_progress") return false;
         var stages = p.stages || [];
         var hasRecentProgress = stages.some(function (s) {
-          return s.done && s.done_at && s.done_at > sevenDaysAgo;
+          return s.completed_at && s.completed_at > sevenDaysAgo;
         });
         return !hasRecentProgress;
       });

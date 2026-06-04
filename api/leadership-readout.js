@@ -35,9 +35,9 @@ export default async function handler(req, res) {
 
   var portfolioSection = "";
   if (portfolioState && portfolioState.length > 0) {
-    var healthy  = portfolioState.filter(function (s) { return s.health_status === "green"; }).length;
-    var watching = portfolioState.filter(function (s) { return s.health_status === "yellow"; }).length;
-    var atRisk   = portfolioState.filter(function (s) { return s.health_status === "red"; }).length;
+    var healthy  = portfolioState.filter(function (s) { return s.health_status === "healthy" || s.health_status === "green"; }).length;
+    var watching = portfolioState.filter(function (s) { return s.health_status === "watching" || s.health_status === "yellow"; }).length;
+    var atRisk   = portfolioState.filter(function (s) { return s.health_status === "at_risk" || s.health_status === "red"; }).length;
     portfolioSection = "Portfolio: " + portfolioState.length + " accounts — " +
       healthy + " healthy, " + watching + " watching, " + atRisk + " at risk.\n" +
       portfolioState.slice(0, 8).map(function (s) {

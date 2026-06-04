@@ -522,7 +522,7 @@ export function buildPortfolioState(accounts, snapshots, projects) {
   var stuck    = (projects || []).filter(function (p) {
     if (p.status !== "in_progress") return false;
     var stages = p.stages || [];
-    return !stages.some(function (s) { return s.done && s.done_at && s.done_at > sevenDaysAgo; });
+    return !stages.some(function (s) { return s.completed_at && s.completed_at > sevenDaysAgo; });
   });
 
   function sortedAccountNames(snapshotList) {

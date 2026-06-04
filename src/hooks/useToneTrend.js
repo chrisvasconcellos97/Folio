@@ -36,8 +36,11 @@ export function useToneTrend(userId, accountId) {
   return { toneHistory: toneHistory, trend: trend };
 }
 
-var NEGATIVE = ["concerned", "frustrated", "negative", "cold", "at_risk"];
-var POSITIVE  = ["positive", "warm", "excited", "engaged", "enthusiastic"];
+// Match actual pip_tone values stored in folio_account_snapshots.
+// Stored values: "positive" | "neutral" | "mixed" | "negative"
+// "mixed" scores as mild negative so a string of mixed tones shows as cooling.
+var NEGATIVE = ["negative", "mixed"];
+var POSITIVE  = ["positive"];
 
 function score(tone) {
   if (!tone) return 0;

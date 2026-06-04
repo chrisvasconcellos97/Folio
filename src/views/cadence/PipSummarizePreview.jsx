@@ -523,7 +523,9 @@ export function PipSummarizePreview({
 
   var contactOptions = useMemo(function () {
     return (accountContacts || []).map(function (c) {
-      return { label: c.name, value: c.name };
+      // Use email as the value when available so assignee_email holds a real
+      // email address. Fall back to name only when no email exists.
+      return { label: c.name, value: c.email || c.name };
     });
   }, [accountContacts]);
 
