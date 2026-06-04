@@ -21,10 +21,8 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  var { snapshots, projects } = req.body || {};
-  if (!snapshots || snapshots.length === 0) {
-    return res.status(200).json({ brief: "", callouts: [] });
-  }
+  var { snapshots, projects, overdueTasks, commitmentsDue, commitmentsOverdue, todayCadences } = req.body || {};
+  snapshots = snapshots || [];
 
   var atRisk   = snapshots.filter(function (s) { return s.health_status === "at_risk"; });
   var watching = snapshots.filter(function (s) { return s.health_status === "watching"; });
@@ -33,7 +31,7 @@ export default async function handler(req, res) {
   var stuckProjects = (projects || []).filter(function (p) { return p.status === "in_progress" && p.is_stuck; });
   var recentWins    = (projects || []).filter(function (p) { return p.status === "complete" && p.updated_at && p.updated_at > sevenDaysAgo; });
 
-  // Build a specific, readable account list so Pip can reference real details
+  // Build account-level flagged lines for at_risk/watching accounts
   var flaggedLines = [];
   atRisk.concat(watching).forEach(function (s) {
     var parts = [s.account_name];
@@ -50,27 +48,57 @@ export default async function handler(req, res) {
     flaggedLines.push(parts.join(" — "));
   });
 
+  // Workload section — this is what makes the brief feel real
+  var workloadLines = [];
+  if ((commitmentsOverdue || []).length > 0) {
+    workloadLines.push("OVERDUE COMMITMENTS (" + commitmentsOverdue.length + "): " +
+      commitmentsOverdue.slice(0, 3).map(function (c) { return '"' + c.text + '"'; }).join(", "));
+  }
+  if ((commitmentsDue || []).length > 0) {
+    workloadLines.push("COMMITMENTS DUE THIS WEEK (" + commitmentsDue.length + "): " +
+      commitmentsDue.slice(0, 3).map(function (c) { return '"' + c.text + '" by ' + c.due_date; }).join(", "));
+  }
+  if ((overdueTasks || []).length > 0) {
+    workloadLines.push("OVERDUE TASKS (" + overdueTasks.length + " total): " +
+      overdueTasks.slice(0, 4).map(function (t) { return '"' + t + '"'; }).join(", ") +
+      (overdueTasks.length > 4 ? " (+" + (overdueTasks.length - 4) + " more)" : ""));
+  }
+  if ((todayCadences || []).length > 0) {
+    workloadLines.push("CADENCES TODAY: " + todayCadences.join(", "));
+  }
+  if (stuckProjects.length > 0) {
+    workloadLines.push(stuckProjects.length + " stuck project" + (stuckProjects.length > 1 ? "s" : "") + " (no stage progress in 7+ days)");
+  }
+
   var portfolioText = [
-    snapshots.length + " accounts total.",
-    flaggedLines.length > 0 ? "Flagged:\n" + flaggedLines.join("\n") : "No accounts flagged.",
-    stuckProjects.length > 0 ? stuckProjects.length + " stuck project" + (stuckProjects.length > 1 ? "s" : "") + " (no progress in 7+ days)." : null,
-    recentWins.length > 0 ? "Recent wins: " + recentWins.map(function (p) { return p.title; }).join(", ") + "." : "No recent wins.",
-  ].filter(Boolean).join("\n");
+    snapshots.length > 0 ? snapshots.length + " accounts total." : null,
+    flaggedLines.length > 0 ? "Account flags:\n" + flaggedLines.join("\n") : "No accounts flagged at the account level.",
+    workloadLines.length > 0 ? "Active workload:\n" + workloadLines.join("\n") : "No overdue tasks or upcoming commitments.",
+    recentWins.length > 0 ? "Recent wins: " + recentWins.map(function (p) { return p.title; }).join(", ") + "." : "No recent project wins.",
+  ].filter(Boolean).join("\n\n");
+
+  // If there's genuinely nothing to report, return empty so the UI skips the card
+  var hasAnything = flaggedLines.length > 0 || workloadLines.length > 0 || recentWins.length > 0;
+  if (!hasAnything) {
+    return res.status(200).json({ brief: "", callouts: [] });
+  }
 
   var systemPrompt = `You are Pip — a sharp, slightly dry field analyst who knows this account manager's portfolio inside and out. You're giving them a morning read the way a trusted colleague would: honest, specific, with a little personality. Not a report. Not a dashboard printout. Something they'd actually want to read.
 
+The "Active workload" section is the most important input — it shows overdue tasks, upcoming commitments, and today's meetings. Lead with what's most urgent from that section. An AM can be drowning in work even when their accounts all look healthy on paper — don't let a clean account health score distract you from a pile of overdue tasks.
+
 Voice rules:
 - Sound like a smart friend who's been watching their book — direct, a little dry, genuinely invested.
-- You can have opinions: "that ratio isn't great," "worth a real look before Friday," "nothing alarming but don't let it slide." That's Pip.
-- Name specific accounts and items. Never say "one account needs attention" when you know which one and why.
-- No corporate words: not "warrants," "tension point," "resource-constrained," "unpacking," "flag before end-of-day." If it sounds like a consulting deck, cut it.
+- You can have opinions: "that's a lot to carry," "worth clearing before Friday," "don't let this one slip." That's Pip.
+- Name specific tasks and commitments when they're given. Never say "several overdue tasks" when you can say what they are.
+- No corporate words: not "warrants," "tension point," "resource-constrained," "unpacking." If it sounds like a consulting deck, cut it.
 - Vary your sentence length — some short punches, some longer observations. Monotone rhythm is boring.
 - 4-6 sentences. Enough to actually say something, not so much that it becomes a report.
 - No bullet points. No markdown bold (**like this**). Plain prose.
 - Don't start with "I" or "Here is" or "Daily Brief."
-- Major-tier accounts carry the most revenue and relationship weight. Lead with them when surfacing risks, wins, or items needing attention. Don't bury a Major account issue behind Mid or Growth items.
+- Major-tier accounts carry the most revenue and relationship weight. Lead with them when surfacing risks.
 
-Also return a JSON array called "callouts" — one object per specific account you mention. Each: { "account_name": exact name as given, "reason": one short phrase, "item": the specific overdue item text or null }.
+Also return a JSON array called "callouts" — one object per specific account or task you mention. Each: { "account_name": exact account name if applicable or null, "reason": one short phrase, "item": the specific task/commitment text or null }.
 
 Return ONLY valid JSON:
 { "brief": "...", "callouts": [...] }`;
