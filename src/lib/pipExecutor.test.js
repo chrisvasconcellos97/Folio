@@ -109,7 +109,11 @@ describe("executeTool", function () {
       tool: { name: "update_account_health", input: { account_id: "a1", status: "at_risk" } },
       hooks: { updateAccount: updateAccount },
     });
-    expect(updateAccount).toHaveBeenCalledWith("a1", { status: "at_risk" });
+    // at_risk pins via the status_override columns, not the raw status column.
+    expect(updateAccount).toHaveBeenCalledWith("a1", {
+      status_override: "red",
+      status_override_reason: "Set via Pip",
+    });
     expect(r.ok).toBe(true);
   });
 

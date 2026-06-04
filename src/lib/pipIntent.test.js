@@ -58,9 +58,16 @@ describe("classifyIntent", function () {
     expect(out.mode).toBe("brief");
   });
 
-  it("routes 'summarize this' to summary mode", function () {
-    var out = classifyIntent("summarize what came out of last week", sampleContext);
+  it("routes a summarize request that names an account to summary mode", function () {
+    // Summary mode strips Pip's persona and expects JSON, so it only fires when
+    // the message references a known account (mentionsAccount gate).
+    var out = classifyIntent("summarize what came out of last week with KSI Auto Parts", sampleContext);
     expect(out.mode).toBe("summary");
+  });
+
+  it("keeps a bare 'summarize this' (no account named) in chat mode", function () {
+    var out = classifyIntent("summarize what came out of last week", sampleContext);
+    expect(out.mode).toBe("chat");
   });
 
   it("falls through to chat for general questions", function () {

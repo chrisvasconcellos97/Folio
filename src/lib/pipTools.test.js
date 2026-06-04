@@ -265,7 +265,12 @@ describe("routeToolCall — routing to hooks", function () {
       { id: "t6", name: "update_account_health", input: { account_id: "a1", status: "at_risk" } },
       { accounts: sampleAccounts, updateAccount: updateAccount }
     );
-    expect(updateAccount).toHaveBeenCalledWith("a1", { status: "at_risk" });
+    // at_risk/cold pin the account via the status_override columns (health is
+    // computed; the raw status column is not written by this tool).
+    expect(updateAccount).toHaveBeenCalledWith("a1", {
+      status_override: "red",
+      status_override_reason: "Set via Pip",
+    });
   });
 
   it("routes navigate to onNavigate callback", async function () {

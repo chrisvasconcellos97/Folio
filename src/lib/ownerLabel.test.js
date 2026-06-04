@@ -6,8 +6,13 @@ describe("ownerLabel", function () {
     expect(ownerLabel(null)).toBe("Unowned");
     expect(ownerLabel(undefined)).toBe("Unowned");
   });
-  it("returns invited_email when present", function () {
-    expect(ownerLabel({ invited_email: "chris@example.com" })).toBe("chris@example.com");
+  it("returns the email local-part when only invited_email is present", function () {
+    // Per the display-name rule, ownerLabel prefers full_name, then the email
+    // local-part (not the full address), then "Team member".
+    expect(ownerLabel({ invited_email: "chris@example.com" })).toBe("chris");
+  });
+  it("prefers full_name over the email local-part", function () {
+    expect(ownerLabel({ full_name: "Chris V", invited_email: "chris@example.com" })).toBe("Chris V");
   });
   it("falls back to 'Team member' when no email", function () {
     expect(ownerLabel({ user_id: "uid-1" })).toBe("Team member");
