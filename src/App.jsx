@@ -542,6 +542,15 @@ export default function App() {
   // "Catch up with Pip" modal — answer the whole queue in one sitting.
   var [catchUpOpen, setCatchUpOpen] = useState(false);
 
+  // Purge the generic evergreen filler on EVERY load — not gated behind the
+  // daily detect timer, which previously let filler linger for a day after a
+  // deploy and (worse) kept the queue full enough that the good-question
+  // generator self-skipped forever. Cheap idempotent delete.
+  useEffect(function () {
+    if (!userId) return;
+    purgeEvergreenQuestions({ userId: userId, supabase: supabase }).catch(function () {});
+  }, [userId]);
+
   // Daily detectKnowledgeGaps — once per calendar day, pure JS, zero LLM cost.
   useEffect(function () {
     if (!userId || !accounts || !allContacts) return;
@@ -577,18 +586,20 @@ export default function App() {
     }).catch(function (err) { console.warn("[detect-terminology] failed:", err && err.message); });
   }, [userId]);
 
-  // Weekly portfolio-aware question generator (Lane D) — one cheap Haiku pass
-  // that reasons across the whole portfolio and writes a few insightful
-  // questions in Pip's voice + simple term clarifiers. The endpoint self-skips
-  // (no Haiku call) when a queue backlog already exists, so token cost stays
-  // near zero. Skip entirely if the user paused drip questions.
+  // Portfolio-aware question generator (Lane D) — one cheap Haiku pass that
+  // reasons across the whole portfolio and writes a few insightful questions
+  // in Pip's voice + simple term clarifiers. Checked every 6h (not weekly) so
+  // it tops the queue back up shortly after you work through it — the endpoint
+  // SELF-SKIPS (no Haiku call, just a DB count) whenever >=5 are already
+  // queued, so a frequent check costs nothing until the queue actually drains.
+  // Skip entirely if the user paused drip questions.
   useEffect(function () {
     if (!userId || !session) return;
     if (userProfile && userProfile.pip_questions_paused) return;
     var key = "folio_generate_questions_last_" + userId;
     var last = 0;
     try { last = parseInt(localStorage.getItem(key) || "0", 10); } catch (e) {}
-    if (Date.now() - last < 7 * 24 * 60 * 60 * 1000) return; // once per 7 days
+    if (Date.now() - last < 6 * 60 * 60 * 1000) return; // at most once per 6h
     try { localStorage.setItem(key, String(Date.now())); } catch (e) {}
     fetch("/api/generate-questions", {
       method:  "POST",
