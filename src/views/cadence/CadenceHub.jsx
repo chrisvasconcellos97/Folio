@@ -23,6 +23,7 @@ import { useUserProfile } from "../../hooks/useUserProfile";
 import { applyPipPlan } from "../../lib/pipPlanApply";
 import { updateTask, insertTask } from "../../hooks/useTasks";
 import { ownerLabel } from "../../lib/ownerLabel";
+import { autoStatusPatch } from "../../lib/gaugeStatus";
 
 var INTER = "'Inter', system-ui, sans-serif";
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
@@ -466,7 +467,7 @@ export function OpenItemRow({ item, onClose, discussed, mentioned, onToggleDiscu
 }
 
 /* ---- Compact inline task row with quick-action controls ---- */
-function MeetingTaskRow({ task, userId, members, contacts, onUpdateTask }) {
+function MeetingTaskRow({ task, userId, members, contacts, onUpdate }) {
   var [editingTitle, setEditingTitle] = useState(false);
   var [titleDraft,   setTitleDraft]   = useState(task.title || task.text || "");
   var [saving,       setSaving]       = useState(false);
@@ -488,7 +489,7 @@ function MeetingTaskRow({ task, userId, members, contacts, onUpdateTask }) {
     var newDone = !done;
     setDone(newDone);
     setSaving(true);
-    onUpdateTask(task.id, { done: newDone, status: newDone ? "complete" : "in_progress" })
+    onUpdate({ done: newDone })
       .catch(function () { setDone(!newDone); showToast("Couldn't update task"); })
       .finally(function () { setSaving(false); });
   }
@@ -500,7 +501,7 @@ function MeetingTaskRow({ task, userId, members, contacts, onUpdateTask }) {
       return;
     }
     setSaving(true);
-    onUpdateTask(task.id, { title: trimmed })
+    onUpdate({ title: trimmed })
       .catch(function () { showToast("Couldn't rename task"); })
       .finally(function () { setSaving(false); setEditingTitle(false); });
   }
@@ -509,14 +510,14 @@ function MeetingTaskRow({ task, userId, members, contacts, onUpdateTask }) {
     var email = e.target.value;
     if (!email) return;
     setShowAssign(false);
-    onUpdateTask(task.id, { assignee_email: email })
+    onUpdate({ assignee_email: email })
       .catch(function () { showToast("Couldn't reassign task"); });
   }
 
   function handleDateChange(e) {
     var val = e.target.value;
     setShowDate(false);
-    onUpdateTask(task.id, { due_date: val || null })
+    onUpdate({ due_date: val || null })
       .catch(function () { showToast("Couldn't set due date"); });
   }
 
@@ -796,6 +797,43 @@ export function HubProjectCard({ project, accounts, members, userEmail, onUpdate
   var tasks        = project.stages || [];
   var doneCount    = tasks.filter(function (t) { return t.completed_at; }).length;
 
+  // Meeting-hub task edits operate on the project's `stages` jsonb (the store
+  // the list reads), NOT folio_tasks — writing the whole array back via
+  // onUpdateProject, exactly like ProjectStageEditor. Completion is tracked by
+  // `completed_at`; autoStatusPatch flips project status when all/none done.
+  function persistStages(nextStages) {
+    var payload = { stages: nextStages };
+    var sp = autoStatusPatch(nextStages, project.status, project.is_standing);
+    if (sp) Object.assign(payload, sp);
+    return onUpdateProject(project.id, payload);
+  }
+  function updateStageAt(idx, fields) {
+    var next = (project.stages || []).map(function (s, i) {
+      if (i !== idx) return s;
+      var patch = Object.assign({}, s);
+      if (Object.prototype.hasOwnProperty.call(fields, "done")) {
+        patch.completed_at = fields.done ? (s.completed_at || new Date().toISOString()) : null;
+      }
+      if (Object.prototype.hasOwnProperty.call(fields, "title")) patch.title = fields.title;
+      if (Object.prototype.hasOwnProperty.call(fields, "assignee_email")) patch.assignee_email = fields.assignee_email;
+      if (Object.prototype.hasOwnProperty.call(fields, "due_date")) patch.due_date = fields.due_date;
+      return patch;
+    });
+    return persistStages(next);
+  }
+  function addStage(payload) {
+    var newStage = {
+      title:          payload.title,
+      completed_at:   null,
+      is_external:    false,
+      blocked_reason: null,
+      sub_stages:     [],
+      assignee_email: payload.assignee_email || null,
+      due_date:       payload.due_date || null,
+    };
+    return persistStages((project.stages || []).concat([newStage]));
+  }
+
   return (
     <div style={{
       background: C.surface,
@@ -958,19 +996,20 @@ export function HubProjectCard({ project, accounts, members, userEmail, onUpdate
                   userId={userId}
                   members={members}
                   contacts={contacts}
-                  onAddTask={onAddTask}
+                  onAddTask={addStage}
                   onCancel={function () { setAddTaskOpen(false); }}
                 />
               )}
-              {tasks.filter(function (t) { return !t.completed_at; }).map(function (t) {
+              {tasks.map(function (t, idx) {
+                if (t.completed_at) return null;
                 return (
                   <MeetingTaskRow
-                    key={t.id || t.title}
+                    key={t.id || idx}
                     task={t}
                     userId={userId}
                     members={members}
                     contacts={contacts}
-                    onUpdateTask={onUpdateTask}
+                    onUpdate={function (fields) { return updateStageAt(idx, fields); }}
                   />
                 );
               })}
@@ -1011,7 +1050,7 @@ export function HubProjectCard({ project, accounts, members, userEmail, onUpdate
                   userId={userId}
                   members={members}
                   contacts={contacts}
-                  onAddTask={onAddTask}
+                  onAddTask={addStage}
                   onCancel={function () { setAddTaskOpen(false); }}
                 />
               )}
