@@ -16,6 +16,7 @@
 import { useState, useMemo } from "react";
 import { C } from "../../lib/colors";
 import { InfoTip } from "../../components/InfoTip";
+import { projectMatchesAccount } from "../../lib/gaugeStatus";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
@@ -117,7 +118,7 @@ export function LeaderProjectsView({ projects, accounts, members, userEmail, onO
     list = list.filter(function (p) { return p.status !== "draft" && p.status !== "complete"; });
 
     if (amFilter   !== "all") list = list.filter(function (p) { return (p.assignee || "") === amFilter; });
-    if (acctFilter !== "all") list = list.filter(function (p) { return p.account_id === acctFilter; });
+    if (acctFilter !== "all") list = list.filter(function (p) { return projectMatchesAccount(p, acctFilter); });
     if (statusFilter !== "all") list = list.filter(function (p) { return p.status === statusFilter; });
     if (stuckOnly) {
       list = list.filter(function (p) {

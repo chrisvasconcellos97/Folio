@@ -8,6 +8,16 @@
 // status === "complete" then disagreed with reality — a project showed as
 // overdue/"burning" forever despite all its tasks being done.
 
+// A project belongs to an account if it's the primary account_id OR the
+// account appears in the multi-account account_ids array. Used everywhere a
+// project is filtered to a single account so multi-account projects surface
+// under every account they touch.
+export function projectMatchesAccount(p, accountId) {
+  if (!p || !accountId) return false;
+  if (p.account_id === accountId) return true;
+  return Array.isArray(p.account_ids) && p.account_ids.indexOf(accountId) >= 0;
+}
+
 // A discrete project is effectively complete when it has tasks and every
 // task is completed — even if the stored status field never flipped.
 // Standing projects are ongoing by nature and never auto-complete.

@@ -7,6 +7,7 @@ import { FL } from "../../components/FieldLabel";
 import { useBreakpoint } from "../../hooks/useBreakpoint";
 import { useContacts } from "../../hooks/useContacts";
 import { extractTouchpointActionsPip } from "../../lib/pip";
+import { projectMatchesAccount } from "../../lib/gaugeStatus";
 import { showToast } from "../../components/Toast";
 import { useAutoBullet } from "../../lib/useAutoBullet";
 
@@ -307,7 +308,7 @@ export function StartConversationModal({ accountId, accounts, userId, orgId, mem
   var accountGaugeProjects = useMemo(function () {
     if (!selectedAccountId || !allGaugeProjects) return [];
     return allGaugeProjects.filter(function (p) {
-      return p.account_id === selectedAccountId && p.status !== "complete" && p.status !== "draft";
+      return projectMatchesAccount(p, selectedAccountId) && p.status !== "complete" && p.status !== "draft";
     });
   }, [selectedAccountId, allGaugeProjects]);
 

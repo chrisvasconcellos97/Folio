@@ -11,6 +11,7 @@ import { executeTool } from "../../lib/pipExecutor";
 var MONO = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
 import { askPip, classifyIntent } from "../../lib/pip";
+import { projectMatchesAccount } from "../../lib/gaugeStatus";
 import { getNextOccurrence, getFrequencyLabel } from "../../lib/cadenceUtils";
 import { routeToolCall, planToolCalls, describeToolCall, classifyTool, CONFIRM_THRESHOLD } from "../../lib/pipTools";
 // (CONFIRM_THRESHOLD re-export below; routeToolCall still used by executeTools.)
@@ -212,7 +213,7 @@ export function PipView(props) {
         var acctContacts = allContacts.filter(function (c) { return c.account_id === a.id; })
           .map(function (c) { return { name: c.name, title: c.title, email: c.email, phone: c.phone, is_poc: c.is_poc, is_primary: c.is_primary || false, is_leader: c.is_leader || false, relationship_role: c.relationship_role || null, relationship_note: c.relationship_note || null }; });
         var acctProjects = (projects || [])
-          .filter(function (p) { return p.account_id === a.id && p.status !== "complete" && p.status !== "on_hold"; })
+          .filter(function (p) { return projectMatchesAccount(p, a.id) && p.status !== "complete" && p.status !== "on_hold"; })
           .map(function (p) { return { title: p.title, status: p.status, due_date: p.due_date, status_updates: Array.isArray(p.status_updates) ? p.status_updates.slice(0, 3) : [] }; });
         var acctUpdates = allUpdates
           .filter(function (u) { return u.account_id === a.id; })

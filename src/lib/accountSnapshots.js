@@ -6,6 +6,7 @@
 
 import { supabase } from "./supabase";
 import { computeAccountHealth, gatherSignals } from "./accountHealth";
+import { projectMatchesAccount } from "./gaugeStatus";
 
 var STORAGE_KEY_PREFIX = "folio_snapshots_computed_";
 
@@ -79,7 +80,7 @@ export async function computeAndSaveSnapshots(userId) {
 
     var rows = accounts.map(function (account) {
       var acctItems    = items.filter(function (i)    { return i.account_id === account.id; });
-      var acctProjects = projects.filter(function (p) { return p.account_id === account.id; });
+      var acctProjects = projects.filter(function (p) { return projectMatchesAccount(p, account.id); });
 
       // Use gatherSignals + computeAccountHealth for consistency with AccountsView
       var signals = gatherSignals(account, items, projects, today, cadences, meetings);

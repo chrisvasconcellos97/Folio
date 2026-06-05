@@ -21,10 +21,12 @@ export function useProjects(userId, accountId, orgId, extraAccountIds) {
       .select("*")
       .order("created_at", { ascending: false });
     var extras = extrasKey ? extrasKey.split(",") : [];
-    if (accountId && extras.length > 0) {
-      query = query.in("account_id", [accountId].concat(extras));
-    } else if (accountId) {
-      query = query.eq("account_id", accountId);
+    // Match the primary account_id OR membership in the multi-account
+    // account_ids array, so a project linked to several accounts surfaces
+    // under every one of them (not just its primary).
+    if (accountId) {
+      var ids = [accountId].concat(extras);
+      query = query.or("account_id.in.(" + ids.join(",") + "),account_ids.ov.{" + ids.join(",") + "}");
     }
     query.then(function (result) {
       setLoading(false);

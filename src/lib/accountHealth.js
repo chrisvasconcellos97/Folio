@@ -1,3 +1,5 @@
+import { projectMatchesAccount } from "./gaugeStatus";
+
 // Computes account health from signals. Tier-aware thresholds.
 // Returns { status: 'green'|'yellow'|'red'|'new', reason: string }.
 // Override (when set) supersedes everything.
@@ -118,7 +120,7 @@ export function gatherSignals(account, allItems, allProjects, todayISO, allCaden
   var openItemsOverdue = openItemsAll.filter(function (i) {
     return i.due_date && i.due_date < todayISO;
   }).length;
-  var accountProjects = (allProjects || []).filter(function (p) { return p.account_id === account.id; });
+  var accountProjects = (allProjects || []).filter(function (p) { return projectMatchesAccount(p, account.id); });
   var blockedProjects = accountProjects.filter(function (p) { return p.status === 'blocked'; }).length;
   var onHoldProjects  = accountProjects.filter(function (p) { return p.status === 'on_hold'; }).length;
   var accountAgeDays  = account.created_at
