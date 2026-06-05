@@ -1274,6 +1274,8 @@ export function CadenceHub({
       glossary:         glossaryApi.entries,
       contacts:         contacts || [],
       pipAccountState:  pipAccountStateRow || null,
+      facts:            pipFactsApi.activeFactStrings || [],
+      profileProse:     userProfile && userProfile.profile_prose ? userProfile.profile_prose : null,
     }).then(function (out) {
       var brief = out.brief || "";
       var when  = new Date().toISOString();

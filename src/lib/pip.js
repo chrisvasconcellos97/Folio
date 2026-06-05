@@ -536,7 +536,15 @@ export function callBriefMePip(payload) {
   return callPipApi(
     [{ role: "user", content: userMsg }],
     context,
-    { mode: "brief", focusedAccountIds: account.id ? [account.id] : null }
+    {
+      mode: "brief",
+      focusedAccountIds: account.id ? [account.id] : null,
+      // Inject what the user has taught Pip — glossary facts (folio_pip_facts,
+      // where answered terminology questions land) + the WHO YOU ARE profile —
+      // so a pre-call brief reflects everything Pip knows, same as chat.
+      facts:        Array.isArray(payload.facts) && payload.facts.length ? payload.facts : undefined,
+      profileProse: payload.profileProse || undefined,
+    }
   ).then(function (resp) {
     // Keep the legacy { brief: "..." } shape for the existing caller.
     return { brief: resp.content || "" };
@@ -1168,7 +1176,12 @@ export function callCadenceBriefPip(payload) {
   return callPipApi(
     [{ role: "user", content: prompt }],
     null,
-    { mode: "brief", focusedAccountIds: account.id ? [account.id] : null }
+    {
+      mode: "brief",
+      focusedAccountIds: account.id ? [account.id] : null,
+      facts:        Array.isArray(payload.facts) && payload.facts.length ? payload.facts : undefined,
+      profileProse: payload.profileProse || undefined,
+    }
   ).then(function (resp) {
     return { brief: resp.content || "" };
   });

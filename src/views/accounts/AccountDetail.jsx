@@ -373,6 +373,8 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
         .map(function(p) { return { title: p.title, status: p.status, due_date: p.due_date }; }),
       accountObjective: account.objective || "",
       glossary:         glossaryApi.entries,
+      facts:            pipFactsApi.activeFactStrings || [],
+      profileProse:     profileProse,
     }).then(function (data) {
       setBriefLoading(false);
       setBriefText(data.brief || "Pip couldn't generate a brief right now.");
