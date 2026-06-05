@@ -156,8 +156,10 @@ create table if not exists folio_meetings (
   cadence_id     uuid references folio_cadences(id) on delete set null,
   title          text,
   meeting_date   date,
+  meeting_time   text,                 -- HH:MM for scheduled meetings
   method         text check (method is null or method in ('phone', 'email', 'video', 'in_person')),
-  status         text default 'summarized' check (status in ('draft', 'summarized')),
+  status         text default 'summarized' check (status in ('draft', 'summarized', 'scheduled')),
+  agenda         text,                 -- optional agenda note for scheduled meetings
   notes          text,
   talking_points text,
   action_items   text,
