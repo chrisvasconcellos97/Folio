@@ -4,6 +4,7 @@ import { Modal } from "../../components/Modal";
 import { InputField, TextArea, SelectField } from "../../components/InputField";
 import { FL } from "../../components/FieldLabel";
 import { AccountPicker } from "../../components/AccountPicker";
+import { PersonPicker } from "../../components/PersonPicker";
 import { relUpdateTime, updateAuthorLabel } from "./ProjectStatusUpdate";
 import { DangerBtn } from "../../components/Buttons";
 import { supabase } from "../../lib/supabase";
@@ -26,10 +27,6 @@ var PRIORITY_OPTS = [
   { value: "medium", label: "Medium" },
   { value: "low",    label: "Low"    },
 ];
-
-function memberLabel(m) {
-  return m.full_name || (m.invited_email || m.email || "").split("@")[0] || "";
-}
 
 // Normalize stages from existing data — handle old format gracefully
 function normalizeStages(stages) {
@@ -60,6 +57,7 @@ export function ProjectModal({
   existing,
   accounts,
   members,
+  allContacts,
   userId,
   onSave,
   onDelete,
@@ -681,36 +679,16 @@ export function ProjectModal({
         {scope === "team" && (
           <div>
             <FL>Assigned To</FL>
-            {(members && members.length > 0) || contacts.length > 0 ? (
-              <SelectField
-                value={assigneeEmail}
-                onChange={function (e) { setAssignee(e.target.value); }}
-              >
-                <option value="">Unassigned</option>
-                {members && members.length > 0 && (
-                  <optgroup label="Team">
-                    {members.map(function (m) {
-                      return (
-                        <option key={m.email || m.id} value={m.email || ""}>{memberLabel(m)}</option>
-                      );
-                    })}
-                  </optgroup>
-                )}
-                {contacts.length > 0 && (
-                  <optgroup label="Account Contacts">
-                    {contacts.map(function (c) {
-                      return <option key={c.id} value={c.name}>{c.name}</option>;
-                    })}
-                  </optgroup>
-                )}
-              </SelectField>
-            ) : (
-              <InputField
-                value={assigneeEmail}
-                onChange={function (e) { setAssignee(e.target.value); }}
-                placeholder="Email or name"
-              />
-            )}
+            <PersonPicker
+              value={assigneeEmail}
+              members={members}
+              contacts={allContacts && allContacts.length ? allContacts : contacts}
+              accounts={accounts}
+              accountIds={accountIds}
+              onChange={function (v) { setAssignee(v || ""); }}
+              noneLabel="Unassigned"
+              contactValue={function (c) { return c.name; }}
+            />
           </div>
         )}
 
@@ -900,40 +878,18 @@ export function ProjectModal({
                         />
                       )
                     ) : (
-                      // Internal: org member + contact dropdown
-                      (members && members.length > 0) || contacts.length > 0 ? (
-                        <SelectField
-                          value={s.assignee_email || ""}
-                          onChange={function (e) { updateStageField(i, "assignee_email", e.target.value || null); }}
-                          style={{ fontSize: 12, padding: "4px 10px", flex: 1 }}
-                        >
-                          <option value="">Assign to…</option>
-                          {members && members.length > 0 && (
-                            <optgroup label="Team">
-                              {members.map(function (m) {
-                                return <option key={m.email || m.id} value={m.email || ""}>{memberLabel(m)}</option>;
-                              })}
-                            </optgroup>
-                          )}
-                          {contacts.length > 0 && (
-                            <optgroup label="Account Contacts">
-                              {/* Prefer the contact's email so the value stays
-                                  an email (queue/Mine filters are email-keyed);
-                                  fall back to the name only when no email. */}
-                              {contacts.map(function (c) {
-                                return <option key={c.id} value={c.email || c.name}>{c.name}</option>;
-                              })}
-                            </optgroup>
-                          )}
-                        </SelectField>
-                      ) : (
-                        <InputField
-                          value={s.assignee_email || ""}
-                          onChange={function (e) { updateStageField(i, "assignee_email", e.target.value || null); }}
-                          placeholder="Assignee email"
-                          style={{ fontSize: 12, padding: "4px 10px", flex: 1 }}
-                        />
-                      )
+                      // Internal: workspace-grouped people picker (account
+                      // contacts first → team → others) + free-text escape hatch.
+                      <PersonPicker
+                        value={s.assignee_email || ""}
+                        members={members}
+                        contacts={allContacts && allContacts.length ? allContacts : contacts}
+                        accounts={accounts}
+                        accountIds={accountIds}
+                        onChange={function (v) { updateStageField(i, "assignee_email", v); }}
+                        noneLabel="Assign to…"
+                        style={{ fontSize: 12, padding: "4px 10px", flex: 1 }}
+                      />
                     )}
                   </div>
 

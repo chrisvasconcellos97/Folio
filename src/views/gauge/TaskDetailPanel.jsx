@@ -5,13 +5,12 @@ import { InputField, TextArea, SelectField } from "../../components/InputField";
 import { FL } from "../../components/FieldLabel";
 import { taskStatusLabel } from "../../lib/gaugeFields";
 import { AccountPicker } from "../../components/AccountPicker";
+import { PersonPicker } from "../../components/PersonPicker";
 import { useEntityDetection } from "../../hooks/useEntityDetection";
 import { EntitySuggestionChip } from "../../components/EntitySuggestionChip";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var INTER = "'Inter', system-ui, sans-serif";
-
-function memberLabel(m) { return m.full_name || (m.invited_email || m.email || "").split("@")[0] || ""; }
 
 // Unified detail panel for a single Gauge task. Handles both create
 // (project + index === null) and edit (existing task at index). Renders
@@ -75,94 +74,38 @@ export function TaskDetailPanel({
     projectAccount.account_type === "internal_team" ||
     projectAccount.account_type === "partner";
 
-  // Contacts from ALL accounts linked to the project (account_id + account_ids array)
-  var projectContacts = useMemo(function () {
-    if (!contacts) return [];
-    var ids = new Set();
-    if (project.account_id) ids.add(project.account_id);
-    (project.account_ids || []).forEach(function (id) { ids.add(id); });
-    if (ids.size === 0) return [];
-    return contacts.filter(function (c) { return ids.has(c.account_id); });
-  }, [contacts, project.account_id, project.account_ids]);
-
-  // Contacts from the selected Dept/Partner account (3rd group — only when a different account is linked)
-  var linkedAccountContacts = useMemo(function () {
-    if (!contacts || !accountId || accountId === project.account_id) return [];
-    return contacts.filter(function (c) { return c.account_id === accountId; });
-  }, [contacts, accountId, project.account_id]);
-
-  var linkedAccount = useMemo(function () {
-    if (!accountId) return null;
-    return (accounts || []).find(function (a) { return a.id === accountId; }) || null;
-  }, [accounts, accountId]);
-
-  var internalTeamContacts = useMemo(function () {
-    if (!contacts || !accounts) return [];
-    var internalIds = (accounts || [])
-      .filter(function (a) { return a.account_type === "internal_team"; })
-      .map(function (a) { return a.id; });
-    return (contacts || []).filter(function (c) {
-      return internalIds.indexOf(c.account_id) !== -1 &&
-             c.account_id !== project.account_id &&
-             c.account_id !== accountId;
-    });
-  }, [contacts, accounts, project.account_id, accountId]);
-
   function updateCustom(key, val) {
     setCustomFields(function (prev) { return Object.assign({}, prev, { [key]: val }); });
   }
 
-  // Shared person picker — used by both Assignee and Recipient so the two
-  // stay consistent. Falls back to a free-text field when no team members or
-  // contacts are available to choose from.
-  var hasPeopleOptions =
-    (members && members.length > 0) ||
-    projectContacts.length > 0 ||
-    linkedAccountContacts.length > 0 ||
-    internalTeamContacts.length > 0;
+  // The task's accounts — surfaced first in the people picker, in order:
+  // project's primary, then its other linked accounts, then the selected account.
+  var taskAccountIds = useMemo(function () {
+    var ids = [];
+    function add(id) { if (id && ids.indexOf(id) === -1) ids.push(id); }
+    add(project.account_id);
+    (project.account_ids || []).forEach(add);
+    add(accountId);
+    return ids;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project.account_id, (project.account_ids || []).join(","), accountId]);
 
+  // Shared person picker — used by both Assignee and Recipient so the two stay
+  // consistent. Grouped by workspace (account contacts first, then My Team, then
+  // everyone else), with a free-text escape hatch. Preserves the stored-value
+  // convention (contact name) used by the queue/Mine surfaces.
   function personSelect(value, setValue, noneLabel) {
-    if (!hasPeopleOptions) {
-      return (
-        <InputField
-          value={value}
-          onChange={function (e) { setValue(e.target.value); }}
-          placeholder="Email or name"
-        />
-      );
-    }
     return (
-      <SelectField value={value} onChange={function (e) { setValue(e.target.value); }}>
-        <option value="">{noneLabel}</option>
-        {members && members.length > 0 && (
-          <optgroup label="Team">
-            {members.map(function (m) {
-              return <option key={m.email || m.id} value={m.email || ""}>{memberLabel(m)}</option>;
-            })}
-          </optgroup>
-        )}
-        {projectContacts.length > 0 && (
-          <optgroup label="Account Contacts">
-            {projectContacts.map(function (c) {
-              return <option key={c.id} value={c.name}>{c.name}{c.role ? " · " + c.role : ""}</option>;
-            })}
-          </optgroup>
-        )}
-        {linkedAccountContacts.length > 0 && linkedAccount && (
-          <optgroup label={linkedAccount.name}>
-            {linkedAccountContacts.map(function (c) {
-              return <option key={c.id} value={c.name}>{c.name}{c.role ? " · " + c.role : ""}</option>;
-            })}
-          </optgroup>
-        )}
-        {internalTeamContacts.length > 0 && (
-          <optgroup label="Internal Teams">
-            {internalTeamContacts.map(function (c) {
-              return <option key={c.id} value={c.name}>{c.name}{c.role ? " · " + c.role : ""}</option>;
-            })}
-          </optgroup>
-        )}
-      </SelectField>
+      <PersonPicker
+        value={value}
+        onChange={function (v) { setValue(v || ""); }}
+        members={members}
+        contacts={contacts}
+        accounts={accounts}
+        accountIds={taskAccountIds}
+        noneLabel={noneLabel}
+        contactValue={function (c) { return c.name; }}
+      />
     );
   }
 
@@ -294,49 +237,16 @@ export function TaskDetailPanel({
       );
     }
     if (f.type === "person") {
-      if ((members && members.length > 0) || projectContacts.length > 0 || linkedAccountContacts.length > 0 || internalTeamContacts.length > 0) {
-        return (
-          <SelectField
-            value={v || ""}
-            onChange={function (e) { updateCustom(f.key, e.target.value); }}
-          >
-            <option value="">— Unassigned —</option>
-            {members && members.length > 0 && (
-              <optgroup label="Team">
-                {members.map(function (m) {
-                  return <option key={m.email || m.id} value={m.email || ""}>{memberLabel(m)}</option>;
-                })}
-              </optgroup>
-            )}
-            {projectContacts.length > 0 && (
-              <optgroup label="Account Contacts">
-                {projectContacts.map(function (c) {
-                  return <option key={c.id} value={c.name}>{c.name}{c.role ? " · " + c.role : ""}</option>;
-                })}
-              </optgroup>
-            )}
-            {linkedAccountContacts.length > 0 && linkedAccount && (
-              <optgroup label={linkedAccount.name}>
-                {linkedAccountContacts.map(function (c) {
-                  return <option key={c.id} value={c.name}>{c.name}{c.role ? " · " + c.role : ""}</option>;
-                })}
-              </optgroup>
-            )}
-            {internalTeamContacts.length > 0 && (
-              <optgroup label="Internal Teams">
-                {internalTeamContacts.map(function (c) {
-                  return <option key={c.id} value={c.name}>{c.name}{c.role ? " · " + c.role : ""}</option>;
-                })}
-              </optgroup>
-            )}
-          </SelectField>
-        );
-      }
       return (
-        <InputField
+        <PersonPicker
           value={v || ""}
-          onChange={function (e) { updateCustom(f.key, e.target.value); }}
-          placeholder="Email"
+          onChange={function (val) { updateCustom(f.key, val || ""); }}
+          members={members}
+          contacts={contacts}
+          accounts={accounts}
+          accountIds={taskAccountIds}
+          noneLabel="— Unassigned —"
+          contactValue={function (c) { return c.name; }}
         />
       );
     }

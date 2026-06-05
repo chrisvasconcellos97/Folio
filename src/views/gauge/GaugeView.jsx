@@ -1362,6 +1362,7 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
         <ProjectModal
           accounts={accounts}
           members={members}
+          allContacts={contacts}
           userId={userId}
           onSave={handleSaveNew}
           onClose={function () { setShowAdd(false); setPrefill(null); }}
@@ -1376,6 +1377,7 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
           existing={editing}
           accounts={accounts}
           members={members}
+          allContacts={contacts}
           userId={userId}
           onSave={handleSaveEdit}
           onDelete={deleteProject}
