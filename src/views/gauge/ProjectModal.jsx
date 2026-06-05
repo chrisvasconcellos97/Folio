@@ -3,6 +3,8 @@ import { C } from "../../lib/colors";
 import { Modal } from "../../components/Modal";
 import { InputField, TextArea, SelectField } from "../../components/InputField";
 import { FL } from "../../components/FieldLabel";
+import { AccountPicker } from "../../components/AccountPicker";
+import { relUpdateTime, updateAuthorLabel } from "./ProjectStatusUpdate";
 import { DangerBtn } from "../../components/Buttons";
 import { supabase } from "../../lib/supabase";
 import { showToast } from "../../components/Toast";
@@ -312,11 +314,14 @@ export function ProjectModal({
   }
 
   // --- Account multi-select ---
-  function toggleAccount(id) {
+  function addAccount(id) {
+    if (!id) return;
     setAccountIds(function (prev) {
-      if (prev.indexOf(id) !== -1) return prev.filter(function (x) { return x !== id; });
-      return prev.concat([id]);
+      return prev.indexOf(id) !== -1 ? prev : prev.concat([id]);
     });
+  }
+  function removeAccount(id) {
+    setAccountIds(function (prev) { return prev.filter(function (x) { return x !== id; }); });
   }
 
   function selectAllByType(type) {
@@ -519,49 +524,45 @@ export function ProjectModal({
               )}
             </div>
           )}
-          <div style={{
-            maxHeight: 160,
-            overflowY: "auto",
-            background: C.bgDark,
-            border: "1px solid " + C.border,
-            borderRadius: 10,
-            padding: "6px 0",
-          }}>
-            {(accounts || []).length === 0 && (
-              <div style={{ padding: "10px 14px", fontSize: 13, color: C.textMuted }}>No accounts yet</div>
-            )}
-            {(accounts || []).map(function (a) {
-              var checked = accountIds.indexOf(a.id) !== -1;
-              return (
-                <label
-                  key={a.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "7px 14px",
-                    cursor: "pointer",
-                    background: checked ? C.accentFaint : "transparent",
-                    transition: "background 0.1s",
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={function () { toggleAccount(a.id); }}
-                    style={{ accentColor: C.accent, width: 14, height: 14 }}
-                  />
-                  <span style={{ fontSize: 13, color: C.text }}>{a.name}</span>
-                  {a.account_type && a.account_type !== "standard" && (
-                    <span style={{ fontFamily: MONO, fontSize: 9, color: C.textMuted, textTransform: "uppercase", marginLeft: "auto" }}>{a.account_type}</span>
-                  )}
-                </label>
-              );
-            })}
-          </div>
+          {/* Selected accounts — removable chips */}
           {accountIds.length > 0 && (
-            <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, marginTop: 4 }}>
-              {accountIds.length} account{accountIds.length !== 1 ? "s" : ""} selected
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+              {accountIds.map(function (id) {
+                var a = (accounts || []).find(function (x) { return x.id === id; });
+                return (
+                  <span key={id} style={{
+                    display: "inline-flex", alignItems: "center", gap: 6,
+                    background: C.accentFaint, border: "1px solid " + C.accentLine,
+                    borderRadius: 999, padding: "4px 6px 4px 11px",
+                    fontSize: 12, color: C.text, fontFamily: "'Inter', system-ui, sans-serif",
+                  }}>
+                    {a ? a.name : "Unknown account"}
+                    <button
+                      type="button"
+                      onClick={function () { removeAccount(id); }}
+                      aria-label={"Remove " + (a ? a.name : "account")}
+                      style={{
+                        background: "transparent", border: "none", cursor: "pointer",
+                        color: C.textMuted, fontSize: 15, lineHeight: 1, padding: "0 2px",
+                      }}
+                    >
+                      ×
+                    </button>
+                  </span>
+                );
+              })}
+            </div>
+          )}
+          {/* Searchable adder — pick one, then search again to add more */}
+          <AccountPicker
+            accounts={(accounts || []).filter(function (a) { return accountIds.indexOf(a.id) === -1; })}
+            value=""
+            onChange={function (id) { addAccount(id); }}
+            placeholder={accountIds.length > 0 ? "Search to add another account…" : "Search accounts…"}
+          />
+          {accountIds.length === 0 && (
+            <div style={{ fontFamily: MONO, fontSize: 9.5, color: C.textMuted, marginTop: 4, letterSpacing: "0.04em" }}>
+              Optional — leave empty for an internal project
             </div>
           )}
         </div>
@@ -576,6 +577,33 @@ export function ProjectModal({
             rows={3}
           />
         </div>
+
+        {/* Status history — read-only append-only pulse log */}
+        {existing && Array.isArray(existing.status_updates) && existing.status_updates.length > 0 && (
+          <div>
+            <FL>Status history</FL>
+            <div style={{
+              maxHeight: 180, overflowY: "auto",
+              background: C.bgDark, border: "1px solid " + C.border,
+              borderRadius: 10, padding: "6px 0",
+            }}>
+              {existing.status_updates.map(function (u, i) {
+                return (
+                  <div key={i} style={{
+                    padding: "8px 14px",
+                    borderBottom: i < existing.status_updates.length - 1 ? "1px solid " + C.rule : "none",
+                  }}>
+                    <div style={{ fontSize: 13, color: C.text, lineHeight: 1.5 }}>{u.body}</div>
+                    <div style={{ fontFamily: MONO, fontSize: 9, color: C.textMuted, marginTop: 3, letterSpacing: "0.04em" }}>
+                      {relUpdateTime(u.at)} · {new Date(u.at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      {u.by ? " · " + updateAuthorLabel(u.by) : ""}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Status + Priority */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>

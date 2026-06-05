@@ -425,7 +425,8 @@ create table if not exists gauge_projects (
   meeting_id     uuid references folio_meetings on delete set null,
   title          text not null,
   description    text,
-  notes          text,
+  notes          text,                  -- durable scratchpad
+  status_updates jsonb default '[]',    -- append-only pulse log: [{body, at, by}], newest-first
   status         text default 'planned'
                  check (status in ('draft', 'planned', 'in_progress', 'blocked', 'complete', 'on_hold')),
   priority       text default 'medium'

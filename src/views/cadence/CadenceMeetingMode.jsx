@@ -584,6 +584,18 @@ export function CadenceMeetingMode({
           </div>
           {!sidebarCollapsed && (
             <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 28px 16px" }}>
+              {draft.agenda && draft.agenda.trim() && (
+                <SidebarSection title="Agenda">
+                  <div style={{
+                    fontSize: 13, color: C.textSoft, lineHeight: 1.55,
+                    whiteSpace: "pre-wrap", fontFamily: "'Inter', system-ui, sans-serif",
+                    background: C.surface2, border: "1px solid " + C.rule,
+                    borderLeft: "2px solid " + C.accent, borderRadius: 8, padding: "9px 11px",
+                  }}>
+                    {draft.agenda}
+                  </div>
+                </SidebarSection>
+              )}
               <SidebarSection title="Gauge Projects" count={(projects || []).length}>
                 {(projects || []).length === 0 ? (
                   <div style={{ fontSize: 11, color: C.textMuted }}>No active projects.</div>

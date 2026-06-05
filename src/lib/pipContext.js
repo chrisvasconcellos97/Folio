@@ -261,6 +261,18 @@ function renderAccountFull(a, userId) {
     });
   }
 
+  // Upcoming scheduled (one-off) meetings — what's on the calendar ahead.
+  var upcoming = take(a.scheduledMeetings, 5);
+  if (upcoming.length) {
+    lines.push("");
+    lines.push("Upcoming scheduled meetings (" + upcoming.length + "):");
+    upcoming.forEach(function (m) {
+      var head = "- " + (m.date || "?") + (m.time ? " " + m.time : "") + (m.method ? " · " + m.method : "");
+      if (m.agenda) head += " — agenda: " + trunc(m.agenda, 160);
+      lines.push(head);
+    });
+  }
+
   var items = take(a.openItems, 10);
   if (items.length) {
     lines.push("");
@@ -355,6 +367,12 @@ function renderAccountFull(a, userId) {
       var line = "- " + p.title + " · " + (p.status || "—").replace("_", " ");
       if (p.due_date) line += " · due " + p.due_date;
       lines.push(line);
+      // Latest pulse + prior two for momentum sense (cheap: latest + last 2 only).
+      var ups = Array.isArray(p.status_updates) ? p.status_updates.slice(0, 3) : [];
+      ups.forEach(function (u, i) {
+        if (!u || !u.body) return;
+        lines.push("    " + (i === 0 ? "latest" : "prior") + " (" + (u.at ? String(u.at).slice(0, 10) : "?") + "): " + trunc(u.body, 140));
+      });
     });
   }
 
@@ -487,6 +505,8 @@ export function renderContextProse(curated) {
       var line = "- " + p.title + " · " + (p.status || "—").replace("_", " ");
       if (p.account) line += " · " + p.account;
       if (p.due_date) line += " · due " + p.due_date;
+      var latest = Array.isArray(p.status_updates) && p.status_updates[0];
+      if (latest && latest.body) line += " · latest: \"" + trunc(latest.body, 100) + "\"";
       projLines.push(line);
     });
     sections.push(projLines.join("\n"));

@@ -9,6 +9,7 @@ import { ProjectModal } from "./ProjectModal";
 import { ProjectStageEditor } from "./ProjectStageEditor";
 import { StandingBoardView } from "./StandingBoardView";
 import { ProjectNotesEditor } from "./ProjectNotesEditor";
+import { ProjectStatusUpdate } from "./ProjectStatusUpdate";
 import { MyQueueView } from "./MyQueueView";
 import { TemplatePickerModal } from "./TemplatePickerModal";
 import { PipLoader } from "../../components/PipLoader";
@@ -1286,6 +1287,7 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
                   </>)}
                 </div>
 
+                <ProjectStatusUpdate project={p} onUpdate={updateProject} userEmail={userEmail} />
                 <ProjectNotesEditor project={p} onUpdate={updateProject} />
                 <div style={{
                   fontFamily: MONO, fontSize: 9.5, color: C.textMuted,

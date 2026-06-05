@@ -536,7 +536,7 @@ export function callBriefMePip(payload) {
         return { name: c.name, title: c.title, email: c.email, is_poc: c.is_poc };
       }),
       activeProjects: activeProjects.map(function (p) {
-        return { title: p.title, status: p.status, due_date: p.due_date };
+        return { title: p.title, status: p.status, due_date: p.due_date, status_updates: Array.isArray(p.status_updates) ? p.status_updates.slice(0, 3) : [] };
       }),
       healthSnapshots: Array.isArray(payload.healthSnapshots) ? payload.healthSnapshots : [],
     }],
@@ -894,7 +894,12 @@ export function summarizeDraftPip(payload) {
     "Existing in-flight Gauge tasks on this account (incl. child accounts):\n" + taskBlock + "\n\n" +
     "Active Gauge projects (use these ids for project_id):\n" +
     (activeProjects.length
-      ? activeProjects.map(function (p) { return "- " + p.id + " · " + (p.title || "Untitled"); }).join("\n")
+      ? activeProjects.map(function (p) {
+          var l = "- " + p.id + " · " + (p.title || "Untitled");
+          var latest = Array.isArray(p.status_updates) && p.status_updates[0];
+          if (latest && latest.body) l += " · latest: \"" + String(latest.body).slice(0, 100) + "\"";
+          return l;
+        }).join("\n")
       : "(none)") + "\n\n" +
     (discussedProjectIds.length || discussedItemIds.length
       ? "── DISCUSSED THIS MEETING (high-confidence signal) ──\n" +

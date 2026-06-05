@@ -1,6 +1,6 @@
 # Folios — Upgrade Log
 
-*Last updated: 2026-06-05 (scheduled one-off meetings)*
+*Last updated: 2026-06-05 (project status updates + multi-account picker)*
 
 Plain-English log of major upgrades shipped to Folios. Date, time, and
 a short explanation written in terms anyone can read — not technical
@@ -14,6 +14,24 @@ For the technical changelog with full release detail, see
 architectural changes, anything that meaningfully changes what Folios
 *does* or *is*. Not bug fixes, styling tweaks, or doc-only updates —
 those live in git history.
+
+---
+
+## 2026-06-05 — Project status updates + multi-account project picker
+
+**What I built:** Two upgrades to Gauge projects. First, a "status updates" pulse log on every project — a running, timestamped heartbeat separate from the durable notes field. Second, the account field on a project is now a searchable picker that lets you tie a project to several accounts.
+
+**Problem it solves:** Project notes were one big blob, so there was no clean way to post "here's where this stands today" without burying the last status. And linking a project to its accounts meant scrolling a long checkbox list instead of just searching.
+
+**What changed:**
+- **Status updates.** The expanded project card shows the latest update with a relative timestamp ("Updated 2h ago"), plus a box to post a new one (Enter to post). Each post is stamped with the time and who wrote it, and the project edit screen shows the full history. Pip reads the latest update (and the prior two) so its briefs can say things like "All Star — latest: 'waiting on legal sign-off' (Jun 3)."
+- **Searchable multi-account picker.** When building or editing a project, search for an account, click to add it as a chip, then search again to add more. Picked accounts drop out of the search so you can't add them twice, and chips remove with one tap.
+- **Meeting agenda, surfaced.** When you open a meeting you scheduled with an agenda, that agenda now greets you at the top of the meeting sidebar instead of being hidden.
+- **Pip knows what's coming.** Upcoming scheduled meetings now feed Pip's per-account context, so when you ask "what's on my plate for Acme?" it can mention the meeting you've booked.
+
+**What you see today:** Projects read as a living status feed, link cleanly to every account they touch, and Pip's briefs reflect both the latest project pulse and your upcoming calendar.
+
+**Why it matters:** A project's current state and the meetings ahead of you are exactly what a chief-of-staff needs at a glance — now Pip has both, and so do you.
 
 ---
 

@@ -181,7 +181,7 @@ export function PipView(props) {
     });
     return {
       accounts: accounts.map(function (a) {
-        var acctMeetings = allMeetings.filter(function (m) { return m.account_id === a.id; })
+        var acctMeetings = allMeetings.filter(function (m) { return m.account_id === a.id && m.status !== "scheduled"; })
           .slice(0, 8)
           .map(function (m) {
             return {
@@ -197,13 +197,23 @@ export function PipView(props) {
               theme:        m.theme     || null,
             };
           });
+        // Upcoming scheduled (future, one-off) meetings — kept separate from
+        // recent meetings so Pip can reason about what's coming up.
+        var todayMid = new Date().toISOString().slice(0, 10);
+        var scheduledMeetings = allMeetings
+          .filter(function (m) { return m.account_id === a.id && m.status === "scheduled" && (m.meeting_date || "") >= todayMid; })
+          .sort(function (x, y) { return (x.meeting_date || "") < (y.meeting_date || "") ? -1 : 1; })
+          .slice(0, 5)
+          .map(function (m) {
+            return { date: m.meeting_date, time: m.meeting_time || null, method: m.method || null, agenda: m.agenda || null };
+          });
         var openItems = allItems.filter(function (i) { return i.account_id === a.id && !i.done; })
           .map(function (i) { return { text: i.text, due: i.due_date, owner: i.owner, created_at: i.created_at, is_commitment: !!i.is_commitment }; });
         var acctContacts = allContacts.filter(function (c) { return c.account_id === a.id; })
           .map(function (c) { return { name: c.name, title: c.title, email: c.email, phone: c.phone, is_poc: c.is_poc, is_primary: c.is_primary || false, is_leader: c.is_leader || false, relationship_role: c.relationship_role || null, relationship_note: c.relationship_note || null }; });
         var acctProjects = (projects || [])
           .filter(function (p) { return p.account_id === a.id && p.status !== "complete" && p.status !== "on_hold"; })
-          .map(function (p) { return { title: p.title, status: p.status, due_date: p.due_date }; });
+          .map(function (p) { return { title: p.title, status: p.status, due_date: p.due_date, status_updates: Array.isArray(p.status_updates) ? p.status_updates.slice(0, 3) : [] }; });
         var acctUpdates = allUpdates
           .filter(function (u) { return u.account_id === a.id; })
           .slice(0, 6)
@@ -242,6 +252,7 @@ export function PipView(props) {
           status_override: a.status_override || null,
           status_override_reason: a.status_override_reason || null,
           meetings:       acctMeetings,
+          scheduledMeetings: scheduledMeetings,
           openItems:      openItems,
           contacts:       acctContacts,
           activeProjects:  acctProjects,
@@ -314,6 +325,7 @@ export function PipView(props) {
             status:  p.status,
             account: acct ? acct.name : null,
             due_date: p.due_date || null,
+            status_updates: Array.isArray(p.status_updates) ? p.status_updates.slice(0, 3) : [],
           };
         }),
       recentDeliveries: (projects || [])

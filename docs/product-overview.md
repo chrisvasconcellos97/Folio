@@ -1,6 +1,6 @@
 # Folios — Product Overview
 
-*Last updated: 2026-06-05 (scheduled one-off meetings)*
+*Last updated: 2026-06-05 (project status updates + multi-account picker)*
 
 This is the substantive product read after the [one-pager](./one-pager.md).
 Covers what Folios does, how it's structured, and what makes the Pip
@@ -405,6 +405,23 @@ people involved.
 **Standing projects.** Admin-owned reactive queues. No sequence,
 no finish line. AMs (and Pip) drop tasks in; admin clears them.
 Example: an "Invoice Updates" inbox.
+
+A project can be linked to multiple accounts — the account field is a
+searchable picker (search → pick → chip → search again), so a project
+that touches several accounts is filed under all of them.
+
+### Notes vs. status updates
+
+Each project carries two distinct text surfaces:
+
+- **Notes** — a durable scratchpad for context, decisions, and
+  background that stays put.
+- **Status updates** — an append-only, timestamped pulse log. Posting
+  an update prepends a new entry (body + timestamp + author); the
+  expanded card shows the latest pulse ("Updated 2h ago"), and the
+  project edit screen shows the full history. Pip reads the latest
+  update (plus the prior two) so briefs can say "All Star — latest:
+  'waiting on legal sign-off' (Jun 3)."
 
 ### Custom fields
 
