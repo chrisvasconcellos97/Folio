@@ -129,7 +129,7 @@ function renderBriefWithGlows(text, accounts, onOpenAccount) {
   return segments;
 }
 
-export function HomeView({ userName, userId, accounts, meetings, items, cadences, projects, contacts, themes, onOpenAccount, onOpenAccountTab, onOpenCadenceHub, onOpenConversation, onOpenQuickTask, showOnboardingCard, onStartInterview, onDismissOnboardingCard, dripQuestion, dripQueueCount, onOpenCatchUp, onAnswerDrip, onSkipDrip, onDismissDrip, commitmentNudges, onSnoozeNudge, onMarkNudgeDone }) {
+export function HomeView({ userName, userId, accounts, meetings, items, cadences, projects, contacts, themes, onOpenAccount, onOpenAccountTab, onOpenCadenceHub, onOpenConversation, onOpenQuickTask, showOnboardingCard, onStartInterview, onDismissOnboardingCard, dripQuestion, dripQueueCount, onOpenCatchUp, onAnswerDrip, onSkipDrip, onDismissDrip, commitmentNudges, onSnoozeNudge, onMarkNudgeDone, pipFacts, profileProse }) {
   commitmentNudges = commitmentNudges || [];
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
@@ -369,6 +369,8 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
         relationshipSignals: relationshipSignals,
         toneSignals: toneSignals,
         portfolioThemes: portfolioThemes,
+        facts: pipFacts || [],
+        profileProse: profileProse || null,
       }).then(function (result) {
         setBriefLoading(false);
         if (result && result.brief) {

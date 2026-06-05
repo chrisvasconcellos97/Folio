@@ -21,7 +21,7 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  var { snapshots, projects, overdueTasks, commitmentsDue, commitmentsOverdue, todayCadences, coldAccounts, looseEnds, healthDeltas, relationshipSignals, toneSignals, portfolioThemes } = req.body || {};
+  var { snapshots, projects, overdueTasks, commitmentsDue, commitmentsOverdue, todayCadences, coldAccounts, looseEnds, healthDeltas, relationshipSignals, toneSignals, portfolioThemes, facts, profileProse } = req.body || {};
   snapshots = snapshots || [];
 
   var atRisk   = snapshots.filter(function (s) { return s.health_status === "at_risk"; });
@@ -135,7 +135,19 @@ export default async function handler(req, res) {
       }).join("; ")
     : null;
 
-  var portfolioText = [
+  // What the user has taught Pip — profile narrative + glossary facts. Goes in
+  // the (non-cached) user message so the cached system prompt stays byte-stable
+  // across users. Lets the morning brief speak their vocabulary.
+  var knownBlock = "";
+  if (typeof profileProse === "string" && profileProse.trim()) {
+    knownBlock += "WHO THIS PERSON IS:\n" + profileProse.trim() + "\n\n";
+  }
+  if (Array.isArray(facts) && facts.length) {
+    knownBlock += "WHAT YOU'VE LEARNED (their vocabulary + preferences — use it, don't ask):\n" +
+      facts.slice(0, 20).map(function (f) { return "- " + f; }).join("\n") + "\n\n";
+  }
+
+  var portfolioText = knownBlock + [
     snapshots.length > 0 ? snapshots.length + " accounts total." : null,
     flaggedLines.length > 0 ? "Account flags:\n" + flaggedLines.join("\n") : "No accounts flagged at the account level.",
     workloadLines.length > 0 ? "Active workload:\n" + workloadLines.join("\n") : "No overdue tasks or upcoming commitments.",

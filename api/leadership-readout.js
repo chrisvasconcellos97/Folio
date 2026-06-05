@@ -28,7 +28,7 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  var { meetingSummary, actionItems, contactName, portfolioState } = req.body || {};
+  var { meetingSummary, actionItems, contactName, portfolioState, facts, profileProse } = req.body || {};
   if (!meetingSummary) return res.status(400).json({ error: "meetingSummary required" });
 
   var bossName = contactName || "your manager";
@@ -54,7 +54,18 @@ export default async function handler(req, res) {
     "Keep it under 250 words. Do not include a subject line. Start with 'Hi [name],' on the first line. " +
     "Major-tier accounts carry the most revenue and relationship weight. Lead with them when surfacing risks, wins, or items needing attention. Don't bury a Major account issue behind Mid or Growth items.";
 
-  var userPrompt = "1:1 meeting summary:\n" + meetingSummary + "\n\n" +
+  // Inject what Pip has learned so the email uses the user's own vocabulary
+  // (glossary facts) and reflects who they are (profile narrative).
+  var knownBlock = "";
+  if (typeof profileProse === "string" && profileProse.trim()) {
+    knownBlock += "About the AM writing this:\n" + profileProse.trim() + "\n\n";
+  }
+  if (Array.isArray(facts) && facts.length) {
+    knownBlock += "Their vocabulary / things they've taught you (use the right terms, don't explain them):\n" +
+      facts.slice(0, 20).map(function (f) { return "- " + f; }).join("\n") + "\n\n";
+  }
+
+  var userPrompt = knownBlock + "1:1 meeting summary:\n" + meetingSummary + "\n\n" +
     (actionItems && actionItems.length ? "Action items from the call:\n" + actionItems.map(function(a) { return "- " + a; }).join("\n") + "\n\n" : "") +
     (portfolioSection ? "Portfolio state:\n" + portfolioSection + "\n\n" : "") +
     "Write the email to " + bossName + ".";

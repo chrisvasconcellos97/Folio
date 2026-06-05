@@ -1515,6 +1515,8 @@ export function CadenceHub({
             var acc = (accounts || []).find(function (a) { return a.id === s.account_id; });
             return Object.assign({}, s, { account_name: acc ? acc.name : "Account" });
           }),
+          facts:        pipFactsApi.activeFactStrings || [],
+          profileProse: userProfile && userProfile.profile_prose ? userProfile.profile_prose : null,
         }),
       });
     })

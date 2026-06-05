@@ -966,6 +966,8 @@ export default function App() {
         dripQuestion={dripHook.activeQuestion}
         dripQueueCount={(dripHook.queuedQuestions || []).length}
         onOpenCatchUp={function () { setCatchUpOpen(true); }}
+        pipFacts={pipFactsAppApi.activeFactStrings || []}
+        profileProse={userProfile && userProfile.profile_prose ? userProfile.profile_prose : null}
         onAnswerDrip={dripHook.answerQuestion}
         onSkipDrip={dripHook.skipQuestion}
         onDismissDrip={dripHook.dismissQuestion}
