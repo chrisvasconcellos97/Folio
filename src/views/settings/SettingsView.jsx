@@ -7,6 +7,7 @@ import { AmberBtn } from "../../components/Buttons";
 import { showToast } from "../../components/Toast";
 import { Modal } from "../../components/Modal";
 import { supabase } from "../../lib/supabase";
+import { MarkdownText } from "../../components/MarkdownText";
 import { usePipFacts } from "../../hooks/usePipFacts";
 import { useUserProfile } from "../../hooks/useUserProfile";
 import { usePipUsage } from "../../hooks/usePipUsage";
@@ -1385,9 +1386,25 @@ function PipQuestionsSection({ userId }) {
   var profileApi = useUserProfile(userId);
   var profile    = profileApi.profile;
   var [saving, setSaving] = useState(false);
+  var [answers, setAnswers] = useState([]);
+
+  // Surface the answers the user has given Pip — otherwise answering the drip
+  // questions feels like shouting into a void (they feed profile_prose, which
+  // until now had no UI).
+  useEffect(function () {
+    if (!userId) return;
+    supabase.from("folio_pip_questions")
+      .select("id, question_text, answer_text, answered_at")
+      .eq("user_id", userId).eq("status", "answered")
+      .not("answer_text", "is", null)
+      .order("answered_at", { ascending: false })
+      .limit(25)
+      .then(function (r) { if (!r.error) setAnswers(r.data || []); });
+  }, [userId]);
 
   var paused = !!(profile && profile.pip_questions_paused);
   var completeness = (profile && profile.completeness) || 0;
+  var prose = profile && profile.profile_prose;
 
   function togglePause() {
     if (!profile || saving) return;
@@ -1427,6 +1444,38 @@ function PipQuestionsSection({ userId }) {
           }} />
         </div>
       </div>
+
+      {/* What Pip understands about you — the synthesized narrative (read-only) */}
+      {prose && (
+        <div style={{ marginBottom: 16, paddingTop: 14, borderTop: "1px solid " + C.rule }}>
+          <div style={{ fontSize: 12, color: C.textSub, fontWeight: 600, marginBottom: 6 }}>
+            What Pip understands about you
+          </div>
+          <MarkdownText text={prose} style={{ fontSize: 13, color: C.textSoft, lineHeight: 1.65 }} />
+          <div style={{ fontSize: 11, color: C.textMuted, marginTop: 8, fontStyle: "italic" }}>
+            Pip rebuilds this from your answers. Injected into every brief, summary, and chat.
+          </div>
+        </div>
+      )}
+
+      {/* What you've told Pip — the raw answered questions, so nothing feels lost */}
+      {answers.length > 0 && (
+        <div style={{ marginBottom: 16, paddingTop: 14, borderTop: "1px solid " + C.rule }}>
+          <div style={{ fontSize: 12, color: C.textSub, fontWeight: 600, marginBottom: 8 }}>
+            What you{"'"}ve told Pip <span style={{ color: C.textMuted, fontWeight: 400 }}>· {answers.length}</span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {answers.map(function (a) {
+              return (
+                <div key={a.id} style={{ borderLeft: "2px solid " + C.accentLine, paddingLeft: 10 }}>
+                  <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.5, marginBottom: 2 }}>{a.question_text}</div>
+                  <div style={{ fontSize: 13, color: C.text, lineHeight: 1.55 }}>{a.answer_text}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Pause toggle */}
       <div style={{

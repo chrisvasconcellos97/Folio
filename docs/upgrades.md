@@ -1,6 +1,6 @@
 # Folios — Upgrade Log
 
-*Last updated: 2026-06-05 (Pip structured formatting + daily-brief fix)*
+*Last updated: 2026-06-05 (Pip answers visibility + structured formatting)*
 
 Plain-English log of major upgrades shipped to Folios. Date, time, and
 a short explanation written in terms anyone can read — not technical
@@ -14,6 +14,20 @@ For the technical changelog with full release detail, see
 architectural changes, anything that meaningfully changes what Folios
 *does* or *is*. Not bug fixes, styling tweaks, or doc-only updates —
 those live in git history.
+
+---
+
+## 2026-06-05 — You can now see what you've told Pip
+
+**What I built:** A place in Settings that shows everything you've told Pip and the profile it has built from your answers — plus a fix so your answers fold into that profile within minutes instead of the next day.
+
+**Problem it solves:** Answering Pip's "Pip's Curious" questions felt like shouting into a void. The answers were saved and Pip was quietly using them in every brief, but there was no screen that showed them back to you — so a long session of answering looked like it did nothing.
+
+**What changed:** Settings → Pip's Questions now shows "What Pip understands about you" (the narrative Pip builds from your answers) and "What you've told Pip" (your actual answered questions). And the background step that rebuilds the narrative from new answers now runs about five minutes after you answer, with a small confirmation, instead of once a day.
+
+**What you see today:** Answer a few questions, and within minutes Settings reflects the updated understanding — and your raw answers are always listed there so nothing ever feels lost.
+
+**Why it matters:** If the app asks you to invest a few minutes teaching it, it owes you visible proof that the investment landed.
 
 ---
 

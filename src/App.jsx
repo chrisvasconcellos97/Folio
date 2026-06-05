@@ -643,14 +643,18 @@ export default function App() {
     }).catch(function (err) { console.warn("[generate-questions] failed:", err && err.message); });
   }, [userId, profileLoading, userProfile && userProfile.pip_questions_paused]);
 
-  // Re-synthesis trigger — when drip hook reports >= 3 new answers since last synthesis.
+  // Re-synthesis trigger — when drip hook reports >= 3 new answers since last
+  // synthesis. Short throttle (5 min) not 24h: a sitting where you answer
+  // several questions should fold into Pip's profile of you within minutes, not
+  // the next day. Each run is ~$0.004, and answeredSinceSynthesis resets to 0
+  // once prose_generated_at updates, so this can't loop.
   useEffect(function () {
     if (!userId || !session) return;
     if (dripHook.answeredSinceSynthesis < 3) return;
     var key = "folio_resynth_last_" + userId;
     var last = 0;
     try { last = parseInt(localStorage.getItem(key) || "0", 10); } catch (e) {}
-    if (Date.now() - last < 24 * 60 * 60 * 1000) return; // once per 24h
+    if (Date.now() - last < 5 * 60 * 1000) return; // at most once per 5 min
     try { localStorage.setItem(key, String(Date.now())); } catch (e) {}
 
     // Gather all answered Q&A pairs (bank + drip) for synthesis.
@@ -676,6 +680,7 @@ export default function App() {
         if (!parsed || parsed.error) return;
         var update = Object.assign({}, parsed, { prose_generated_at: new Date().toISOString() });
         userProfileApi.upsertProfile(update).catch(function () {});
+        showToast("Pip updated what he knows about you ✦");
       });
     }).catch(function (err) { console.warn("[resynth] failed:", err && err.message); });
   }, [userId, dripHook.answeredSinceSynthesis]);
