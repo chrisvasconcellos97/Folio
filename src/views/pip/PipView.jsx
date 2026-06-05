@@ -231,6 +231,7 @@ export function PipView(props) {
           billing_terms: a.billing_terms || null,
           spend_ytd: a.spend_ytd != null ? a.spend_ytd : null,
           objective: a.objective,
+          systems: Array.isArray(a.systems) ? a.systems : [],
           is_my_department: a.is_my_department || false,
           serviced_states:  a.serviced_states  || null,
           health:  computedHealth.status || null,

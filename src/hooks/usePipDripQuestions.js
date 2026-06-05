@@ -133,16 +133,20 @@ export function usePipDripQuestions(userId, profile, onTermLearned) {
       .eq("user_id", userId)
       .then(function (r) {
         if (r.error) throw r.error;
-        // If category is 'terminology', call onTermLearned with the term + answer.
         var row = rows.find(function (x) { return x.id === id; });
+        // If category is 'terminology', call onTermLearned with the term + answer.
         if (row && row.category === "terminology" && typeof onTermLearned === "function") {
           onTermLearned(row.trigger_context || row.question_text, text);
         }
+        var suggestion = row && row.suggestion ? row.suggestion : null;
         setActiveQuestion(null);
         setRows(function (prev) {
           return prev.filter(function (x) { return x.id !== id; });
         });
-        return fetch();
+        fetch();
+        // Resolve with the structured suggestion (if any) so the caller can
+        // offer a "save it to the account/contact" approval.
+        return { suggestion: suggestion };
       });
   }
 

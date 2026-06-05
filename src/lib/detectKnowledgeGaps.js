@@ -97,9 +97,10 @@ export async function detectKnowledgeGaps({ userId, supabase, accounts, meetings
       var count = countsByName[c.name] || 0;
       if (count < 3) return;
       candidates.push({
-        question_text:   "You’ve sat down with " + name + " a few times but I don’t have their role — who are they to the account?",
+        question_text:   "You’ve sat down with " + name + " a few times but I don’t have their role. Who are they to the account?",
         category:        "gap",
         trigger_context: c.id,
+        suggestion:      { type: "contact_role", contact_id: c.id, contact_name: name },
         priority:        7,
       });
     });
@@ -119,6 +120,7 @@ export async function detectKnowledgeGaps({ userId, supabase, accounts, meetings
           question_text:   "What’s the main objective with " + a.name + "? I don’t have one on file.",
           category:        "gap",
           trigger_context: a.id,
+          suggestion:      { type: "account_objective", account_id: a.id, account_name: a.name },
           priority:        6,
         });
       });

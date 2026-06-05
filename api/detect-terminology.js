@@ -153,7 +153,7 @@ export default async function handler(req, res) {
     var acctById = {};
     accounts.forEach(function (a) { if (a.id) acctById[a.id] = a.name; });
 
-    function dominantAccountFor(term) {
+    function dominantAccountIdFor(term) {
       var lc = term.toLowerCase();
       var counts = {};
       meetings.forEach(function (m) {
@@ -168,14 +168,15 @@ export default async function handler(req, res) {
       Object.keys(counts).forEach(function (id) {
         if (counts[id] > topN) { topN = counts[id]; top = id; }
       });
-      return top && acctById[top] ? acctById[top] : null;
+      return top && acctById[top] ? top : null;
     }
 
     var rows = newTerms.slice(0, 8).map(function (t) {
-      var acctName = dominantAccountFor(t.term);
+      var acctId   = dominantAccountIdFor(t.term);
+      var acctName = acctId ? acctById[acctId] : null;
       var q = acctName
-        ? "You keep mentioning " + t.term + " around " + acctName + " — what is it? A system they use, a brand, a program, or a person?"
-        : "You keep mentioning " + t.term + " — what is it? A system, a brand, a program, or a person?";
+        ? "You keep mentioning " + t.term + " around " + acctName + ". What is it: a system they use, a brand, a program, or a person?"
+        : "You keep mentioning " + t.term + ". What is it: a system, a brand, a program, or a person?";
       return {
         user_id:        userId,
         question_text:  q,
@@ -184,6 +185,9 @@ export default async function handler(req, res) {
         status:         "queued",
         priority:       7,
         trigger_context: t.term,
+        // Approved answers become a structured "systems they use" entry on the
+        // account whose notes mention the term most.
+        suggestion:     acctId ? { type: "account_system", account_id: acctId, account_name: acctName, term: t.term } : null,
       };
     });
 

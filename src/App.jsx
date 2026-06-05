@@ -159,13 +159,17 @@ export default function App() {
       setAllItems((r.data || []).map(function (row) { return Object.assign({}, row, { text: row.title, owner: row.assignee_email }); }));
     });
   }
-  useEffect(function () {
+  function fetchAllContacts() {
     if (!userId) return;
-    fetchAllItems();
     supabase.from("folio_contacts").select("*").eq("user_id", userId).then(function (r) {
       if (r.error) { console.warn("[App] failed to load folio_contacts:", r.error && r.error.message); return; }
       setAllContacts(r.data || []);
     });
+  }
+  useEffect(function () {
+    if (!userId) return;
+    fetchAllItems();
+    fetchAllContacts();
     supabase.from("folio_account_updates").select("*").eq("user_id", userId).order("update_date", { ascending: false }).then(function (r) {
       if (r.error) { console.warn("[App] failed to load folio_account_updates:", r.error && r.error.message); return; }
       setAllUpdates(r.data || []);
@@ -541,6 +545,32 @@ export default function App() {
   );
   // "Catch up with Pip" modal — answer the whole queue in one sitting.
   var [catchUpOpen, setCatchUpOpen] = useState(false);
+
+  // Pip "proposes, you approve" — turn an answered question into an approved
+  // structured write. Never silent: only fires when the user keeps the toggle
+  // checked in the answer card. Writes to existing fields (account objective /
+  // contact role / account systems list); never touches health or tier.
+  function applyPipSuggestion(suggestion, answerText) {
+    if (!suggestion || !answerText) return Promise.resolve();
+    var val = String(answerText).trim();
+    if (!val) return Promise.resolve();
+    if (suggestion.type === "account_objective" && suggestion.account_id) {
+      return updateAccount(suggestion.account_id, { objective: val })
+        .then(function () { showToast("Saved to " + (suggestion.account_name || "the account") + "’s objective ✦"); });
+    }
+    if (suggestion.type === "account_system" && suggestion.account_id) {
+      var acct = (accounts || []).find(function (a) { return a.id === suggestion.account_id; });
+      var existing = (acct && Array.isArray(acct.systems)) ? acct.systems : [];
+      var entry = { name: suggestion.term || val.split(/[.,\n]/)[0].slice(0, 40), note: val, at: new Date().toISOString() };
+      return updateAccount(suggestion.account_id, { systems: existing.concat([entry]) })
+        .then(function () { showToast("Saved " + (suggestion.term || "it") + " to " + (suggestion.account_name || "the account") + "’s systems ✦"); });
+    }
+    if (suggestion.type === "contact_role" && suggestion.contact_id) {
+      return supabase.from("folio_contacts").update({ title: val }).eq("id", suggestion.contact_id).eq("user_id", userId)
+        .then(function (r) { if (r.error) throw r.error; fetchAllContacts(); showToast("Saved " + (suggestion.contact_name || "their") + " role ✦"); });
+    }
+    return Promise.resolve();
+  }
 
   // Purge the generic evergreen filler on EVERY load — not gated behind the
   // daily detect timer, which previously let filler linger for a day after a
@@ -977,6 +1007,7 @@ export default function App() {
         dripQuestion={dripHook.activeQuestion}
         dripQueueCount={(dripHook.queuedQuestions || []).length}
         onOpenCatchUp={function () { setCatchUpOpen(true); }}
+        onApplySuggestion={applyPipSuggestion}
         pipFacts={pipFactsAppApi.activeFactStrings || []}
         profileProse={userProfile && userProfile.profile_prose ? userProfile.profile_prose : null}
         onAnswerDrip={dripHook.answerQuestion}
@@ -1420,6 +1451,7 @@ export default function App() {
             questions={dripHook.queuedQuestions || []}
             onAnswer={dripHook.answerQuestion}
             onSkip={dripHook.skipQuestion}
+            onApplySuggestion={applyPipSuggestion}
             onClose={function () { setCatchUpOpen(false); }}
           />
         )}
@@ -1437,6 +1469,7 @@ export default function App() {
           questions={dripHook.queuedQuestions || []}
           onAnswer={dripHook.answerQuestion}
           onSkip={dripHook.skipQuestion}
+            onApplySuggestion={applyPipSuggestion}
           onClose={function () { setCatchUpOpen(false); }}
         />
       )}

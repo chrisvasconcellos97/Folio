@@ -237,6 +237,11 @@ function renderAccountFull(a, userId) {
     lines.push("Serviced states: " + ssStr);
   }
   if (a.objective) lines.push("Account Intel: " + a.objective);
+  if (Array.isArray(a.systems) && a.systems.length) {
+    lines.push("Systems/tools they use: " + a.systems.map(function (s) {
+      return (s.name || "") + (s.note ? " (" + s.note + ")" : "");
+    }).filter(Boolean).join(", "));
+  }
 
   var meetings = take(a.meetings, 8);
   if (meetings.length) {

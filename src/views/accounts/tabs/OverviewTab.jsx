@@ -323,6 +323,31 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
         />
       </Card>
 
+      {/* Systems they use — populated via approved Pip suggestions. */}
+      {Array.isArray(account.systems) && account.systems.length > 0 && (
+        <Card>
+          <FL>Systems They Use</FL>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+            {account.systems.map(function (s, i) {
+              return (
+                <span
+                  key={i}
+                  title={s.note || ""}
+                  style={{
+                    fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+                    fontSize: 11, color: C.accent,
+                    background: C.accentFaint, border: "1px solid " + C.accentLine,
+                    borderRadius: 999, padding: "3px 10px",
+                  }}
+                >
+                  {s.name}{s.note ? " · " + (s.note.length > 40 ? s.note.slice(0, 40) + "…" : s.note) : ""}
+                </span>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
       {/* Recent updates — last 5, links into the full Updates tab. */}
       {(function () {
         var recent = (updates || []).slice(0, 5);

@@ -502,6 +502,7 @@ export function callBriefMePip(payload) {
       spend_ytd: account.spend_ytd != null ? account.spend_ytd : null,
       last_interaction_at: account.last_interaction_at,
       objective: account.objective,
+      systems: Array.isArray(account.systems) ? account.systems : [],
       notes:  account.objective,
       tags:   account.tags,
       region: account.region,

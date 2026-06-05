@@ -36,6 +36,7 @@ create table if not exists folio_accounts (
   tier                    text check (tier in ('Major', 'Mid', 'Growth')),
   status                  text default 'green' check (status in ('green', 'yellow', 'red')),
   objective               text,
+  systems                 jsonb not null default '[]'::jsonb,  -- tools/systems the account uses (approved Pip suggestions)
   next_meeting            date,
   last_meeting            date,
   last_interaction_at     timestamptz,
@@ -770,6 +771,7 @@ create table if not exists folio_pip_questions (
   status           text default 'queued' check (status in ('queued','asked','answered','skipped','dismissed')),
   answer_text      text,
   trigger_context  text,
+  suggestion       jsonb,  -- structured intent: { type, account_id?, contact_id?, term? }
   asked_at         timestamptz,
   answered_at      timestamptz,
   created_at       timestamptz default now()

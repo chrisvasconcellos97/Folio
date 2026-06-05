@@ -18,9 +18,19 @@ function catLabel(cat) {
   return "Question";
 }
 
-export function PipCatchUp({ questions, onAnswer, onSkip, onClose }) {
+// Plain-language label for the structured write a suggestion would make.
+export function suggestionLabel(s) {
+  if (!s) return null;
+  if (s.type === "account_system")    return "Also save " + (s.term || "this") + " to " + (s.account_name || "the account") + "’s systems";
+  if (s.type === "contact_role")      return "Also save " + (s.contact_name || "their") + "’s role";
+  if (s.type === "account_objective") return "Also set " + (s.account_name || "the account") + "’s objective";
+  return null;
+}
+
+export function PipCatchUp({ questions, onAnswer, onSkip, onClose, onApplySuggestion }) {
   var [drafts, setDrafts] = useState({});
   var [busy, setBusy]     = useState({});
+  var [applyOff, setApplyOff] = useState({}); // ids where the user unchecked "also save"
 
   function setDraft(id, v) { setDrafts(function (p) { return Object.assign({}, p, { [id]: v }); }); }
   function markBusy(id)    { setBusy(function (p) { return Object.assign({}, p, { [id]: true }); }); }
@@ -30,8 +40,12 @@ export function PipCatchUp({ questions, onAnswer, onSkip, onClose }) {
     var text = (drafts[q.id] || "").trim();
     if (!text || busy[q.id]) return;
     markBusy(q.id);
+    var willApply = q.suggestion && !applyOff[q.id] && typeof onApplySuggestion === "function";
     Promise.resolve(onAnswer(q.id, text))
-      .then(function () { showToast("Got it — thanks"); })
+      .then(function () {
+        if (willApply) onApplySuggestion(q.suggestion, text);  // shows its own toast
+        else showToast("Got it — thanks");
+      })
       .catch(function () { clearBusy(q.id); showToast("Couldn't save — try again", "error"); });
   }
 
@@ -97,6 +111,22 @@ export function PipCatchUp({ questions, onAnswer, onSkip, onClose }) {
                   outline: "none", boxSizing: "border-box",
                 }}
               />
+              {q.suggestion && suggestionLabel(q.suggestion) && onApplySuggestion && (
+                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", marginTop: 2 }}>
+                  <input
+                    type="checkbox"
+                    checked={!applyOff[q.id]}
+                    onChange={function (e) {
+                      var off = !e.target.checked;
+                      setApplyOff(function (p) { return Object.assign({}, p, { [q.id]: off }); });
+                    }}
+                    style={{ accentColor: C.accent, width: 15, height: 15 }}
+                  />
+                  <span style={{ fontFamily: INTER, fontSize: 12, color: C.accent }}>
+                    {suggestionLabel(q.suggestion)}
+                  </span>
+                </label>
+              )}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <button
                   type="button"

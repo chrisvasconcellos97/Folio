@@ -8,6 +8,7 @@ import { getNextOccurrence, formatTime } from "../../lib/cadenceUtils";
 import { useAccountSnapshots } from "../../hooks/useAccountSnapshots";
 import { callPortfolioBriefPip } from "../../lib/pip";
 import { isProjectComplete } from "../../lib/gaugeStatus";
+import { suggestionLabel } from "../pip/PipCatchUp";
 
 var SERIF = "'Fraunces', Georgia, serif";
 var INTER = "'Inter', system-ui, sans-serif";
@@ -129,7 +130,7 @@ function renderBriefWithGlows(text, accounts, onOpenAccount) {
   return segments;
 }
 
-export function HomeView({ userName, userId, accounts, meetings, items, cadences, projects, contacts, themes, onOpenAccount, onOpenAccountTab, onOpenCadenceHub, onOpenConversation, onOpenQuickTask, showOnboardingCard, onStartInterview, onDismissOnboardingCard, dripQuestion, dripQueueCount, onOpenCatchUp, onAnswerDrip, onSkipDrip, onDismissDrip, commitmentNudges, onSnoozeNudge, onMarkNudgeDone, pipFacts, profileProse }) {
+export function HomeView({ userName, userId, accounts, meetings, items, cadences, projects, contacts, themes, onOpenAccount, onOpenAccountTab, onOpenCadenceHub, onOpenConversation, onOpenQuickTask, showOnboardingCard, onStartInterview, onDismissOnboardingCard, dripQuestion, dripQueueCount, onOpenCatchUp, onApplySuggestion, onAnswerDrip, onSkipDrip, onDismissDrip, commitmentNudges, onSnoozeNudge, onMarkNudgeDone, pipFacts, profileProse }) {
   commitmentNudges = commitmentNudges || [];
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
@@ -141,9 +142,10 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
   var briefFiredRef = useRef(false);
   var [dripAnswer, setDripAnswer]     = useState("");
   var [dripSaving, setDripSaving]     = useState(false);
+  var [dripApplyOff, setDripApplyOff] = useState(false); // unchecked "also save"
 
   // Reset textarea when the active question changes.
-  useEffect(function () { setDripAnswer(""); }, [dripQuestion && dripQuestion.id]);
+  useEffect(function () { setDripAnswer(""); setDripApplyOff(false); }, [dripQuestion && dripQuestion.id]);
 
   var { snapshots, snapshotHistory } = useAccountSnapshots(userId);
 
@@ -1053,6 +1055,19 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
               marginBottom: 10,
             }}
           />
+          {dripQuestion.suggestion && suggestionLabel(dripQuestion.suggestion) && onApplySuggestion && (
+            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", marginBottom: 10 }}>
+              <input
+                type="checkbox"
+                checked={!dripApplyOff}
+                onChange={function (e) { setDripApplyOff(!e.target.checked); }}
+                style={{ accentColor: C.accent, width: 15, height: 15 }}
+              />
+              <span style={{ fontFamily: INTER, fontSize: 12, color: C.accent }}>
+                {suggestionLabel(dripQuestion.suggestion)}
+              </span>
+            </label>
+          )}
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             <button
               type="button"
@@ -1060,10 +1075,14 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
               onClick={function () {
                 if (!dripAnswer.trim() || dripSaving) return;
                 setDripSaving(true);
-                var p = onAnswerDrip ? onAnswerDrip(dripQuestion.id, dripAnswer.trim()) : Promise.resolve();
+                var text = dripAnswer.trim();
+                var willApply = dripQuestion.suggestion && !dripApplyOff && onApplySuggestion;
+                var p = onAnswerDrip ? onAnswerDrip(dripQuestion.id, text) : Promise.resolve();
                 (p || Promise.resolve()).then(function () {
+                  if (willApply) onApplySuggestion(dripQuestion.suggestion, text);
                   setDripSaving(false);
                   setDripAnswer("");
+                  setDripApplyOff(false);
                 }).catch(function () { setDripSaving(false); });
               }}
               style={{
