@@ -66,12 +66,13 @@ function hasEditableTitle(kind) {
 // the existing text out of the leader — it gets its own "CURRENT" line in
 // the diff block below so the user can read it in full instead of a
 // 60-char truncation.
-function rowLeader(row, ctx) {
+function rowLeader(row, ctx, effectiveProjectId) {
   switch (row.kind) {
     case "new_item":    return "New item";
     case "new_task": {
-      var np = findProject(ctx.activeProjects, row.project_id);
-      return "New task on " + (np ? np.title : "project");
+      var npId = effectiveProjectId !== undefined ? effectiveProjectId : row.project_id;
+      var np = findProject(ctx.activeProjects, npId);
+      return np ? ("New task on " + np.title) : "New task (standalone)";
     }
     case "update_item": return "Update item";
     case "update_task": {
@@ -514,7 +515,7 @@ function UnknownPersonRow({ person, onAdd, onDismiss }) {
 }
 
 export function PipSummarizePreview({
-  plan,
+  plan: rawPlan,
   existingItems,
   activeProjects,
   orgMembers,
@@ -537,6 +538,28 @@ export function PipSummarizePreview({
   discussedProjectIds = [],  // UUIDs of projects the user flagged as discussed
   discussedItemIds    = [],  // UUIDs of items/tasks the user flagged as discussed
 }) {
+  // Sanitize Pip's plan: drop update rows that point at a task/item we can't
+  // resolve, or that carry no concrete field change. Pip sometimes emits an
+  // update_task on a "discussed" project without a real task to update —
+  // these rendered as a useless "(empty) → (blank)" row that does nothing on
+  // apply. Shadowing the prop means every downstream use sees the clean plan.
+  var plan = useMemo(function () {
+    return (rawPlan || []).filter(function (r) {
+      if (r.kind === "update_task") {
+        var p = findProject(activeProjects, r.project_id);
+        var t = p && findTask(p, r.task_id);
+        if (!t) return false;
+        if (!r.fields || Object.keys(r.fields).length === 0) return false;
+      }
+      if (r.kind === "update_item") {
+        var it = findItem(existingItems, r.target_id);
+        if (!it) return false;
+        if (!r.fields || Object.keys(r.fields).length === 0) return false;
+      }
+      return true;
+    });
+  }, [rawPlan, activeProjects, existingItems]);
+
   var memberOptions = useMemo(function () {
     return (orgMembers || []).map(function (m) {
       var email = m.invited_email || m.email || "";
@@ -590,7 +613,9 @@ export function PipSummarizePreview({
         initialTargetAccountId: r.target_account_id || null,
         isCommitment: r.is_commitment === true,
         pipFlaggedCommitment: r.is_commitment === true,
-        gaugeProjectId: null,
+        // new_task rows reflect Pip's routed project so the picker shows it and
+        // can be changed — incl. "Not in Gauge" to pull the task out standalone.
+        gaugeProjectId: r.kind === "new_task" ? (r.project_id || null) : null,
         asProject: false,
       };
     });
@@ -721,7 +746,14 @@ export function PipSummarizePreview({
         merged.target_account_id = state[idx].targetAccountId || null;
         merged.recipient = state[idx].recipient || null;
         merged.is_commitment = state[idx].isCommitment || false;
-        if (state[idx].gaugeProjectId) merged.gaugeProjectId = state[idx].gaugeProjectId;
+        if (row.kind === "new_task") {
+          // The picker is the source of truth for a new_task's project. Empty
+          // ("Not in Gauge") clears project_id → applyPipPlan files it as a
+          // standalone task instead of a project stage.
+          merged.project_id = state[idx].gaugeProjectId || null;
+        } else if (state[idx].gaugeProjectId) {
+          merged.gaugeProjectId = state[idx].gaugeProjectId;
+        }
       }
       selected.push({ idx: idx, row: merged });
 
@@ -871,7 +903,7 @@ export function PipSummarizePreview({
               checked={!!s.checked}
               onChange={function (v) { patch(idx, { checked: v }); }}
               lowConfidence={low}
-              ariaLabel={(s.checked ? "Selected: " : "Not selected: ") + rowLeader(row, ctx)}
+              ariaLabel={(s.checked ? "Selected: " : "Not selected: ") + rowLeader(row, ctx, s.gaugeProjectId)}
             />
           </div>
         )}
@@ -881,7 +913,7 @@ export function PipSummarizePreview({
             textTransform: "uppercase", letterSpacing: "0.07em",
             lineHeight: 1.4,
           }}>
-            {rowLeader(row, ctx)}
+            {rowLeader(row, ctx, s.gaugeProjectId)}
           </div>
           {(row.kind === "update_item" || row.kind === "update_task") && (
             <div style={{
