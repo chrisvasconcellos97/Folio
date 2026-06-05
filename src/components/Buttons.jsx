@@ -16,6 +16,9 @@ var btnBase = {
 // a screen / the confirm action in a modal. The glow ties it into the same
 // family as the secondary CTA and the rail's lit-pill so users learn
 // "teal glow = action" everywhere.
+// NOTE: type defaults to "button" (avoids accidental form submits). If you use
+// this as a form's submit control, you MUST pass type="submit" — otherwise the
+// click does nothing. (This bit AuthView's Sign In after the CTA refactor.)
 export function AmberBtn({ onClick, children, style, disabled, type, title, ariaLabel }) {
   return (
     <button

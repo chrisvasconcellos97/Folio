@@ -264,6 +264,7 @@ export function AuthView({ onSignIn, onSignUp }) {
             )}
 
             <AmberBtn
+              type="submit"
               style={{ width: "100%", fontSize: 14, padding: "11px 0" }}
               disabled={loading}
             >
