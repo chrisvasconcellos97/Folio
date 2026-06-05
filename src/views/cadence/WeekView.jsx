@@ -2,9 +2,12 @@ import { C } from "../../lib/colors";
 import { isSameDay, formatTime, DAYS_SHORT, MONTHS } from "../../lib/cadenceUtils";
 import { eventColor, navBtnStyle } from "./cadenceShared";
 
-export function WeekView({ weekStart, weekEnd, events, onPrev, onNext, onSelectAccount, onOpenHub, contacts }) {
+export function WeekView({ weekStart, weekEnd, events, onPrev, onNext, onSelectAccount, onOpenHub, contacts, accounts, onOpenScheduled }) {
   var today = new Date();
   today.setHours(0, 0, 0, 0);
+
+  var accountById = {};
+  (accounts || []).forEach(function (a) { accountById[a.id] = a; });
 
   var days = [];
   for (var i = 0; i < 7; i++) {
@@ -56,6 +59,33 @@ export function WeekView({ weekStart, weekEnd, events, onPrev, onNext, onSelectA
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                 {evts.map(function (ev, j) {
+                  // Scheduled one-off meeting chip
+                  if (ev.scheduledMeeting) {
+                    var acct = accountById[ev.scheduledMeeting.account_id];
+                    var mName = acct ? acct.name : '?';
+                    var mTime = ev.scheduledMeeting.meeting_time ? formatTime(ev.scheduledMeeting.meeting_time) : '';
+                    return (
+                      <div key={ev.scheduledMeeting.id + "-w-" + j}
+                        onClick={function () { if (onOpenScheduled) onOpenScheduled(ev.scheduledMeeting); }}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={function (e) {
+                          if (e.key !== 'Enter' && e.key !== ' ') return;
+                          e.preventDefault();
+                          if (onOpenScheduled) onOpenScheduled(ev.scheduledMeeting);
+                        }}
+                        style={{
+                          background: C.accent + '18', border: '1px solid ' + C.accent + '44',
+                          borderRadius: 5, padding: '4px 5px', cursor: 'pointer',
+                        }}
+                      >
+                        <div style={{ fontSize: 9, fontWeight: 700, color: C.accent, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          ◆ {mName}
+                        </div>
+                        {mTime && <div style={{ fontSize: 9, color: C.textMuted, marginTop: 1 }}>{mTime}</div>}
+                      </div>
+                    );
+                  }
                   var col  = eventColor(ev);
                   var isPerson = ev.cadence.cadence_scope === 'person' || (!ev.cadence.account_id && ev.cadence.contact_id);
                   var personContact = isPerson && ev.cadence.contact_id && contacts

@@ -100,7 +100,7 @@ function systemNotificationBody(threshold, cadenceLabel, accountName) {
   return cadenceLabel + " with " + accountName + " just started.";
 }
 
-export function useCadenceReminders(userId, cadences, accounts) {
+export function useCadenceReminders(userId, cadences, accounts, scheduledMeetings) {
   var [reminders, setReminders]   = useState([]);
   var [permission, setPermission] = useState(permState());
   var firedRef     = useRef(null);
@@ -150,7 +150,9 @@ export function useCadenceReminders(userId, cadences, accounts) {
   // Tick — scan cadences for crossed thresholds.
   useEffect(function () {
     if (!userId) return;
-    if (!cadences || cadences.length === 0) {
+    var hasCadences   = cadences && cadences.length > 0;
+    var hasScheduled  = scheduledMeetings && scheduledMeetings.length > 0;
+    if (!hasCadences && !hasScheduled) {
       setReminders([]);
       return;
     }
@@ -169,7 +171,7 @@ export function useCadenceReminders(userId, cadences, accounts) {
       var newlyFired = [];
       var active = []; // reminders that should currently be visible
 
-      cadences.forEach(function (c) {
+      (cadences || []).forEach(function (c) {
         if (!c || !c.meeting_time) return;
         var acct = accountById[c.account_id];
         if (!acct) return;
@@ -192,6 +194,53 @@ export function useCadenceReminders(userId, cadences, accounts) {
               id:            id,
               cadenceId:     c.id,
               accountId:     c.account_id,
+              accountName:   name,
+              cadenceLabel:  label,
+              threshold:     t.key,
+              startAt:       startMs,
+              firedAt:       alreadyFired ? firedRef.current[id] : now,
+              text:          pipCopyFor(t.key, label, name),
+            };
+            if (!alreadyDismissed) active.push(reminder);
+            if (!alreadyFired) {
+              firedRef.current[id] = now;
+              if (!alreadyDismissed) newlyFired.push(reminder);
+            }
+          }
+        });
+      });
+
+      // Process scheduled one-off meetings.
+      (scheduledMeetings || []).forEach(function (m) {
+        if (!m || !m.meeting_date || !m.meeting_time) return;
+        var acct = accountById[m.account_id];
+        var name = acct ? (acct.name || "this account") : "this account";
+
+        // Parse fixed start datetime from meeting_date + meeting_time
+        var parts = String(m.meeting_time).split(":");
+        var hh = parseInt(parts[0], 10);
+        var mm = parseInt(parts[1] || "0", 10);
+        if (isNaN(hh) || isNaN(mm)) return;
+        var startDate = new Date(m.meeting_date + "T00:00:00");
+        startDate.setHours(hh, mm, 0, 0);
+        var startMs = startDate.getTime();
+
+        // Skip meetings in the past beyond STALE_AFTER_MS
+        if (now > startMs + STALE_AFTER_MS) return;
+
+        THRESHOLDS.forEach(function (t) {
+          var fireAt = startMs - t.minutes * 60 * 1000;
+          var id = "sched:" + m.id + ":" + t.key;
+
+          if (now >= fireAt && now <= startMs + STALE_AFTER_MS) {
+            var alreadyFired     = !!firedRef.current[id];
+            var alreadyDismissed = !!dismissedRef.current[id];
+            var label = "Meeting";
+            var reminder = {
+              id:            id,
+              cadenceId:     null,
+              scheduledMeetingId: m.id,
+              accountId:     m.account_id,
               accountName:   name,
               cadenceLabel:  label,
               threshold:     t.key,
@@ -262,7 +311,7 @@ export function useCadenceReminders(userId, cadences, accounts) {
       document.removeEventListener("visibilitychange", onVisibility);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, cadences, accounts]);
+  }, [userId, cadences, accounts, scheduledMeetings]);
 
   return {
     reminders:         bannersEnabled() ? reminders : [],

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, lazy, Suspense } from "react";
+import { useState, useEffect, useRef, useMemo, lazy, Suspense } from "react";
 import { supabase } from "./lib/supabase";
 import { touchAccount } from "./lib/touchAccount";
 import { useAuth } from "./hooks/useAuth";
@@ -20,6 +20,7 @@ import { AccountDetail } from "./views/accounts/AccountDetail";
 import { AddAccountModal } from "./views/accounts/AddAccountModal";
 import { StartConversationModal } from "./views/accounts/StartConversationModal";
 import { AdHocConversationFlow } from "./views/accounts/AdHocConversationFlow";
+import { ScheduleMeetingModal } from "./views/cadence/ScheduleMeetingModal";
 import { OnboardingTour } from "./views/welcome/OnboardingTour";
 import { PipLoader } from "./components/PipLoader";
 
@@ -80,6 +81,8 @@ export default function App() {
   var [showStartConv, setShowStartConv] = useState(false);
   var [convPrefillDate, setConvPrefillDate] = useState(null); // ISO date string from calendar click
   var [adHocFlow, setAdHocFlow]         = useState(null); // { accountId, draftId }
+  var [showScheduleModal, setShowScheduleModal] = useState(false);
+  var [schedulePrefillDate, setSchedulePrefillDate] = useState(null); // ISO date string from clicking a day
   // Ref so handleSetView's setTimeout can pick up the intended account without
   // the setSelected(null) inside the delay wiping it out.
   var pendingNavAccountRef = useRef(null);
@@ -148,7 +151,7 @@ export default function App() {
     return function() { window.removeEventListener("keydown", handleKeyDown); };
   }, []);
 
-  var { meetings, loading: meetLoading, error: meetError, refetch: refetchMeetings, addMeeting } = useMeetings(userId);
+  var { meetings, loading: meetLoading, error: meetError, refetch: refetchMeetings, addMeeting, updateMeeting: updateMeetingGlobal } = useMeetings(userId);
   var [allItems, setAllItems]       = useState([]);
   var [allContacts, setAllContacts] = useState([]);
   var [allUpdates, setAllUpdates]   = useState([]);
@@ -198,7 +201,12 @@ export default function App() {
   }, [userId]);
   var { cadences, loading: cadenceLoading, addCadence, error: cadenceError, refetch: refetchCadencesApp } = useCadences(userId);
   useCadenceSync(userId, cadences, cadenceLoading);
-  var reminderApi = useCadenceReminders(userId, cadences, accounts);
+  // Derive scheduled (one-off future) meetings from the global meetings list.
+  // useMeetings(userId) fetches ALL user meetings when no accountId is given.
+  var scheduledMeetings = useMemo(function () {
+    return (meetings || []).filter(function (m) { return m.status === "scheduled"; });
+  }, [meetings]);
+  var reminderApi = useCadenceReminders(userId, cadences, accounts, scheduledMeetings);
 
   // Discreet one-time permission prompt — surfaces the first time a cadence
   // with a meeting_time exists, the user hasn't been asked yet, and the
@@ -234,11 +242,35 @@ export default function App() {
   function handleOpenReminder(reminder) {
     var acct = (accounts || []).find(function (a) { return a.id === reminder.accountId; });
     if (!acct) return;
+    if (reminder.scheduledMeetingId) {
+      // Open a scheduled meeting: flip status to draft then launch the ad-hoc flow
+      var sm = (scheduledMeetings || []).find(function (m) { return m.id === reminder.scheduledMeetingId; });
+      if (sm) handleOpenScheduled(sm);
+      reminderApi.dismissReminder(reminder.id);
+      return;
+    }
     setSelected(acct);
     setPendingHubCadenceId(reminder.cadenceId);
     setPendingAutoOpenMeetingMode(reminder.threshold === "start");
     setView("accounts");
     reminderApi.dismissReminder(reminder.id);
+  }
+
+  // Open a scheduled meeting — flip status 'scheduled' → 'draft' then launch ad-hoc flow.
+  function handleOpenScheduled(meeting) {
+    if (!meeting) return;
+    var acct = (accounts || []).find(function (a) { return a.id === meeting.account_id; });
+    if (!acct) return;
+    updateMeetingGlobal(meeting.id, { status: "draft" }).then(function () {
+      setAdHocFlow({ accountId: meeting.account_id, draftId: meeting.id });
+      setSelected(acct);
+      var target = acct.account_type === "internal_team" ? "departments"
+                 : acct.account_type === "partner"       ? "partners"
+                 : "accounts";
+      setView(target);
+    }).catch(function (err) {
+      showToast((err && err.message) || "Couldn't open meeting.", "error");
+    });
   }
   var { tasks, addTask, updateTask, deleteTask, error: tasksError } = useQuickTasks(userId);
   var { projects: allProjects, error: projectsErrorApp, refetch: refetchProjectsApp, addProject: addProjectApp } = useProjects(userId);
@@ -1025,6 +1057,8 @@ export default function App() {
         onMarkNudgeDone={commitmentNudgesHook.markDone}
         contacts={allContacts}
         themes={recentThemes}
+        scheduledMeetings={scheduledMeetings}
+        onOpenScheduled={handleOpenScheduled}
       />
     );
   }
@@ -1117,6 +1151,12 @@ export default function App() {
         accounts={accounts}
         contacts={allContacts}
         addCadence={addCadence}
+        scheduledMeetings={scheduledMeetings}
+        onScheduleMeeting={function (dateOrNull) {
+          setSchedulePrefillDate(dateOrNull);
+          setShowScheduleModal(true);
+        }}
+        onOpenScheduled={handleOpenScheduled}
         onOpenHub={function (cadence) {
           if (cadence.cadence_scope === 'person' || !cadence.account_id) {
             // Person 1:1 cadence — find the contact's parent account and navigate there
@@ -1226,6 +1266,23 @@ export default function App() {
       accounts={accounts}
       onSave={addTask}
       onClose={function () { setShowGlobalQuickTask(false); }}
+    />
+  );
+
+  // Schedule a one-off future meeting — fired by "+ Schedule Meeting" in CadenceView
+  // or by clicking an empty calendar day.
+  var scheduleMeetingModal = showScheduleModal && (
+    <ScheduleMeetingModal
+      accounts={accounts}
+      defaultDate={schedulePrefillDate}
+      onSchedule={function (data) {
+        return addMeeting(Object.assign({}, data, { user_id: userId })).then(function () {
+          showToast("Meeting scheduled.");
+          setShowScheduleModal(false);
+          setSchedulePrefillDate(null);
+        });
+      }}
+      onClose={function () { setShowScheduleModal(false); setSchedulePrefillDate(null); }}
     />
   );
 
@@ -1410,6 +1467,7 @@ export default function App() {
         />
         {addAccountModal}
         {startConvModal}
+        {scheduleMeetingModal}
         {adHocFlowOverlay}
         {globalQuickTaskModal}
         {/* Floating Pip (desktop) */}
@@ -1504,6 +1562,7 @@ export default function App() {
       </MobileLayout>
       {addAccountModal}
       {startConvModal}
+      {scheduleMeetingModal}
       {adHocFlowOverlay}
       {globalQuickTaskModal}
       {/* Floating Pip (mobile) — hidden on home (home has its own centerpiece orb) and pip itself */}

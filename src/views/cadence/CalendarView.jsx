@@ -1,15 +1,29 @@
 import { useState } from "react";
 import { C } from "../../lib/colors";
 import { isSameDay, formatDateFull, getCalendarGrid, DAYS_SHORT, MONTHS } from "../../lib/cadenceUtils";
-import { CadenceEventCard, eventColor, navBtnStyle } from "./cadenceShared";
+import { CadenceEventCard, ScheduledMeetingCard, eventColor, navBtnStyle } from "./cadenceShared";
 
-export function CalendarView({ year, month, events, onPrev, onNext, onSelectAccount, onCreateItem, onOpenHub, contacts }) {
+export function CalendarView({ year, month, events, onPrev, onNext, onSelectAccount, onCreateItem, onOpenHub, contacts, accounts, onScheduleMeeting, onOpenScheduled }) {
   var today = new Date();
   var grid  = getCalendarGrid(year, month);
   var [selectedDay, setSelectedDay] = useState(null);
 
+  var accountById = {};
+  (accounts || []).forEach(function (a) { accountById[a.id] = a; });
+
   function dayEvents(date) {
     return events.filter(function (e) { return isSameDay(e.date, date); });
+  }
+
+  function handleDayClick(date, evts, isSelected) {
+    if (evts.length > 0) {
+      // If has events, toggle selection to show detail panel
+      setSelectedDay(isSelected ? null : date);
+    } else if (onScheduleMeeting) {
+      // Empty day — open schedule modal with this date prefilled
+      var iso = date.toISOString().slice(0, 10);
+      onScheduleMeeting(iso);
+    }
   }
 
   return (
@@ -40,21 +54,28 @@ export function CalendarView({ year, month, events, onPrev, onNext, onSelectAcco
           var isToday  = isSameDay(date, today);
           var evts     = dayEvents(date);
           var selected = selectedDay && isSameDay(date, selectedDay);
+          var isClickable = evts.length > 0 || (!!onScheduleMeeting && inMonth);
 
           return (
             <div
               key={date.toISOString().slice(0, 10)}
-              onClick={function () { if (evts.length > 0) setSelectedDay(selected ? null : date); }}
-              role={evts.length > 0 ? "button" : undefined}
-              tabIndex={evts.length > 0 ? 0 : undefined}
-              onKeyDown={evts.length > 0 ? function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedDay(selected ? null : date); } } : undefined}
+              onClick={function () { if (inMonth) handleDayClick(date, evts, selected); }}
+              role={isClickable ? "button" : undefined}
+              tabIndex={isClickable ? 0 : undefined}
+              aria-label={evts.length === 0 && onScheduleMeeting && inMonth ? "Schedule meeting on " + date.getDate() : undefined}
+              onKeyDown={isClickable ? function (e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  if (inMonth) handleDayClick(date, evts, selected);
+                }
+              } : undefined}
               style={{
                 minHeight: 58,
                 background: selected ? C.accentFaint : 'rgba(255,255,255,0.02)',
                 border: '1px solid ' + (selected ? C.accentSubtle : C.border),
                 borderRadius: 6,
                 padding: '5px 5px 4px',
-                cursor: evts.length > 0 ? 'pointer' : 'default',
+                cursor: isClickable ? 'pointer' : 'default',
                 opacity: inMonth ? 1 : 0.25,
               }}
             >
@@ -74,6 +95,22 @@ export function CalendarView({ year, month, events, onPrev, onNext, onSelectAcco
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {evts.slice(0, 2).map(function (ev, j) {
+                  // Scheduled one-off meeting chip
+                  if (ev.scheduledMeeting) {
+                    var acctName = accountById[ev.scheduledMeeting.account_id]
+                      ? accountById[ev.scheduledMeeting.account_id].name.slice(0, 9)
+                      : '?';
+                    return (
+                      <div key={ev.scheduledMeeting.id + "-chip-" + j} style={{
+                        background: C.accent + '22', color: C.accent,
+                        borderRadius: 3, padding: '1px 4px',
+                        fontSize: 9, fontWeight: 600,
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}>
+                        ◆ {acctName}
+                      </div>
+                    );
+                  }
                   var col  = eventColor(ev);
                   var isPerson = ev.cadence.cadence_scope === 'person' || (!ev.cadence.account_id && ev.cadence.contact_id);
                   var personContact = isPerson && ev.cadence.contact_id && contacts
@@ -112,7 +149,27 @@ export function CalendarView({ year, month, events, onPrev, onNext, onSelectAcco
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {dayEvents(selectedDay).map(function (ev, i) {
-              return <CadenceEventCard key={ev.cadence.id + "-sel-" + i} event={ev} onSelectAccount={onSelectAccount} onCreateItem={onCreateItem} onOpenHub={onOpenHub} contacts={contacts} />;
+              if (ev.scheduledMeeting) {
+                var acct = accountById[ev.scheduledMeeting.account_id];
+                return (
+                  <ScheduledMeetingCard
+                    key={ev.scheduledMeeting.id + "-sel-" + i}
+                    meeting={ev.scheduledMeeting}
+                    accountName={acct ? acct.name : "Unknown"}
+                    onOpen={onOpenScheduled}
+                  />
+                );
+              }
+              return (
+                <CadenceEventCard
+                  key={ev.cadence.id + "-sel-" + i}
+                  event={ev}
+                  onSelectAccount={onSelectAccount}
+                  onCreateItem={onCreateItem}
+                  onOpenHub={onOpenHub}
+                  contacts={contacts}
+                />
+              );
             })}
           </div>
         </div>

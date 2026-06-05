@@ -1,6 +1,6 @@
 # Folios — Upgrade Log
 
-*Last updated: 2026-06-05 (Pip answers visibility + structured formatting)*
+*Last updated: 2026-06-05 (scheduled one-off meetings)*
 
 Plain-English log of major upgrades shipped to Folios. Date, time, and
 a short explanation written in terms anyone can read — not technical
@@ -14,6 +14,25 @@ For the technical changelog with full release detail, see
 architectural changes, anything that meaningfully changes what Folios
 *does* or *is*. Not bug fixes, styling tweaks, or doc-only updates —
 those live in git history.
+
+---
+
+## 2026-06-05 — Schedule future meetings on the calendar
+
+**What I built:** A lightweight way to put a single upcoming meeting on a specific date without it being part of a recurring cadence. Click any empty day on the calendar, pick the account, set a date and time, add an optional agenda — and the meeting appears on the calendar, the list view, and the Home screen alongside your cadence events.
+
+**Problem it solves:** The calendar only showed recurring cadence occurrences. If you knew you had a one-off call booked for next Thursday there was no way to put it on the calendar so Pip could surface it as "today's meetings" and fire reminders like it does for cadences.
+
+**What changed:**
+- A new Schedule Meeting modal (account picker, date/time, method, optional agenda) reachable from any empty calendar day click or the "+ Schedule Meeting" header button.
+- Scheduled meetings appear in Calendar, Week, and List views with a `◆` chip distinct from cadence cards.
+- Home screen surfaces a "Scheduled Today" section showing upcoming same-day scheduled meetings with a one-tap "Open →" to go straight into meeting mode.
+- Reminders (30 min, 5 min, at start) fire exactly like cadence meeting reminders — including browser notifications if permission is granted.
+- Opening a scheduled meeting on or after its day flips it to a live draft and opens the full-screen note-taking and summarize flow — no separate path needed.
+
+**What you see today:** The calendar is now a complete picture of your planned meetings, not just the recurring cadence pattern.
+
+**Why it matters:** When you leave a call knowing you need to follow up in two weeks, you can book the slot immediately instead of relying on a reminder app you may never check.
 
 ---
 

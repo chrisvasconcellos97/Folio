@@ -1,6 +1,6 @@
 # Folios — Product Overview
 
-*Last updated: 2026-06-05*
+*Last updated: 2026-06-05 (scheduled one-off meetings)*
 
 This is the substantive product read after the [one-pager](./one-pager.md).
 Covers what Folios does, how it's structured, and what makes the Pip
@@ -129,6 +129,24 @@ at summarize time so Pip strongly prefers updating or closing those items
 instead of creating new duplicates. Rows in the plan modal that touch a
 flagged project or item show a ✦ Discussed badge so the user can see Pip
 acted on the signal.
+
+### Scheduling future one-off meetings
+
+In addition to recurring cadences, you can pin a single upcoming meeting
+to a specific date/time. From the Calendar view:
+
+- Click any empty day to open the schedule modal, or use the
+  **+ Schedule Meeting** button in the header
+- Pick the account (required), date, time, method, and an optional
+  agenda note
+- The meeting appears on the Calendar, Week, and List views with a
+  distinct `◆` chip (distinguished from cadence events)
+- Reminders fire at 30m / 5m / start just like cadence meetings
+- Today's scheduled meetings surface on the Home screen in a
+  "Scheduled Today" card
+- Opening the card on or after meeting day flips it into a live draft
+  and opens the full-screen meeting mode so the conversation can be
+  captured and summarized normally
 
 ### Logging conversations (non-cadence)
 

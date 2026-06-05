@@ -1,20 +1,34 @@
 import { C } from "../../lib/colors";
 import { getNextOccurrence, isSameDay } from "../../lib/cadenceUtils";
-import { CadenceEventCard } from "./cadenceShared";
+import { CadenceEventCard, ScheduledMeetingCard } from "./cadenceShared";
 
+var INTER = "'Inter', system-ui, sans-serif";
 var MONO = "'JetBrains Mono', ui-monospace, monospace";
 
-export function ListView({ cadences, onSelectAccount, onCreateItem, onOpenHub, contacts }) {
+export function ListView({ cadences, onSelectAccount, onCreateItem, onOpenHub, contacts, accounts, scheduledMeetings, onOpenScheduled }) {
   var today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  var items = cadences.map(function (cadence) {
+  var accountById = {};
+  (accounts || []).forEach(function (a) { accountById[a.id] = a; });
+
+  // Cadence items
+  var cadenceItems = (cadences || []).map(function (cadence) {
     var next = getNextOccurrence(cadence, today);
     var acct = cadence.folio_accounts;
-    return { cadence: cadence, next: next, account: acct };
-  }).filter(function (item) { return item.next; });
+    return next ? { type: 'cadence', cadence: cadence, next: next, account: acct } : null;
+  }).filter(Boolean);
 
-  items.sort(function (a, b) { return a.next - b.next; });
+  // Scheduled one-off meeting items
+  var scheduledItems = (scheduledMeetings || []).map(function (m) {
+    if (!m.meeting_date) return null;
+    var d = new Date(m.meeting_date + "T00:00:00");
+    return { type: 'scheduled', meeting: m, next: d };
+  }).filter(Boolean);
+
+  // Merge and sort by date
+  var allItems = cadenceItems.concat(scheduledItems);
+  allItems.sort(function (a, b) { return a.next - b.next; });
 
   var endOfToday    = new Date(today); endOfToday.setHours(23, 59, 59);
   var endOfWeek     = new Date(today); endOfWeek.setDate(today.getDate() + (6 - today.getDay())); endOfWeek.setHours(23, 59, 59);
@@ -27,7 +41,7 @@ export function ListView({ cadences, onSelectAccount, onCreateItem, onOpenHub, c
     { key: 'later',    label: 'LATER',     items: [] },
   ];
 
-  items.forEach(function (item) {
+  allItems.forEach(function (item) {
     var d = new Date(item.next); d.setHours(0, 0, 0, 0);
     if (isSameDay(d, today))     groups[0].items.push(item);
     else if (d <= endOfWeek)     groups[1].items.push(item);
@@ -36,6 +50,14 @@ export function ListView({ cadences, onSelectAccount, onCreateItem, onOpenHub, c
   });
 
   var filled = groups.filter(function (g) { return g.items.length > 0; });
+
+  if (filled.length === 0) {
+    return (
+      <div style={{ textAlign: 'center', padding: '40px 0', color: C.textMuted, fontFamily: INTER, fontSize: 13 }}>
+        Nothing scheduled. Set a cadence or schedule a one-off meeting to get started.
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -47,6 +69,17 @@ export function ListView({ cadences, onSelectAccount, onCreateItem, onOpenHub, c
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {group.items.map(function (item) {
+                if (item.type === 'scheduled') {
+                  var acct = accountById[item.meeting.account_id];
+                  return (
+                    <ScheduledMeetingCard
+                      key={item.meeting.id}
+                      meeting={item.meeting}
+                      accountName={acct ? acct.name : "Unknown"}
+                      onOpen={onOpenScheduled}
+                    />
+                  );
+                }
                 return (
                   <CadenceEventCard
                     key={item.cadence.id}

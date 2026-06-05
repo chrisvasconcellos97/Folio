@@ -89,7 +89,7 @@ function buildGlobalCadenceInsight(allCadences, handlers, activeAccountIds) {
 }
 
 /* ---- Main CadenceView ---- */
-export function CadenceView({ cadences, cadencesError, onRetryCadences, accounts, contacts, onSelectAccount, addCadence, onCreateItem, onOpenHub }) {
+export function CadenceView({ cadences, cadencesError, onRetryCadences, accounts, contacts, onSelectAccount, addCadence, onCreateItem, onOpenHub, scheduledMeetings, onScheduleMeeting, onOpenScheduled }) {
   var [viewMode, setViewMode] = useState('list');
   var insightHandlers = {
     onClickToday:    function () { setViewMode('list'); setTimeout(function () { scrollToCadenceGroup('today'); }, 50); },
@@ -119,6 +119,14 @@ export function CadenceView({ cadences, cadencesError, onRetryCadences, accounts
       getOccurrencesInRange(cadence, start, end).forEach(function (date) {
         evts.push({ cadence: cadence, date: date, account: acct });
       });
+    });
+    // Merge one-off scheduled meetings into the event stream.
+    (scheduledMeetings || []).forEach(function (m) {
+      if (!m.meeting_date) return;
+      var d = new Date(m.meeting_date + "T00:00:00");
+      if (d >= start && d <= end) {
+        evts.push({ scheduledMeeting: m, date: d });
+      }
     });
     evts.sort(function (a, b) { return a.date - b.date; });
     return evts;
@@ -167,21 +175,40 @@ export function CadenceView({ cadences, cadencesError, onRetryCadences, accounts
               </div>
             </div>
           </div>
-          <button
-            onClick={function () { setShowAddModal(true); }}
-            style={{
-              background: C.accentDeep || C.accent,
-              border: 'none',
-              borderRadius: 6,
-              padding: '8px 14px',
-              color: C.bg,
-              fontFamily: INTER,
-              fontSize: 12, fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            + Set Cadence
-          </button>
+          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+            {onScheduleMeeting && (
+              <button
+                onClick={function () { onScheduleMeeting(null); }}
+                style={{
+                  background: 'transparent',
+                  border: '1px solid ' + C.accentBorder,
+                  borderRadius: 6,
+                  padding: '8px 14px',
+                  color: C.accent,
+                  fontFamily: INTER,
+                  fontSize: 12, fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                + Schedule Meeting
+              </button>
+            )}
+            <button
+              onClick={function () { setShowAddModal(true); }}
+              style={{
+                background: C.accentDeep || C.accent,
+                border: 'none',
+                borderRadius: 6,
+                padding: '8px 14px',
+                color: C.bg,
+                fontFamily: INTER,
+                fontSize: 12, fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              + Set Cadence
+            </button>
+          </div>
         </div>
         <ErrorBanner message={cadencesError ? "Couldn't load cadences — check your connection" : null} onRetry={onRetryCadences} />
         <PipInsightCard segments={[cadenceInsight]} />
@@ -228,21 +255,40 @@ export function CadenceView({ cadences, cadencesError, onRetryCadences, accounts
             </div>
           </div>
         </div>
-        <button
-          onClick={function () { setShowAddModal(true); }}
-          style={{
-            background: C.accentDeep || C.accent,
-            border: 'none',
-            borderRadius: 6,
-            padding: '8px 14px',
-            color: C.bg,
-            fontFamily: INTER,
-            fontSize: 12, fontWeight: 600,
-            cursor: 'pointer',
-          }}
-        >
-          + Set Cadence
-        </button>
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+          {onScheduleMeeting && (
+            <button
+              onClick={function () { onScheduleMeeting(null); }}
+              style={{
+                background: 'transparent',
+                border: '1px solid ' + C.accentBorder,
+                borderRadius: 6,
+                padding: '8px 14px',
+                color: C.accent,
+                fontFamily: INTER,
+                fontSize: 12, fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              + Schedule Meeting
+            </button>
+          )}
+          <button
+            onClick={function () { setShowAddModal(true); }}
+            style={{
+              background: C.accentDeep || C.accent,
+              border: 'none',
+              borderRadius: 6,
+              padding: '8px 14px',
+              color: C.bg,
+              fontFamily: INTER,
+              fontSize: 12, fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            + Set Cadence
+          </button>
+        </div>
       </div>
       <PipInsightCard segments={[cadenceInsight]} />
       {viewToggle}
@@ -256,6 +302,9 @@ export function CadenceView({ cadences, cadencesError, onRetryCadences, accounts
           onCreateItem={onCreateItem}
           onOpenHub={onOpenHub}
           contacts={contacts}
+          accounts={accounts}
+          onScheduleMeeting={onScheduleMeeting}
+          onOpenScheduled={onOpenScheduled}
         />
       )}
 
@@ -267,11 +316,22 @@ export function CadenceView({ cadences, cadencesError, onRetryCadences, accounts
           onSelectAccount={onSelectAccount}
           onOpenHub={onOpenHub}
           contacts={contacts}
+          accounts={accounts}
+          onOpenScheduled={onOpenScheduled}
         />
       )}
 
       {viewMode === 'list' && (
-        <ListView cadences={cadences} onSelectAccount={onSelectAccount} onCreateItem={onCreateItem} onOpenHub={onOpenHub} contacts={contacts} />
+        <ListView
+          cadences={cadences}
+          onSelectAccount={onSelectAccount}
+          onCreateItem={onCreateItem}
+          onOpenHub={onOpenHub}
+          contacts={contacts}
+          accounts={accounts}
+          scheduledMeetings={scheduledMeetings}
+          onOpenScheduled={onOpenScheduled}
+        />
       )}
 
       {showAddModal && (

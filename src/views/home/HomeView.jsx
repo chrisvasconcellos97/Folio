@@ -133,7 +133,7 @@ function makeAccountLinkify(accounts, onOpenAccount) {
   };
 }
 
-export function HomeView({ userName, userId, accounts, meetings, items, cadences, projects, contacts, themes, onOpenAccount, onOpenAccountTab, onOpenCadenceHub, onOpenConversation, onOpenQuickTask, showOnboardingCard, onStartInterview, onDismissOnboardingCard, dripQuestion, dripQueueCount, onOpenCatchUp, onApplySuggestion, onAnswerDrip, onSkipDrip, onDismissDrip, commitmentNudges, onSnoozeNudge, onMarkNudgeDone, pipFacts, profileProse }) {
+export function HomeView({ userName, userId, accounts, meetings, items, cadences, projects, contacts, themes, onOpenAccount, onOpenAccountTab, onOpenCadenceHub, onOpenConversation, onOpenQuickTask, showOnboardingCard, onStartInterview, onDismissOnboardingCard, dripQuestion, dripQueueCount, onOpenCatchUp, onApplySuggestion, onAnswerDrip, onSkipDrip, onDismissDrip, commitmentNudges, onSnoozeNudge, onMarkNudgeDone, pipFacts, profileProse, scheduledMeetings, onOpenScheduled }) {
   commitmentNudges = commitmentNudges || [];
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
@@ -441,6 +441,18 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
       });
   }, [cadences, accountById]);
 
+  // ── Today's Scheduled Meetings (one-off) ────────────────────────────
+  var todaysScheduled = useMemo(function () {
+    var todayStr = startOfToday().toISOString().slice(0, 10);
+    return (scheduledMeetings || [])
+      .filter(function (m) { return m.meeting_date === todayStr; })
+      .sort(function (a, b) {
+        var ta = a.meeting_time || "23:59";
+        var tb = b.meeting_time || "23:59";
+        return ta.localeCompare(tb);
+      });
+  }, [scheduledMeetings]);
+
   // ── Burning ──────────────────────────────────────────────────────────
   // Overdue items + blocked/overdue projects + cold accounts (>45d).
   // Sorted: longest overdue first, oldest cold next. Top 6.
@@ -582,7 +594,7 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
   }, [cadences, meetings, accounts, accountById]);
 
   var heroLine = pickHeroLine({
-    calls: todaysCalls.length,
+    calls: todaysCalls.length + todaysScheduled.length,
     overdue: burningRows.filter(function (r) { return r.kind === "item"; }).length,
   });
 
@@ -1210,6 +1222,67 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
           >
             Catch up →
           </button>
+        </div>
+      )}
+
+      {/* Today's scheduled one-off meetings */}
+      {todaysScheduled.length > 0 && (
+        <div style={{
+          maxWidth: 600,
+          margin: isMobile ? "0 16px 12px" : "0 auto 12px",
+        }}>
+          <div style={{ fontFamily: MONO, fontSize: 10, color: C.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
+            Scheduled Today
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {todaysScheduled.map(function (m) {
+              var acct = accountById[m.account_id];
+              var time = m.meeting_time ? formatTime(m.meeting_time) : null;
+              var methodLabel = { phone: "Phone", in_person: "In Person", video: "Video", email: "Email" }[m.method] || (m.method || "Meeting");
+              return (
+                <div
+                  key={m.id}
+                  onClick={function () { if (onOpenScheduled) onOpenScheduled(m); }}
+                  role={onOpenScheduled ? "button" : undefined}
+                  tabIndex={onOpenScheduled ? 0 : undefined}
+                  onKeyDown={function (e) {
+                    if ((e.key === "Enter" || e.key === " ") && onOpenScheduled) { e.preventDefault(); onOpenScheduled(m); }
+                  }}
+                  style={{
+                    background: C.surface,
+                    border: "1px solid " + C.rule,
+                    borderLeft: "3px solid " + C.accent,
+                    borderRadius: 10,
+                    padding: "10px 14px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    cursor: onOpenScheduled ? "pointer" : "default",
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: INTER, fontSize: 14, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {acct ? acct.name : "Meeting"}
+                    </div>
+                    <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, marginTop: 2, letterSpacing: "0.04em" }}>
+                      {methodLabel}{time ? " · " + time : ""}
+                    </div>
+                    {m.agenda && (
+                      <div style={{ fontFamily: INTER, fontSize: 11, color: C.textMuted, marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {m.agenda}
+                      </div>
+                    )}
+                  </div>
+                  {onOpenScheduled && (
+                    <span style={{ fontFamily: MONO, fontSize: 10, color: C.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 }}>
+                      Open →
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 

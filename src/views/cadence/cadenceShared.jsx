@@ -1,6 +1,8 @@
 import { C, glass } from "../../lib/colors";
 import { getFrequencyLabel, formatTime, daysUntil, formatDateFull } from "../../lib/cadenceUtils";
 
+var INTER_SHARED = "'Inter', system-ui, sans-serif";
+
 var SERIF = "'Fraunces', Georgia, serif";
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 
@@ -167,6 +169,90 @@ export function CadenceEventCard({ event, onSelectAccount, onCreateItem, onOpenH
             </button>
           )}
         </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Card for a scheduled (one-off future) meeting event on the calendar.
+ * Teal-accent border, distinct from recurring cadence cards.
+ *
+ * Props:
+ *  - meeting      The folio_meetings row (status='scheduled')
+ *  - accountName  Display name of the meeting's account
+ *  - onOpen(meeting)   Called when the user taps to open/start the meeting
+ */
+export function ScheduledMeetingCard({ meeting, accountName, onOpen }) {
+  if (!meeting) return null;
+  var time = meeting.meeting_time ? formatTime(meeting.meeting_time) : null;
+  var methodLabel = {
+    phone:     "Phone",
+    in_person: "In Person",
+    video:     "Video",
+    email:     "Email",
+  }[meeting.method] || (meeting.method || "Meeting");
+
+  return (
+    <div
+      className="hover-lift"
+      style={Object.assign({}, glass, {
+        borderLeft: "3px solid " + C.accent,
+        boxShadow: "-2px 0 8px -3px " + C.accent,
+        borderRadius: 8,
+        padding: "11px 14px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 12,
+        cursor: onOpen ? "pointer" : "default",
+      })}
+      role={onOpen ? "button" : undefined}
+      tabIndex={onOpen ? 0 : undefined}
+      onClick={function () { if (onOpen) onOpen(meeting); }}
+      onKeyDown={function (e) {
+        if (onOpen && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          onOpen(meeting);
+        }
+      }}
+    >
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+          <div style={{ fontFamily: SERIF, fontSize: 15.5, fontWeight: 400, color: C.text, letterSpacing: "-0.005em", lineHeight: 1.2 }}>
+            {accountName || "Unknown"}
+          </div>
+          <span style={{ fontFamily: MONO, fontSize: 9, fontWeight: 700, color: C.accent, background: C.accentFaint, border: "1px solid " + C.accentLine, borderRadius: 4, padding: "1px 5px", letterSpacing: "0.06em", textTransform: "uppercase", flexShrink: 0 }}>
+            SCHEDULED
+          </span>
+        </div>
+        <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, marginTop: 3, letterSpacing: "0.04em" }}>
+          {methodLabel}{time ? " · " + time : ""}
+        </div>
+        {meeting.agenda && (
+          <div style={{ fontFamily: INTER_SHARED, fontSize: 11, color: C.textMuted, marginTop: 4, lineHeight: 1.4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 260 }}>
+            {meeting.agenda}
+          </div>
+        )}
+      </div>
+      {onOpen && (
+        <button
+          onClick={function (e) { e.stopPropagation(); onOpen(meeting); }}
+          style={{
+            background: C.accentMid,
+            border: "1px solid " + C.accentBorder,
+            borderRadius: 7,
+            padding: "5px 11px",
+            fontSize: 11, fontWeight: 600,
+            color: C.accent,
+            fontFamily: INTER_SHARED,
+            cursor: "pointer",
+            whiteSpace: "nowrap",
+            flexShrink: 0,
+          }}
+        >
+          Open →
+        </button>
       )}
     </div>
   );
