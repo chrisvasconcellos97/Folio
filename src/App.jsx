@@ -600,6 +600,7 @@ export default function App() {
   // you keep using?" questions flowing. Skip if user has paused drip questions.
   useEffect(function () {
     if (!userId || !session) return;
+    if (profileLoading) return; // wait until pause state is known so we don't fire for a paused user mid-load
     if (userProfile && userProfile.pip_questions_paused) return;
     var key = "folio_terminology_scan_last_" + userId;
     var last = 0;
@@ -614,7 +615,7 @@ export default function App() {
       },
       body: JSON.stringify({}),
     }).catch(function (err) { console.warn("[detect-terminology] failed:", err && err.message); });
-  }, [userId]);
+  }, [userId, profileLoading, userProfile && userProfile.pip_questions_paused]);
 
   // Portfolio-aware question generator (Lane D) — one cheap Haiku pass that
   // reasons across the whole portfolio and writes a few insightful questions
@@ -625,6 +626,7 @@ export default function App() {
   // Skip entirely if the user paused drip questions.
   useEffect(function () {
     if (!userId || !session) return;
+    if (profileLoading) return; // wait until pause state is known so we don't fire for a paused user mid-load
     if (userProfile && userProfile.pip_questions_paused) return;
     var key = "folio_generate_questions_last_" + userId;
     var last = 0;
@@ -639,7 +641,7 @@ export default function App() {
       },
       body: JSON.stringify({}),
     }).catch(function (err) { console.warn("[generate-questions] failed:", err && err.message); });
-  }, [userId]);
+  }, [userId, profileLoading, userProfile && userProfile.pip_questions_paused]);
 
   // Re-synthesis trigger — when drip hook reports >= 3 new answers since last synthesis.
   useEffect(function () {

@@ -1,6 +1,6 @@
 # Folios — Upgrade Log
 
-*Last updated: 2026-06-04 (Full audit-fix pass + schema reconciliation)*
+*Last updated: 2026-06-05 (Pip intelligence push — model tiering + structured suggestions)*
 
 Plain-English log of major upgrades shipped to Folios. Date, time, and
 a short explanation written in terms anyone can read — not technical
@@ -14,6 +14,30 @@ For the technical changelog with full release detail, see
 architectural changes, anything that meaningfully changes what Folios
 *does* or *is*. Not bug fixes, styling tweaks, or doc-only updates —
 those live in git history.
+
+---
+
+## 2026-06-05 — Pip intelligence push (model tiering + structured suggestions)
+
+**What I built:** A round of upgrades that make Pip noticeably sharper and let what you teach him actually change the data — safely.
+
+**Problem it solves:** Pip had started to feel flat: nearly every Pip surface was running on the cheapest model, the "Pip's Curious" questions were generic or had quietly stopped appearing, and the things you told Pip (a contact's role, what a tool like "Fuse5" is) stayed as loose notes instead of updating the account.
+
+**What changed:**
+- **Model tiering.** The surfaces you actually judge Pip's intelligence by — the chat, meeting summarize, the daily brief, the questions Pip asks, the "who you are" profile, and the QBR — now run on the stronger Sonnet model. The mechanical, high-volume jobs (per-account Brief Me, drafting follow-up emails, vocabulary extraction, memory compression, the boss readout) stay on the cheaper Haiku model. Each upgraded surface can be re-dialed from a setting without a redeploy.
+- **Pip proposes, you approve.** When Pip asks about a contact's role, an account's objective, or a tool the account uses, your answer can be saved straight to that field with one tap — a pre-checked "Also save to…" toggle on the answer card. Untick it to keep the answer as a plain note. Nothing is ever changed silently, and it never touches account health or tier.
+- **Systems an account uses.** Tools/systems (e.g. "Fuse5 is their inventory system") now show as chips on the account Overview and travel into every per-account Pip surface — so when "Fuse5" appears in raw meeting notes, Pip knows what it is instead of asking again.
+- **Question pipeline fixed.** The generic filler questions are gone for good, and the portfolio question generator (which had silently jammed) is unblocked and tops the queue back up as you work through it.
+- **Full knowledge coverage.** The glossary terms and your profile now reach the last two surfaces that were missing them — the daily brief and the leadership readout — so every Pip output speaks your vocabulary.
+
+**What you see today:** Pip's chat and the questions he asks read sharper and more specific; the "Pip's Curious" card surfaces real, grounded questions and answering one can update the account in place; account screens show the tools each account runs on.
+
+**Why it matters:** This is the difference between Pip *generating text* and Pip *knowing your world* — what you teach him now changes the data and shows up everywhere he helps.
+
+> Operator note: one schema migration backs this —
+> `supabase/pip_structured_suggestions.sql` (adds `folio_accounts.systems`
+> and `folio_pip_questions.suggestion`). Already applied to production and
+> folded into `schema.sql`; additive and idempotent.
 
 ---
 

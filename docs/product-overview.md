@@ -1,6 +1,6 @@
 # Folios — Product Overview
 
-*Last updated: 2026-06-03*
+*Last updated: 2026-06-05*
 
 This is the substantive product read after the [one-pager](./one-pager.md).
 Covers what Folios does, how it's structured, and what makes the Pip
@@ -67,7 +67,8 @@ holds child shops; parent customer holds child divisions).
 
 Each account gets its own command center:
 - **Overview** — health (auto-computed), context notes (read by Pip),
-  follow-up due, recent meetings, recent updates
+  follow-up due, recent meetings, recent updates, systems/tools they use
+  (chips, populated via approved Pip suggestions)
 - **Cadences** — recurring meeting schedules
 - **Meetings** — all conversations with the account
 - **Items** — open action items
@@ -196,6 +197,16 @@ teammate, not a generic chatbot.
 | **ask** | Conversational chat — ask anything about your accounts | Pip view (chat surface) |
 | **plan / extract** | One-shot extraction of action items from short notes | Quick Touchpoint modal |
 
+**Model tiering.** Pip runs the right model for each task. The
+reasoning-heavy, user-facing, low-frequency surfaces — Ask Pip chat,
+meeting summarize, portfolio question generation, the daily brief,
+profile synthesis, and the QBR — run on **Sonnet 4.6**. High-volume or
+mechanical surfaces — per-account Brief Me, follow-up email drafting,
+terminology extraction, memory compression, and the leadership readout —
+run on **Haiku 4.5**. Each Sonnet surface has an environment override so
+its tier can be re-dialed without a code change. (See
+[ai-governance.md](./ai-governance.md) for the full matrix.)
+
 ### The V2 brain — Pip's learning loop
 
 This is the differentiator that nothing else does. Pip doesn't
@@ -212,23 +223,33 @@ output.
    accounts they have. Soft-gated: interview is skippable and resumable.
    Existing users see a dismissible HomeView card. Cost: ~$0.002 once.
 
-   **Phase 2 — drip questions.** After onboarding, Pip continues learning
-   via a gentle weekly drip. Once per day (max 3 per rolling 7 days, 48h
-   cooldown after any skip), a "Pip's Curious" card appears on the Home
-   screen with one question at a time — inline textarea, never a modal.
-   Three gap types are auto-detected (zero LLM cost): contacts who appear
-   in ≥3 meetings but have no role recorded, accounts past 30 days with
-   no objective, and empty profile slots post-onboarding. An evergreen
-   bank of 15 get-to-know-you questions ensures the well never runs dry.
-   **Terminology lane (Lane C):** once per week, a Haiku scan of recent
-   meeting notes surfaces proper nouns / brand names / codenames that appear
-   ≥3 times but aren't a known account name, contact, or glossary term.
-   Pip asks what they are — answers write directly to `folio_pip_facts` so
-   future briefs know the company's vocabulary automatically. Answering ≥3
-   drip questions since the last synthesis triggers a background re-synthesis
-   so `profile_prose` stays current. Settings → "Pip's Questions" has a
-   global pause toggle and a completeness meter. Cost: gap detection = $0;
-   terminology scan ≈ $0.01/month; re-synthesis ≈ $0.004 per batch.
+   **Phase 2 — drip questions.** After onboarding, Pip keeps learning via
+   a "Pip's Curious" card on the Home screen — one question at a time,
+   inline textarea, never a modal. Soft cap of 5 per rolling 24h with no
+   skip cooldown, so you can power through several in a sitting. Every
+   question comes from real observed data — there is no generic
+   "get-to-know-you" filler (that was removed; the well staying silent
+   beats the well being fake). Sources:
+   - **Structural gaps (zero LLM cost):** contacts who appear in ≥3
+     meetings but have no role recorded, active accounts past 30 days with
+     no objective, and empty profile slots post-onboarding.
+   - **Terminology lane (Lane C):** a daily Haiku scan of recent meeting
+     notes surfaces proper nouns / brand names / codenames that appear ≥3
+     times but aren't a known account, contact, or glossary term. Each
+     question is account-anchored ("you keep mentioning Fuse5 around John's
+     Auto Parts — what is it?"). Answers write to `folio_pip_facts` so
+     future briefs know the company's vocabulary automatically.
+   - **Portfolio generator (Lane D):** a low-frequency Sonnet pass reasons
+     across the whole portfolio and writes a few genuinely insightful
+     questions in Pip's voice. It self-skips (a DB count, no model call)
+     whenever the queue already holds ≥5, so it only spends when the queue
+     has actually drained.
+
+   Answering ≥3 drip questions since the last synthesis triggers a
+   background re-synthesis so `profile_prose` stays current. Settings →
+   "Pip's Questions" has a global pause toggle and a completeness meter.
+   Cost: gap detection = $0; terminology + generator ≈ $0.01–0.02/month;
+   re-synthesis ≈ $0.004 per batch.
 
 1. **Correction log (`pip_correction_log`).** Every time the user
    declines a proposed action, edits the text of a Pip-created item,
@@ -254,6 +275,21 @@ output.
    acronyms, and aliases (e.g., "ProParts was the legacy name for
    KSI Collision"). Pip respects glossary aliases when matching
    account names in notes.
+
+5. **Structured suggestions ("Pip proposes, you approve").** When a
+   drip question is *about* something structured — a contact's role, an
+   account's objective, or a tool/system the account uses — the intent is
+   attached to the question when it's created (Pip already knows which
+   account or contact it's asking about). On answer, the card shows a
+   pre-checked "Also save to…" toggle: keep it checked and the answer is
+   written to the real field (`folio_contacts.title`,
+   `folio_accounts.objective`, or the account's `systems` list); untick
+   it to keep the answer as a plain fact. One tap, human in the loop —
+   nothing mutates silently, and it never touches health or tier. The
+   "systems" an account uses (e.g. "Fuse5 is their IMS") surface as chips
+   on the account Overview and ride into every per-account Pip surface, so
+   when "Fuse5" later shows up in raw notes Pip knows what it is instead of
+   asking again. No per-answer model call — the structured write is free.
 
 **Cross-account routing.** Pip can route a task from one account's
 meeting to a different account's plate. Example: "ACME meeting, but
