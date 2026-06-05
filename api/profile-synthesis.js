@@ -50,7 +50,8 @@ export default async function handler(req, res) {
       // Sonnet: this defines how Pip understands WHO YOU ARE — it shapes every
       // downstream output. Runs rarely (onboarding + occasional re-synthesis).
       model:      process.env.PIP_PROFILE_MODEL || "claude-sonnet-4-6",
-      max_tokens: 600,
+      max_tokens: 1000, // 1000 (was 600): headroom so Sonnet's prose + slots JSON never truncates
+
       system:     systemPrompt,
       messages:   [{ role: "user", content: userPrompt }],
     });

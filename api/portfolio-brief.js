@@ -214,7 +214,10 @@ Return ONLY valid JSON: { "brief": "...", "callouts": [...] }`;
       // Sonnet: the daily brief synthesizes risk/triage across the whole
       // portfolio once per day (cached) — reasoning-heavy, low-frequency.
       model: process.env.PIP_DAILY_BRIEF_MODEL || "claude-sonnet-4-6",
-      max_tokens: 600,
+      // 1400 (was 600): Sonnet writes a fuller brief + richer callouts than
+      // Haiku did. 600 truncated the JSON mid-array → parse failed → the raw
+      // JSON string leaked into the UI. This comfortably fits brief + callouts.
+      max_tokens: 1400,
       system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
       messages: [{ role: "user", content: portfolioText }],
     });
@@ -228,8 +231,12 @@ Return ONLY valid JSON: { "brief": "...", "callouts": [...] }`;
     try {
       parsed = JSON.parse(raw);
     } catch (_) {
-      // Fallback: treat the whole thing as brief with no callouts
-      parsed = { brief: raw, callouts: [] };
+      // Output was truncated or wrapped in stray prose. NEVER dump raw JSON
+      // into the UI — salvage the "brief" string via regex and drop callouts
+      // (the array is the part most likely cut off mid-element).
+      var m = raw.match(/"brief"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+      var salvaged = m ? m[1].replace(/\\n/g, " ").replace(/\\"/g, '"').replace(/\\\\/g, "\\").trim() : "";
+      parsed = { brief: salvaged, callouts: [] };
     }
 
     return res.status(200).json({

@@ -158,8 +158,8 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
   // Only fires when snapshots are ready and the brief hasn't been generated today.
   useEffect(function () {
     var todayStr = new Date().toISOString().slice(0, 10);
-    // v6: cache key bumped so brief includes health momentum, tone trend, champions/blockers, cross-account themes
-    var cacheKey = "folio_daily_brief_v6_" + todayStr;
+    // v7: cache key bumped to flush briefs cached as raw JSON (Sonnet output overflowed the old 600-token budget → truncated JSON leaked to UI)
+    var cacheKey = "folio_daily_brief_v7_" + todayStr;
 
     // Check localStorage cache first — if we have a brief for today, use it.
     try {

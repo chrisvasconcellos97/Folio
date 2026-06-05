@@ -153,7 +153,7 @@ export default async function handler(req, res) {
     var client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     var response = await client.messages.create({
       model:      MODEL,
-      max_tokens: 1024,
+      max_tokens: 2048, // 2048 (was 1024): QBR on Sonnet writes fuller sections; avoid truncating the JSON
       system:     SYSTEM_PROMPT,
       messages:   [{ role: "user", content: contextStr }],
     });

@@ -149,7 +149,8 @@ export default async function handler(req, res) {
       // insightful questions is the surface users judge Pip's intelligence by.
       // Runs rarely (weekly + backlog guard), so the cost delta is negligible.
       model:      process.env.PIP_QUESTIONS_MODEL || "claude-sonnet-4-6",
-      max_tokens: 700,
+      max_tokens: 1200, // 1200 (was 700): Sonnet's question JSON is fuller; 700 risked truncating the array
+
       system:     system,
       messages:   [{ role: "user", content: userMsg.slice(0, 9000) }],
     });

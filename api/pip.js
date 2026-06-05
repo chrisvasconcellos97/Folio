@@ -158,7 +158,7 @@ var MODEL_SONNET = "claude-sonnet-4-6";
 var CHAT_MODEL = process.env.PIP_CHAT_MODEL || MODEL_SONNET;
 
 var MODE_CONFIG = {
-  chat:    { model: CHAT_MODEL, max_tokens: 512 },
+  chat:    { model: CHAT_MODEL, max_tokens: 900 }, // 900 (was 512): keep Sonnet chat replies from cutting off mid-answer
   action:  { model: MODEL_HAIKU, max_tokens: 384 },
   brief:   { model: MODEL_HAIKU, max_tokens: 1024 },
   // summary returns a JSON plan with one source_excerpt (~50-100 tokens)
