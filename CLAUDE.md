@@ -426,6 +426,13 @@ This app is currently single-user but should be built with multi-tenancy in mind
     - **Pip wiring (parity rule — both paths):** inject latest + the prior two (for momentum sense) into `pipContext.js` (chat) AND `pip.js` (summarize), plus daily/portfolio brief, leadership readout, and cadence pre-call brief. Lets briefs say "All Star — latest: 'waiting on legal sign-off' (Jun 3)." Keep it cheap: latest + last 2 only.
     - SQL: new `supabase/gauge_project_status_updates.sql` + fold into canonical `schema.sql`. Docs: update `docs/product-overview.md` (Gauge capability) + `docs/upgrades.md` entry on ship.
 
+32. **Schedule future meetings on the calendar (one-off scheduled meetings)** — requested June 2026. Today the Calendar only renders recurring **cadence** occurrences (`getOccurrencesInRange`); there's no way to put a single future meeting on a specific date. "Log Conversation" creates a notes-first meeting that lands in History, not a scheduled item. The gap: a lightweight "schedule a meeting on a date/time" that shows on the calendar and converts to the normal meeting-notes flow when it's time. **Proposed design (not locked):**
+    - **Create:** click a day on CalendarView/WeekView (or a "+ Schedule meeting" button) → modal reusing `AccountPicker` + date (prefilled) + time + method + optional title/agenda. Writes a `folio_meetings` row with a future `meeting_date` (+ `meeting_time`) and a `scheduled` marker (either `status='scheduled'` or treat future-dated draft meetings as scheduled — decide to avoid colliding with the existing draft/summarized states).
+    - **Render:** Calendar/Week/List show these one-off meetings as their own event card (distinct styling from cadence cards), tappable.
+    - **Open:** on/after the date, opening it launches the existing `CadenceMeetingMode` (cadence_id null) so notes/agenda → summarize reuses the ad-hoc flow. Before the date, it's a prep/agenda view.
+    - **Reuse:** `useCadenceReminders` could extend to scheduled meetings for the 30m/5m/start nudges; HomeView "today's meetings" should include them.
+    - Open questions for Chris: should a scheduled meeting be account-required or allow a free-form/personal meeting? Should it support attendees + an agenda note up front? One-off only, or also "remind me to schedule"? Parity: if it feeds Pip (upcoming-meeting awareness), wire both `pipContext.js` and `pip.js`.
+
 15. *(shipped — see Already shipped)*
 
 16. *(ripped — Route Builder removed, not needed)*
