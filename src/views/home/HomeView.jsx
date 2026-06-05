@@ -142,7 +142,21 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
   var [captureMenuOpen, setCaptureMenuOpen] = useState(false);
   var [briefCallouts, setBriefCallouts] = useState([]);
   var [briefLoading, setBriefLoading] = useState(false);
+  var [briefNonce, setBriefNonce] = useState(0);
   var briefFiredRef = useRef(false);
+
+  // Manual "refresh brief" — clears today's cached brief and re-fires the
+  // generation effect (bumping briefNonce). Lets the user rebuild a brief that
+  // looks off without waiting for tomorrow.
+  function refreshBrief() {
+    if (briefLoading) return;
+    var todayStr = new Date().toISOString().slice(0, 10);
+    try { localStorage.removeItem("folio_daily_brief_v9_" + todayStr); } catch (_) { /* ignore */ }
+    briefFiredRef.current = false;
+    setDailyBrief("");
+    setBriefCallouts([]);
+    setBriefNonce(function (n) { return n + 1; });
+  }
   var [dripAnswer, setDripAnswer]     = useState("");
   var [dripSaving, setDripSaving]     = useState(false);
   var [dripApplyOff, setDripApplyOff] = useState(false); // unchecked "also save"
@@ -397,7 +411,7 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
       });
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [snapshots.length, (items || []).length]);
+  }, [snapshots.length, (items || []).length, briefNonce]);
 
   var accountById = useMemo(function () {
     var m = {};
@@ -920,12 +934,31 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
             borderRadius: 12,
             padding: "14px 16px 16px",
           }}>
-            <div style={{
-              fontFamily: MONO, fontSize: 10, color: C.accent,
-              fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em",
-              marginBottom: 8,
-            }}>
-              Pip · Daily Brief
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+              <div style={{
+                fontFamily: MONO, fontSize: 10, color: C.accent,
+                fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em",
+              }}>
+                Pip · Daily Brief
+              </div>
+              <button
+                onClick={refreshBrief}
+                disabled={briefLoading}
+                title="Refresh brief"
+                aria-label="Refresh brief"
+                style={{
+                  background: "none", border: "none", padding: 4, margin: -4,
+                  cursor: briefLoading ? "default" : "pointer",
+                  color: C.textMuted, opacity: briefLoading ? 0.45 : 0.8,
+                  display: "inline-flex", alignItems: "center",
+                }}
+              >
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"
+                     style={briefLoading ? { animation: "fol-spin 0.9s linear infinite" } : undefined}>
+                  <path d="M13.5 8a5.5 5.5 0 1 1-1.7-3.97" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <path d="M13.7 3v2.6h-2.6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
             </div>
             {briefLoading
               ? <div style={{ fontFamily: INTER, fontSize: 14, color: C.textMuted, lineHeight: 1.6 }}>Pip is thinking…</div>
