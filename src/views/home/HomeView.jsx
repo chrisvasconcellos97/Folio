@@ -161,8 +161,10 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
   // Only fires when snapshots are ready and the brief hasn't been generated today.
   useEffect(function () {
     var todayStr = new Date().toISOString().slice(0, 10);
-    // v8: structured markdown brief (headers + bullets + Pip glyphs). v7 flushed raw-JSON briefs; v8 flushes the old prose format.
-    var cacheKey = "folio_daily_brief_v8_" + todayStr;
+    // v9: flushes any brief cached before account data finished loading (the
+    // "Unknown accounts" short brief from opening two tabs at once). v8 added
+    // structured markdown; v7 flushed raw-JSON briefs.
+    var cacheKey = "folio_daily_brief_v9_" + todayStr;
 
     // Check localStorage cache first — if we have a brief for today, use it.
     try {
@@ -182,6 +184,10 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
     // invokes). Wait for snapshots so the brief isn't built from empty data.
     if (briefFiredRef.current) return;
     if (!snapshots || snapshots.length === 0) return;
+    // Don't build (and cache) a brief before the account list has loaded —
+    // otherwise a race (e.g. two tabs opened at once) caches a sparse
+    // "Unknown accounts" brief for the rest of the day.
+    if (!accounts || accounts.length === 0) return;
     briefFiredRef.current = true;
     setBriefLoading(true);
     (function () {
