@@ -286,6 +286,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
       assignmentHints:  adHocHintsApi.hints,
       corrections:      adHocCorrectionsApi.corrections,
       accountObjective: account.objective || "",
+      accountSystems:   account.systems   || [],
       glossary:         glossaryApi.entries,
       accountRoster:    accountRoster,
       accountType:      account.account_type || "standard",
@@ -583,6 +584,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
           onUpdateMeeting={updateMeeting}
           logCorrection={adHocCorrectionsApi.logCorrection}
           accountObjective={account.objective || ""}
+          accountSystems={account.systems || []}
           glossary={glossaryApi.entries}
         />
         </>

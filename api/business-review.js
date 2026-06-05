@@ -49,6 +49,12 @@ function buildContext(body) {
 
   lines.push("ACCOUNT: " + (account.name || "—") + " (id: " + (account.id || "—") + ")");
   lines.push("REVIEW PERIOD: " + start + " to " + end);
+  if (account.objective) lines.push("ACCOUNT INTEL: " + account.objective);
+  if (Array.isArray(account.systems) && account.systems.length) {
+    lines.push("SYSTEMS/TOOLS THEY USE: " + account.systems.map(function (s) {
+      return (s.name || "") + (s.note ? " (" + s.note + ")" : "");
+    }).filter(Boolean).join(", "));
+  }
   lines.push("");
 
   if (meetings.length) {

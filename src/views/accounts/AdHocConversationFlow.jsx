@@ -118,6 +118,7 @@ export function AdHocConversationFlow({
       assignmentHints:  hintsApi.hints,
       corrections:      correctionsApi.corrections,
       accountObjective: account.objective || "",
+      accountSystems:   account.systems   || [],
       glossary:         glossaryApi.entries,
       accountRoster:    accountRoster,
       accountType:      account.account_type || "standard",

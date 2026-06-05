@@ -293,6 +293,20 @@ function renderAccountObjectiveBlock(objective) {
     "\n\n";
 }
 
+// Systems/tools the account uses (e.g. "Fuse5 = their inventory system"),
+// learned via approved Pip suggestions. Lets Pip recognize these terms in raw
+// meeting notes instead of treating them as unknown nouns.
+function renderAccountSystemsBlock(systems) {
+  var list = Array.isArray(systems) ? systems : [];
+  if (!list.length) return "";
+  return "── SYSTEMS / TOOLS THEY USE ──\n" +
+    "When these appear in the notes, you know what they are — don't ask:\n" +
+    list.map(function (s) {
+      return "- " + (s.name || "") + (s.note ? ": " + s.note : "");
+    }).filter(function (l) { return l.length > 2; }).join("\n") +
+    "\n\n";
+}
+
 // Renders a one-line health trend string from snapshot rows (for summarize context).
 // snapshots — array of folio_account_snapshots rows already filtered to this account.
 function renderHealthTrendBlock(snapshots) {
@@ -573,9 +587,11 @@ export function callAskPip(payload) {
   var m = payload.meeting || {};
   var glossary = Array.isArray(payload.glossary) ? payload.glossary : [];
   var accountObjective = (payload.accountObjective || "").trim();
+  var accountSystems   = Array.isArray(payload.accountSystems) ? payload.accountSystems : [];
   var prompt =
     renderGlossaryBlock(glossary) +
     renderAccountObjectiveBlock(accountObjective) +
+    renderAccountSystemsBlock(accountSystems) +
     "Summarize this meeting, extract action items aggressively, and draft a follow-up email. " +
     "Return ONLY valid JSON: {\"short_title\":\"...\",\"summary\":\"...\",\"action_items\":[\"...\"],\"email\":\"...\"}.\n\n" +
     "Account: " + (payload.accountName || "—") + "\n" +
@@ -672,6 +688,7 @@ export function summarizeDraftPip(payload) {
   var hints          = Array.isArray(payload.assignmentHints) ? payload.assignmentHints : [];
   var corrections    = Array.isArray(payload.corrections)     ? payload.corrections     : [];
   var accountObjective = (payload.accountObjective || "").trim();
+  var accountSystems   = Array.isArray(payload.accountSystems) ? payload.accountSystems : [];
   var glossary         = Array.isArray(payload.glossary) ? payload.glossary : [];
   var accountRoster    = Array.isArray(payload.accountRoster) ? payload.accountRoster : [];
   var accountType      = payload.accountType || "standard";
@@ -860,6 +877,7 @@ export function summarizeDraftPip(payload) {
     (isPersonCadence ? renderPersonCadenceBlock(contactName) : (accountType === "internal_team" ? renderInternalMeetingBlock() : "")) +
     renderServicedStatesBlock(servicedStates) +
     renderAccountObjectiveBlock(accountObjective) +
+    renderAccountSystemsBlock(accountSystems) +
     renderHealthTrendBlock(healthSnapshots) +
     renderSnapshotMetricsBlock(healthSnapshots) +
     renderContactsBlock(contacts) +
@@ -1120,6 +1138,7 @@ export function callCadenceBriefPip(payload) {
   var openItems        = payload.openItems        || [];
   var activeProjects   = payload.activeProjects   || [];
   var accountObjective = (payload.accountObjective || "").trim();
+  var accountSystems   = Array.isArray(payload.accountSystems) ? payload.accountSystems : [];
   var glossary         = Array.isArray(payload.glossary) ? payload.glossary : [];
   var contacts         = Array.isArray(payload.contacts) ? payload.contacts : [];
   var pipAccountState  = payload.pipAccountState  || null;
@@ -1147,6 +1166,7 @@ export function callCadenceBriefPip(payload) {
   var prompt =
     renderGlossaryBlock(glossary) +
     renderAccountObjectiveBlock(accountObjective) +
+    renderAccountSystemsBlock(accountSystems) +
     lessonsBlock +
     renderContactsBlock(contacts) +
     "Give me a short per-cadence brief.\n\n" +
