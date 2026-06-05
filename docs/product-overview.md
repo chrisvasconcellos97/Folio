@@ -207,6 +207,15 @@ run on **Haiku 4.5**. Each Sonnet surface has an environment override so
 its tier can be re-dialed without a code change. (See
 [ai-governance.md](./ai-governance.md) for the full matrix.)
 
+**How Pip writes.** Every Pip text surface — chat, the daily brief, meeting
+summaries, Brief Me, the cadence pre-call brief, and the QBR — renders
+structured output: a short headline, labeled sections, and scannable bullets
+with the important names in bold, instead of a wall of prose. Priority
+sections can carry one of Pip's own inline status glyphs (a small on-brand
+icon set — needs-now, keep-an-eye, good-news, cross-account-pattern, done) in
+place of generic emoji, so a brief reads at a glance. Email drafts stay plain
+prose (no markup) since they're meant to be sent as-is.
+
 ### The V2 brain — Pip's learning loop
 
 This is the differentiator that nothing else does. Pip doesn't

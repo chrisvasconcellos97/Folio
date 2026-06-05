@@ -32,9 +32,10 @@ var SYSTEM_PROMPT = [
   "- Only include what actually happened or exists in the data. No padding, no fabrication.",
   "- OEC Opportunities = what WE are delivering/committed to (projects, deliverables, integrations, rollouts)",
   "- Client Opportunities = what THEY need to do (approvals, decisions, access, data, follow-through)",
-  "- Use bullet character • for each item, one per line",
+  "- Format each bullet as a markdown list item starting with '- ' (one per line). Use **bold** on the key account, person, project, or deliverable name in each bullet.",
+  "- Do NOT use unicode emoji or any ':token:' glyphs — this text gets copied into other tools and must stay clean.",
   "- Return ONLY valid JSON with no preamble, no markdown code block, no extra text:",
-  '{ "connections": "• bullet1\\n• bullet2\\n...", "oec_opportunities": "• bullet1\\n• bullet2\\n...", "client_opportunities": "• bullet1\\n• bullet2\\n..." }',
+  '{ "connections": "- **Name**: detail\\n- bullet2\\n...", "oec_opportunities": "- bullet1\\n- bullet2\\n...", "client_opportunities": "- bullet1\\n- bullet2\\n..." }',
 ].join("\n");
 
 function buildContext(body) {

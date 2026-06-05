@@ -3,6 +3,7 @@ import { C } from "../../lib/colors";
 import { PipOrb } from "../../components/PipMark";
 import { LitPill } from "../../components/LitPill";
 import { Glow } from "../../components/Glow";
+import { MarkdownText } from "../../components/MarkdownText";
 import { useBreakpoint } from "../../hooks/useBreakpoint";
 import { getNextOccurrence, formatTime } from "../../lib/cadenceUtils";
 import { useAccountSnapshots } from "../../hooks/useAccountSnapshots";
@@ -99,35 +100,37 @@ function acctName(accountById, accountId) {
   return a ? a.name : "an account";
 }
 
-// Split brief prose and wrap known account names in Glow components.
-function renderBriefWithGlows(text, accounts, onOpenAccount) {
-  if (!text) return null;
-  if (!accounts || !accounts.length || !onOpenAccount) return text;
+// Build a linkify(str, keyBase) that wraps known account names in <Glow> so
+// MarkdownText can keep the brief's tap-to-open-account behavior inside its
+// structured (headers + bullets + glyph) rendering.
+function makeAccountLinkify(accounts, onOpenAccount) {
+  if (!accounts || !accounts.length || !onOpenAccount) return null;
   var named = accounts
     .filter(function (a) { return a.name && a.name.length > 3; })
     .sort(function (a, b) { return b.name.length - a.name.length; });
-  var segments = [text];
-  named.forEach(function (account) {
-    var next = [];
-    segments.forEach(function (seg) {
-      if (typeof seg !== "string") { next.push(seg); return; }
-      var parts = seg.split(account.name);
-      if (parts.length === 1) { next.push(seg); return; }
-      parts.forEach(function (part, i) {
-        if (part) next.push(part);
-        if (i < parts.length - 1) {
-          var id = account.id + "-" + i;
-          next.push(
-            <Glow key={id} onClick={function () { onOpenAccount(account.id); }}>
-              {account.name}
-            </Glow>
-          );
-        }
+  return function linkify(str, keyBase) {
+    var segments = [str];
+    named.forEach(function (account) {
+      var next = [];
+      segments.forEach(function (seg) {
+        if (typeof seg !== "string") { next.push(seg); return; }
+        var parts = seg.split(account.name);
+        if (parts.length === 1) { next.push(seg); return; }
+        parts.forEach(function (part, i) {
+          if (part) next.push(part);
+          if (i < parts.length - 1) {
+            next.push(
+              <Glow key={keyBase + "-" + account.id + "-" + i} onClick={function () { onOpenAccount(account.id); }}>
+                {account.name}
+              </Glow>
+            );
+          }
+        });
       });
+      segments = next;
     });
-    segments = next;
-  });
-  return segments;
+    return segments;
+  };
 }
 
 export function HomeView({ userName, userId, accounts, meetings, items, cadences, projects, contacts, themes, onOpenAccount, onOpenAccountTab, onOpenCadenceHub, onOpenConversation, onOpenQuickTask, showOnboardingCard, onStartInterview, onDismissOnboardingCard, dripQuestion, dripQueueCount, onOpenCatchUp, onApplySuggestion, onAnswerDrip, onSkipDrip, onDismissDrip, commitmentNudges, onSnoozeNudge, onMarkNudgeDone, pipFacts, profileProse }) {
@@ -158,8 +161,8 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
   // Only fires when snapshots are ready and the brief hasn't been generated today.
   useEffect(function () {
     var todayStr = new Date().toISOString().slice(0, 10);
-    // v7: cache key bumped to flush briefs cached as raw JSON (Sonnet output overflowed the old 600-token budget → truncated JSON leaked to UI)
-    var cacheKey = "folio_daily_brief_v7_" + todayStr;
+    // v8: structured markdown brief (headers + bullets + Pip glyphs). v7 flushed raw-JSON briefs; v8 flushes the old prose format.
+    var cacheKey = "folio_daily_brief_v8_" + todayStr;
 
     // Check localStorage cache first — if we have a brief for today, use it.
     try {
@@ -922,9 +925,11 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
               ? <div style={{ fontFamily: INTER, fontSize: 14, color: C.textMuted, lineHeight: 1.6 }}>Pip is thinking…</div>
               : (
                 <div>
-                  <div style={{ fontFamily: INTER, fontSize: 14, color: C.textSoft, lineHeight: 1.7 }}>
-                    {renderBriefWithGlows(dailyBrief, accounts, onOpenAccount)}
-                  </div>
+                  <MarkdownText
+                    text={dailyBrief}
+                    linkify={makeAccountLinkify(accounts, onOpenAccount)}
+                    style={{ fontFamily: INTER, fontSize: 14, color: C.textSoft, lineHeight: 1.7 }}
+                  />
                   {briefCallouts && briefCallouts.length > 0 && (
                     <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 7 }}>
                       {briefCallouts.map(function (c, i) {

@@ -1,6 +1,6 @@
 # Folios — Upgrade Log
 
-*Last updated: 2026-06-05 (Pip intelligence push — model tiering + structured suggestions)*
+*Last updated: 2026-06-05 (Pip structured formatting + daily-brief fix)*
 
 Plain-English log of major upgrades shipped to Folios. Date, time, and
 a short explanation written in terms anyone can read — not technical
@@ -14,6 +14,23 @@ For the technical changelog with full release detail, see
 architectural changes, anything that meaningfully changes what Folios
 *does* or *is*. Not bug fixes, styling tweaks, or doc-only updates —
 those live in git history.
+
+---
+
+## 2026-06-05 — Pip structured formatting + daily-brief fix
+
+**What I built:** Pip now writes every brief and summary the way a person actually wants to read one — a headline, labeled sections, and bullets with the important names in bold — using its own small set of on-brand status icons instead of generic emoji. Also fixed the daily brief, which had started showing raw computer text.
+
+**Problem it solves:** Right after the model upgrade, the daily brief rendered as a block of raw JSON (computer formatting) instead of readable text, and even when readable it was one long paragraph that was hard to scan. Pip's other write-ups were inconsistent — some structured, some a wall of prose.
+
+**What changed:**
+- **Daily brief fix.** The stronger model writes a fuller brief than the old one, which overflowed a size limit and caused the text to break into raw JSON on screen. Raised the limits on every relevant Pip endpoint so output completes cleanly, and added a safety net so the brief can never show raw code again even if something else goes wrong.
+- **Structured formatting everywhere.** Chat, the daily brief, meeting summaries, Brief Me, the cadence pre-call brief, and the QBR all now render with headers, bullets, and bold — consistently.
+- **Pip's own status glyphs.** A small custom icon set in Folios' visual language (needs-now, keep-an-eye, good-news, cross-account-pattern, done) marks priority sections, instead of clashy unicode emoji. Email drafts stay clean plain text.
+
+**What you see today:** The Home daily brief reads as a tidy, skimmable rundown — a one-line headline, then short labeled sections with bullets and tappable account names. Meeting summaries and QBRs are slide-ready.
+
+**Why it matters:** A brief you can read in five seconds gets read. This is the difference between Pip producing text and Pip producing something you actually act on.
 
 ---
 

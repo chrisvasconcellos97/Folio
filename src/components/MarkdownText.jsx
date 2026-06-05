@@ -1,24 +1,55 @@
+import { PipGlyph, GLYPH_NAMES } from "./PipGlyph.jsx";
+
+// Pip status glyph tokens (e.g. ":fire:") — only the whitelisted names match,
+// so real text like "8:00" or "https://" is never touched.
+var GLYPH_RE  = new RegExp(":(" + GLYPH_NAMES.join("|") + "):", "g");
 var BOLD_ITAL = /(\*\*([^*]+)\*\*|\*([^*\s][^*]*[^*\s]|[^*\s])\*)/g;
 
-function renderInline(text, keyBase) {
+// Optional linkify(str, keyBase) lets a caller decorate plain text (e.g. wrap
+// account names in <Glow> on the daily brief). Returns a node/array or null.
+function applyLinkify(str, linkify, keyBase) {
+  if (!linkify || !str) return str;
+  var r = linkify(str, keyBase);
+  return r == null ? str : r;
+}
+
+// Bold/italic pass over a plain (glyph-free) string; plain residuals run
+// through linkify.
+function renderFormatted(text, keyBase, linkify) {
   var out = [];
   var last = 0;
   var m;
   var k = 0;
+  BOLD_ITAL.lastIndex = 0;
   while ((m = BOLD_ITAL.exec(text)) !== null) {
-    if (m.index > last) out.push(text.slice(last, m.index));
+    if (m.index > last) out.push(applyLinkify(text.slice(last, m.index), linkify, keyBase + "-t" + k));
     if (m[2] != null) {
-      out.push(<strong key={keyBase + "-" + (k++)}>{m[2]}</strong>);
+      out.push(<strong key={keyBase + "-b" + (k++)}>{applyLinkify(m[2], linkify, keyBase + "-bt" + k)}</strong>);
     } else {
-      out.push(<em key={keyBase + "-" + (k++)}>{m[3]}</em>);
+      out.push(<em key={keyBase + "-i" + (k++)}>{applyLinkify(m[3], linkify, keyBase + "-it" + k)}</em>);
     }
     last = BOLD_ITAL.lastIndex;
   }
-  if (last < text.length) out.push(text.slice(last));
+  if (last < text.length) out.push(applyLinkify(text.slice(last), linkify, keyBase + "-t" + k));
+  return out;
+}
+
+function renderInline(text, keyBase, linkify) {
+  var out = [];
+  var last = 0;
+  var m;
+  var k = 0;
+  GLYPH_RE.lastIndex = 0;
+  while ((m = GLYPH_RE.exec(text)) !== null) {
+    if (m.index > last) out = out.concat(renderFormatted(text.slice(last, m.index), keyBase + "-f" + k, linkify));
+    out.push(<PipGlyph key={keyBase + "-g" + (k++)} name={m[1]} />);
+    last = GLYPH_RE.lastIndex;
+  }
+  if (last < text.length) out = out.concat(renderFormatted(text.slice(last), keyBase + "-f" + k, linkify));
   return out.length ? out : text;
 }
 
-export function MarkdownText({ text, style }) {
+export function MarkdownText({ text, style, linkify }) {
   if (!text) return null;
   var lines = text.split("\n");
   var blocks = [];
@@ -62,13 +93,15 @@ export function MarkdownText({ text, style }) {
             <div
               key={idx}
               style={{
+                display: "flex",
+                alignItems: "center",
                 fontSize: "1.05em",
                 fontWeight: 700,
                 marginTop: idx ? 14 : 0,
                 marginBottom: 6,
               }}
             >
-              {renderInline(b.v, "h2-" + idx)}
+              {renderInline(b.v, "h2-" + idx, linkify)}
             </div>
           );
         }
@@ -77,13 +110,15 @@ export function MarkdownText({ text, style }) {
             <div
               key={idx}
               style={{
+                display: "flex",
+                alignItems: "center",
                 fontSize: "1em",
                 fontWeight: 700,
                 marginTop: idx ? 10 : 0,
                 marginBottom: 4,
               }}
             >
-              {renderInline(b.v, "h3-" + idx)}
+              {renderInline(b.v, "h3-" + idx, linkify)}
             </div>
           );
         }
@@ -96,7 +131,7 @@ export function MarkdownText({ text, style }) {
               {b.v.map(function (item, j) {
                 return (
                   <li key={j} style={{ marginBottom: 3 }}>
-                    {renderInline(item, "li-" + idx + "-" + j)}
+                    {renderInline(item, "li-" + idx + "-" + j, linkify)}
                   </li>
                 );
               })}
@@ -105,7 +140,7 @@ export function MarkdownText({ text, style }) {
         }
         return (
           <p key={idx} style={{ margin: idx ? "6px 0" : "0 0 6px" }}>
-            {renderInline(b.v, "p-" + idx)}
+            {renderInline(b.v, "p-" + idx, linkify)}
           </p>
         );
       })}

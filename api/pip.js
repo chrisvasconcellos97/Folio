@@ -56,6 +56,8 @@ var PIP_FORMATTING = [
   "Use ## headers only when sectioning a longer response. For short chat replies, skip headers.",
   "Keep paragraphs short — 1-3 sentences each.",
   "",
+  "Status glyphs: a ## header in a brief or multi-account summary MAY be prefixed with exactly one glyph token, placed immediately after '## ': :fire: (needs attention now), :watch: (keep an eye on it), :win: (good news / momentum), :signal: (a pattern across multiple accounts), :done: (shipped or closed). Example: '## :fire: Watch'. At most one per header. Use ONLY these tokens, NEVER a unicode emoji, NEVER inside body text or bullets, and NEVER in an email draft.",
+  "",
   "Structured shapes for specific tasks:",
   "",
   "Meeting summary (when asked to summarize or recap a meeting):",
@@ -74,7 +76,7 @@ var PIP_FORMATTING = [
   "## per account as header. Bullets under each. Blank line between accounts.",
   "If there's a cross-account note at the end, put it after all account sections.",
   "",
-  "Follow-up email drafts: write the email body only (no subject, no greeting preamble). Plain prose, no markdown — these get sent as email.",
+  "Follow-up email drafts: write the email body only (no subject, no greeting preamble). Plain prose, no markdown, no glyph tokens — these get sent as email.",
 ].join("\n");
 
 var PIP_CONTEXT_FORMAT = [
@@ -98,7 +100,7 @@ var PIP_FEWSHOTS = [
   "## Where things stand",
   "**KSI Auto Parts** is humming — green health, met on **Apr 12** for the Q1 review. Adam stayed steady on commitments.",
   "",
-  "## Watch",
+  "## :fire: Watch",
   "- CAPA cert docs still **overdue** (5 days past due) — Lisa is waiting.",
   "- No-response report hasn't gone out yet.",
   "",

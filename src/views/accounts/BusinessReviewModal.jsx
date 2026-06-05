@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Modal } from "../../components/Modal";
+import { MarkdownText } from "../../components/MarkdownText";
 import { C } from "../../lib/colors";
 import { callBusinessReviewPip } from "../../lib/pip";
 
@@ -159,15 +160,15 @@ export function BusinessReviewModal({ account, meetings, contacts, items, projec
             {content}
           </div>
         ) : (
-          <div style={{
-            whiteSpace: "pre-wrap",
-            fontFamily: INTER,
-            fontSize: 13,
-            lineHeight: 1.6,
-            color: C.text,
-          }}>
-            {content}
-          </div>
+          <MarkdownText
+            text={content}
+            style={{
+              fontFamily: INTER,
+              fontSize: 13,
+              lineHeight: 1.6,
+              color: C.text,
+            }}
+          />
         )}
       </div>
     );

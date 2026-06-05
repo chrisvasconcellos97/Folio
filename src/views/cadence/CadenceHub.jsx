@@ -355,9 +355,7 @@ function HistoryRow({ meeting, onEdit, onDelete, accountId, openItems, addItem, 
             {meeting.meeting_date && new Date(meeting.meeting_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
           </div>
           {meeting.pip_summary && (
-            <div style={{ fontSize: 13, color: C.textSub, lineHeight: 1.6, marginTop: 6, fontStyle: "italic" }}>
-              {meeting.pip_summary}
-            </div>
+            <MarkdownText text={meeting.pip_summary} style={{ fontSize: 13, color: C.textSub, lineHeight: 1.6, marginTop: 6 }} />
           )}
           {!meeting.pip_summary && meeting.notes && (
             <div style={{ fontSize: 13, color: C.textSub, lineHeight: 1.6, marginTop: 6, whiteSpace: "pre-wrap" }}>
