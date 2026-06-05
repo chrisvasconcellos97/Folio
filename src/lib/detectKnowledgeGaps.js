@@ -144,8 +144,28 @@ export async function detectKnowledgeGaps({ userId, supabase, accounts, meetings
   await insertGapQuestions(userId, supabase, candidates);
 }
 
+// Purge the generic evergreen "interview" questions from the active queue.
+// These were filler ("What does a great week look like?", "Who do you report
+// to?") that read as a personality quiz rather than Pip piecing things
+// together from real data. We no longer seed them; this removes any that are
+// still queued/asked so the user stops seeing them. Answered ones (history)
+// are left untouched.
+export async function purgeEvergreenQuestions({ userId, supabase }) {
+  if (!userId || !supabase) return;
+  var texts = EVERGREEN_QUESTIONS.map(function (q) { return q.question_text; });
+  await supabase
+    .from("folio_pip_questions")
+    .delete()
+    .eq("user_id", userId)
+    .eq("source", "gap_observed")
+    .in("status", ["queued", "asked"])
+    .in("question_text", texts);
+}
+
 // Seeds the evergreen question bank ONLY if the user currently has zero
 // queued drip questions (source='gap_observed', status='queued').
+// DEPRECATED — no longer called; observation-driven gap + terminology
+// questions are the only source now. Kept for reference / possible reuse.
 export async function seedEvergreenIfEmpty({ userId, supabase }) {
   if (!userId || !supabase) return;
 

@@ -48,7 +48,7 @@ import { usePipState } from "./lib/pipState";
 import { compressCorrectionsPip } from "./lib/pip";
 import { PipOnboardingView } from "./views/onboarding/PipOnboardingView";
 import { computeAndSaveSnapshots } from "./lib/accountSnapshots";
-import { detectKnowledgeGaps, seedEvergreenIfEmpty } from "./lib/detectKnowledgeGaps.js";
+import { detectKnowledgeGaps, purgeEvergreenQuestions } from "./lib/detectKnowledgeGaps.js";
 import { usePipDripQuestions } from "./hooks/usePipDripQuestions.js";
 import { usePipFacts as usePipFactsApp } from "./hooks/usePipFacts.js";
 import { useCommitmentNudges } from "./hooks/useCommitmentNudges.js";
@@ -549,19 +549,20 @@ export default function App() {
     if (last >= todayStart.getTime()) return; // already ran today
     try { localStorage.setItem(key, String(Date.now())); } catch (e) {}
     detectKnowledgeGaps({ userId: userId, supabase: supabase, accounts: accounts, meetings: meetings || [], contacts: allContacts, profile: userProfile })
-      .then(function () { return seedEvergreenIfEmpty({ userId: userId, supabase: supabase }); })
+      .then(function () { return purgeEvergreenQuestions({ userId: userId, supabase: supabase }); })
       .catch(function (err) { console.warn("[detectKnowledgeGaps] failed:", err && err.message); });
   }, [userId, accounts && accounts.length, allContacts && allContacts.length]);
 
-  // Weekly terminology scan — one lightweight Haiku call, fire-and-forget.
-  // Skip if user has paused drip questions.
+  // Daily terminology scan — one lightweight Haiku call, fire-and-forget.
+  // Runs daily (was weekly) so Pip keeps a steady stream of "what's this term
+  // you keep using?" questions flowing. Skip if user has paused drip questions.
   useEffect(function () {
     if (!userId || !session) return;
     if (userProfile && userProfile.pip_questions_paused) return;
     var key = "folio_terminology_scan_last_" + userId;
     var last = 0;
     try { last = parseInt(localStorage.getItem(key) || "0", 10); } catch (e) {}
-    if (Date.now() - last < 7 * 24 * 60 * 60 * 1000) return; // once per 7 days
+    if (Date.now() - last < 24 * 60 * 60 * 1000) return; // once per day
     try { localStorage.setItem(key, String(Date.now())); } catch (e) {}
     fetch("/api/detect-terminology", {
       method:  "POST",

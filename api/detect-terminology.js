@@ -27,14 +27,14 @@ export default async function handler(req, res) {
 
     // Fetch data in parallel.
     var [meetingsResult, contactsResult, accountsResult, glossaryResult, factsResult, existingQResult] = await Promise.all([
-      // Last 30 meetings with notes.
+      // Last 40 meetings with notes.
       supabase
         .from("folio_meetings")
-        .select("notes, title")
+        .select("notes, title, account_id")
         .eq("user_id", userId)
         .not("notes", "is", null)
         .order("created_at", { ascending: false })
-        .limit(30),
+        .limit(40),
       // All contacts.
       supabase
         .from("folio_contacts")
@@ -43,7 +43,7 @@ export default async function handler(req, res) {
       // All accounts.
       supabase
         .from("folio_accounts")
-        .select("name")
+        .select("id, name")
         .eq("user_id", userId),
       // Glossary terms.
       supabase
@@ -133,14 +133,43 @@ export default async function handler(req, res) {
 
     if (!newTerms.length) return res.status(200).json({ inserted: 0 });
 
+    // Account-anchor each term: find the account whose meeting notes mention it
+    // most, so Pip can ask "you keep saying X around <account>" — the question
+    // Chris actually wants ("Why do you keep mentioning Fuse5 with John's Auto
+    // Parts?") instead of a context-free "is that a new account?".
+    var acctById = {};
+    accounts.forEach(function (a) { if (a.id) acctById[a.id] = a.name; });
+
+    function dominantAccountFor(term) {
+      var lc = term.toLowerCase();
+      var counts = {};
+      meetings.forEach(function (m) {
+        if (!m.account_id) return;
+        var hay = ((m.notes || "") + " " + (m.title || "")).toLowerCase();
+        if (hay.indexOf(lc) === -1) return;
+        // count occurrences in this meeting
+        var n = hay.split(lc).length - 1;
+        counts[m.account_id] = (counts[m.account_id] || 0) + n;
+      });
+      var top = null, topN = 0;
+      Object.keys(counts).forEach(function (id) {
+        if (counts[id] > topN) { topN = counts[id]; top = id; }
+      });
+      return top && acctById[top] ? acctById[top] : null;
+    }
+
     var rows = newTerms.slice(0, 8).map(function (t) {
+      var acctName = dominantAccountFor(t.term);
+      var q = acctName
+        ? "You keep mentioning " + t.term + " around " + acctName + " — what is it? A system they use, a brand, a program, or a person?"
+        : "You keep mentioning " + t.term + " — what is it? A system, a brand, a program, or a person?";
       return {
         user_id:        userId,
-        question_text:  "You keep mentioning " + t.term + " — is that a new account, or tied to another? Tell me what it is.",
+        question_text:  q,
         category:       "terminology",
         source:         "gap_observed",
         status:         "queued",
-        priority:       6,
+        priority:       7,
         trigger_context: t.term,
       };
     });

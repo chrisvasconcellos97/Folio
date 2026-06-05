@@ -1,13 +1,19 @@
 // usePipDripQuestions — manages the drip-question queue for Pip Phase 2.
 //
 // Loads folio_pip_questions rows where source='gap_observed',
-// applies throttle rules (paused, 48h cooldown, 1/day, 3/week),
-// exposes the active question + answer/skip/dismiss actions.
+// applies a soft daily cap, exposes the active question + answer/skip/dismiss.
 //
-// Throttle is fully DB-driven (persisted, cross-device) — no localStorage.
+// Throttle is a handful per day: answer one and the next surfaces immediately
+// (so you can catch up in a sitting), up to DAILY_CAP interactions per 24h.
+// No weekly cap, no multi-hour cooldown — the questions are now observation-
+// driven (gaps + terminology), not a personality quiz, so a steady stream is
+// the point. Throttle is DB-driven (persisted, cross-device) — no localStorage.
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase.js";
+
+// Max questions surfaced per rolling 24h. "A handful a day."
+var DAILY_CAP = 5;
 
 export function usePipDripQuestions(userId, profile, onTermLearned) {
   var [rows, setRows]     = useState([]);
@@ -37,16 +43,16 @@ export function usePipDripQuestions(userId, profile, onTermLearned) {
 
   // ── Throttle computation ────────────────────────────────────────────────
 
-  // Returns Promise<{paused, has24hActivity, has3in7days}> so we can decide
-  // whether to surface a question.
+  // Returns Promise<{paused, dailyCountReached}> — surface a question only if
+  // we're under the daily cap. Each answer/skip/dismiss in the last 24h counts
+  // toward the cap, so the stream stops after a handful but lets you power
+  // through several in one sitting.
   function loadThrottleState() {
-    if (!userId) return Promise.resolve({ paused: true, has24hActivity: false, has3in7days: false });
+    if (!userId) return Promise.resolve({ paused: true, dailyCountReached: true });
 
     var now = Date.now();
-    var h24ago  = new Date(now - 24  * 60 * 60 * 1000).toISOString();
-    var d7ago   = new Date(now -  7 * 24 * 60 * 60 * 1000).toISOString();
+    var h24ago = new Date(now - 24 * 60 * 60 * 1000).toISOString();
 
-    // Query: most-recent skip/dismiss/answered (for 48h cooldown + daily limit)
     return supabase
       .from("folio_pip_questions")
       .select("status, answered_at")
@@ -54,32 +60,15 @@ export function usePipDripQuestions(userId, profile, onTermLearned) {
       .eq("source", "gap_observed")
       .in("status", ["answered", "skipped", "dismissed"])
       .order("answered_at", { ascending: false })
-      .limit(20)
+      .limit(30)
       .then(function (r) {
         var hist = r.data || [];
-
-        // 48h cooldown: any skip/dismiss in last 48h → wait.
-        var h48ago = new Date(now - 48 * 60 * 60 * 1000).toISOString();
-        var recentSkip = hist.some(function (row) {
-          return (row.status === "skipped" || row.status === "dismissed") &&
-            row.answered_at && row.answered_at > h48ago;
-        });
-        if (recentSkip) return { paused: false, has24hActivity: true, has3in7days: false };
-
-        // 1/day: any answer/skip/dismiss with answered_at in last 24h → done today.
-        var doneToday = hist.some(function (row) {
+        var last24 = hist.filter(function (row) {
           return row.answered_at && row.answered_at > h24ago;
-        });
-
-        // 3 per rolling 7 days: count rows with answered_at in last 7 days.
-        var last7 = hist.filter(function (row) {
-          return row.answered_at && row.answered_at > d7ago;
         }).length;
-
         return {
-          paused:          false,
-          has24hActivity:  doneToday,
-          has3in7days:     last7 >= 3,
+          paused:            false,
+          dailyCountReached: last24 >= DAILY_CAP,
         };
       });
   }
@@ -95,7 +84,7 @@ export function usePipDripQuestions(userId, profile, onTermLearned) {
 
     loadThrottleState().then(function (t) {
       setThrottleLoaded(true);
-      if (t.paused || t.has24hActivity || t.has3in7days) {
+      if (t.paused || t.dailyCountReached) {
         setActiveQuestion(null);
         return;
       }
