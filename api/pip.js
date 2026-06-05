@@ -151,13 +151,14 @@ var PIP_STATIC_SYSTEM = [
 var MODEL_HAIKU  = "claude-haiku-4-5-20251001";
 var MODEL_SONNET = "claude-sonnet-4-6";
 
-// Phase 3 — every mode runs on Haiku 4.5 by default. Brief/summary/email used
-// to route to Sonnet "for quality", but Haiku 4.5 produces equivalent
-// formatting/synthesis on these structured tasks at ~3× lower cost. Override
-// per-call by passing `model: "sonnet"` in the request body if a future
-// caller actually needs the bigger model.
+// Per-surface model dial (override in Vercel env without a redeploy).
+// Chat is the conversational surface the user judges Pip by, so it runs on
+// Sonnet for stronger reasoning. Mechanical modes (action/brief/email) stay
+// on Haiku; summarize is already Sonnet for semantic project matching.
+var CHAT_MODEL = process.env.PIP_CHAT_MODEL || MODEL_SONNET;
+
 var MODE_CONFIG = {
-  chat:    { model: MODEL_HAIKU, max_tokens: 512 },
+  chat:    { model: CHAT_MODEL, max_tokens: 512 },
   action:  { model: MODEL_HAIKU, max_tokens: 384 },
   brief:   { model: MODEL_HAIKU, max_tokens: 1024 },
   // summary returns a JSON plan with one source_excerpt (~50-100 tokens)

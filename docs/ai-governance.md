@@ -1,6 +1,6 @@
 # Folios — AI Governance
 
-*Last updated: 2026-06-03*
+*Last updated: 2026-06-05*
 
 This document describes how Folios uses AI (Pip) responsibly. It
 covers what Pip can and can't do, what guardrails are in place, how
@@ -146,9 +146,20 @@ defenses:
 - Prevents both intentional abuse and accidental client loops.
 
 ### Model selection
-- **claude-haiku-4-5-20251001** is the default for all Pip
-  operations.
-- **Sonnet** is reserved for high-synthesis paths (Brief Me).
+Models are tiered by task — capability where it shows, cost
+efficiency where it doesn't:
+- **claude-sonnet-4-6** runs the reasoning-heavy, user-facing,
+  low-frequency surfaces: Ask Pip chat, meeting summarize,
+  portfolio-aware question generation, the daily portfolio brief,
+  profile synthesis ("who you are"), and the QBR / business review.
+- **claude-haiku-4-5-20251001** runs the high-volume or mechanical
+  surfaces: per-account Brief Me, follow-up email drafting,
+  terminology extraction, account-state compression, and the
+  leadership readout.
+- Each Sonnet surface has a per-surface env override
+  (`PIP_CHAT_MODEL`, `PIP_QUESTIONS_MODEL`, `PIP_DAILY_BRIEF_MODEL`,
+  `PIP_PROFILE_MODEL`, `PIP_QBR_MODEL`) so the tier can be re-dialed
+  without a code change.
 - No Opus calls in production code.
 
 ### Prompt caching

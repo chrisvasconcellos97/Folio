@@ -145,7 +145,10 @@ export default async function handler(req, res) {
     ].join("\n");
 
     var msg = await client.messages.create({
-      model:      "claude-haiku-4-5-20251001",
+      // Sonnet: reasoning over the whole portfolio to write genuinely
+      // insightful questions is the surface users judge Pip's intelligence by.
+      // Runs rarely (weekly + backlog guard), so the cost delta is negligible.
+      model:      process.env.PIP_QUESTIONS_MODEL || "claude-sonnet-4-6",
       max_tokens: 700,
       system:     system,
       messages:   [{ role: "user", content: userMsg.slice(0, 9000) }],

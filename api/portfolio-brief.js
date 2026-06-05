@@ -211,7 +211,9 @@ Return ONLY valid JSON: { "brief": "...", "callouts": [...] }`;
   try {
     var client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     var msg = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
+      // Sonnet: the daily brief synthesizes risk/triage across the whole
+      // portfolio once per day (cached) — reasoning-heavy, low-frequency.
+      model: process.env.PIP_DAILY_BRIEF_MODEL || "claude-sonnet-4-6",
       max_tokens: 600,
       system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
       messages: [{ role: "user", content: portfolioText }],

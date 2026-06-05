@@ -47,7 +47,9 @@ export default async function handler(req, res) {
       "- completeness: integer 0-100 reflecting how complete the profile is based on answers provided";
 
     var msg = await client.messages.create({
-      model:      "claude-haiku-4-5-20251001",
+      // Sonnet: this defines how Pip understands WHO YOU ARE — it shapes every
+      // downstream output. Runs rarely (onboarding + occasional re-synthesis).
+      model:      process.env.PIP_PROFILE_MODEL || "claude-sonnet-4-6",
       max_tokens: 600,
       system:     systemPrompt,
       messages:   [{ role: "user", content: userPrompt }],
