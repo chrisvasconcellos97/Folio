@@ -6,6 +6,7 @@ import { showToast } from "../../components/Toast";
 import { InfoTip } from "../../components/InfoTip";
 import { useEntityDetection } from "../../hooks/useEntityDetection";
 import { EntitySuggestionChip } from "../../components/EntitySuggestionChip";
+import { PersonPicker } from "../../components/PersonPicker";
 import { isDefaultMeetingTitle } from "../../lib/meetingTitle";
 
 // Recognizes a person named in a plan row's title and offers to drop them
@@ -170,37 +171,6 @@ function RowCheckbox({ checked, onChange, lowConfidence, ariaLabel }) {
         )}
       </span>
     </label>
-  );
-}
-
-function AssigneeSelect({ value, memberOptions, contactOptions, onChange, noneLabel }) {
-  return (
-    <select
-      value={value || ""}
-      onChange={function (e) { onChange(e.target.value || null); }}
-      style={{
-        background: C.surface, color: C.text,
-        border: "1px solid " + C.rule, borderRadius: 6,
-        padding: "4px 8px", fontSize: 11, fontFamily: INTER,
-        maxWidth: 180,
-      }}
-    >
-      <option value="">{noneLabel || "— Unassigned —"}</option>
-      {memberOptions && memberOptions.length > 0 && (
-        <optgroup label="Team">
-          {memberOptions.map(function (o) {
-            return <option key={o.value} value={o.value}>{o.label}</option>;
-          })}
-        </optgroup>
-      )}
-      {contactOptions && contactOptions.length > 0 && (
-        <optgroup label="Account Contacts">
-          {contactOptions.map(function (o) {
-            return <option key={o.value} value={o.value}>{o.label}</option>;
-          })}
-        </optgroup>
-      )}
-    </select>
   );
 }
 
@@ -560,21 +530,25 @@ export function PipSummarizePreview({
     });
   }, [rawPlan, activeProjects, existingItems]);
 
-  var memberOptions = useMemo(function () {
-    return (orgMembers || []).map(function (m) {
-      var email = m.invited_email || m.email || "";
-      var label = m.full_name || email.split("@")[0] || email;
-      return { label: label, value: email };
-    }).filter(function (o) { return o.value; });
-  }, [orgMembers]);
-
-  var contactOptions = useMemo(function () {
-    return (accountContacts || []).map(function (c) {
-      // Use email as the value when available so assignee_email holds a real
-      // email address. Fall back to name only when no email exists.
-      return { label: c.name, value: c.email || c.name };
-    });
-  }, [accountContacts]);
+  // Shared workspace-grouped person picker (account contacts first → My Team →
+  // others) with a free-text escape hatch — same component used everywhere else
+  // for assignee/recipient so the app stays uniform. A plain function (not a
+  // component) so PersonPicker keeps its state across re-renders.
+  var personAccountIds = currentAccountId ? [currentAccountId] : [];
+  function personField(value, onChange, noneLabel) {
+    return (
+      <PersonPicker
+        value={value}
+        onChange={onChange}
+        members={orgMembers}
+        contacts={accountContacts}
+        accounts={accountRoster}
+        accountIds={personAccountIds}
+        noneLabel={noneLabel || "— Unassigned —"}
+        style={{ fontSize: 12, maxWidth: 220 }}
+      />
+    );
+  }
 
   var rosterLookup = useMemo(function () {
     var map = {};
@@ -1094,12 +1068,7 @@ export function PipSummarizePreview({
                   <span style={{ fontSize: 10, color: C.textMuted, fontFamily: MONO, textTransform: "uppercase", letterSpacing: "0.07em" }}>
                     Assignee
                   </span>
-                  <AssigneeSelect
-                    value={s.assignee}
-                    memberOptions={memberOptions}
-                    contactOptions={contactOptions}
-                    onChange={function (v) { patch(idx, { assignee: v }); }}
-                  />
+                  {personField(s.assignee, function (v) { patch(idx, { assignee: v }); })}
                 </div>
               )}
               {hasAssignee(row.kind) && (
@@ -1107,13 +1076,7 @@ export function PipSummarizePreview({
                   <span style={{ fontSize: 10, color: C.textMuted, fontFamily: MONO, textTransform: "uppercase", letterSpacing: "0.07em" }}>
                     Recipient
                   </span>
-                  <AssigneeSelect
-                    value={s.recipient}
-                    memberOptions={memberOptions}
-                    contactOptions={contactOptions}
-                    onChange={function (v) { patch(idx, { recipient: v }); }}
-                    noneLabel="— No recipient —"
-                  />
+                  {personField(s.recipient, function (v) { patch(idx, { recipient: v }); }, "— No recipient —")}
                 </div>
               )}
               {hasDueEdit(row.kind) && (
@@ -1222,24 +1185,13 @@ export function PipSummarizePreview({
               <span style={{ fontSize: 10, color: C.textMuted, fontFamily: MONO, textTransform: "uppercase", letterSpacing: "0.07em" }}>
                 Assignee
               </span>
-              <AssigneeSelect
-                value={ur.assignee}
-                memberOptions={memberOptions}
-                contactOptions={contactOptions}
-                onChange={function (v) { patchUserRow(ur.id, { assignee: v }); }}
-              />
+              {personField(ur.assignee, function (v) { patchUserRow(ur.id, { assignee: v }); })}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{ fontSize: 10, color: C.textMuted, fontFamily: MONO, textTransform: "uppercase", letterSpacing: "0.07em" }}>
                 Recipient
               </span>
-              <AssigneeSelect
-                value={ur.recipient}
-                memberOptions={memberOptions}
-                contactOptions={contactOptions}
-                onChange={function (v) { patchUserRow(ur.id, { recipient: v }); }}
-                noneLabel="— No recipient —"
-              />
+              {personField(ur.recipient, function (v) { patchUserRow(ur.id, { recipient: v }); }, "— No recipient —")}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{ fontSize: 10, color: C.textMuted, fontFamily: MONO, textTransform: "uppercase", letterSpacing: "0.07em" }}>
