@@ -19,6 +19,7 @@ var handlers = [
   "api/leadership-readout.js",
   "api/profile-synthesis.js",
   "api/detect-terminology.js",
+  "api/generate-questions.js",
 ];
 
 var failed = false;

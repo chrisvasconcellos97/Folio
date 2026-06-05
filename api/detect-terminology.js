@@ -25,6 +25,19 @@ export default async function handler(req, res) {
 
     var userId = user.id;
 
+    // Cost guard: if the user already has a backlog of queued questions, skip
+    // the Haiku call entirely — never generate into a pile. Keeps tokens near
+    // zero when questions aren't being answered.
+    var queuedCount = await supabase
+      .from("folio_pip_questions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("source", "gap_observed")
+      .in("status", ["queued", "asked"]);
+    if ((queuedCount.count || 0) >= 5) {
+      return res.status(200).json({ skipped: true, reason: "queue_not_empty", queued: queuedCount.count });
+    }
+
     // Fetch data in parallel.
     var [meetingsResult, contactsResult, accountsResult, glossaryResult, factsResult, existingQResult] = await Promise.all([
       // Last 40 meetings with notes.

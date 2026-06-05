@@ -574,6 +574,29 @@ export default function App() {
     }).catch(function (err) { console.warn("[detect-terminology] failed:", err && err.message); });
   }, [userId]);
 
+  // Weekly portfolio-aware question generator (Lane D) — one cheap Haiku pass
+  // that reasons across the whole portfolio and writes a few insightful
+  // questions in Pip's voice + simple term clarifiers. The endpoint self-skips
+  // (no Haiku call) when a queue backlog already exists, so token cost stays
+  // near zero. Skip entirely if the user paused drip questions.
+  useEffect(function () {
+    if (!userId || !session) return;
+    if (userProfile && userProfile.pip_questions_paused) return;
+    var key = "folio_generate_questions_last_" + userId;
+    var last = 0;
+    try { last = parseInt(localStorage.getItem(key) || "0", 10); } catch (e) {}
+    if (Date.now() - last < 7 * 24 * 60 * 60 * 1000) return; // once per 7 days
+    try { localStorage.setItem(key, String(Date.now())); } catch (e) {}
+    fetch("/api/generate-questions", {
+      method:  "POST",
+      headers: {
+        "Content-Type":  "application/json",
+        "Authorization": "Bearer " + session.access_token,
+      },
+      body: JSON.stringify({}),
+    }).catch(function (err) { console.warn("[generate-questions] failed:", err && err.message); });
+  }, [userId]);
+
   // Re-synthesis trigger — when drip hook reports >= 3 new answers since last synthesis.
   useEffect(function () {
     if (!userId || !session) return;
@@ -590,7 +613,10 @@ export default function App() {
     ]).then(function (results) {
       var allAnswered = results[0].data || [];
       var pairs = allAnswered
-        .filter(function (r) { return r.answer_text; })
+        // Terminology answers ("Fuse5 — John's IMS") are glossary facts, not
+        // facts about who the user is — they already ride onTermLearned into
+        // folio_pip_facts. Keep them out of the personal profile narrative.
+        .filter(function (r) { return r.answer_text && r.category !== "terminology"; })
         .map(function (r) { return { question: r.question_text, answer: r.answer_text }; });
       if (!pairs.length) return;
       return fetch("/api/profile-synthesis", {
