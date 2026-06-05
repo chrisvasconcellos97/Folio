@@ -213,6 +213,7 @@ export function usePipDripQuestions(userId, profile, onTermLearned) {
 
   return {
     activeQuestion:         throttleLoaded ? activeQuestion : null,
+    queuedQuestions:        rows,
     answerQuestion:         answerAndCount,
     skipQuestion:           skipQuestion,
     dismissQuestion:        dismissQuestion,

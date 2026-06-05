@@ -129,7 +129,7 @@ function renderBriefWithGlows(text, accounts, onOpenAccount) {
   return segments;
 }
 
-export function HomeView({ userName, userId, accounts, meetings, items, cadences, projects, contacts, themes, onOpenAccount, onOpenAccountTab, onOpenCadenceHub, onOpenConversation, onOpenQuickTask, showOnboardingCard, onStartInterview, onDismissOnboardingCard, dripQuestion, onAnswerDrip, onSkipDrip, onDismissDrip, commitmentNudges, onSnoozeNudge, onMarkNudgeDone }) {
+export function HomeView({ userName, userId, accounts, meetings, items, cadences, projects, contacts, themes, onOpenAccount, onOpenAccountTab, onOpenCadenceHub, onOpenConversation, onOpenQuickTask, showOnboardingCard, onStartInterview, onDismissOnboardingCard, dripQuestion, dripQueueCount, onOpenCatchUp, onAnswerDrip, onSkipDrip, onDismissDrip, commitmentNudges, onSnoozeNudge, onMarkNudgeDone }) {
   commitmentNudges = commitmentNudges || [];
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
@@ -1101,7 +1101,50 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
             >
               Not now
             </button>
+            {dripQueueCount > 1 && onOpenCatchUp && (
+              <button
+                type="button"
+                onClick={onOpenCatchUp}
+                style={{
+                  marginLeft: "auto", background: "none", border: "none",
+                  color: C.accent, fontSize: 12, fontWeight: 600,
+                  fontFamily: INTER, cursor: "pointer", padding: "4px 0",
+                }}
+              >
+                {"+" + (dripQueueCount - 1) + " more · Catch up →"}
+              </button>
+            )}
           </div>
+        </div>
+      )}
+
+      {/* Throttled-but-queued: daily drip is quiet, but let the user power
+          through the rest whenever they want. */}
+      {!dripQuestion && dripQueueCount > 0 && onOpenCatchUp && (
+        <div style={{
+          maxWidth: 600,
+          margin: isMobile ? "0 16px 12px" : "0 auto 12px",
+          padding: "11px 14px",
+          background: C.surface,
+          border: "1px solid " + C.rule,
+          borderLeft: "3px solid " + C.accent,
+          borderRadius: 12,
+          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
+        }}>
+          <div style={{ fontFamily: INTER, fontSize: 13, color: C.textSub }}>
+            Pip's got {dripQueueCount} thing{dripQueueCount !== 1 ? "s" : ""} he's curious about.
+          </div>
+          <button
+            type="button"
+            onClick={onOpenCatchUp}
+            style={{
+              background: "none", border: "none", color: C.accent,
+              fontSize: 12, fontWeight: 600, fontFamily: INTER,
+              cursor: "pointer", padding: "4px 0", whiteSpace: "nowrap",
+            }}
+          >
+            Catch up →
+          </button>
         </div>
       )}
 

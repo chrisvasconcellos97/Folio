@@ -40,6 +40,7 @@ import { DesktopLayout } from "./layout/DesktopLayout";
 import { MobileLayout } from "./layout/MobileLayout";
 import { PipOrb, PipMark } from "./components/PipMark";
 import { CommandPalette } from "./components/CommandPalette";
+import { PipCatchUp } from "./views/pip/PipCatchUp";
 import { MeetingReminderBanner } from "./components/MeetingReminderBanner";
 import { Toast, showToast } from "./components/Toast";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -538,6 +539,8 @@ export default function App() {
       pipFactsAppApi.addFact({ fact: term + " — " + definition, source: "pip_inferred" }).catch(function () {});
     }
   );
+  // "Catch up with Pip" modal — answer the whole queue in one sitting.
+  var [catchUpOpen, setCatchUpOpen] = useState(false);
 
   // Daily detectKnowledgeGaps — once per calendar day, pure JS, zero LLM cost.
   useEffect(function () {
@@ -961,6 +964,8 @@ export default function App() {
           try { localStorage.setItem("folio_onboarding_dismissed", "1"); } catch (e) {}
         }}
         dripQuestion={dripHook.activeQuestion}
+        dripQueueCount={(dripHook.queuedQuestions || []).length}
+        onOpenCatchUp={function () { setCatchUpOpen(true); }}
         onAnswerDrip={dripHook.answerQuestion}
         onSkipDrip={dripHook.skipQuestion}
         onDismissDrip={dripHook.dismissQuestion}
@@ -1397,6 +1402,14 @@ export default function App() {
             onClose={function() { setShowPalette(false); }}
           />
         )}
+        {catchUpOpen && (
+          <PipCatchUp
+            questions={dripHook.queuedQuestions || []}
+            onAnswer={dripHook.answerQuestion}
+            onSkip={dripHook.skipQuestion}
+            onClose={function () { setCatchUpOpen(false); }}
+          />
+        )}
       </>
     );
   }
@@ -1406,6 +1419,14 @@ export default function App() {
       <Toast />
       {reminderBanner}
       {inviteBanner}
+      {catchUpOpen && (
+        <PipCatchUp
+          questions={dripHook.queuedQuestions || []}
+          onAnswer={dripHook.answerQuestion}
+          onSkip={dripHook.skipQuestion}
+          onClose={function () { setCatchUpOpen(false); }}
+        />
+      )}
       <MobileLayout
         view={view}
         setView={handleSetView}
