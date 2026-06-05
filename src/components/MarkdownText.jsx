@@ -49,9 +49,23 @@ function renderInline(text, keyBase, linkify) {
   return out.length ? out : text;
 }
 
+// Models don't reliably put real newlines inside a JSON string field — they
+// often run "## Header - item - item" together on one line. Reconstruct line
+// breaks from the inline markers so the structure renders no matter how the
+// model spaced it. Already-newlined text passes through unchanged.
+export function normalizeStructure(text) {
+  return String(text)
+    // a ## / ### header that isn't already starting a line
+    .replace(/([^\n])[ \t]*(#{2,3}[ \t])/g, "$1\n$2")
+    // a " - " bullet marker mid-line (spaces both sides → not "1-800" or em dash)
+    .replace(/([^\n])[ \t]+-[ \t]+/g, "$1\n- ")
+    // collapse runaway blank lines
+    .replace(/\n{3,}/g, "\n\n");
+}
+
 export function MarkdownText({ text, style, linkify }) {
   if (!text) return null;
-  var lines = text.split("\n");
+  var lines = normalizeStructure(text).split("\n");
   var blocks = [];
   var i = 0;
   while (i < lines.length) {

@@ -183,6 +183,8 @@ Structure rule — write the brief in this markdown shape (the UI renders **bold
 - Under each header, use "- " bullets. Bold the account / person / task names. End an urgent bullet with the concrete next action ("→ pull the routing config").
 - Glyph tokens: use ONLY :fire: :watch: :win: :signal:, ONLY immediately after "## ". Never anywhere else, never any other token, and never a unicode emoji.
 - Skip any section with nothing in it. Order sections fire → watch → win → signal. Wins never go first.
+- CRITICAL: put the headline, every "## " header, and every "- " bullet on its OWN line using a real newline character (\\n) inside the brief string. Never run a header or bullet inline after other text. Example of the exact shape:
+  "**Two commitments due this week — one's on fire.**\\n\\n## :fire: Needs you today\\n- **Gerber (Major)** — orders auto-reassigning off Steve. → Pull the routing config today.\\n\\n## :win: Good news\\n- **Power Auto Parts** trending back to healthy."
 
 Voice rules:
 - Sound like a smart friend who's been watching their book — direct, a little dry, genuinely invested
@@ -249,8 +251,8 @@ Return ONLY valid JSON: { "brief": "...", "callouts": [...] }`;
     }
 
     return res.status(200).json({
-      brief:    (parsed.brief    || "").replace(/\*\*/g, ""),
-      callouts: parsed.callouts  || [],
+      brief:    parsed.brief    || "",
+      callouts: parsed.callouts || [],
     });
   } catch (e) {
     console.error("[portfolio-brief]", e);
