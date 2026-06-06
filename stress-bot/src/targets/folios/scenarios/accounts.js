@@ -86,16 +86,27 @@ export async function run({ page, config }) {
   });
 
   // 4. Reload and re-check — confirms it persisted to Supabase, not just local state.
+  // A cold reload has to restore the Supabase session AND refetch the full
+  // account list before the new row renders, which can take several seconds on
+  // a well-populated sandbox. So we wait for the logged-in marker, navigate to
+  // Accounts, then POLL the DOM (up to ~12s) instead of a single flat wait —
+  // a flat 2s read was racing the refetch and producing a false "vanished".
   await page.reload({ waitUntil: "domcontentloaded" });
+  await page.locator(S.loggedIn).first().waitFor({ state: "visible", timeout: 15_000 }).catch(() => {});
   const navAgain = page.locator(S.navAccounts).first();
   if (await navAgain.isVisible().catch(() => false)) { await navAgain.click({ timeout: 4000 }).catch(() => {}); }
-  await page.waitForTimeout(2000);
-  const htmlAfter = await page.content();
-  const persisted = htmlAfter.includes(testName);
+  await page.locator(S.searchInput).first().waitFor({ state: "visible", timeout: 6_000 }).catch(() => {});
+
+  let persisted = false;
+  for (let attempt = 0; attempt < 12; attempt++) {
+    const htmlAfter = await page.content();
+    if (htmlAfter.includes(testName)) { persisted = true; break; }
+    await page.waitForTimeout(1000);
+  }
   results.push({
     name: "account survives reload (persisted to DB)",
     passed: persisted,
-    note: persisted ? "persisted" : "vanished on reload — only saved client-side",
+    note: persisted ? "persisted" : "vanished on reload after 12s poll — write may not have reached Supabase",
   });
 
   return results;
