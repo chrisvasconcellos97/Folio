@@ -73,8 +73,34 @@ export async function run({ page, config }) {
   // 2. Fill + save with a uniquely-named account.
   const testName = `_stress_${Date.now()}`;
   await nameInput.fill(testName).catch(() => {});
+
+  // Attach a response listener BEFORE the save click so we can record whether
+  // the app fires a Supabase REST write and what the server returned.
+  const inserts = [];
+  const onResp = (res) => {
+    try {
+      const u = res.url();
+      const m = res.request().method();
+      if (u.includes("/rest/v1/folio_accounts") && (m === "POST" || m === "PATCH")) {
+        inserts.push({ method: m, status: res.status() });
+      }
+    } catch (_) {}
+  };
+  page.on("response", onResp);
+
   await page.locator(S.modalSave).first().click({ timeout: 4000 }).catch(() => {});
-  await page.waitForTimeout(1500);
+  await page.waitForTimeout(2500);
+
+  // Capture modal state after the wait — tells us if the modal stayed open
+  // (e.g. due to a validation error or a rejected write) or closed on success.
+  const modalStillOpen = await page.locator(S.modalNameInput).first().isVisible().catch(() => false);
+  const modalText = modalStillOpen
+    ? await page.locator(".modal-sheet").first().innerText().then((t) => t.slice(0, 200)).catch(() => "")
+    : "";
+  page.off("response", onResp);
+  const insertSummary = inserts.length
+    ? inserts.map((i) => `${i.method}:${i.status}`).join(",")
+    : "NONE";
 
   // 3. Verify it appears in the list.
   const html = await page.content();
@@ -83,6 +109,14 @@ export async function run({ page, config }) {
     name: "account appears in the list after save",
     passed: appeared,
     note: appeared ? "found in DOM" : "saved account not visible — write or realtime sync may be broken",
+  });
+
+  // Informational diagnostic — always passes (skipped:true → WARN in report).
+  results.push({
+    name: "save diagnostic (informational)",
+    passed: true,
+    skipped: true,
+    note: `db write requests: [${insertSummary}]; modal still open after save: ${modalStillOpen}` + (modalText ? `; modal text: "${modalText.replace(/\s+/g, " ").trim()}"` : ""),
   });
 
   // 4. Reload and re-check — confirms it persisted to Supabase, not just local state.
