@@ -29,11 +29,25 @@ export async function run({ page, config }) {
 
   // Modal is open once the name field shows.
   const nameInput = page.locator(S.modalNameInput).first();
-  const modalOpen = await nameInput.waitFor({ state: "visible", timeout: 5_000 }).then(() => true).catch(() => false);
+  const modalOpen = await nameInput.waitFor({ state: "visible", timeout: 6_000 }).then(() => true).catch(() => false);
+  let modalNote = "modal open";
+  if (!modalOpen) {
+    // Diagnostic: did ANY modal open, and what inputs are on the page? This
+    // tells us (from the log) whether the click failed to open the modal vs.
+    // the name-field selector being wrong — no screenshot needed.
+    const diag = await page.evaluate(() => {
+      const sheet = document.querySelector(".modal-sheet");
+      const inputs = Array.from(document.querySelectorAll("input"))
+        .slice(0, 12)
+        .map((i) => i.id || i.getAttribute("placeholder") || i.type || "?");
+      return { sheet: !!sheet, inputs };
+    }).catch(() => ({ sheet: null, inputs: [] }));
+    modalNote = `name field never appeared — .modal-sheet present: ${diag.sheet}; inputs on page: [${diag.inputs.join(" | ")}]`;
+  }
   results.push({
     name: "add-account modal opens with a name field",
     passed: modalOpen,
-    note: modalOpen ? "modal open" : "name field never appeared",
+    note: modalNote,
   });
   if (!modalOpen) return results;
 

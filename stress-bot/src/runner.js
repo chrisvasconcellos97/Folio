@@ -62,6 +62,25 @@ export async function run(config, opts) {
 
   const dir = await reporter.write();
   const sum = reporter.summary();
+
+  // Echo failure detail + clustered passive issues to stdout so the whole
+  // picture is readable straight from CI logs (no artifact download needed).
+  const fails = [];
+  for (const s of reporter.results.scenarios) {
+    for (const r of s.results) {
+      if (!r.skipped && !r.passed) fails.push(`${s.name} — ${r.name}: ${r.note || "(no note)"}`);
+    }
+  }
+  if (fails.length) {
+    log.section("failure detail");
+    for (const f of fails) log.fail(f);
+  }
+  const clusters = reporter.cluster();
+  if (clusters.length) {
+    log.section("passive issue clusters");
+    for (const c of clusters) log.warn(`[${c.kind} ×${c.count}] ${(c.sample || "").slice(0, 180)}`);
+  }
+
   log.section("summary");
   log.info(`pass=${sum.pass} fail=${sum.fail} skip=${sum.skip} passive_issues=${sum.issueCount}`);
   log.info(`report: ${dir}/report.html`);
