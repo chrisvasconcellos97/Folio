@@ -1,0 +1,61 @@
+name: Stress Test (manual)
+
+# Manual "Run workflow" button for the stress-bot.
+#
+# This file lives on the repo DEFAULT branch because GitHub only shows the
+# "Run workflow" button for workflows present on the default branch. The bot's
+# CODE lives on the `claude/app-stress-testing-bot-igPgi` branch (stress-bot/
+# is a vendored subproject, intentionally NOT merged into main / the Vercel
+# build), so the job checks that branch out explicitly before running.
+#
+# One-time setup: add a repository secret named SANDBOX_PASSWORD
+#   (Settings -> Secrets and variables -> Actions -> New repository secret)
+#   value = the password for chris.vasconcellos97+sandbox@gmail.com
+#
+# Then: Actions tab -> "Stress Test (manual)" -> Run workflow.
+# When it finishes, download the "stress-report" artifact from the run page.
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  stress:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: stress-bot
+    steps:
+      - name: Check out the stress-bot branch
+        uses: actions/checkout@v4
+        with:
+          ref: claude/app-stress-testing-bot-igPgi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run stress-bot
+        env:
+          # Non-secret config is inlined so the only thing you must set is the
+          # password secret. The anon key is a publishable client key by design.
+          TARGET_URL: https://folioshq.com
+          TEST_USER_EMAIL: chris.vasconcellos97+sandbox@gmail.com
+          TEST_USER_PASSWORD: ${{ secrets.SANDBOX_PASSWORD }}
+          SUPABASE_URL: https://yrpdjmyfidhxlpmxasao.supabase.co
+          SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlycGRqbXlmaWRoeGxwbXhhc2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg5Nzg3NDQsImV4cCI6MjA5NDU1NDc0NH0.tutTq1raFxA3HKUWsfYsUJtCZeQfswc3tFh7sqUM2RA
+        run: npm run stress
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stress-report
+          path: stress-bot/reports/
+          retention-days: 14
