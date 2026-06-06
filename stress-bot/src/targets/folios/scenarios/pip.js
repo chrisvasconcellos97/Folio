@@ -1,4 +1,4 @@
-// Pip API probes: prompt-injection resistance + rate limiting.
+// Pip API probes: prompt-injection resistance + rate limiting + recall.
 // Pip is at /api/pip. CLAUDE.md says: 20 req/min per user, in-memory.
 //
 // CRITICAL: /api/pip rejects any request without a Bearer token with a 401
@@ -9,6 +9,9 @@
 //
 // Order matters: the injection probe (1 real call) runs FIRST, before the
 // burst exhausts the per-user limit — so we don't need the old 62s sleep.
+//
+// AI call budget per run: ~5 authenticated calls total.
+//   1 injection probe + 3 burst (informational) + 1 recall check = 5.
 
 import { login, getAccessToken } from "../adapter.js";
 
@@ -85,15 +88,15 @@ export async function run({ page, config }) {
   });
 
   // 3. Per-user rate limit on AUTHENTICATED requests — INFORMATIONAL only.
-  //    The limiter is in-memory, which is best-effort on Vercel: a simultaneous
-  //    burst can fan out across serverless instances and slip the per-instance
-  //    counter. Realistic sustained abuse from one client is still curbed, and
-  //    nobody can get in without a login (test #2). We report the distribution
-  //    rather than failing the run on an inherent serverless edge case.
+  //    Reduced to 3 requests (was 25) to cut AI spend; the test is informational
+  //    anyway since in-memory rate limiting on Vercel serverless is best-effort.
+  //    The limiter can fan out across instances and slip the per-instance counter.
+  //    Realistic sustained abuse from one client is still curbed, and nobody can
+  //    get in without a login (test #2 is the real enforcement check).
   const burst = await page.evaluate(async ({ url, headers }) => {
     const target = new URL("/api/pip", url).toString();
     const out = [];
-    await Promise.all(Array.from({ length: 25 }).map(() =>
+    await Promise.all(Array.from({ length: 3 }).map(() =>
       fetch(target, {
         method: "POST",
         headers,
@@ -105,11 +108,38 @@ export async function run({ page, config }) {
     return out;
   }, { url: config.url, headers });
   const n = (code) => burst.filter((s) => s === code).length;
+  // With only 3 requests we won't reliably hit a 20-req/min limit — always informational.
   results.push({
-    name: "authed per-user rate limit (informational — in-memory is best-effort)",
-    passed: n(429) >= 1,
-    skipped: n(429) < 1,
-    note: `authed burst: 429×${n(429)}, 200×${n(200)} — 429s mean the limit fired; 0 is the known serverless fan-out limitation`,
+    name: "authed per-user rate limit (informational — 3-req probe, in-memory is best-effort)",
+    passed: true,
+    skipped: true,
+    note: `authed 3-req probe: 429×${n(429)}, 200×${n(200)} — 429s mean the limit fired on this small sample; 0 is expected at low volume`,
+  });
+
+  // 4. Recall check — ONE authenticated call asking Pip something account-related.
+  //    Pass if status is 200 and the response body is non-empty. We don't assert
+  //    exact content — just that authenticated Pip works end-to-end.
+  const recall = await page.evaluate(async ({ url, headers }) => {
+    const target = new URL("/api/pip", url).toString();
+    try {
+      const r = await fetch(target, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          messages: [{ role: "user", content: "Name one of my accounts." }],
+        }),
+      });
+      const t = await r.text();
+      return { status: r.status, body: t.slice(0, 200) };
+    } catch (e) {
+      return { status: "err", body: String(e && e.message) };
+    }
+  }, { url: config.url, headers });
+
+  results.push({
+    name: "Pip recall: authenticated end-to-end response (200 + non-empty body)",
+    passed: recall.status === 200 && (recall.body || "").trim().length > 0,
+    note: `status: ${recall.status}; first 80 chars: ${(recall.body || "").slice(0, 80)}`,
   });
 
   return results;
