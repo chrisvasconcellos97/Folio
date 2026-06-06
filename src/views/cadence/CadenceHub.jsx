@@ -1360,7 +1360,14 @@ export function CadenceHub({
         overdue_items: (overdueByAccount[s.account_id] || []).slice(0, 3),
       });
     });
-    callPortfolioBriefPip({ snapshots: enrichedSnapshots, userId: userId })
+    callPortfolioBriefPip({
+      snapshots: enrichedSnapshots,
+      userId: userId,
+      // Your own open to-dos from this 1:1 — so Pip can surface them pre-call.
+      leadershipTasks: (leadershipApi.tasks || []).slice(0, 8).map(function (t) {
+        return { title: t.title, due: t.due_date || null };
+      }),
+    })
       .then(function (out) {
         var brief = out.brief || out.content || "";
         setPortfolioBrief(brief);

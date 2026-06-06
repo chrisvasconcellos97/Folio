@@ -4,8 +4,11 @@ import { Modal } from "../../components/Modal";
 import { AmberBtn, SecBtn } from "../../components/Buttons";
 import { InputField } from "../../components/InputField";
 import { FL } from "../../components/FieldLabel";
+import { PersonPicker } from "../../components/PersonPicker";
+import { useContacts } from "../../hooks/useContacts";
 
-export function AddItemModal({ accountId, userId, existing, onSave, onClose }) {
+export function AddItemModal({ accountId, userId, existing, onSave, onClose, members, accounts }) {
+  var contactsApi = useContacts(userId, accountId);
   var [text, setText]    = useState(existing ? (existing.text || "") : "");
   var [due, setDue]      = useState(existing ? (existing.due_date || "") : "");
   var [owner, setOwner]  = useState(existing ? (existing.owner || "") : "");
@@ -62,11 +65,14 @@ export function AddItemModal({ accountId, userId, existing, onSave, onClose }) {
 
         <div>
           <FL htmlFor="item-owner">Owner</FL>
-          <InputField
-            id="item-owner"
+          <PersonPicker
             value={owner}
-            onChange={function (e) { setOwner(e.target.value); }}
-            placeholder="Who owns this?"
+            onChange={function (v) { setOwner(v || ""); }}
+            members={members}
+            contacts={contactsApi.contacts}
+            accounts={accounts}
+            accountIds={accountId ? [accountId] : []}
+            noneLabel="Unassigned"
           />
         </div>
 

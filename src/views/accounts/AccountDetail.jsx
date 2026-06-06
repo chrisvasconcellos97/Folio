@@ -57,7 +57,7 @@ function setDefaultTab(accountId, tab) {
   try { localStorage.setItem("folio_default_tab_" + accountId, tab); } catch(e) {}
 }
 
-export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, accounts, members, onBack, onEdit, onDelete, onReactivate, onMerge, onUpdate, onSelectAccount, pipPrefill, onPipPrefillHandled, initialHubCadenceId, onHubConsumed, initialPersonHubCadenceId, onPersonHubConsumed, autoOpenMeetingMode, onAutoOpenMeetingModeConsumed, onAddAccount, allProjects }) {
+export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, accounts, members, onBack, onEdit, onDelete, onReactivate, onMerge, onUpdate, onSelectAccount, pipPrefill, onPipPrefillHandled, initialHubCadenceId, onHubConsumed, initialPersonHubCadenceId, onPersonHubConsumed, autoOpenMeetingMode, onAutoOpenMeetingModeConsumed, onAddAccount, allProjects, onOpenSettings }) {
   var isInternalTeam = account.account_type === 'internal_team';
   var isPartner      = account.account_type === 'partner';
   var isCustomerType = !isInternalTeam && !isPartner;
@@ -852,6 +852,8 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
         <AddItemModal
           accountId={account.id}
           userId={userId}
+          members={members}
+          accounts={accounts}
           onSave={function (data) {
             return addItem(data).then(function (i) { showToast("Item added"); return i; });
           }}
@@ -938,6 +940,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
           account={account}
           userId={userId}
           onClose={function () { setShowPipMemory(false); }}
+          onOpenSettings={onOpenSettings}
         />
       )}
 

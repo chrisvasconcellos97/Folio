@@ -14,6 +14,7 @@ import { C } from "../../lib/colors";
 import { supabase } from "../../lib/supabase";
 
 var MONO = "'JetBrains Mono', ui-monospace, monospace";
+var INTER = "'Inter', system-ui, sans-serif";
 
 var TYPE_LABELS = {
   summary_edit:          "Summary edits",
@@ -100,7 +101,7 @@ function groupCorrections(corrections) {
   return Object.values(groups).sort(function (a, b) { return b.rows.length - a.rows.length; });
 }
 
-export function PipMemoryPanel({ account, userId, onClose }) {
+export function PipMemoryPanel({ account, userId, onClose, onOpenSettings }) {
   var [lessonRow, setLessonRow]       = useState(null);
   var [corrections, setCorrections]   = useState([]);
   var [totalCount, setTotalCount]     = useState(null);
@@ -334,6 +335,19 @@ export function PipMemoryPanel({ account, userId, onClose }) {
             >
               Pip reads the last 10 corrections before each meeting summary.
             </div>
+
+            {onOpenSettings && (
+              <button
+                onClick={function () { onClose && onClose(); onOpenSettings(); }}
+                style={{
+                  marginTop: 10, background: "none", border: "none", padding: 0,
+                  color: C.accent, fontFamily: INTER, fontSize: 12, fontWeight: 600,
+                  cursor: "pointer", textAlign: "left",
+                }}
+              >
+                Pip also knows some things about you →
+              </button>
+            )}
           </>
         )}
       </div>

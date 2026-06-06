@@ -957,6 +957,7 @@ export default function App() {
             orgId={orgId}
             accounts={accounts}
             members={members}
+            onOpenSettings={function () { handleSetView("settings"); }}
             onBack={handleBack}
             onEdit={function () { setEditingAccount(selectedAccount); }}
             onDelete={handleArchiveAccount}

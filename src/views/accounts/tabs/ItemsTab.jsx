@@ -371,6 +371,8 @@ export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAd
           existing={editingItem}
           accountId={accountId}
           userId={userId}
+          members={members}
+          accounts={accounts}
           onSave={function (id, data) {
             return onUpdate(id, data).then(function () {
               showToast("Item updated");
