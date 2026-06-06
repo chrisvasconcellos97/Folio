@@ -10,19 +10,22 @@ export async function run({ page, config }) {
   await login(page, { url: config.url, email: config.user.email, password: config.user.password });
 
   // Go to the Accounts workspace — the "Add Account" CTA lives there, not on Home.
+  // (Explicit click timeouts everywhere so a non-actionable target fails fast
+  // instead of hanging on Playwright's 30s default.)
   const accountsNav = page.locator(S.navAccounts).first();
   if (await accountsNav.isVisible().catch(() => false)) {
-    await accountsNav.click().catch(() => {});
-    await page.waitForTimeout(600);
+    await accountsNav.click({ timeout: 4000 }).catch(() => {});
   }
 
-  // 1. Open the add-account modal (the sidebar/header CTA).
+  // 1. Open the add-account modal. Wait for the CTA to render after nav
+  //    (it only appears once the Accounts view mounts).
   const addBtn = page.locator(S.addAccount).first();
-  if (!(await addBtn.isVisible().catch(() => false))) {
-    results.push({ name: "add-account button present", passed: false, note: "no Add Account CTA on the Accounts view" });
+  const addVisible = await addBtn.waitFor({ state: "visible", timeout: 6_000 }).then(() => true).catch(() => false);
+  if (!addVisible) {
+    results.push({ name: "Add Account CTA present", passed: false, note: "no Add Account button on the Accounts view" });
     return results;
   }
-  await addBtn.click().catch(() => {});
+  await addBtn.click({ timeout: 4000 }).catch(() => {});
 
   // Modal is open once the name field shows.
   const nameInput = page.locator(S.modalNameInput).first();
@@ -37,7 +40,7 @@ export async function run({ page, config }) {
   // 2. Fill + save with a uniquely-named account.
   const testName = `_stress_${Date.now()}`;
   await nameInput.fill(testName).catch(() => {});
-  await page.locator(S.modalSave).first().click().catch(() => {});
+  await page.locator(S.modalSave).first().click({ timeout: 4000 }).catch(() => {});
   await page.waitForTimeout(1500);
 
   // 3. Verify it appears in the list.
@@ -53,7 +56,7 @@ export async function run({ page, config }) {
   await page.reload({ waitUntil: "domcontentloaded" });
   // Make sure we're back on the Accounts view, then give realtime a beat.
   const navAgain = page.locator(S.navAccounts).first();
-  if (await navAgain.isVisible().catch(() => false)) { await navAgain.click().catch(() => {}); }
+  if (await navAgain.isVisible().catch(() => false)) { await navAgain.click({ timeout: 4000 }).catch(() => {}); }
   await page.waitForTimeout(2000);
   const htmlAfter = await page.content();
   const persisted = htmlAfter.includes(testName);
