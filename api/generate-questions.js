@@ -231,14 +231,45 @@ export default async function handler(req, res) {
       });
     });
 
-    if (!rows.length) return res.status(200).json({ inserted: 0 });
+    // Manual fallback — if the user explicitly asked for more but the model
+    // hedged (empty/all-duplicates), generate concrete account-anchored
+    // questions so "ask me more" NEVER comes back empty. These are grounded in a
+    // real account (not generic filler): prefer accounts with no objective on
+    // file, then the rest, skipping internal teams and anything already asked.
+    if (manual && rows.length === 0) {
+      var fbAccounts = accounts
+        .filter(function (a) { return a.account_type !== "internal_team"; })
+        .sort(function (a, b) {
+          var an = (!a.objective || !a.objective.trim()) ? 0 : 1;
+          var bn = (!b.objective || !b.objective.trim()) ? 0 : 1;
+          return an - bn; // accounts with no objective first
+        });
+      fbAccounts.forEach(function (a) {
+        if (rows.length >= maxNew) return;
+        var qtext = "Where do things stand with " + a.name + " right now — what are you trying to move there, who really makes the call, and what could derail it?";
+        var key = qtext.toLowerCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        rows.push({
+          user_id:         userId,
+          question_text:   qtext,
+          category:        "portfolio",
+          source:          "gap_observed",
+          status:          "queued",
+          priority:        8,
+          trigger_context: null,
+        });
+      });
+    }
+
+    if (!rows.length) return res.status(200).json({ inserted: 0, modelReturned: questions.length });
 
     var ins = await supabase.from("folio_pip_questions").insert(rows);
     if (ins.error) {
       console.error("[generate-questions] insert error:", ins.error.message);
       return res.status(500).json({ error: "Failed to insert questions.", detail: ins.error.message });
     }
-    return res.status(200).json({ inserted: rows.length });
+    return res.status(200).json({ inserted: rows.length, modelReturned: questions.length });
   } catch (err) {
     console.error("[generate-questions] error:", err && err.message);
     return res.status(500).json({ error: "Question generation unavailable.", detail: err && err.message });
