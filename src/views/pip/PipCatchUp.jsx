@@ -37,6 +37,14 @@ export function PipCatchUp({ questions, onAnswer, onSkip, onClose, onApplySugges
     if (asking || typeof onAskMore !== "function") return;
     setAsking(true);
     Promise.resolve(onAskMore())
+      .then(function (out) {
+        // Honest feedback when Pip genuinely had nothing new to add this round.
+        if (out && typeof out.inserted === "number" && out.inserted === 0) {
+          showToast("Pip couldn't think of more just now — try again in a bit");
+        } else if (out && out.error) {
+          showToast("Couldn't fetch more — try again", "error");
+        }
+      })
       .catch(function () { showToast("Couldn't fetch more — try again", "error"); })
       .finally(function () { setAsking(false); });
   }

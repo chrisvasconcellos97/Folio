@@ -174,6 +174,14 @@ export default async function handler(req, res) {
       "Return ONLY JSON, no markdown fences: { \"questions\": [ { \"question\": \"...\", \"kind\": \"portfolio\"|\"term\", \"term\": \"only for kind=term\" } ] }. Return at most " + maxNew + ". If you have nothing genuinely insightful, return fewer or an empty array — quality over quantity.",
     ].join("\n");
 
+    // Manual "Teach Pip" session: the user is actively asking for more, so
+    // override the default reluctance. Generate a FULL batch and dig deeper
+    // than the surface gaps — second-order questions, per-account specifics,
+    // follow-ups on what's already known — rather than returning empty.
+    if (manual) {
+      system += "\n\nIMPORTANT — THIS IS A MANUAL 'TEACH ME' SESSION. The user deliberately opened a session and asked you to keep going, so they WANT more questions right now. Do NOT return an empty or near-empty array. Produce a full batch of up to " + maxNew + " genuinely useful questions. Go BEYOND the obvious gaps you've already covered: dig into specific named accounts (their goals, who decides, what could derail them, what 'winning' looks like for that one account), follow up on themes/relationships/systems you partly know to sharpen them, and surface anything you'd want to understand to give a better brief next week. Still anchored to THIS portfolio and never generic filler — but lean hard toward generating, not abstaining.";
+    }
+
     var userMsg = [
       "ACCOUNTS (" + accounts.length + "):", acctLines || "(none)",
       "", "RECURRING MEETING THEMES:", themeLines || "(none recorded)",

@@ -689,8 +689,8 @@ export default function App() {
       body: JSON.stringify({ manual: true }),
     })
       .then(function (r) { return r.json(); })
-      .then(function () { return dripHook.refetch(); })
-      .catch(function (err) { console.warn("[teach-pip] failed:", err && err.message); });
+      .then(function (out) { return dripHook.refetch().then(function () { return out; }); })
+      .catch(function (err) { console.warn("[teach-pip] failed:", err && err.message); return null; });
   }
 
   // Re-synthesis trigger — when drip hook reports >= 3 new answers since last
