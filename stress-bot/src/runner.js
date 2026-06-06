@@ -40,7 +40,10 @@ export async function run(config, opts) {
         } catch (e) {
           results = [{ name: `${name} (threw)`, passed: false, note: e.message }];
         }
-        for (const r of results) (r.skipped ? log.warn : r.passed ? log.pass : log.fail).call(log, `${name} — ${r.name}`);
+        for (const r of results) {
+          const suffix = (r.skipped || !r.passed) && r.note ? " — " + r.note : "";
+          (r.skipped ? log.warn : r.passed ? log.pass : log.fail).call(log, `${name} — ${r.name}${suffix}`);
+        }
         reporter.addScenario(name, results);
       }
     }
