@@ -38,7 +38,12 @@ export default defineConfig({
     }),
   ],
   build: {
-    sourcemap: false,
+    // "hidden" emits .map files alongside the bundle (so a minified crash like
+    // index-XXXX.js:258:663 can be resolved back to the real src/ file + line)
+    // but omits the //# sourceMappingURL comment — so the maps aren't auto-
+    // loaded by visitors' devtools. Used to decode stress-bot / folio_errors
+    // stacks after a deploy.
+    sourcemap: "hidden",
     rollupOptions: {
       output: {
         manualChunks: function (id) {
