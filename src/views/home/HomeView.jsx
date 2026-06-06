@@ -1156,7 +1156,7 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
               padding: "12px 16px", cursor: "pointer", textAlign: "left",
             }}
           >
-            <PipOrb size={18} />
+            <span style={{ flexShrink: 0, display: "inline-flex" }}><PipOrb size="sm" isStatic /></span>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontFamily: INTER, fontSize: 14, fontWeight: 600, color: C.text }}>
                 Teach Pip about your world
