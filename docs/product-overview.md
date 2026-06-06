@@ -1,6 +1,6 @@
 # Folios — Product Overview
 
-*Last updated: 2026-06-05 (project status updates + multi-account picker)*
+*Last updated: 2026-06-06 (Pip chief-of-staff finish + profile editor)*
 
 This is the substantive product read after the [one-pager](./one-pager.md).
 Covers what Folios does, how it's structured, and what makes the Pip
@@ -370,22 +370,29 @@ preserves the summarized meeting but applies nothing.
   voice quality is poor).
 - Premium voice (OpenAI / Cartesia / ElevenLabs) on the wishlist.
 
-### Pip — portfolio intelligence (Tier A)
+### Pip — portfolio intelligence ("chief of staff")
 
-Pip now sees your entire portfolio at once, not just one account at a time.
+Pip sees your entire portfolio at once, not just one account at a time.
 
 - **Daily account state snapshots** (`folio_account_snapshots`): computed
   once per day, client-side, from real signals — health status, days since
   last contact, open and overdue item counts, active and stuck Gauge project
   counts. Zero LLM cost; pure data derivation.
-- **Daily brief card on the Home screen**: a single Haiku call, cached in
-  localStorage for the full calendar day. Pip synthesises a 3-5 sentence
-  morning read across the whole portfolio — what needs attention, what's at
-  risk, any recent wins. Cost estimate: ~$0.07/month.
+- **Daily brief card on the Home screen**: one call per day, cached for the
+  calendar day. Pip synthesises a morning read across the whole portfolio —
+  what's due, what's at risk, recent wins — factoring in workload (overdue
+  tasks, commitments, today's cadences), cross-account themes, tone trend,
+  health momentum, and **off-cadence accounts vs. their own rhythm** (e.g.
+  "you usually meet every ~3 weeks; it's been 45 days" — a personal baseline,
+  not a generic cold threshold).
+- **Draft-ahead follow-ups**: Home surfaces meetings you summarised a couple
+  days ago that still have no follow-up logged, with the follow-up email Pip
+  already drafted ready to copy or send — no extra cost.
+- **Boss-ready leadership readout** and **pre-call standing agendas** (via the
+  cadence brief) round out the proactive layer.
 - **Portfolio state utility (`buildPortfolioState`)**: a compact text block
-  summarising at-risk / watching accounts and stuck projects. Ready to be
-  injected into any future Pip context that needs cross-portfolio awareness
-  (1:1 mode, boss-ready rollup, etc.).
+  summarising at-risk / watching accounts and stuck projects, injected into
+  cross-portfolio Pip surfaces.
 
 ---
 

@@ -1382,11 +1382,46 @@ function NotificationsSection() {
   );
 }
 
-function PipQuestionsSection({ userId }) {
+var PROFILE_SLOTS = [
+  { key: "role_title",      label: "Your role",      ph: "e.g. Account Manager" },
+  { key: "company_name",    label: "Company",        ph: "Where you work" },
+  { key: "industry",        label: "Industry",       ph: "e.g. Automotive aftermarket" },
+  { key: "portfolio_shape", label: "Portfolio",      ph: "How many accounts, what kind" },
+  { key: "primary_goal",    label: "Primary goal",   ph: "What a great quarter looks like" },
+  { key: "working_style",   label: "Working style",  ph: "Quick hits vs. full picture; busy days" },
+];
+
+function PipQuestionsSection({ userId, onStartInterview }) {
   var profileApi = useUserProfile(userId);
   var profile    = profileApi.profile;
   var [saving, setSaving] = useState(false);
   var [answers, setAnswers] = useState([]);
+  var [slotDraft, setSlotDraft] = useState({});
+  var [slotSaving, setSlotSaving] = useState(false);
+
+  // Seed the editable slots from the profile once it loads (keyed on user_id so
+  // a post-save refetch doesn't clobber in-progress edits).
+  useEffect(function () {
+    if (!profile) return;
+    var d = {};
+    PROFILE_SLOTS.forEach(function (s) { d[s.key] = profile[s.key] || ""; });
+    setSlotDraft(d);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile && profile.user_id]);
+
+  var slotsDirty = profile && PROFILE_SLOTS.some(function (s) {
+    return (slotDraft[s.key] || "") !== (profile[s.key] || "");
+  });
+
+  function saveSlots() {
+    if (slotSaving || !slotsDirty) return;
+    setSlotSaving(true);
+    var patch = {};
+    PROFILE_SLOTS.forEach(function (s) { patch[s.key] = slotDraft[s.key] ? slotDraft[s.key].trim() : null; });
+    profileApi.upsertProfile(patch)
+      .then(function () { setSlotSaving(false); })
+      .catch(function () { setSlotSaving(false); });
+  }
 
   // Surface the answers the user has given Pip — otherwise answering the drip
   // questions feels like shouting into a void (they feed profile_prose, which
@@ -1457,6 +1492,52 @@ function PipQuestionsSection({ userId }) {
           </div>
         </div>
       )}
+
+      {/* Editable profile slots — the structured facts Pip keys on. */}
+      <div style={{ marginBottom: 16, paddingTop: 14, borderTop: "1px solid " + C.rule }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 10 }}>
+          <div style={{ fontSize: 12, color: C.textSub, fontWeight: 600 }}>
+            What Pip knows about you
+          </div>
+          {onStartInterview && (
+            <button
+              onClick={onStartInterview}
+              style={{
+                background: "transparent", border: "1px solid " + C.rule, borderRadius: 7,
+                padding: "4px 10px", color: C.textMuted, fontSize: 11, fontWeight: 600, cursor: "pointer",
+              }}
+            >
+              Re-run the interview
+            </button>
+          )}
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {PROFILE_SLOTS.map(function (s) {
+            return (
+              <div key={s.key}>
+                <FL htmlFor={"slot-" + s.key}>{s.label}</FL>
+                <InputField
+                  id={"slot-" + s.key}
+                  value={slotDraft[s.key] || ""}
+                  onChange={function (e) {
+                    var v = e.target.value;
+                    setSlotDraft(function (prev) { var n = Object.assign({}, prev); n[s.key] = v; return n; });
+                  }}
+                  placeholder={s.ph}
+                />
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
+          <AmberBtn onClick={saveSlots} disabled={!slotsDirty || slotSaving} style={{ fontSize: 12 }}>
+            {slotSaving ? "Saving…" : "Save"}
+          </AmberBtn>
+          <span style={{ fontSize: 11, color: C.textMuted, fontStyle: "italic" }}>
+            Edits feed every brief, summary, and chat.
+          </span>
+        </div>
+      </div>
 
       {/* What you've told Pip — the raw answered questions, so nothing feels lost */}
       {answers.length > 0 && (
@@ -1569,7 +1650,7 @@ function AppearanceSection() {
   );
 }
 
-export function SettingsView({ userId, userMeta, orgId, role, members, accounts }) {
+export function SettingsView({ userId, userMeta, orgId, role, members, accounts, onStartInterview }) {
   return (
     <div style={{ maxWidth: 600, margin: "0 auto", padding: "8px 0 40px" }}>
       <div style={{ marginBottom: 24, display: "flex", alignItems: "center", gap: 14 }}>
@@ -1597,7 +1678,7 @@ export function SettingsView({ userId, userMeta, orgId, role, members, accounts 
 
         {userId && <PipGlossarySection userId={userId} orgId={orgId} accounts={accounts} />}
 
-        {userId && <PipQuestionsSection userId={userId} />}
+        {userId && <PipQuestionsSection userId={userId} onStartInterview={onStartInterview} />}
 
         {orgId && (
           <ActivitySection

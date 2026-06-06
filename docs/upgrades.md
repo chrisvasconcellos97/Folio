@@ -1,6 +1,6 @@
 # Folios — Upgrade Log
 
-*Last updated: 2026-06-05 (project status updates + multi-account picker)*
+*Last updated: 2026-06-06 (Pip chief-of-staff finish + profile editor)*
 
 Plain-English log of major upgrades shipped to Folios. Date, time, and
 a short explanation written in terms anyone can read — not technical
@@ -14,6 +14,24 @@ For the technical changelog with full release detail, see
 architectural changes, anything that meaningfully changes what Folios
 *does* or *is*. Not bug fixes, styling tweaks, or doc-only updates —
 those live in git history.
+
+---
+
+## 2026-06-06 — Pip finishes the "chief of staff" build + you can edit your profile
+
+**What I built:** The last pieces of Pip's portfolio intelligence, plus a place to edit what Pip knows about you directly.
+
+**Problem it solves:** Pip could already brief you across the whole portfolio, but it couldn't notice when an account had quietly gone off your *own* usual rhythm, and it waited to be asked before drafting a follow-up. And the profile Pip builds from your answers was read-only — no way to correct it without answering more questions.
+
+**What changed:**
+- **Off-cadence radar.** The daily brief now flags accounts you've drifted away from *relative to how often you normally meet them* — "you usually meet every ~3 weeks; it's been 45 days" — not a generic "cold" threshold. It learns each account's rhythm from your own history.
+- **Drafts waiting for you.** A "Pip drafted these follow-ups" card on Home surfaces meetings you wrapped a couple days ago that still have no follow-up logged — with the follow-up email Pip already wrote ready to copy or open in Mail. No extra cost; it reuses the draft from when you summarized.
+- **Edit your profile.** Settings → "What Pip knows about you" now lets you edit the basics (role, company, industry, portfolio, goals, working style) inline, and re-run the intro interview anytime. Edits feed every brief, summary, and chat.
+- **Sharper questions.** The weekly question generator now also reads your champions/blockers and recent meeting summaries, so the questions it asks connect threads across accounts instead of one-at-a-time clarifiers.
+
+**What you see today:** Home tells you who's gone quiet by your own standard and hands you drafts to send; Settings lets you keep Pip's picture of you accurate.
+
+**Why it matters:** This is the difference between an assistant that answers when asked and one that notices things and gets ahead of them.
 
 ---
 

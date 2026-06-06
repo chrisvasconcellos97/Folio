@@ -8,9 +8,12 @@
 //   1. Skips the Haiku call entirely if the user already has a backlog of
 //      queued questions (>= QUEUE_SOFT_CAP) — never generate into a pile.
 //   2. Runs weekly (App.jsx localStorage guard).
-//   3. Sends a compact structured summary (account lines + theme counts +
-//      known facts), never raw meeting notes — keeps input tokens small.
-// Net: ~one Haiku call/week with a few thousand input tokens ≈ pennies/month.
+//   3. Sends a compact structured summary — account lines, theme counts, the
+//      relationship power-map (champions/blockers), and short recent-summary
+//      excerpts (NOT raw notes), all capped by a 9000-char slice. Wider input
+//      lets questions connect threads across accounts; the slice keeps tokens
+//      bounded.
+// Net: ~one Sonnet call/week with a few thousand input tokens ≈ pennies/month.
 
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
@@ -53,7 +56,7 @@ export default async function handler(req, res) {
     // ── Gather compact portfolio state ──
     var results = await Promise.all([
       supabase.from("folio_accounts")
-        .select("name, tier, account_type, status, status_override, last_interaction_at, objective, created_at")
+        .select("id, name, tier, account_type, status, status_override, last_interaction_at, objective, created_at")
         .eq("user_id", userId).eq("is_inactive", false).limit(60),
       supabase.from("folio_meetings")
         .select("theme, pip_tone")
@@ -69,6 +72,16 @@ export default async function handler(req, res) {
       supabase.from("folio_pip_questions")
         .select("question_text").eq("user_id", userId).eq("source", "gap_observed")
         .in("status", ["queued", "asked", "answered", "skipped", "dismissed"]).limit(60),
+      // Relationship power-map — who Pip should factor into "who really decides".
+      supabase.from("folio_contacts")
+        .select("name, relationship_role, account_id")
+        .eq("user_id", userId).in("relationship_role", ["champion", "blocker"]).limit(40),
+      // Recent activity excerpts (most recent summaries) so questions can connect
+      // threads the way Pip does in chat — bounded + capped by the 9000-char slice.
+      supabase.from("folio_meetings")
+        .select("account_id, pip_summary, meeting_date")
+        .eq("user_id", userId).not("pip_summary", "is", null)
+        .order("created_at", { ascending: false }).limit(12),
     ]);
 
     var accounts = results[0].data || [];
@@ -77,6 +90,11 @@ export default async function handler(req, res) {
     var facts    = results[3].data || [];
     var profile  = results[4].data || null;
     var priorQ   = results[5].data || [];
+    var relContacts = results[6].data || [];
+    var recentMtgs  = results[7].data || [];
+
+    var acctNameById = {};
+    accounts.forEach(function (a) { acctNameById[a.id] = a.name; });
 
     if (accounts.length === 0) return res.status(200).json({ skipped: true, reason: "no_accounts" });
 
@@ -113,6 +131,19 @@ export default async function handler(req, res) {
     var factLines = facts.map(function (f) { return "- " + f.fact; }).join("\n");
     var priorLines = priorQ.map(function (q) { return "- " + q.question_text; }).join("\n");
 
+    // Relationship power-map (champions / blockers).
+    var relLines = relContacts.map(function (c) {
+      var an = acctNameById[c.account_id];
+      return "- " + c.name + " — " + c.relationship_role + (an ? " @ " + an : "");
+    }).join("\n");
+
+    // Recent activity — short summary excerpts for the latest meetings.
+    var recentLines = recentMtgs.slice(0, 8).map(function (m) {
+      var an = acctNameById[m.account_id] || "an account";
+      return "- " + an + (m.meeting_date ? " (" + m.meeting_date + ")" : "") + ": " +
+        String(m.pip_summary || "").replace(/\s+/g, " ").slice(0, 180);
+    }).join("\n");
+
     var profileBlock = profile
       ? [
           profile.role_title ? "Role: " + profile.role_title : "",
@@ -140,6 +171,8 @@ export default async function handler(req, res) {
       "ACCOUNTS (" + accounts.length + "):", acctLines || "(none)",
       "", "RECURRING MEETING THEMES:", themeLines || "(none recorded)",
       "", "ACTIVE GAUGE PROJECTS:", projectLines || "(none)",
+      "", "RELATIONSHIP MAP (champions/blockers):", relLines || "(none recorded)",
+      "", "RECENT ACTIVITY (latest summaries):", recentLines || "(none yet)",
       "", "WHAT YOU ALREADY KNOW (facts/profile — don't re-ask):", profileBlock, factLines || "(no facts yet)",
       "", "ALREADY ASKED (don't repeat):", priorLines || "(none)",
     ].join("\n");

@@ -1218,6 +1218,7 @@ export default function App() {
         role={role}
         members={members}
         accounts={accounts}
+        onStartInterview={function () { setShowInterview(true); }}
       />
     );
   }

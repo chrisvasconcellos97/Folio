@@ -21,7 +21,7 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  var { snapshots, projects, overdueTasks, commitmentsDue, commitmentsOverdue, todayCadences, coldAccounts, looseEnds, healthDeltas, relationshipSignals, toneSignals, portfolioThemes, facts, profileProse } = req.body || {};
+  var { snapshots, projects, overdueTasks, commitmentsDue, commitmentsOverdue, todayCadences, coldAccounts, looseEnds, healthDeltas, relationshipSignals, toneSignals, anomalySignals, portfolioThemes, facts, profileProse } = req.body || {};
   snapshots = snapshots || [];
 
   var atRisk   = snapshots.filter(function (s) { return s.health_status === "at_risk"; });
@@ -117,6 +117,13 @@ export default async function handler(req, res) {
     if (warming.length > 0) {
       workloadLines.push("WARMING TONE: " + warming.map(function (t) { return t.account_name; }).join(", "));
     }
+  }
+  if ((anomalySignals || []).length > 0) {
+    workloadLines.push("OFF-CADENCE vs their own rhythm: " +
+      anomalySignals.map(function (a) {
+        return (a.tier === "major" ? "[MAJOR] " : "") + a.account_name +
+          " (usually every ~" + a.typical_days + "d, now " + a.days_since + "d)";
+      }).join("; "));
   }
   if ((relationshipSignals || []).length > 0) {
     relationshipSignals.forEach(function (r) {

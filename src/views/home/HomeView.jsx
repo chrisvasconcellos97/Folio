@@ -10,6 +10,7 @@ import { useAccountSnapshots } from "../../hooks/useAccountSnapshots";
 import { callPortfolioBriefPip } from "../../lib/pip";
 import { isProjectComplete } from "../../lib/gaugeStatus";
 import { suggestionLabel } from "../pip/PipCatchUp";
+import { showToast } from "../../components/Toast";
 
 var SERIF = "'Fraunces', Georgia, serif";
 var INTER = "'Inter', system-ui, sans-serif";
@@ -151,7 +152,7 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
   function refreshBrief() {
     if (briefLoading) return;
     var todayStr = new Date().toISOString().slice(0, 10);
-    try { localStorage.removeItem("folio_daily_brief_v9_" + todayStr); } catch (_) { /* ignore */ }
+    try { localStorage.removeItem("folio_daily_brief_v10_" + todayStr); } catch (_) { /* ignore */ }
     briefFiredRef.current = false;
     setDailyBrief("");
     setBriefCallouts([]);
@@ -178,7 +179,7 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
     // v9: flushes any brief cached before account data finished loading (the
     // "Unknown accounts" short brief from opening two tabs at once). v8 added
     // structured markdown; v7 flushed raw-JSON briefs.
-    var cacheKey = "folio_daily_brief_v9_" + todayStr;
+    var cacheKey = "folio_daily_brief_v10_" + todayStr;
 
     // Check localStorage cache first — if we have a brief for today, use it.
     try {
@@ -381,6 +382,43 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
         };
       });
 
+      // Cadence anomaly vs the account's OWN baseline — flag accounts whose gap
+      // since last contact is well beyond their typical meeting interval. Pure
+      // JS, personal baseline (median gap from history), not an industry norm.
+      var todayMs = startOfToday().getTime();
+      var anomalySignals = [];
+      (accounts || []).forEach(function (a) {
+        if (a.is_inactive) return;
+        var dates = (meetings || [])
+          .filter(function (m) { return m.account_id === a.id && m.meeting_date && m.status !== "scheduled"; })
+          .map(function (m) { return m.meeting_date; })
+          .sort();
+        if (dates.length < 4) return; // need real history for a baseline
+        var gaps = [];
+        for (var gi = 1; gi < dates.length; gi++) {
+          var d = (new Date(dates[gi]) - new Date(dates[gi - 1])) / 86400000;
+          if (d > 0) gaps.push(d);
+        }
+        if (gaps.length < 3) return;
+        gaps.sort(function (x, y) { return x - y; });
+        var median = gaps[Math.floor(gaps.length / 2)];
+        if (!median || median < 3) return;
+        var daysSince = Math.round((todayMs - new Date(dates[dates.length - 1]).getTime()) / 86400000);
+        // Off-cadence: well past 2x the usual rhythm (and a meaningful absolute gap).
+        if (daysSince >= median * 2 && daysSince >= median + 10) {
+          var snapA = (snapshots || []).find(function (s) { return s.account_id === a.id; });
+          anomalySignals.push({
+            account_name: a.name,
+            tier: a.tier || null,
+            typical_days: Math.round(median),
+            days_since: daysSince,
+            health: snapA ? snapA.health_status : null,
+          });
+        }
+      });
+      anomalySignals.sort(function (p, q) { return q.days_since - p.days_since; });
+      anomalySignals = anomalySignals.slice(0, 5);
+
       callPortfolioBriefPip({
         snapshots: snapshotsWithDetails,
         projects: activeProjects.concat(recentWins),
@@ -393,6 +431,7 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
         healthDeltas: healthDeltas,
         relationshipSignals: relationshipSignals,
         toneSignals: toneSignals,
+        anomalySignals: anomalySignals,
         portfolioThemes: portfolioThemes,
         facts: pipFacts || [],
         profileProse: profileProse || null,
@@ -452,6 +491,37 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
         return ta.localeCompare(tb);
       });
   }, [scheduledMeetings]);
+
+  // Draft-ahead — meetings Pip summarized 2+ days ago with a follow-up email
+  // already drafted (pip_email) but no later meeting logged on that account
+  // since (proxy for "no follow-up sent"). Pip proactively surfaces the draft
+  // it already wrote so you can send it before it goes stale. Zero extra cost —
+  // reuses the email generated at summarize time.
+  var draftAhead = useMemo(function () {
+    var now = Date.now();
+    var TWO_DAYS = 2 * 86400000;
+    // Latest meeting date per account (any meeting) to detect later contact.
+    var latestByAcct = {};
+    (meetings || []).forEach(function (m) {
+      if (!m.meeting_date || m.status === "scheduled") return;
+      if (!latestByAcct[m.account_id] || m.meeting_date > latestByAcct[m.account_id]) {
+        latestByAcct[m.account_id] = m.meeting_date;
+      }
+    });
+    return (meetings || [])
+      .filter(function (m) {
+        if (m.status === "scheduled") return false;
+        if (!m.pip_email || !m.pip_email.trim()) return false;
+        if (!m.meeting_date) return false;
+        var ageMs = now - new Date(m.meeting_date + "T00:00:00").getTime();
+        if (ageMs < TWO_DAYS) return false;          // give it 48h first
+        if (ageMs > 21 * 86400000) return false;      // stop nagging after 3 weeks
+        // No later meeting on this account since (would imply follow-up happened).
+        return latestByAcct[m.account_id] === m.meeting_date;
+      })
+      .sort(function (a, b) { return (b.meeting_date || "").localeCompare(a.meeting_date || ""); })
+      .slice(0, 3);
+  }, [meetings]);
 
   // ── Burning ──────────────────────────────────────────────────────────
   // Overdue items + blocked/overdue projects + cold accounts (>45d).
@@ -1279,6 +1349,74 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
                       Open →
                     </span>
                   )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Draft-ahead — follow-up emails Pip already wrote, waiting to send */}
+      {draftAhead.length > 0 && (
+        <div style={{
+          maxWidth: 600,
+          margin: isMobile ? "0 16px 12px" : "0 auto 12px",
+        }}>
+          <div style={{ fontFamily: MONO, fontSize: 10, color: C.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
+            Pip drafted these follow-ups
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {draftAhead.map(function (m) {
+              var acct = accountById[m.account_id];
+              return (
+                <div
+                  key={m.id}
+                  style={{
+                    background: C.surface,
+                    border: "1px solid " + C.rule,
+                    borderLeft: "3px solid " + C.accent,
+                    borderRadius: 10,
+                    padding: "10px 14px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: INTER, fontSize: 14, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {acct ? acct.name : "Account"}
+                    </div>
+                    <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, marginTop: 2, letterSpacing: "0.04em" }}>
+                      Follow-up ready · last met {m.meeting_date}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                    <button
+                      onClick={function () {
+                        try {
+                          navigator.clipboard.writeText(m.pip_email || "");
+                          showToast("Follow-up copied", "success");
+                        } catch (_) { /* ignore */ }
+                      }}
+                      style={{
+                        background: C.accentFaint, border: "1px solid " + C.accentLine, borderRadius: 7,
+                        padding: "5px 11px", color: C.accent, fontFamily: INTER, fontSize: 12, fontWeight: 600, cursor: "pointer",
+                      }}
+                    >
+                      Copy
+                    </button>
+                    <a
+                      href={"mailto:?body=" + encodeURIComponent(m.pip_email || "")}
+                      style={{
+                        background: "transparent", border: "1px solid " + C.rule, borderRadius: 7,
+                        padding: "5px 11px", color: C.textMuted, fontFamily: INTER, fontSize: 12, fontWeight: 600,
+                        cursor: "pointer", textDecoration: "none", display: "inline-flex", alignItems: "center",
+                      }}
+                    >
+                      Mail
+                    </a>
+                  </div>
                 </div>
               );
             })}
