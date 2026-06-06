@@ -37,10 +37,13 @@ export default {
   scenarios: [
     "auth",
     "accounts",
+    "viewsweep",
     "meetings",
     "cadences",
     "pip",
     "rls",
+    "apihealth",
+    "cachescope",
   ],
 
   // Fuzz layer — random behaviors that run after scripted scenarios.
