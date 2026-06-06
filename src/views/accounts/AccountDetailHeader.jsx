@@ -139,7 +139,12 @@ export function AccountDetailHeader({
             }}
           >
             {(function() {
-              var words = account.name.split(" ");
+              // Guard: a transient/optimistic account object (e.g. one just
+              // created mid-render) can reach here before `name` is populated.
+              // An unguarded .split here crashed the whole accounts/partners
+              // view to the ErrorBoundary (folio_errors: react "reading 'split'").
+              var nm = account.name || "";
+              var words = nm.split(" ");
               if (words.length > 1) {
                 return (
                   <>
@@ -148,7 +153,7 @@ export function AccountDetailHeader({
                   </>
                 );
               }
-              return account.name;
+              return nm;
             })()}
           </div>
           {account.account_number && isCustomerType && (
