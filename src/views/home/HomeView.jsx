@@ -144,13 +144,23 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
     return function () { clearTimeout(t); };
   }, []);
 
+  // Clear any rendered brief when the logged-in user changes, so a brief shown
+  // under one account can't carry into another on an in-session account switch.
+  useEffect(function () {
+    setDailyBrief("");
+    setBriefCallouts([]);
+  }, [userId]);
+
   // Daily brief — generated once per calendar day, cached in localStorage.
   // Only fires when snapshots are ready and the brief hasn't been generated today.
   useEffect(function () {
     if (!snapshots || snapshots.length === 0) return;
 
+    if (!userId) return;
     var todayStr = new Date().toISOString().slice(0, 10);
-    var cacheKey = "folio_daily_brief_v3_" + todayStr;
+    // Scope the cache key to the user — a date-only key bled one user's brief
+    // into another account on a shared device (every other cache is userId-scoped).
+    var cacheKey = "folio_daily_brief_v3_" + userId + "_" + todayStr;
 
     // Check localStorage cache first — if we have a brief for today, use it.
     try {
@@ -221,7 +231,7 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
   // Trigger only when snapshot count changes (i.e., when they first arrive).
   // accounts/projects are stable refs from parent hooks.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [snapshots.length]);
+  }, [snapshots.length, userId]);
 
   var accountById = useMemo(function () {
     var m = {};
