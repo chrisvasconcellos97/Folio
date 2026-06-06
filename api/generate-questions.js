@@ -46,7 +46,11 @@ export default async function handler(req, res) {
 
     // Manual "Teach Pip" sessions bypass the backlog cap + ask for a bigger
     // batch — the user explicitly wants more questions right now.
-    var manual = !!(req.body && req.body.manual);
+    // Read `manual` from BOTH the query string and the body. The query string
+    // is always parsed by Vercel; req.body depends on content-type parsing, so
+    // relying on it alone was fragile. teachPipMore() sends ?manual=1.
+    var qManual = req.query && (req.query.manual === "1" || req.query.manual === "true" || req.query.manual === true);
+    var manual = !!(qManual || (req.body && req.body.manual));
     var maxNew = manual ? 8 : MAX_NEW;
 
     // ── Guard 1: skip if a backlog of queued questions already exists ──
@@ -192,21 +196,28 @@ export default async function handler(req, res) {
       "", "ALREADY ASKED (don't repeat):", priorLines || "(none)",
     ].join("\n");
 
-    var msg = await client.messages.create({
-      // Sonnet: reasoning over the whole portfolio to write genuinely
-      // insightful questions is the surface users judge Pip's intelligence by.
-      // Runs rarely (weekly + backlog guard), so the cost delta is negligible.
-      model:      process.env.PIP_QUESTIONS_MODEL || "claude-sonnet-4-6",
-      max_tokens: 1200, // 1200 (was 700): Sonnet's question JSON is fuller; 700 risked truncating the array
-
-      system:     system,
-      messages:   [{ role: "user", content: userMsg.slice(0, 9000) }],
-    });
-
-    var raw = (msg.content && msg.content[0] && msg.content[0].text) || "{}";
-    var parsed = {};
-    try { parsed = JSON.parse(raw.replace(/^```json\n?/, "").replace(/\n?```$/, "")); } catch (e) { parsed = {}; }
-    var questions = Array.isArray(parsed.questions) ? parsed.questions : [];
+    // Model call is wrapped so a model/SDK failure (bad model env, rate limit,
+    // timeout) does NOT crash the whole request — for a manual session we still
+    // want the deterministic fallback below to fire. modelError is surfaced in
+    // the response for observability.
+    var questions = [];
+    var modelError = null;
+    try {
+      var msg = await client.messages.create({
+        model:      process.env.PIP_QUESTIONS_MODEL || "claude-sonnet-4-6",
+        max_tokens: 1200, // Sonnet's question JSON is fuller; lower risked truncating the array
+        system:     system,
+        messages:   [{ role: "user", content: userMsg.slice(0, 9000) }],
+      });
+      var raw = (msg.content && msg.content[0] && msg.content[0].text) || "{}";
+      var parsed = {};
+      try { parsed = JSON.parse(raw.replace(/^```json\n?/, "").replace(/\n?```$/, "")); } catch (e) { parsed = {}; }
+      questions = Array.isArray(parsed.questions) ? parsed.questions : [];
+    } catch (modelErr) {
+      modelError = (modelErr && modelErr.message) || "model_call_failed";
+      console.error("[generate-questions] model call failed:", modelError);
+      questions = [];
+    }
 
     // Dedupe against everything already in the queue/history.
     var seen = new Set(priorQ.map(function (q) { return (q.question_text || "").trim().toLowerCase(); }));
@@ -262,14 +273,14 @@ export default async function handler(req, res) {
       });
     }
 
-    if (!rows.length) return res.status(200).json({ inserted: 0, modelReturned: questions.length });
+    if (!rows.length) return res.status(200).json({ inserted: 0, modelReturned: questions.length, modelError: modelError });
 
     var ins = await supabase.from("folio_pip_questions").insert(rows);
     if (ins.error) {
       console.error("[generate-questions] insert error:", ins.error.message);
       return res.status(500).json({ error: "Failed to insert questions.", detail: ins.error.message });
     }
-    return res.status(200).json({ inserted: rows.length, modelReturned: questions.length });
+    return res.status(200).json({ inserted: rows.length, modelReturned: questions.length, modelError: modelError });
   } catch (err) {
     console.error("[generate-questions] error:", err && err.message);
     return res.status(500).json({ error: "Question generation unavailable.", detail: err && err.message });

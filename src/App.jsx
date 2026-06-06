@@ -680,7 +680,9 @@ export default function App() {
   // Up "ask me more" loop so the user can deliberately build Pip's knowledge.
   function teachPipMore() {
     if (!session) return Promise.resolve();
-    return fetch("/api/generate-questions", {
+    // manual flag in BOTH the query string (always parsed server-side) and the
+    // body — the query string is the reliable one.
+    return fetch("/api/generate-questions?manual=1", {
       method:  "POST",
       headers: {
         "Content-Type":  "application/json",
@@ -689,7 +691,10 @@ export default function App() {
       body: JSON.stringify({ manual: true }),
     })
       .then(function (r) { return r.json(); })
-      .then(function (out) { return dripHook.refetch().then(function () { return out; }); })
+      .then(function (out) {
+        if (out) console.log("[teach-pip] inserted:", out.inserted, "modelReturned:", out.modelReturned, "modelError:", out.modelError, "skipped:", out.reason || out.skipped);
+        return dripHook.refetch().then(function () { return out; });
+      })
       .catch(function (err) { console.warn("[teach-pip] failed:", err && err.message); return null; });
   }
 
