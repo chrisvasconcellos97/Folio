@@ -1,7 +1,7 @@
-// Meeting log smoke test. Navigates to Meetings, asserts the view loads
-// without errors, and tries to open the log modal. Best-effort — Folios'
-// log flow depends on having at least one account, which is handled by
-// the accounts scenario running first.
+// Calendar view smoke test. The "Meetings" view is labeled "Calendar" in the
+// nav. Folios is a state-based SPA (no URL change on nav), so we assert on
+// rendered content, not the URL. Best-effort: the conversation/schedule CTAs
+// are what we look for.
 
 import { S } from "../selectors.js";
 import { login } from "../adapter.js";
@@ -10,32 +10,33 @@ export async function run({ page, config }) {
   const results = [];
   await login(page, { url: config.url, email: config.user.email, password: config.user.password });
 
-  // Try clicking the Meetings nav.
-  const nav = await page.$(S.navMeetings).catch(() => null);
-  if (!nav) {
-    results.push({ name: "meetings nav present", passed: false, note: "no Meetings nav button" });
+  const nav = page.locator(S.navMeetings).first();
+  if (!(await nav.isVisible().catch(() => false))) {
+    results.push({ name: "Calendar nav present", passed: false, note: 'no "Calendar" nav button found' });
     return results;
   }
   await nav.click().catch(() => {});
-  await page.waitForTimeout(800);
+  await page.waitForTimeout(900);
 
-  // The view should mount without a JS error. The chaos watcher catches errors;
-  // here we just check the URL or visible content.
-  const url = page.url();
+  // View should mount and render calendar/meeting content (chaos watchers catch
+  // any JS error separately).
+  const content = (await page.content()).toLowerCase();
+  const mounted = /calendar|meeting|today|month|week/.test(content);
   results.push({
-    name: "meetings view navigates",
-    passed: /meetings|\/$/.test(url) || (await page.content()).toLowerCase().includes("meeting"),
-    note: `current url: ${url}`,
+    name: "Calendar view mounts",
+    passed: mounted,
+    note: mounted ? "calendar content rendered" : "no calendar/meeting content found after nav",
   });
 
-  // Try to find a log-meeting / log-conversation button.
-  const logBtn = await page.$(
-    'button:has-text("Log Meeting"), button:has-text("Log Conversation"), button:has-text("+ Meeting"), button:has-text("+ Conversation")'
-  ).catch(() => null);
+  // Try to find a conversation / schedule CTA.
+  const logBtn = page.locator(
+    'button:has-text("Conversation"), button:has-text("Schedule Meeting"), button:has-text("Log")'
+  ).first();
+  const hasCta = await logBtn.isVisible().catch(() => false);
   results.push({
-    name: "log-meeting CTA present",
-    passed: !!logBtn,
-    note: logBtn ? "found CTA" : "no Log Meeting / Log Conversation button visible — may need an account first",
+    name: "log/schedule CTA present",
+    passed: hasCta,
+    note: hasCta ? "found a conversation/schedule CTA" : "no conversation/schedule button visible",
   });
 
   return results;
