@@ -152,7 +152,7 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
   function refreshBrief() {
     if (briefLoading) return;
     var todayStr = new Date().toISOString().slice(0, 10);
-    try { localStorage.removeItem("folio_daily_brief_v10_" + todayStr); } catch (_) { /* ignore */ }
+    try { localStorage.removeItem("folio_daily_brief_v10_" + userId + "_" + todayStr); } catch (_) { /* ignore */ }
     briefFiredRef.current = false;
     setDailyBrief("");
     setBriefCallouts([]);
@@ -172,14 +172,26 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
     return function () { clearTimeout(t); };
   }, []);
 
+  // Clear any rendered brief when the logged-in user changes, so a brief shown
+  // under one account can't carry into another on an in-session account switch.
+  // Reset the fired-guard too, so the new user's brief regenerates.
+  useEffect(function () {
+    setDailyBrief("");
+    setBriefCallouts([]);
+    briefFiredRef.current = false;
+  }, [userId]);
+
   // Daily brief — generated once per calendar day, cached in localStorage.
   // Only fires when snapshots are ready and the brief hasn't been generated today.
   useEffect(function () {
+    if (!userId) return;
     var todayStr = new Date().toISOString().slice(0, 10);
     // v9: flushes any brief cached before account data finished loading (the
     // "Unknown accounts" short brief from opening two tabs at once). v8 added
     // structured markdown; v7 flushed raw-JSON briefs.
-    var cacheKey = "folio_daily_brief_v10_" + todayStr;
+    // Also scope the key to userId — a date-only key bled one user's brief into
+    // another account on a shared device (every other cache is userId-scoped).
+    var cacheKey = "folio_daily_brief_v10_" + userId + "_" + todayStr;
 
     // Check localStorage cache first — if we have a brief for today, use it.
     try {
@@ -450,7 +462,7 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
       });
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [snapshots.length, (items || []).length, briefNonce]);
+  }, [snapshots.length, (items || []).length, briefNonce, userId]);
 
   var accountById = useMemo(function () {
     var m = {};
