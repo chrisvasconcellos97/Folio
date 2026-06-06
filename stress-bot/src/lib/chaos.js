@@ -4,7 +4,11 @@
 
 export function attachPageWatchers(page, onIssue) {
   page.on("pageerror", (err) => {
-    onIssue({ kind: "pageerror", message: String(err) });
+    // Prefer the full stack — it carries the asset:line:col frames the
+    // source-map decoder needs to point at a real src/ file. Fall back to
+    // the plain message if no stack is present.
+    const message = (err && err.stack) ? err.stack : String(err);
+    onIssue({ kind: "pageerror", message });
   });
 
   page.on("console", (msg) => {

@@ -6,6 +6,7 @@ import { log } from "./lib/logger.js";
 import { Reporter } from "./reporter.js";
 import { attachPageWatchers } from "./lib/chaos.js";
 import { runFuzz } from "./fuzz/monkey.js";
+import { decodeStack, disposeSourceMaps } from "./lib/sourcemap.js";
 
 export async function run(config, opts) {
   const adapter = await loadAdapter(config.target);
@@ -78,8 +79,18 @@ export async function run(config, opts) {
   const clusters = reporter.cluster();
   if (clusters.length) {
     log.section("passive issue clusters");
-    for (const c of clusters) log.warn(`[${c.kind} ×${c.count}] ${(c.sample || "").slice(0, 180)}`);
+    for (const c of clusters) {
+      // App-emitted JS errors carry a minified stack; try to decode it to a
+      // real src/ file:line via the deployed .map. Best-effort — falls back to
+      // the raw text if maps aren't deployed (or anything goes wrong). Errors
+      // get a longer slice so the (now-decoded) frame isn't truncated away.
+      const isError = c.kind === "pageerror" || c.kind === "console.error";
+      const raw = (c.sample || "").slice(0, isError ? 600 : 180);
+      const shown = isError ? await decodeStack(raw).catch(() => raw) : raw;
+      log.warn(`[${c.kind} ×${c.count}] ${shown}`);
+    }
   }
+  disposeSourceMaps();
 
   log.section("summary");
   log.info(`pass=${sum.pass} fail=${sum.fail} skip=${sum.skip} passive_issues=${sum.issueCount}`);
