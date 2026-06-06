@@ -189,14 +189,20 @@ function DueInput({ value, onChange }) {
   );
 }
 
-function TargetAccountChip({ targetAccountId, currentAccountName, hasNoCurrentAccount, rosterOptions, rosterLookup, onChange }) {
+function TargetAccountChip({ targetAccountId, currentAccountName, hasNoCurrentAccount, isPersonCadence, rosterOptions, rosterLookup, onChange }) {
   var [open, setOpen] = useState(false);
   var targetName = targetAccountId
     ? ((rosterLookup[targetAccountId] && rosterLookup[targetAccountId].name) || targetAccountId)
     : null;
   var isRouted = !!targetAccountId;
-  var needsRoute = hasNoCurrentAccount && !isRouted;
-  var label = targetName ? ("→ on " + targetName) : (needsRoute ? "→ Route to account…" : ("→ on " + currentAccountName));
+  // For a person/internal 1:1, account-less is the intended default (leadership
+  // task) — not a "needs routing" warning.
+  var personSelf = isPersonCadence && !isRouted;
+  var needsRoute = hasNoCurrentAccount && !isRouted && !isPersonCadence;
+  var label = targetName ? ("→ on " + targetName)
+    : personSelf ? "↳ My task · no account"
+    : needsRoute ? "→ Route to account…"
+    : ("→ on " + currentAccountName);
   return (
     <div style={{ position: "relative", display: "inline-block" }}>
       <button
@@ -940,6 +946,7 @@ export function PipSummarizePreview({
                   targetAccountId={s.targetAccountId || null}
                   currentAccountName={currentAccountName}
                   hasNoCurrentAccount={!currentAccountId}
+                  isPersonCadence={isPersonCadence}
                   rosterOptions={rosterOptions}
                   rosterLookup={rosterLookup}
                   onChange={function (v) { patch(idx, { targetAccountId: v }); }}
@@ -1168,6 +1175,7 @@ export function PipSummarizePreview({
                 targetAccountId={ur.targetAccountId || null}
                 currentAccountName={currentAccountName}
                 hasNoCurrentAccount={!currentAccountId}
+                isPersonCadence={isPersonCadence}
                 rosterOptions={rosterOptions}
                 rosterLookup={rosterLookup}
                 onChange={function (v) { patchUserRow(ur.id, { targetAccountId: v }); }}

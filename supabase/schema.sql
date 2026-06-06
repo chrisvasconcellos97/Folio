@@ -242,6 +242,7 @@ create table if not exists folio_tasks (
   is_commitment       boolean not null default false,
   custom_fields       jsonb not null default '{}'::jsonb,
   source_meeting_id   uuid references folio_meetings(id) on delete set null,
+  cadence_id          uuid references folio_cadences(id) on delete set null,  -- provenance; account-less + cadence_id = leadership task (1:1 / internal)
   pip_created_at      timestamptz,
   user_added          boolean not null default false,
   created_at          timestamptz not null default now(),
@@ -249,6 +250,7 @@ create table if not exists folio_tasks (
 );
 
 create index if not exists folio_tasks_user_time_idx     on folio_tasks (user_id, created_at desc);
+create index if not exists folio_tasks_cadence_idx        on folio_tasks (cadence_id) where cadence_id is not null;
 create index if not exists folio_tasks_account_idx       on folio_tasks (account_id) where account_id is not null;
 create index if not exists folio_tasks_project_idx       on folio_tasks (project_id) where project_id is not null;
 create index if not exists folio_tasks_assignee_due_idx  on folio_tasks (assignee_email, due_date) where done = false;

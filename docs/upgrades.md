@@ -1,6 +1,6 @@
 # Folios — Upgrade Log
 
-*Last updated: 2026-06-06 (Pip chief-of-staff finish + profile editor)*
+*Last updated: 2026-06-06 (leadership tasks + Pip chief-of-staff finish)*
 
 Plain-English log of major upgrades shipped to Folios. Date, time, and
 a short explanation written in terms anyone can read — not technical
@@ -14,6 +14,23 @@ For the technical changelog with full release detail, see
 architectural changes, anything that meaningfully changes what Folios
 *does* or *is*. Not bug fixes, styling tweaks, or doc-only updates —
 those live in git history.
+
+---
+
+## 2026-06-06 — Leadership tasks: to-dos from your 1:1s have a home
+
+**What I built:** Action items from a 1:1 or internal/leadership meeting can now live as *your own* tasks, instead of being forced onto a customer account.
+
+**Problem it solves:** Folios already let you run recurring 1:1s (with your manager, a teammate) that aren't tied to a customer. But when you summarized one, every action item wanted an account to file under — which is wrong for "send the forecast up to leadership" or "prep the partner-review deck." Those are your work, not an account's.
+
+**What changed:**
+- Items from a person/internal cadence that you *don't* route to an account now persist as **leadership tasks** — tagged to the 1:1 they came from, with no account.
+- The summarize screen stops nagging you to route them: for a 1:1, an un-routed item reads "↳ My task · no account" instead of a yellow "route this somewhere" warning. (You can still route a specific item to an account if it belongs there.)
+- Each 1:1's hub now lists its open leadership tasks with a one-tap done — so they don't disappear.
+
+**What you see today:** Run your weekly 1:1, capture "follow up on headcount," leave it un-routed, and it's waiting for you in that 1:1's hub — not buried under some random account.
+
+**Why it matters:** Your own commitments out of leadership meetings are some of the most important things you carry. Now they have a home instead of falling through the cracks.
 
 ---
 

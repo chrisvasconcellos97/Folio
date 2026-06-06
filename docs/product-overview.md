@@ -1,6 +1,6 @@
 # Folios — Product Overview
 
-*Last updated: 2026-06-06 (Pip chief-of-staff finish + profile editor)*
+*Last updated: 2026-06-06 (leadership tasks + Pip chief-of-staff finish)*
 
 This is the substantive product read after the [one-pager](./one-pager.md).
 Covers what Folios does, how it's structured, and what makes the Pip
@@ -88,6 +88,12 @@ week, and optional time. Folios:
 - Sends in-app + browser-notification reminders 30m / 5m / start
 - Auto-advances when a conversation is logged tied to it
 - Surfaces the Cadence Hub when due
+
+Cadences can also be **account-less** — a recurring 1:1 with your manager or a
+teammate, or an internal/leadership meeting (`cadence_scope='person'`). Action
+items from those meetings persist as **leadership tasks** — your own to-dos,
+filed under the 1:1 rather than forced onto a customer account — and show in
+that cadence's hub.
 
 ### Cadence Hub
 

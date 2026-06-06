@@ -29,6 +29,7 @@ export function applyPipPlan(selected, ctx) {
   var updateProject  = ctx.updateProject;
   var addHint        = ctx.addHint;
   var accountId      = ctx.accountId;
+  var cadenceId      = ctx.cadenceId || null;   // provenance for leadership tasks (person/internal cadences)
   var meetingId      = ctx.meetingId || null;
   var activeProjects = ctx.activeProjects || [];
 
@@ -68,6 +69,8 @@ export function applyPipPlan(selected, ctx) {
           owner:             row.assignee || null,
           recipient:         row.recipient || null,
           account_id:        targetAcct,
+          // Account-less item born from a person/internal cadence = leadership task.
+          cadence_id:        (cadenceId && !targetAcct) ? cadenceId : null,
           source_meeting_id: meetingId,
           is_commitment:     row.is_commitment || false,
         };
@@ -99,6 +102,7 @@ export function applyPipPlan(selected, ctx) {
             owner:             row.assignee || null,
             recipient:         row.recipient || null,
             account_id:        fallbackAcct,
+            cadence_id:        (cadenceId && !fallbackAcct) ? cadenceId : null,
             source_meeting_id: meetingId,
             is_commitment:     row.is_commitment || false,
           };

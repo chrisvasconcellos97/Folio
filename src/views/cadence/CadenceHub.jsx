@@ -16,6 +16,7 @@ import { ProjectNotesEditor } from "../gauge/ProjectNotesEditor";
 import { usePipAssignmentHints } from "../../hooks/usePipAssignmentHints";
 import { usePipCorrections } from "../../hooks/usePipCorrections";
 import { usePipFacts } from "../../hooks/usePipFacts";
+import { useLeadershipTasks } from "../../hooks/useLeadershipTasks";
 import { useGlossary } from "../../hooks/useGlossary";
 import { useAccountSnapshots } from "../../hooks/useAccountSnapshots";
 import { usePipPromiseLog } from "../../hooks/usePipPromiseLog";
@@ -1172,6 +1173,8 @@ export function CadenceHub({
   contactAliases,
 }) {
   var isPersonCadence = cadence.cadence_scope === 'person' || !account;
+  // Leadership tasks — account-less items from this person/internal cadence.
+  var leadershipApi = useLeadershipTasks(userId, isPersonCadence ? cadence.id : null);
 
   var [briefLoading, setBriefLoading] = useState(false);
   var [briefError, setBriefError]     = useState(null);
@@ -1515,7 +1518,10 @@ export function CadenceHub({
       closeItem:      closeItem,
       updateProject:  updateProject,
       addHint:        hintsApi.addHint,
-      accountId:      accountId,
+      // Person/internal 1:1 → default items account-less (leadership tasks);
+      // per-row routing can still send a specific item to an account.
+      accountId:      isPersonCadence ? null : accountId,
+      cadenceId:      cadence ? cadence.id : null,
       meetingId:      draftId || null,
       activeProjects: activeProjects,
       userId:         userId,
@@ -1675,10 +1681,19 @@ export function CadenceHub({
 
   var tasksSection = isPersonCadence ? (
     <div>
-      <SectionHeader>Action Items</SectionHeader>
-      <div style={{ fontSize: 12, color: C.textMuted, padding: "6px 0", lineHeight: 1.5 }}>
-        Action items from this cadence will be routed to their accounts after each meeting via Pip.
-      </div>
+      <SectionHeader count={leadershipApi.tasks.length}>Leadership Tasks</SectionHeader>
+      {leadershipApi.tasks.length === 0 ? (
+        <div style={{ fontSize: 12, color: C.textMuted, padding: "6px 0", lineHeight: 1.5 }}>
+          Your own to-dos from this 1:1 land here. Items you route to an account during summarize go to that account instead.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {leadershipApi.tasks.map(function (t) {
+            var item = { id: t.id, text: t.title, due_date: t.due_date, owner: t.assignee_email, recipient: t.recipient };
+            return <OpenItemRow key={t.id} item={item} onClose={leadershipApi.closeTask} />;
+          })}
+        </div>
+      )}
     </div>
   ) : (
     <div>
@@ -1876,7 +1891,7 @@ export function CadenceHub({
       onLogCorrections={correctionsApi.logCorrections}
       meetingId={previewPlan.draftId}
       accountRoster={accountRoster}
-      currentAccountId={accountId}
+      currentAccountId={isPersonCadence ? null : accountId}
       skippedByPip={!!previewPlan.skippedByPip}
       isPersonCadence={isPersonCadence}
       suggestedTitle={previewPlan.suggestedTitle || null}
