@@ -3,7 +3,7 @@
 // (i.e. it actually persisted to Supabase, not just client state).
 
 import { S } from "../selectors.js";
-import { login } from "../adapter.js";
+import { login, getAccessToken } from "../adapter.js";
 
 export async function run({ page, config }) {
   const results = [];
@@ -121,28 +121,32 @@ export async function run({ page, config }) {
     note: `db write requests: [${insertSummary}]; modal closed: ${modalClosed}; saveClicked: ${saveClicked}`,
   });
 
-  // 4. Reload and re-check — confirms it persisted to Supabase, not just local state.
-  // A cold reload has to restore the Supabase session AND refetch the full
-  // account list before the new row renders, which can take several seconds on
-  // a well-populated sandbox. So we wait for the logged-in marker, navigate to
-  // Accounts, then POLL the DOM (up to ~12s) instead of a single flat wait —
-  // a flat 2s read was racing the refetch and producing a false "vanished".
-  await page.reload({ waitUntil: "domcontentloaded" });
-  await page.locator(S.loggedIn).first().waitFor({ state: "visible", timeout: 15_000 }).catch(() => {});
-  const navAgain = page.locator(S.navAccounts).first();
-  if (await navAgain.isVisible().catch(() => false)) { await navAgain.click({ timeout: 4000 }).catch(() => {}); }
-  await page.locator(S.searchInput).first().waitFor({ state: "visible", timeout: 6_000 }).catch(() => {});
-
+  // 4. Verify persistence the bulletproof way: query Supabase REST directly for the
+  // row we just created (immune to UI list-filter / render-timing flakiness),
+  // then DELETE it so the sandbox stays clean. Uses the logged-in user's token.
+  const token = await getAccessToken(page);
   let persisted = false;
-  for (let attempt = 0; attempt < 12; attempt++) {
-    const htmlAfter = await page.content();
-    if (htmlAfter.includes(testName)) { persisted = true; break; }
-    await page.waitForTimeout(1000);
+  let cleanupOk = false;
+  const base = (config.supabase && config.supabase.url) ? config.supabase.url.replace(/\/$/, "") : "";
+  if (token && base) {
+    const headers = { apikey: config.supabase.anonKey, Authorization: "Bearer " + token };
+    const q = `${base}/rest/v1/folio_accounts?name=eq.${encodeURIComponent(testName)}&select=id`;
+    try {
+      const r = await fetch(q, { headers });
+      const rows = r.ok ? await r.json() : [];
+      persisted = Array.isArray(rows) && rows.length > 0;
+      if (persisted) {
+        const del = await fetch(`${base}/rest/v1/folio_accounts?name=eq.${encodeURIComponent(testName)}`, { method: "DELETE", headers });
+        cleanupOk = del.ok;
+      }
+    } catch (_) { /* leave persisted=false */ }
   }
   results.push({
-    name: "account survives reload (persisted to DB)",
+    name: "account persisted to the database (verified via API)",
     passed: persisted,
-    note: persisted ? "persisted" : "vanished on reload after 12s poll — write may not have reached Supabase",
+    note: persisted
+      ? ("confirmed in DB" + (cleanupOk ? "; test row cleaned up" : "; cleanup skipped/failed"))
+      : (token ? "row not found via API — create may not have persisted" : "no auth token — could not verify"),
   });
 
   return results;
