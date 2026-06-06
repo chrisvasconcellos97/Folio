@@ -1391,7 +1391,7 @@ var PROFILE_SLOTS = [
   { key: "working_style",   label: "Working style",  ph: "Quick hits vs. full picture; busy days" },
 ];
 
-function PipQuestionsSection({ userId, onStartInterview }) {
+function PipQuestionsSection({ userId, onStartInterview, onOpenCatchUp }) {
   var profileApi = useUserProfile(userId);
   var profile    = profileApi.profile;
   var [saving, setSaving] = useState(false);
@@ -1457,6 +1457,19 @@ function PipQuestionsSection({ userId, onStartInterview }) {
       <div style={{ fontSize: 13, color: C.textSub, lineHeight: 1.6, marginBottom: 14 }}>
         Pip asks a few gentle questions each week to learn your world — your accounts, contacts, vocabulary — and use them in every brief.
       </div>
+
+      {onOpenCatchUp && (
+        <button
+          onClick={onOpenCatchUp}
+          style={{
+            display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 16,
+            background: C.accentDeep, border: "1px solid " + C.accent, borderRadius: 8,
+            padding: "9px 16px", color: C.bg, fontSize: 13, fontWeight: 600, cursor: "pointer",
+          }}
+        >
+          Catch up with Pip →
+        </button>
+      )}
 
       {/* Completeness meter */}
       <div style={{ marginBottom: 16 }}>
@@ -1650,7 +1663,7 @@ function AppearanceSection() {
   );
 }
 
-export function SettingsView({ userId, userMeta, orgId, role, members, accounts, onStartInterview }) {
+export function SettingsView({ userId, userMeta, orgId, role, members, accounts, onStartInterview, onOpenCatchUp }) {
   return (
     <div style={{ maxWidth: 600, margin: "0 auto", padding: "8px 0 40px" }}>
       <div style={{ marginBottom: 24, display: "flex", alignItems: "center", gap: 14 }}>
@@ -1678,7 +1691,7 @@ export function SettingsView({ userId, userMeta, orgId, role, members, accounts,
 
         {userId && <PipGlossarySection userId={userId} orgId={orgId} accounts={accounts} />}
 
-        {userId && <PipQuestionsSection userId={userId} onStartInterview={onStartInterview} />}
+        {userId && <PipQuestionsSection userId={userId} onStartInterview={onStartInterview} onOpenCatchUp={onOpenCatchUp} />}
 
         {orgId && (
           <ActivitySection

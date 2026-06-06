@@ -7,7 +7,9 @@
 // Cost guardrails:
 //   1. Skips the Haiku call entirely if the user already has a backlog of
 //      queued questions (>= QUEUE_SOFT_CAP) — never generate into a pile.
-//   2. Runs weekly (App.jsx localStorage guard).
+//      EXCEPTION: a manual "Teach Pip" session (body { manual:true }) bypasses
+//      this cap and asks for a bigger batch — the user explicitly wants more.
+//   2. Runs weekly (App.jsx localStorage guard); the manual path bypasses it.
 //   3. Sends a compact structured summary — account lines, theme counts, the
 //      relationship power-map (champions/blockers), and short recent-summary
 //      excerpts (NOT raw notes), all capped by a 9000-char slice. Wider input
@@ -42,6 +44,11 @@ export default async function handler(req, res) {
     if (authRes.error || !user) return res.status(401).json({ error: "Unauthorized" });
     var userId = user.id;
 
+    // Manual "Teach Pip" sessions bypass the backlog cap + ask for a bigger
+    // batch — the user explicitly wants more questions right now.
+    var manual = !!(req.body && req.body.manual);
+    var maxNew = manual ? 8 : MAX_NEW;
+
     // ── Guard 1: skip if a backlog of queued questions already exists ──
     var queuedCount = await supabase
       .from("folio_pip_questions")
@@ -49,7 +56,7 @@ export default async function handler(req, res) {
       .eq("user_id", userId)
       .eq("source", "gap_observed")
       .in("status", ["queued", "asked"]);
-    if ((queuedCount.count || 0) >= QUEUE_SOFT_CAP) {
+    if (!manual && (queuedCount.count || 0) >= QUEUE_SOFT_CAP) {
       return res.status(200).json({ skipped: true, reason: "queue_not_empty", queued: queuedCount.count });
     }
 
@@ -164,7 +171,7 @@ export default async function handler(req, res) {
       "  - \"term\": a SIMPLE clarifier when you see a proper noun, acronym, brand, or system you don't understand (and it isn't already in known facts). e.g. \"You mention <X> a lot — what is it?\". Set the \"term\" field to that word.",
       "Voice: first person, plain, a little eager-to-help. Never generic personality-quiz filler ('what does a great week look like'). Every question must be impossible to ask without having read THIS portfolio.",
       "Do NOT ask anything already answered by Known facts / profile, and do NOT repeat anything in Already asked.",
-      "Return ONLY JSON, no markdown fences: { \"questions\": [ { \"question\": \"...\", \"kind\": \"portfolio\"|\"term\", \"term\": \"only for kind=term\" } ] }. Return at most " + MAX_NEW + ". If you have nothing genuinely insightful, return fewer or an empty array — quality over quantity.",
+      "Return ONLY JSON, no markdown fences: { \"questions\": [ { \"question\": \"...\", \"kind\": \"portfolio\"|\"term\", \"term\": \"only for kind=term\" } ] }. Return at most " + maxNew + ". If you have nothing genuinely insightful, return fewer or an empty array — quality over quantity.",
     ].join("\n");
 
     var userMsg = [
@@ -198,7 +205,7 @@ export default async function handler(req, res) {
 
     var rows = [];
     questions.forEach(function (q) {
-      if (rows.length >= MAX_NEW) return;
+      if (rows.length >= maxNew) return;
       var text = q && typeof q.question === "string" ? q.question.trim() : "";
       if (!text) return;
       var key = text.toLowerCase();

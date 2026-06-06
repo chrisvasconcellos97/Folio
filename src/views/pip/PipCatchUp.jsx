@@ -27,10 +27,19 @@ export function suggestionLabel(s) {
   return null;
 }
 
-export function PipCatchUp({ questions, onAnswer, onSkip, onClose, onApplySuggestion }) {
+export function PipCatchUp({ questions, onAnswer, onSkip, onClose, onApplySuggestion, onAskMore }) {
   var [drafts, setDrafts] = useState({});
   var [busy, setBusy]     = useState({});
   var [applyOff, setApplyOff] = useState({}); // ids where the user unchecked "also save"
+  var [asking, setAsking] = useState(false);
+
+  function askMore() {
+    if (asking || typeof onAskMore !== "function") return;
+    setAsking(true);
+    Promise.resolve(onAskMore())
+      .catch(function () { showToast("Couldn't fetch more — try again", "error"); })
+      .finally(function () { setAsking(false); });
+  }
 
   function setDraft(id, v) { setDrafts(function (p) { return Object.assign({}, p, { [id]: v }); }); }
   function markBusy(id)    { setBusy(function (p) { return Object.assign({}, p, { [id]: true }); }); }
@@ -74,8 +83,29 @@ export function PipCatchUp({ questions, onAnswer, onSkip, onClose, onApplySugges
         </div>
 
         {sorted.length === 0 ? (
-          <div style={{ fontSize: 13, color: C.textMuted, padding: "28px 0", textAlign: "center", fontFamily: INTER }}>
-            All caught up ✦ Nothing waiting right now.
+          <div style={{ padding: "24px 0", textAlign: "center", fontFamily: INTER }}>
+            <div style={{ fontSize: 13, color: C.textMuted, marginBottom: 14, lineHeight: 1.5 }}>
+              {asking
+                ? "Pip's thinking about what to ask…"
+                : "All caught up ✦ Want me to dig up more about your world?"}
+            </div>
+            {onAskMore && (
+              <button
+                type="button"
+                onClick={askMore}
+                disabled={asking}
+                style={{
+                  background: asking ? C.surface : C.accentDeep,
+                  border: "1px solid " + (asking ? C.rule : C.accent),
+                  borderRadius: 8, padding: "9px 18px",
+                  fontSize: 13, fontWeight: 600,
+                  color: asking ? C.textMuted : C.bg,
+                  fontFamily: INTER, cursor: asking ? "default" : "pointer",
+                }}
+              >
+                {asking ? "Thinking…" : "Pip, ask me more →"}
+              </button>
+            )}
           </div>
         ) : sorted.map(function (q) {
           var filled = (drafts[q.id] || "").trim().length > 0;
@@ -151,6 +181,23 @@ export function PipCatchUp({ questions, onAnswer, onSkip, onClose, onApplySugges
             </div>
           );
         })}
+
+        {sorted.length > 0 && onAskMore && (
+          <button
+            type="button"
+            onClick={askMore}
+            disabled={asking}
+            style={{
+              alignSelf: "center", marginTop: 4,
+              background: "none", border: "1px dashed " + C.rule, borderRadius: 8,
+              padding: "8px 16px", fontSize: 12, fontWeight: 600,
+              color: asking ? C.textMuted : C.accent,
+              fontFamily: INTER, cursor: asking ? "default" : "pointer",
+            }}
+          >
+            {asking ? "Thinking…" : "Pip, ask me more →"}
+          </button>
+        )}
       </div>
     </Modal>
   );

@@ -1143,6 +1143,35 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
         );
       })()}
 
+      {/* Teach Pip — persistent entry to the Catch Up session even when no
+          question is queued (the session can generate fresh ones on demand). */}
+      {!dripQuestion && onOpenCatchUp && (
+        <div style={{ maxWidth: 600, margin: isMobile ? "0 16px 12px" : "0 auto 12px" }}>
+          <button
+            onClick={onOpenCatchUp}
+            style={{
+              width: "100%", display: "flex", alignItems: "center", gap: 10,
+              background: C.surface, border: "1px solid " + C.rule,
+              borderLeft: "2px solid " + C.accent, borderRadius: 12,
+              padding: "12px 16px", cursor: "pointer", textAlign: "left",
+            }}
+          >
+            <PipOrb size={18} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontFamily: INTER, fontSize: 14, fontWeight: 600, color: C.text }}>
+                Teach Pip about your world
+              </div>
+              <div style={{ fontFamily: INTER, fontSize: 12, color: C.textMuted, marginTop: 1 }}>
+                Answer a few questions to sharpen every brief — Pip can keep going as long as you like.
+              </div>
+            </div>
+            <span style={{ fontFamily: MONO, fontSize: 10, color: C.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 }}>
+              Start →
+            </span>
+          </button>
+        </div>
+      )}
+
       {/* Drip question card — between daily brief and four-panel grid */}
       {dripQuestion && (
         <div style={{

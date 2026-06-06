@@ -1,6 +1,6 @@
 # Folios — Upgrade Log
 
-*Last updated: 2026-06-06 (leadership tasks + Pip chief-of-staff finish)*
+*Last updated: 2026-06-06 (Teach Pip on-demand questions)*
 
 Plain-English log of major upgrades shipped to Folios. Date, time, and
 a short explanation written in terms anyone can read — not technical
@@ -14,6 +14,23 @@ For the technical changelog with full release detail, see
 architectural changes, anything that meaningfully changes what Folios
 *does* or *is*. Not bug fixes, styling tweaks, or doc-only updates —
 those live in git history.
+
+---
+
+## 2026-06-06 — Teach Pip: build his knowledge on demand
+
+**What I built:** A way to deliberately sit down and have Pip ask you a stream of questions to sharpen what he knows — instead of only getting a couple gentle ones a week.
+
+**Problem it solves:** Pip learns your world from the questions you answer, but those came out slowly (a few a week) and capped out — so there was no way to say "I've got ten minutes, ask me everything." If you wanted to invest in making Pip smarter, you couldn't.
+
+**What changed:**
+- A **"Teach Pip about your world"** card on Home (and a **"Catch up with Pip"** button in Settings) opens a focused Q&A session any time — even when nothing's queued.
+- Inside the session, a **"Pip, ask me more →"** button generates a fresh batch on the spot, lifting the normal once-every-6-hours / five-at-a-time limits because *you* asked. Answer, ask for more, repeat — for as long as you like.
+- Every answer still flows into the same places (Pip's profile of you + your vocabulary glossary), so it compounds into better briefs and summaries.
+
+**What you see today:** Click in, answer questions that are clearly drawn from *your* accounts (not a generic quiz), and tap "ask me more" whenever you want to keep going.
+
+**Why it matters:** The more Pip knows, the more useful every brief is. This turns "teaching Pip" from a slow trickle into something you can actually invest in when you have the time.
 
 ---
 

@@ -675,6 +675,24 @@ export default function App() {
     }).catch(function (err) { console.warn("[generate-questions] failed:", err && err.message); });
   }, [userId, profileLoading, userProfile && userProfile.pip_questions_paused]);
 
+  // Manual "Teach Pip" — on-demand question generation, bypassing the 6h
+  // throttle AND the backlog cap (server-side `manual:true`). Used by the Catch
+  // Up "ask me more" loop so the user can deliberately build Pip's knowledge.
+  function teachPipMore() {
+    if (!session) return Promise.resolve();
+    return fetch("/api/generate-questions", {
+      method:  "POST",
+      headers: {
+        "Content-Type":  "application/json",
+        "Authorization": "Bearer " + session.access_token,
+      },
+      body: JSON.stringify({ manual: true }),
+    })
+      .then(function (r) { return r.json(); })
+      .then(function () { return dripHook.refetch(); })
+      .catch(function (err) { console.warn("[teach-pip] failed:", err && err.message); });
+  }
+
   // Re-synthesis trigger — when drip hook reports >= 3 new answers since last
   // synthesis. Short throttle (5 min) not 24h: a sitting where you answer
   // several questions should fold into Pip's profile of you within minutes, not
@@ -1220,6 +1238,7 @@ export default function App() {
         members={members}
         accounts={accounts}
         onStartInterview={function () { setShowInterview(true); }}
+        onOpenCatchUp={function () { setCatchUpOpen(true); }}
       />
     );
   }
@@ -1520,6 +1539,7 @@ export default function App() {
             onSkip={dripHook.skipQuestion}
             onApplySuggestion={applyPipSuggestion}
             onClose={function () { setCatchUpOpen(false); }}
+            onAskMore={teachPipMore}
           />
         )}
       </>
@@ -1538,6 +1558,7 @@ export default function App() {
           onSkip={dripHook.skipQuestion}
             onApplySuggestion={applyPipSuggestion}
           onClose={function () { setCatchUpOpen(false); }}
+            onAskMore={teachPipMore}
         />
       )}
       <MobileLayout
