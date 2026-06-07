@@ -15,8 +15,11 @@ import * as nastyinputs from "./scenarios/nastyinputs.js";
 import * as contacts from "./scenarios/contacts.js";
 import * as gauge from "./scenarios/gauge.js";
 import * as integrity from "./scenarios/integrity.js";
+import * as orphans from "./scenarios/orphans.js";
+import * as merge from "./scenarios/merge.js";
+import * as edgecases from "./scenarios/edgecases.js";
 
-export const scenarios = { auth, accounts, meetings, cadences, pip, rls, viewsweep, apihealth, cachescope, nastyinputs, contacts, gauge, integrity };
+export const scenarios = { auth, accounts, meetings, cadences, pip, rls, viewsweep, apihealth, cachescope, nastyinputs, contacts, gauge, integrity, orphans, merge, edgecases };
 
 // Folios is a state-based SPA — it has no client-side URL routes, so the only
 // real URL is "/". The fuzz layer churns views by CLICKING nav buttons

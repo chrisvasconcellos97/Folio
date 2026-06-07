@@ -48,6 +48,9 @@ export default {
     "contacts",
     "gauge",
     "integrity",
+    "orphans",
+    "merge",
+    "edgecases",
   ],
 
   // Fuzz layer — random behaviors that run after scripted scenarios.
