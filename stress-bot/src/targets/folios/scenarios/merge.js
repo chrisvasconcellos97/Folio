@@ -35,8 +35,10 @@ async function getUserId(page) {
 // Attempt to call folio_merge_accounts via the Supabase RPC endpoint.
 // Returns { ok, status, body } where body is parsed JSON.
 async function callMerge(base, headers, sourceId, targetId) {
-  // The function signature from CLAUDE.md: folio_merge_accounts(source, target)
-  const body = JSON.stringify({ source: sourceId, target: targetId });
+  // Verified against production: folio_merge_accounts(source_id uuid, target_id uuid).
+  // PostgREST matches RPC args by name, so the param names must be exact —
+  // {source,target} would 404 (PGRST202) and make this scenario falsely skip.
+  const body = JSON.stringify({ source_id: sourceId, target_id: targetId });
   let r;
   try {
     r = await fetch(`${base}/rest/v1/rpc/folio_merge_accounts`, {
