@@ -101,6 +101,10 @@ begin
   update folio_items           set account_id = target_id where account_id = source_id;
   get diagnostics bumped = row_count; moved := moved + bumped;
 
+  -- folio_tasks is the active action-item table (folio_items was retired).
+  update folio_tasks           set account_id = target_id where account_id = source_id;
+  get diagnostics bumped = row_count; moved := moved + bumped;
+
   update folio_contacts        set account_id = target_id where account_id = source_id;
   get diagnostics bumped = row_count; moved := moved + bumped;
 
@@ -108,6 +112,9 @@ begin
   get diagnostics bumped = row_count; moved := moved + bumped;
 
   update folio_account_notes   set account_id = target_id where account_id = source_id;
+  get diagnostics bumped = row_count; moved := moved + bumped;
+
+  update folio_account_updates set account_id = target_id where account_id = source_id;
   get diagnostics bumped = row_count; moved := moved + bumped;
 
   update folio_activity        set account_id = target_id where account_id = source_id;
