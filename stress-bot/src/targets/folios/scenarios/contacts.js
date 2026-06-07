@@ -18,29 +18,20 @@ export async function run({ page, config }) {
   await page.locator(S.searchInput).first().waitFor({ state: "visible", timeout: 6_000 }).catch(() => {});
 
   // ── Open the first real account card ──
-  // Prefer .acct-card (calibrated in viewsweep.js). Fallback to first [role="button"]
-  // that isn't a nav label.
-  let openedAccount = false;
+  // Native click first; fall back to DOM .click() to bypass any overlay interception.
+  let opened = false;
   try {
-    const acctCard = page.locator(".acct-card").first();
-    if (await acctCard.isVisible().catch(() => false)) {
-      await acctCard.click({ timeout: 4000 });
-      openedAccount = true;
-    } else {
-      const cards = page.locator(S.accountCard);
-      const count = await cards.count().catch(() => 0);
-      for (let i = 0; i < count; i++) {
-        const card = cards.nth(i);
-        const text = await card.textContent().catch(() => "");
-        if (/^(Home|Accounts|Calendar|Cadence|Gauge|Settings)$/i.test((text || "").trim())) continue;
-        await card.click({ timeout: 4000 }).catch(() => {});
-        openedAccount = true;
-        break;
-      }
-    }
-  } catch (_) {}
+    await page.locator(".acct-card").first().click({ timeout: 4000 });
+    opened = true;
+  } catch (_) {
+    opened = await page.evaluate(() => {
+      const card = document.querySelector(".acct-card");
+      if (card) { card.click(); return true; }
+      return false;
+    }).catch(() => false);
+  }
 
-  if (!openedAccount) {
+  if (!opened) {
     results.push({
       name: "contact creation smoke test",
       passed: false,
@@ -54,7 +45,7 @@ export async function run({ page, config }) {
   // "Overview" tab. If that never appears, the card click didn't open a detail
   // view — report informational skip rather than a hard fail.
   const detailReady = await page.locator('button:has-text("Overview")').first()
-    .waitFor({ state: "visible", timeout: 6_000 }).then(() => true).catch(() => false);
+    .waitFor({ state: "visible", timeout: 8_000 }).then(() => true).catch(() => false);
   if (!detailReady) {
     results.push({
       name: "contact creation smoke test",

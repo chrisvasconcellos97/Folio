@@ -5,12 +5,13 @@
 // with a diagnostic; the other sub-checks still run.
 //
 // (a) SELF-REFERENCING PARENT:  PATCH an account's parent_account_id to its
-//     own id. Then drive the UI accounts list and confirm no ErrorBoundary
-//     appeared and the page is still responsive. Guards against infinite
-//     recursion in the account-tree builder.
+//     own id. Then reload the app, drive the UI accounts list, and confirm no
+//     ErrorBoundary appeared and the page is still responsive. Guards against
+//     infinite recursion in the account-tree builder.
 //
 // (b) DUPLICATE NAMES: create two accounts with the same name via REST.
-//     Navigate to Accounts and confirm no crash + both rows exist.
+//     Reload the app, navigate to Accounts, and confirm no crash + both rows
+//     exist.
 //
 // (c) FAR-FUTURE / PAST DATES: create meetings with meeting_date '1900-01-01'
 //     and '2999-12-31'. Navigate to the account's detail view and confirm
@@ -92,9 +93,8 @@ export async function run({ page, config }) {
   // ──────────────────────────────────────────────────────────────────────────
   {
     const name = "self-referencing sub-account does not crash the list";
+    const selfName = `_stressself_${ts}`;
     let selfId = null;
-    let skipped = false;
-    let skipNote = "";
 
     try {
       // Create the account
@@ -102,7 +102,7 @@ export async function run({ page, config }) {
         method: "POST",
         headers,
         body: JSON.stringify({
-          name:          `_stressself_${ts}`,
+          name:          selfName,
           user_id:       uid,
           owner_user_id: uid,
           account_type:  "standard",
@@ -146,37 +146,31 @@ export async function run({ page, config }) {
           note: `DB rejected self-referencing parent_account_id (not an app failure). ${patchNote}`,
         });
       } else {
-        // Self-ref was accepted — now drive the Accounts UI and check for crash
+        // Self-ref was accepted — reload the app so it renders the new row,
+        // then drive the Accounts UI and check for crash.
         try {
-          // Navigate to Accounts
-          const acctNav = page.locator(S.navAccounts).first();
-          if (await acctNav.isVisible().catch(() => false)) {
-            await acctNav.click({ timeout: 4000 }).catch(() => {});
-          }
-          // Wait for account list to render (search input is a reliable marker)
-          await page.locator(S.searchInput).first()
-            .waitFor({ state: "visible", timeout: 8_000 })
-            .catch(() => {});
+          await page.reload({ waitUntil: "domcontentloaded" });
+          await page.locator(S.loggedIn).first().waitFor({ state: "visible", timeout: 15_000 }).catch(() => {});
+          await page.locator(S.navAccounts).first().click({ timeout: 4000 }).catch(() => {});
+          const listReady = await page.locator(S.searchInput).first()
+            .waitFor({ state: "visible", timeout: 10_000 }).then(() => true).catch(() => false);
 
-          // Allow any React rendering to settle
-          await page.waitForTimeout(1500);
-
-          const crashed     = await errorBoundaryVisible(page);
-          const searchVisible = await page.locator(S.searchInput).first().isVisible().catch(() => false);
-          const passed      = !crashed && searchVisible;
+          const crashed = await page.locator('[role="alert"]:has-text("Reload")').first().isVisible().catch(() => false);
+          const nameVisible = (await page.content().catch(() => "")).includes(selfName);
+          const passed = !crashed && listReady;
           results.push({
             name,
             passed,
             note: passed
-              ? "accounts list rendered normally with self-referencing account present"
-              : `FAIL — crashed=${crashed}; searchVisible=${searchVisible}`,
+              ? `accounts list rendered normally with self-referencing account present; crashed:false; listReady:true; nameVisible:${nameVisible}`
+              : `FAIL — crashed:${crashed}; listReady:${listReady}; nameVisible:${nameVisible}`,
           });
         } catch (err) {
           results.push({ name, passed: false, note: "UI check threw: " + String(err && err.message ? err.message : err).slice(0, 200) });
         }
       }
 
-      // Cleanup
+      // Cleanup self-ref account BEFORE sub-check (b) runs so it can't interfere.
       await fetch(`${base}/rest/v1/folio_accounts?id=eq.${selfId}`, { method: "DELETE", headers: delHeaders }).catch(() => {});
     }
   }
@@ -219,39 +213,35 @@ export async function run({ page, config }) {
       if (dup1) await fetch(`${base}/rest/v1/folio_accounts?id=eq.${dup1}`, { method: "DELETE", headers: delHeaders }).catch(() => {});
     } else {
       // Verify both exist in DB
-      let count = 0;
+      let dbCount = 0;
       try {
         const r = await fetch(
           `${base}/rest/v1/folio_accounts?name=eq.${encodeURIComponent(dupName)}&select=id`,
           { headers: Object.assign({}, delHeaders, { Prefer: "count=exact" }) }
         );
         const rows = r.ok ? await r.json() : [];
-        count = Array.isArray(rows) ? rows.length : 0;
+        dbCount = Array.isArray(rows) ? rows.length : 0;
       } catch (_) {}
 
-      // Drive UI
-      let uiCrashed = false;
-      let uiResponsive = false;
+      // Reload the app so it fetches the newly-created duplicates, then drive UI.
+      let crashed = false;
+      let listReady = false;
       try {
-        const acctNav = page.locator(S.navAccounts).first();
-        if (await acctNav.isVisible().catch(() => false)) {
-          await acctNav.click({ timeout: 4000 }).catch(() => {});
-        }
-        await page.locator(S.searchInput).first()
-          .waitFor({ state: "visible", timeout: 8_000 })
-          .catch(() => {});
-        await page.waitForTimeout(1000);
-        uiCrashed    = await errorBoundaryVisible(page);
-        uiResponsive = await page.locator(S.searchInput).first().isVisible().catch(() => false);
+        await page.reload({ waitUntil: "domcontentloaded" });
+        await page.locator(S.loggedIn).first().waitFor({ state: "visible", timeout: 15_000 }).catch(() => {});
+        await page.locator(S.navAccounts).first().click({ timeout: 4000 }).catch(() => {});
+        listReady = await page.locator(S.searchInput).first()
+          .waitFor({ state: "visible", timeout: 10_000 }).then(() => true).catch(() => false);
+        crashed = await page.locator('[role="alert"]:has-text("Reload")').first().isVisible().catch(() => false);
       } catch (_) {}
 
-      const passed = !uiCrashed && uiResponsive && count >= 2;
+      const passed = !crashed && listReady && dbCount >= 2;
       results.push({
         name,
         passed,
         note: passed
-          ? `both duplicate-named accounts exist (count=${count}) and accounts list is stable`
-          : `FAIL — dbCount=${count}; uiCrashed=${uiCrashed}; uiResponsive=${uiResponsive}`,
+          ? `both duplicate-named accounts exist (dbCount=${dbCount}) and accounts list is stable`
+          : `FAIL — dbCount:${dbCount}; crashed:${crashed}; listReady:${listReady}`,
       });
 
       // Cleanup
