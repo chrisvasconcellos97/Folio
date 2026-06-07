@@ -51,6 +51,7 @@ export default {
     "orphans",
     "merge",
     "edgecases",
+    "teachpip",
   ],
 
   // Fuzz layer — random behaviors that run after scripted scenarios.
