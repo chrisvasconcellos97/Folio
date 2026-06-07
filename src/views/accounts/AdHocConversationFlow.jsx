@@ -8,6 +8,7 @@ import { usePipCorrections } from "../../hooks/usePipCorrections";
 import { useGlossary } from "../../hooks/useGlossary";
 import { useUserProfile } from "../../hooks/useUserProfile";
 import { usePipFacts } from "../../hooks/usePipFacts";
+import { useEmailThreads } from "../../hooks/useEmailThreads.js";
 import { summarizeDraftPip } from "../../lib/pip";
 import { applyPipPlan } from "../../lib/pipPlanApply";
 import { updateTask, insertTask } from "../../hooks/useTasks";
@@ -53,9 +54,10 @@ export function AdHocConversationFlow({
   var hintsApi       = usePipAssignmentHints(userId, account.id);
   var correctionsApi = usePipCorrections(userId, account.id);
   var glossaryApi    = useGlossary(userId, orgId, account.id);
-  var userProfileApi = useUserProfile(userId);
-  var profileProse   = userProfileApi.profile && userProfileApi.profile.profile_prose ? userProfileApi.profile.profile_prose : null;
-  var pipFactsApi    = usePipFacts(userId);
+  var userProfileApi  = useUserProfile(userId);
+  var profileProse    = userProfileApi.profile && userProfileApi.profile.profile_prose ? userProfileApi.profile.profile_prose : null;
+  var pipFactsApi     = usePipFacts(userId);
+  var emailThreadsApi = useEmailThreads(userId, account.id);
 
   var accountRoster = useMemo(function () {
     var glossaryEntries = glossaryApi.entries || [];
@@ -133,6 +135,7 @@ export function AdHocConversationFlow({
       servicedStates:      account.serviced_states || null,
       discussedProjectIds: discussedProjectIds || [],
       discussedItemIds:    discussedItemIds    || [],
+      emailThreads:        emailThreadsApi.threads || [],
     }).then(function (out) {
       var followUp = out.follow_up_date || null;
       return updateMeeting(draftPayload.id, {

@@ -1,6 +1,6 @@
 # Folios — Product Overview
 
-*Last updated: 2026-06-06 (leadership tasks + Pip chief-of-staff finish)*
+*Last updated: 2026-06-07 (Email Roundup Import)*
 
 This is the substantive product read after the [one-pager](./one-pager.md).
 Covers what Folios does, how it's structured, and what makes the Pip
@@ -177,6 +177,27 @@ Items support due dates, assignees (org members), and completion.
 A floating tray for fast-capture tasks that don't belong to a specific
 account. 2-second log without leaving whatever screen you're on. Same
 underlying row shape as project tasks.
+
+### Email Roundup Import
+
+Paste a daily email roundup into Folios and Pip parses it in seconds.
+Roundups are structured by keyword (`Action:`, `Committed:`, `Waiting:`,
+`Logged:`, `Update:`). Pip identifies which accounts each email belongs
+to, detects new contacts, and surfaces a review screen before anything
+is written.
+
+On apply: new contacts are created, subject lines are stored as
+deduplication keys (`folio_email_threads`), action items and commitments
+become tasks, and every email touch is logged as a thread event. On the
+next import, Pip recognises the same thread subject (fuzzy-matched) and
+links the new event to the existing thread instead of creating a
+duplicate.
+
+The Home screen shows a "Waiting on N replies" panel for threads where
+you're awaiting a response, sorted oldest-first.
+
+Entry point: "Quick capture +" → "Import email roundup" on the Home
+screen.
 
 ### Update Calendar
 

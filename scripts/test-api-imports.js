@@ -20,6 +20,7 @@ var handlers = [
   "api/profile-synthesis.js",
   "api/detect-terminology.js",
   "api/generate-questions.js",
+  "api/email-import.js",
 ];
 
 var failed = false;

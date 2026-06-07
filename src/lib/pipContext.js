@@ -429,6 +429,25 @@ function renderAccountFull(a, userId) {
     lines.push(renderPortfolioThemesBlock(a.portfolioThemes).trim());
   }
 
+  // Open email threads for this account.
+  var emailThreads = take(a.emailThreads, 5);
+  if (emailThreads.length) {
+    lines.push("");
+    lines.push("── OPEN EMAIL THREADS (last 5) ──");
+    var today = Date.now();
+    emailThreads.forEach(function (t) {
+      var parts = ['"' + (t.subject_raw || t.subject_norm || "—") + '"'];
+      if (t.status === "waiting" && t.waiting_since) {
+        var days = Math.floor((today - new Date(t.waiting_since).getTime()) / 86400000);
+        parts.push("waiting " + days + "d");
+      } else {
+        parts.push(t.status || "open");
+      }
+      if (t.contact_name_raw) parts.push(t.contact_name_raw);
+      lines.push("- " + parts.join(" | "));
+    });
+  }
+
   return lines.join("\n");
 }
 

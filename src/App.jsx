@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, lazy, Suspense } from "react";
 import { supabase } from "./lib/supabase";
 import { touchAccount } from "./lib/touchAccount";
+import { logActivity } from "./lib/activity";
 import { useAuth } from "./hooks/useAuth";
 import { useBreakpoint } from "./hooks/useBreakpoint";
 import { useAccounts } from "./hooks/useAccounts";
@@ -37,6 +38,7 @@ var LeadershipView = lazy(function () { return import("./views/leadership/Leader
 var ObservabilityView = lazy(function () { return import("./views/observability/ObservabilityView").then(function (m) { return { default: m.ObservabilityView }; }); });
 var CommitmentsView = lazy(function () { return import("./views/commitments/CommitmentsView").then(function (m) { return { default: m.CommitmentsView }; }); });
 var ShareTargetView = lazy(function () { return import("./views/share/ShareTargetView").then(function (m) { return { default: m.ShareTargetView }; }); });
+var EmailImportModal = lazy(function () { return import("./views/email/EmailImportModal").then(function (m) { return { default: m.EmailImportModal }; }); });
 import { DesktopLayout } from "./layout/DesktopLayout";
 import { MobileLayout } from "./layout/MobileLayout";
 import { PipOrb, PipMark } from "./components/PipMark";
@@ -753,6 +755,9 @@ export default function App() {
     } catch (e) { return false; }
   });
 
+  // Email Roundup Import — paste-and-parse daily email summary
+  var [emailImportOpen, setEmailImportOpen] = useState(false);
+
   // ──── ALL HOOKS MUST BE ABOVE THIS LINE — see React Hook Order Rule in CLAUDE.md ────
   if (authLoading) {
     return (
@@ -1061,6 +1066,7 @@ export default function App() {
         }}
         onOpenConversation={function () { setShowStartConv(true); }}
         onOpenQuickTask={function () { setShowGlobalQuickTask(true); }}
+        onImportRoundup={function () { setEmailImportOpen(true); }}
         showOnboardingCard={showOnboardingCard}
         onStartInterview={function () { setShowInterview(true); }}
         onDismissOnboardingCard={function () {
@@ -1295,6 +1301,26 @@ export default function App() {
     />
   );
 
+  // Email Roundup Import modal — paste-and-parse a daily email summary into Folios
+  var emailImportModalEl = emailImportOpen && (
+    <Suspense fallback={null}>
+      <EmailImportModal
+        open={true}
+        userId={userId}
+        orgId={orgId}
+        accounts={accounts}
+        contacts={allContacts}
+        onClose={function () { setEmailImportOpen(false); }}
+        helpers={{
+          addItem: pipAddItem,
+          supabase: supabase,
+          logActivity: logActivity,
+          touchAccount: touchAccount,
+        }}
+      />
+    </Suspense>
+  );
+
   // Schedule a one-off future meeting — fired by "+ Schedule Meeting" in CadenceView
   // or by clicking an empty calendar day.
   var scheduleMeetingModal = showScheduleModal && (
@@ -1496,6 +1522,7 @@ export default function App() {
         {scheduleMeetingModal}
         {adHocFlowOverlay}
         {globalQuickTaskModal}
+        {emailImportModalEl}
         {/* Floating Pip (desktop) */}
         {view !== "pip" && (
           <div
@@ -1593,6 +1620,7 @@ export default function App() {
       {scheduleMeetingModal}
       {adHocFlowOverlay}
       {globalQuickTaskModal}
+      {emailImportModalEl}
       {/* Floating Pip (mobile) — hidden on home (home has its own centerpiece orb) and pip itself */}
       {view !== "pip" && view !== "home" && (
         <div

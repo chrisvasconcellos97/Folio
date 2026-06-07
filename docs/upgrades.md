@@ -1,6 +1,6 @@
 # Folios — Upgrade Log
 
-*Last updated: 2026-06-06 (Teach Pip on-demand questions)*
+*Last updated: 2026-06-07 (Email Roundup Import)*
 
 Plain-English log of major upgrades shipped to Folios. Date, time, and
 a short explanation written in terms anyone can read — not technical
@@ -14,6 +14,26 @@ For the technical changelog with full release detail, see
 architectural changes, anything that meaningfully changes what Folios
 *does* or *is*. Not bug fixes, styling tweaks, or doc-only updates —
 those live in git history.
+
+---
+
+## 2026-06-07 — Email Roundup Import: paste your inbox summary, Folios does the rest
+
+**What I built:** A paste-and-parse flow that reads a daily email roundup and automatically files everything in Folios — tasks, commitments, activity logs, new contacts, and waiting-on status — with a review screen before anything is written.
+
+**Problem it solves:** Account managers often send themselves (or receive from a coordinator) a daily summary of email activity across accounts — what's actioned, what's waiting, what was logged. Manually keying that into Folios took as long as the emails themselves. This makes the roundup the data entry.
+
+**What changed:**
+- New "Import email roundup" option in the "Quick capture +" menu on the Home screen
+- Two-step modal: paste your roundup → Pip parses it → review screen shows contacts, threads, and action types before anything is applied
+- Pip assigns each email thread to the right account, detects new contacts, and classifies each thread as Action / Committed / Waiting / Logged / Update
+- Subject lines are stored as a deduplication spine (`folio_email_threads`): the next time you paste a roundup with the same subject, Pip links it to the existing thread instead of creating a duplicate
+- A "Waiting on N replies" panel appears on the Home screen showing your oldest unanswered threads
+- Open email threads are now injected into both Pip summarize (cadence + ad-hoc) and Pip chat so Pip can cross-reference in-flight email context when generating briefs
+
+**What you see today:** Tap "Quick capture +" on the Home screen → "Import email roundup" → paste → Pip parses in a few seconds → review and apply. The next day's roundup links to the same threads automatically.
+
+**Why it matters:** Turns a manual copy-paste ritual into a 10-second inbox triage. Every email touch becomes searchable, associated with an account, and visible to Pip without any extra effort.
 
 ---
 

@@ -49,6 +49,7 @@ import { buildAccountExport, downloadAccountExport } from "../../lib/accountExpo
 import { computeAccountHealth, gatherSignals } from "../../lib/accountHealth";
 import { AccountHealthOverrideModal } from "./AccountHealthOverrideModal";
 import { useContactAliases } from "../../hooks/useContactAliases";
+import { useEmailThreads } from "../../hooks/useEmailThreads.js";
 
 function getDefaultTab(accountId) {
   try { return localStorage.getItem("folio_default_tab_" + accountId) || null; } catch(e) { return null; }
@@ -224,6 +225,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
   var userProfileApi      = useUserProfile(userId);
   var profileProse        = userProfileApi.profile && userProfileApi.profile.profile_prose ? userProfileApi.profile.profile_prose : null;
   var pipFactsApi         = usePipFacts(userId);
+  var emailThreadsApi     = useEmailThreads(userId, account.id);
 
   var accountRoster = useMemo(function () {
     var glossaryEntries = glossaryApi.entries || [];
@@ -301,6 +303,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
       servicedStates:      account.serviced_states || null,
       discussedProjectIds: discussedProjectIds || [],
       discussedItemIds:    discussedItemIds    || [],
+      emailThreads:        emailThreadsApi.threads || [],
     }).then(function (out) {
       var followUp = out.follow_up_date || null;
       return updateMeeting(draftPayload.id, {

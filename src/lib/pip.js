@@ -285,6 +285,24 @@ function renderPipFactsBlock(facts) {
     facts.slice(0, 20).map(function (f) { return "- " + f; }).join("\n") + "\n\n";
 }
 
+// Renders open email threads for Pip context (parity: summarize + chat).
+function renderEmailThreadsBlock(threads) {
+  if (!Array.isArray(threads) || threads.length === 0) return "";
+  var today = Date.now();
+  var lines = threads.slice(0, 5).map(function (t) {
+    var parts = ['"' + (t.subject_raw || t.subject_norm || "—") + '"'];
+    if (t.status === "waiting" && t.waiting_since) {
+      var days = Math.floor((today - new Date(t.waiting_since).getTime()) / 86400000);
+      parts.push("waiting " + days + "d");
+    } else {
+      parts.push(t.status || "open");
+    }
+    if (t.contact_name_raw) parts.push(t.contact_name_raw);
+    return "- " + parts.join(" | ");
+  });
+  return "── OPEN EMAIL THREADS (last 5) ──\n" + lines.join("\n") + "\n\n";
+}
+
 // Renders the account context block for system prompts.
 function renderAccountObjectiveBlock(objective) {
   var text = (objective || "").trim();
@@ -705,6 +723,7 @@ export function summarizeDraftPip(payload) {
   var openItems          = Array.isArray(payload.openItems)          ? payload.openItems          : existingItems;
   var discussedProjectIds = Array.isArray(payload.discussedProjectIds) ? payload.discussedProjectIds : [];
   var discussedItemIds    = Array.isArray(payload.discussedItemIds)    ? payload.discussedItemIds    : [];
+  var emailThreads        = Array.isArray(payload.emailThreads)        ? payload.emailThreads        : [];
 
   // #5 — skip Pip on trivial drafts (< 100 chars of notes + action_items).
   // Returns immediately with an empty plan so the caller still shows the
@@ -885,6 +904,7 @@ export function summarizeDraftPip(payload) {
     renderCadenceScheduleBlock(cadence) +
     renderCommitmentsInBlock(openItems, todayISOForCommitments) +
     renderPromiseLogBlock(promiseStats) +
+    renderEmailThreadsBlock(emailThreads) +
     correctionBlock;
 
   // BP4 — meeting history + existing items + tasks + projects + hints (changes per meeting session)
@@ -1395,6 +1415,19 @@ export function callPortfolioBriefPip(payload) {
       body: JSON.stringify(payload),
     }).then(function (r) {
       if (!r.ok) throw new Error("Portfolio brief failed");
+      return r.json();
+    });
+  });
+}
+
+export function callEmailImportPip(payload) {
+  return authHeaders().then(function (headers) {
+    return fetch("/api/email-import", {
+      method: "POST",
+      headers: headers,
+      body: JSON.stringify(payload),
+    }).then(function (r) {
+      if (!r.ok) throw new Error("Email import parse failed: " + r.status);
       return r.json();
     });
   });

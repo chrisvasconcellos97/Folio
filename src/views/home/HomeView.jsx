@@ -11,6 +11,7 @@ import { callPortfolioBriefPip } from "../../lib/pip";
 import { isProjectComplete } from "../../lib/gaugeStatus";
 import { suggestionLabel } from "../pip/PipCatchUp";
 import { showToast } from "../../components/Toast";
+import { useEmailThreads } from "../../hooks/useEmailThreads.js";
 
 var SERIF = "'Fraunces', Georgia, serif";
 var INTER = "'Inter', system-ui, sans-serif";
@@ -134,7 +135,7 @@ function makeAccountLinkify(accounts, onOpenAccount) {
   };
 }
 
-export function HomeView({ userName, userId, accounts, meetings, items, cadences, projects, contacts, themes, onOpenAccount, onOpenAccountTab, onOpenCadenceHub, onOpenConversation, onOpenQuickTask, showOnboardingCard, onStartInterview, onDismissOnboardingCard, dripQuestion, dripQueueCount, onOpenCatchUp, onApplySuggestion, onAnswerDrip, onSkipDrip, onDismissDrip, commitmentNudges, onSnoozeNudge, onMarkNudgeDone, pipFacts, profileProse, scheduledMeetings, onOpenScheduled }) {
+export function HomeView({ userName, userId, accounts, meetings, items, cadences, projects, contacts, themes, onOpenAccount, onOpenAccountTab, onOpenCadenceHub, onOpenConversation, onOpenQuickTask, onImportRoundup, showOnboardingCard, onStartInterview, onDismissOnboardingCard, dripQuestion, dripQueueCount, onOpenCatchUp, onApplySuggestion, onAnswerDrip, onSkipDrip, onDismissDrip, commitmentNudges, onSnoozeNudge, onMarkNudgeDone, pipFacts, profileProse, scheduledMeetings, onOpenScheduled }) {
   commitmentNudges = commitmentNudges || [];
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
@@ -166,6 +167,18 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
   useEffect(function () { setDripAnswer(""); setDripApplyOff(false); }, [dripQuestion && dripQuestion.id]);
 
   var { snapshots, snapshotHistory } = useAccountSnapshots(userId);
+
+  // Waiting-on-replies threads — status='waiting' across all accounts, sorted oldest-first
+  var { threads: emailThreadsAll } = useEmailThreads(userId, null);
+  var waitingThreads = useMemo(function () {
+    return (emailThreadsAll || [])
+      .filter(function (t) { return t.status === "waiting"; })
+      .sort(function (a, b) {
+        var ad = a.waiting_since || a.first_seen_date || a.created_at;
+        var bd = b.waiting_since || b.first_seen_date || b.created_at;
+        return ad < bd ? -1 : ad > bd ? 1 : 0;
+      });
+  }, [emailThreadsAll]);
 
   useEffect(function () {
     var t = setTimeout(function () { setMounted(true); }, 60);
@@ -1004,9 +1017,22 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
                     fontFamily: "'Inter', system-ui, sans-serif",
                     color: C.text, background: "transparent",
                     border: "none", cursor: "pointer",
+                    borderBottom: "1px solid " + C.rule,
                   }}
                 >
                   Quick task
+                </button>
+                <button
+                  onClick={function () { setCaptureMenuOpen(false); if (onImportRoundup) onImportRoundup(); }}
+                  style={{
+                    display: "block", width: "100%", textAlign: "left",
+                    padding: "10px 14px", fontSize: 13,
+                    fontFamily: "'Inter', system-ui, sans-serif",
+                    color: C.text, background: "transparent",
+                    border: "none", cursor: "pointer",
+                  }}
+                >
+                  Import email roundup
                 </button>
               </div>
             )}
@@ -1457,6 +1483,53 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
                     >
                       Mail
                     </a>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Waiting on replies — email threads where we're awaiting a response */}
+      {waitingThreads.length > 0 && (
+        <div style={{
+          maxWidth: 600,
+          margin: isMobile ? "0 16px 12px" : "0 auto 12px",
+        }}>
+          <div style={{ fontFamily: MONO, fontSize: 10, color: C.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
+            {"Waiting on " + waitingThreads.length + " repl" + (waitingThreads.length === 1 ? "y" : "ies")}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {waitingThreads.slice(0, 5).map(function (thread) {
+              var acct = (accounts || []).find(function (a) { return a.id === thread.account_id; });
+              var daysSince = thread.waiting_since
+                ? Math.floor((Date.now() - new Date(thread.waiting_since).getTime()) / 86400000)
+                : null;
+              return (
+                <div
+                  key={thread.id}
+                  style={{
+                    background: C.surface,
+                    border: "1px solid " + C.rule,
+                    borderLeft: "3px solid var(--c-status-watching, #c9871f)",
+                    borderRadius: 10,
+                    padding: "10px 14px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: INTER, fontSize: 14, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {thread.subject_raw || thread.subject_norm}
+                    </div>
+                    <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, marginTop: 2, letterSpacing: "0.04em" }}>
+                      {acct ? acct.name : null}
+                      {acct && daysSince !== null ? " · " : null}
+                      {daysSince !== null ? daysSince + "d waiting" : null}
+                    </div>
                   </div>
                 </div>
               );

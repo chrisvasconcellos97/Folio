@@ -25,6 +25,7 @@ import { applyPipPlan } from "../../lib/pipPlanApply";
 import { updateTask, insertTask } from "../../hooks/useTasks";
 import { ownerLabel } from "../../lib/ownerLabel";
 import { autoStatusPatch } from "../../lib/gaugeStatus";
+import { useEmailThreads } from "../../hooks/useEmailThreads.js";
 
 var INTER = "'Inter', system-ui, sans-serif";
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
@@ -1206,6 +1207,7 @@ export function CadenceHub({
   var promiseLog     = usePipPromiseLog(userId, accountId);
   var userProfileApi = useUserProfile(userId);
   var userProfile    = userProfileApi.profile;
+  var emailThreadsApi = useEmailThreads(userId, accountId);
 
   var cadenceMeetings = useMemo(function () {
     return (meetings || []).filter(function (m) { return m.cadence_id === cadence.id; });
@@ -1479,6 +1481,7 @@ export function CadenceHub({
       profileProse:      userProfile && userProfile.profile_prose ? userProfile.profile_prose : null,
       discussedProjectIds: discussedProjectIds || [],
       discussedItemIds:    discussedItemIds    || [],
+      emailThreads:        emailThreadsApi.threads || [],
     }).then(function (out) {
       var followUp = out.follow_up_date || null;
       return updateMeeting(draftId, {

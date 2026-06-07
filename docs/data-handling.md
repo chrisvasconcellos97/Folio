@@ -1,6 +1,6 @@
 # Folios — Data Handling
 
-*Last updated: 2026-05-30 (Gauge V3 Phase 1 — folio_tasks added)*
+*Last updated: 2026-06-07 (Email Roundup Import — folio_email_threads + folio_thread_events added)*
 
 This document inventories what data Folios stores, where it lives,
 who can access it, and what crosses the boundary to third-party AI
@@ -26,6 +26,8 @@ For broader security posture, see [security.md](./security.md).
 | `folio_quick_tasks` | Task text, due date, completed flag | User business data |
 | `folio_account_notes` | Per-account notes, plain text | User business data |
 | `folio_account_updates` | Update calendar entries (catalog/pricing/integration changes) | User business data |
+| `folio_email_threads` | Email subject deduplication spine — one row per subject line per account; stores normalised subject, status (open/waiting/closed/snoozed), last action, waiting-since date | User business data |
+| `folio_thread_events` | Append-only event log per thread — one row per import pass; stores action type, summary, and link to spawned task | User business data |
 
 ### Authentication data (stored by Supabase Auth, not directly readable by Folios)
 
