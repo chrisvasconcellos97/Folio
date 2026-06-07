@@ -38,7 +38,15 @@ export default async function handler(req, res) {
     var token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
     if (!token) return res.status(401).json({ error: "Unauthorized" });
 
-    var supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
+    // Attach the caller's JWT to the client so EVERY query runs as that user
+    // under RLS. Without this the anon client reads zero of the user's accounts
+    // (RLS: auth.uid() = user_id) — so the endpoint bailed with "no_accounts" —
+    // and the insert into folio_pip_questions was rejected by RLS. That made
+    // "Pip, ask me more" silently produce nothing.
+    var supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: "Bearer " + token } },
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
     var authRes = await supabase.auth.getUser(token);
     var user = authRes.data && authRes.data.user ? authRes.data.user : null;
     if (authRes.error || !user) return res.status(401).json({ error: "Unauthorized" });

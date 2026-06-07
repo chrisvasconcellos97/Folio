@@ -18,7 +18,14 @@ export default async function handler(req, res) {
     var token      = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
     if (!token) return res.status(401).json({ error: "Unauthorized" });
 
-    var supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
+    // Attach the caller's JWT so every query/insert runs as that user under RLS.
+    // Without it the anon client reads zero rows (RLS: auth.uid() = user_id) and
+    // the folio_pip_questions insert is rejected — silently breaking terminology
+    // question generation. (Same fix as api/generate-questions.js.)
+    var supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: "Bearer " + token } },
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
     var { data: authData, error: authError } = await supabase.auth.getUser(token);
     var user = authData && authData.user ? authData.user : null;
     if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
