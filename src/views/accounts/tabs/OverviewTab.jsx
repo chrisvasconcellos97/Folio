@@ -53,7 +53,7 @@ var RANGES = [
   { label: "All Time", days: null },
 ];
 
-export function OverviewTab({ account, userId, orgId, openItems, meetings, onQuickMeeting, onLogMeeting, onAddItem, onSaveSummary, subAccounts, onSelectAccount, onUpdateAccount, projects, updates, onSwitchTab, contacts }) {
+export function OverviewTab({ account, userId, orgId, openItems, meetings, onQuickMeeting, onLogMeeting, onAddItem, onSaveSummary, subAccounts, onSelectAccount, onUpdateAccount, projects, updates, onSwitchTab, contacts, suppressPipInsight }) {
   var isPartner = account.account_type === "partner";
   var pipInsight = buildPipInsight(account, openItems, projects, {
     onClickOverdue: function () { onSwitchTab && onSwitchTab("tasks"); },
@@ -188,7 +188,10 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {/* Pip status card */}
+      {/* Pip status card — hidden when the nightly operator read supersedes it
+          (the OperatorPanel above gives a deeper, current read; showing both
+          risks contradicting each other). */}
+      {!suppressPipInsight && (
       <div
         style={{
           background: C.accentGlow,
@@ -215,6 +218,7 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
           {pipInsight}
         </div>
       </div>
+      )}
 
       {/* Pip — Relationship Summary */}
       <div

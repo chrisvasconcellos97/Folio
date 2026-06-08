@@ -547,6 +547,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
           account={account}
           userId={userId}
           orgId={orgId}
+          suppressPipInsight={!!((pipAcctState.getStateRow(account.id) || {}).operator_generated_at)}
           openItems={items}
           meetings={meetings}
           onQuickMeeting={function () { setMeetingModal(true); }}
