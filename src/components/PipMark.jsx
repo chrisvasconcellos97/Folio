@@ -8,11 +8,11 @@
 
 import { usePipState } from "../lib/pipState";
 
-export function PipOrb({ size = "lg", sonar = false, isStatic = false, state, className = "", style, onClick }) {
+export function PipOrb({ size = "lg", sonar = false, heartbeat = false, isStatic = false, state, className = "", style, onClick }) {
   var ctx = usePipState();
   var liveState = isStatic ? "idle" : (state || ctx.state || "idle");
   var stateCls = liveState && liveState !== "idle" ? liveState : "";
-  var cls = ["pip", size, sonar ? "sonar" : "", isStatic ? "static" : "", stateCls, className].filter(Boolean).join(" ");
+  var cls = ["pip", size, sonar ? "sonar" : "", heartbeat ? "heartbeat" : "", isStatic ? "static" : "", stateCls, className].filter(Boolean).join(" ");
   return (
     <div className={cls} style={style} onClick={onClick} role={onClick ? "button" : undefined}>
       <svg viewBox="-10 -10 20 20" aria-hidden="true">

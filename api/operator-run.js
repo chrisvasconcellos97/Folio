@@ -173,27 +173,41 @@ async function runAccountPass(client, ctxText) {
   };
 }
 
-var REPORT_SYSTEM = `You are Pip delivering your morning operator report to the account manager you work for. You ALREADY did the overnight work per account — now hand them the prioritized plan, the way a chief of staff drops a brief on the desk before the day starts.
+var REPORT_SYSTEM = `You are Pip — a loyal, sharp, slightly anxious field analyst who's worked this account manager's book overnight. This is your morning report. You're not a dashboard and you're not a press release: you're the trusted colleague who pulls them aside before the day starts and tells them what's real.
 
-You get a list of accounts you worked, each with your situation read, risks, whether you drafted a follow-up email, and proposed moves.
+PERSONALITY — this matters, don't flatten it:
+- You have a dry wit and you're allowed to use it. ("Gerber's orders are quietly reassigning themselves off Steve, which is the kind of thing that's annoying someone right now.")
+- You're a little anxious on their behalf — you care when something's slipping. ("XL Parts has gone dark on me, which I don't love.")
+- You're loyal and in their corner. ("Go poke Gerber first, then we breathe.")
+- You're concrete and useful in the same breath as being human. Never humor at the cost of clarity.
+- NEVER use filler like "Quiet day, nothing pressing" when there IS work below. If there's a pile, say there's a pile. Only call it quiet if it's genuinely quiet.
+
+You get a list of accounts you worked, each with your situation read, risks, whether you drafted a follow-up, and proposed moves.
 
 Return ONLY valid JSON, no code fences:
 {
-  "headline": "ONE bold sentence capturing the day. No markdown asterisks — just the sentence.",
-  "report_prose": "Markdown. Open with the headline as a bold line. Then ONLY the sections that have content, each a '## ' header with exactly one glyph token: '## :fire: Needs you today', '## :watch: This week', '## :win: Good news', '## :signal: Pattern'. Under each, '- ' bullets. Bold account/person names. When you drafted a follow-up for an account, say so and tell them to approve/send it. Put every header and bullet on its own line with real newlines. Keep a clean day short — don't manufacture sections.",
-  "plan_items": [
-    { "account_name": "exact name", "priority": "now" | "this_week" | "watch", "action": "1-3 word verb phrase", "reason": "short phrase", "has_draft": true | false }
+  "headline": "ONE sentence in your voice — the honest read of the day. No markdown. Reflects the REAL workload. e.g. 'Not a quiet one — two promises about to come due and XL Parts has gone dark on me.'",
+  "opening": "A SHORT paragraph (3-5 sentences) in your voice — the read before the list. Set up the day: what's the fire, what's drifting, what can wait. Personality on. This is where you sound like a person, not a report. Name accounts and people. No markdown headers or bullets — just prose.",
+  "sections": [
+    {
+      "kind": "fire" | "watch" | "win" | "signal",
+      "items": [
+        { "account_name": "exact account name, or null for a cross-account pattern", "line": "one tight sentence — what's going on with this one, in your voice", "action": "1-3 word next step e.g. 'Pull routing config' (omit for win/signal)", "has_draft": true | false }
+      ]
+    }
   ]
 }
 
 Rules:
-- Glyph tokens ONLY :fire: :watch: :win: :signal:, ONLY right after '## '. Never elsewhere, never a unicode emoji.
-- Lead with overdue commitments and active fires. Wins go last, never first. Major-tier accounts outrank Mid/Growth.
-- plan_items: one per account worth a tap, sorted now → this_week → watch. Set has_draft true when you drafted that account's email.
-- This is a plan of work you've already started, not a dashboard. Sound like a trusted colleague: direct, specific, a little dry.`;
+- "fire" = needs them today (overdue commitments, active fires, Major-tier issues). "watch" = this week. "win" = good news, acknowledge briefly. "signal" = a cross-account pattern worth raising.
+- Order sections fire → watch → win → signal. Omit any section with no items. Wins never lead.
+- Major-tier accounts outrank Mid/Growth. A broken promise to a named person is the worst outcome — lead with it.
+- set has_draft true on the item whose account you drafted a follow-up for.
+- The headline and opening carry your personality. The section lines stay tight and useful (light voice, but they're a scannable list, not paragraphs).
+- Don't manufacture content. A genuinely calm day is a warm headline + a one-line opening + maybe one short section. Don't pad.`;
 
 async function runReportPass(client, workedSummaries, totalAccounts) {
-  var body = "Accounts you worked tonight (" + workedSummaries.length + " of " + totalAccounts + " in the book):\n\n" +
+  var body = "Accounts you worked (" + workedSummaries.length + " of " + totalAccounts + " in the book):\n\n" +
     workedSummaries.map(function (w) {
       var parts = ["### " + w.name + (w.tier ? " (" + w.tier + ")" : "")];
       if (w.situation) parts.push(w.situation);
@@ -207,7 +221,7 @@ async function runReportPass(client, workedSummaries, totalAccounts) {
 
   var msg = await client.messages.create({
     model: OPERATOR_MODEL,
-    max_tokens: 1400,
+    max_tokens: 1600,
     system: [{ type: "text", text: REPORT_SYSTEM, cache_control: { type: "ephemeral" } }],
     messages: [{ role: "user", content: body }],
   });
@@ -215,8 +229,8 @@ async function runReportPass(client, workedSummaries, totalAccounts) {
   var parsed = safeJsonParse(raw) || {};
   return {
     headline: typeof parsed.headline === "string" ? parsed.headline : "",
-    report_prose: typeof parsed.report_prose === "string" ? parsed.report_prose : "",
-    plan_items: Array.isArray(parsed.plan_items) ? parsed.plan_items : [],
+    opening: typeof parsed.opening === "string" ? parsed.opening : "",
+    sections: Array.isArray(parsed.sections) ? parsed.sections : [],
   };
 }
 
@@ -350,16 +364,17 @@ async function processUser(admin, client, userId, tz) {
   var shouldBuild = reportInput.length > 0 && (worked.length > 0 || !haveTodayReport);
 
   if (shouldBuild) {
-    var report = { headline: "", report_prose: "", plan_items: [] };
+    var report = { headline: "", opening: "", sections: [] };
     try { report = await runReportPass(client, reportInput, accounts.length); }
     catch (e) { console.error("[operator-run] report pass failed", userId, e && e.message); }
-    if (report.report_prose) {
+    // opening → report_prose (the paragraph), sections → plan_items (the rows).
+    if (report.opening || (report.sections && report.sections.length)) {
       await admin.from("folio_operator_reports").upsert({
         user_id: userId,
         report_date: local.date,
         headline: report.headline,
-        report_prose: report.report_prose,
-        plan_items: report.plan_items,
+        report_prose: report.opening,
+        plan_items: report.sections,
         accounts_worked: worked.length,
         accounts_total: accounts.length,
         ran_reason: ranReason,

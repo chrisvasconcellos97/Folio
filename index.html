@@ -446,6 +446,20 @@
         70%  { opacity: 0; }
         100% { transform: scale(2.4); opacity: 0; }
       }
+      /* Heartbeat — two quick rings (thump-thump) then a rest, like a pulse. */
+      .pip.heartbeat::before, .pip.heartbeat::after {
+        content: ""; position: absolute; inset: -1px; border-radius: 50%;
+        border: 1px solid var(--accent-border); opacity: 0; pointer-events: none;
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .pip.heartbeat::before, .pip.heartbeat::after { animation: pip-heartbeat 1.9s ease-out infinite; }
+        .pip.heartbeat::after { animation-delay: 0.26s; }
+      }
+      @keyframes pip-heartbeat {
+        0%   { transform: scale(1);   opacity: 0.6; }
+        20%  { transform: scale(1.85); opacity: 0; }
+        100% { transform: scale(1.85); opacity: 0; }
+      }
       .pip.xs  { width: 12px;  height: 12px;  box-shadow: 0 0 6px var(--accent-shadow); }
       .pip.sm  { width: 22px;  height: 22px;  box-shadow: 0 0 10px var(--accent-shadow); }
       .pip.md  { width: 32px;  height: 32px;  box-shadow: 0 0 14px var(--accent-shadow); }

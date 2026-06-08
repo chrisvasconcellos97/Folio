@@ -195,7 +195,7 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
     // Wait for the operator-report check to resolve, then suppress the live
     // brief entirely when the nightly loop already produced today's report.
     if (!operatorLoaded) return;
-    if (operatorReport && operatorReport.report_prose) return;
+    if (operatorReport && (operatorReport.report_prose || (operatorReport.plan_items && operatorReport.plan_items.length))) return;
     var todayStr = new Date().toISOString().slice(0, 10);
     // v9: flushes any brief cached before account data finished loading (the
     // "Unknown accounts" short brief from opening two tabs at once). v8 added
@@ -686,10 +686,15 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
     return rows.slice(0, 5);
   }, [cadences, meetings, accounts, accountById]);
 
-  var heroLine = pickHeroLine({
-    calls: todaysCalls.length + todaysScheduled.length,
-    overdue: burningRows.filter(function (r) { return r.kind === "item"; }).length,
-  });
+  // Pip says something true. When the operator has a headline, that's the read
+  // (it reflects the real workload). Only fall back to the template line when
+  // there's no operator headline yet — never a canned "quiet day" over chaos.
+  var heroLine = (operatorReport && operatorReport.headline)
+    ? operatorReport.headline
+    : pickHeroLine({
+        calls: todaysCalls.length + todaysScheduled.length,
+        overdue: burningRows.filter(function (r) { return r.kind === "item"; }).length,
+      });
 
   // ── Panels ──────────────────────────────────────────────────────────
   // ── Brief writers — Pip's narrative per panel ────────────────────────
@@ -955,7 +960,7 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
         gap: isMobile ? 16 : 20,
         padding: isMobile ? "24px 16px 28px" : "32px 32px 36px",
       }}>
-        <PipOrb size="xxl" sonar />
+        <PipOrb size="xxl" heartbeat />
         <div style={{
           fontFamily: SERIF, fontSize: isMobile ? 18 : 22,
           color: C.text, lineHeight: 1.45, letterSpacing: "-0.01em",
@@ -1025,11 +1030,20 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
         </div>
       </div>
 
-      {operatorReport && operatorReport.report_prose && (function () {
+      {operatorReport && (operatorReport.report_prose || (Array.isArray(operatorReport.plan_items) && operatorReport.plan_items.length > 0)) && (function () {
         var ranAt = operatorReport.generated_at
           ? new Date(operatorReport.generated_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
           : null;
-        var planItems = Array.isArray(operatorReport.plan_items) ? operatorReport.plan_items : [];
+        var sections = Array.isArray(operatorReport.plan_items) ? operatorReport.plan_items : [];
+        var SECTION_META = {
+          fire:   { label: "Needs you today", color: C.red },
+          watch:  { label: "This week",       color: C.yellow },
+          win:    { label: "Good news",       color: C.accent },
+          signal: { label: "Pattern",         color: C.textMuted },
+        };
+        function draftFor(name) {
+          return (operatorDrafts || []).find(function (d) { return d.account_name === name; });
+        }
         return (
           <div style={{
             padding: isMobile ? "0 12px 12px" : "0 32px 12px",
@@ -1044,76 +1058,62 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
               borderRadius: 12,
               padding: "14px 16px 16px",
             }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8, gap: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, gap: 8 }}>
                 <div style={{ fontFamily: MONO, fontSize: 10, color: C.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>
-                  Pip · Operator Report
+                  ✦ Pip · Operator Report
                 </div>
                 <div style={{ fontFamily: MONO, fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>
                   {(operatorReport.accounts_worked || 0) + " worked"}{ranAt ? " · " + ranAt : ""}
                 </div>
               </div>
 
-              <MarkdownText
-                text={operatorReport.report_prose}
-                linkify={makeAccountLinkify(accounts, onOpenAccount)}
-                style={{ fontFamily: INTER, fontSize: 14, color: C.textSoft, lineHeight: 1.7 }}
-              />
-
-              {planItems.length > 0 && (
-                <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 7 }}>
-                  {planItems.map(function (c, i) {
-                    var acc = (accounts || []).find(function (a) { return a.name === c.account_name; });
-                    var dotColor = c.priority === "now" ? C.red : c.priority === "this_week" ? C.yellow : C.textMuted;
-                    return (
-                      <div key={i} style={{ display: "flex", alignItems: "baseline", gap: 6, flexWrap: "wrap" }}>
-                        <span style={{ color: dotColor, fontSize: 14, lineHeight: 1, flexShrink: 0 }}>•</span>
-                        {c.account_name && (acc
-                          ? <Glow onClick={function () { onOpenAccount(acc.id); }}>{c.account_name}</Glow>
-                          : <span style={{ fontFamily: INTER, fontSize: 13, color: C.accent }}>{c.account_name}</span>
-                        )}
-                        {c.action && <span style={{ fontFamily: INTER, fontSize: 13, color: C.text, fontWeight: 600 }}>→ {c.action}</span>}
-                        {c.reason && <span style={{ fontFamily: INTER, fontSize: 13, color: C.textMuted }}>— {c.reason}</span>}
-                        {c.has_draft && (
-                          <span style={{ fontFamily: MONO, fontSize: 9, color: C.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 }}>✦ draft</span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+              {/* Opening paragraph — Pip's read, in his voice */}
+              {operatorReport.report_prose && (
+                <MarkdownText
+                  text={operatorReport.report_prose}
+                  linkify={makeAccountLinkify(accounts, onOpenAccount)}
+                  style={{ fontFamily: INTER, fontSize: 14.5, color: C.textSoft, lineHeight: 1.7 }}
+                />
               )}
 
-              {operatorDrafts && operatorDrafts.length > 0 && (
-                <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid " + C.rule }}>
-                  <div style={{ fontFamily: MONO, fontSize: 9, color: C.textMuted, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
-                    ✦ Pip drafted {operatorDrafts.length} follow-up{operatorDrafts.length > 1 ? "s" : ""} — review &amp; send
+              {/* Fused sections — each line tappable, drafts inline on the row */}
+              {sections.map(function (sec, si) {
+                if (!sec || !Array.isArray(sec.items) || !sec.items.length) return null;
+                var meta = SECTION_META[sec.kind] || { label: "Notes", color: C.textMuted };
+                return (
+                  <div key={si} style={{ marginTop: 15 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 9 }}>
+                      <span style={{ width: 7, height: 7, borderRadius: "50%", background: meta.color, flexShrink: 0 }} />
+                      <span style={{ fontFamily: MONO, fontSize: 9.5, color: meta.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>{meta.label}</span>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                      {sec.items.map(function (it, ii) {
+                        var acc = it.account_name ? (accounts || []).find(function (a) { return a.name === it.account_name; }) : null;
+                        var draft = it.has_draft && it.account_name ? draftFor(it.account_name) : null;
+                        return (
+                          <div key={ii} style={{ display: "flex", alignItems: "baseline", gap: 7, flexWrap: "wrap", paddingLeft: 14 }}>
+                            {it.account_name && (acc
+                              ? <Glow onClick={function () { onOpenAccount(acc.id); }}>{it.account_name}</Glow>
+                              : <span style={{ fontFamily: INTER, fontSize: 13.5, color: C.accent, fontWeight: 600 }}>{it.account_name}</span>)}
+                            {it.line && <span style={{ fontFamily: INTER, fontSize: 13.5, color: C.textSoft }}>{it.account_name ? "— " : ""}{it.line}</span>}
+                            {it.action && (
+                              <span style={{ fontFamily: MONO, fontSize: 9.5, color: meta.color, textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>→ {it.action}</span>
+                            )}
+                            {acc && (
+                              <button onClick={function () { onOpenAccount(acc.id); }}
+                                style={{ fontFamily: MONO, fontSize: 9.5, color: C.textMuted, background: "none", border: "1px solid " + C.rule, borderRadius: 6, padding: "2px 8px", cursor: "pointer" }}>Open</button>
+                            )}
+                            {draft && (
+                              <button onClick={function () { try { navigator.clipboard.writeText(draft.email); showToast("Draft copied — review before sending"); } catch (_) { showToast("Couldn't copy"); } }}
+                                style={{ fontFamily: MONO, fontSize: 9.5, color: C.accent, background: C.accentFaint, border: "1px solid " + C.accentLine, borderRadius: 6, padding: "2px 8px", cursor: "pointer" }}>✦ Draft ready</button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {operatorDrafts.map(function (d) {
-                      var acc = (accounts || []).find(function (a) { return a.id === d.account_id; });
-                      return (
-                        <div key={d.account_id} style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                          {acc
-                            ? <Glow onClick={function () { onOpenAccount(acc.id); }}>{d.account_name}</Glow>
-                            : <span style={{ fontFamily: INTER, fontSize: 13, color: C.accent }}>{d.account_name}</span>}
-                          <button
-                            onClick={function () {
-                              try {
-                                navigator.clipboard.writeText(d.email);
-                                showToast("Draft copied — review before sending");
-                              } catch (_) { showToast("Couldn't copy"); }
-                            }}
-                            style={{ fontFamily: MONO, fontSize: 10, color: C.accent, background: C.accentFaint, border: "1px solid " + C.accentLine, borderRadius: 6, padding: "3px 9px", cursor: "pointer" }}
-                          >Copy</button>
-                          <a
-                            href={"mailto:?body=" + encodeURIComponent(d.email)}
-                            style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, background: "none", border: "1px solid " + C.rule, borderRadius: 6, padding: "3px 9px", textDecoration: "none" }}
-                          >Open in Mail</a>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+                );
+              })}
             </div>
           </div>
         );
@@ -1214,7 +1214,7 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
       )}
 
       {/* Commitment nudge card — amber warning for ✦ commitments due soon or overdue */}
-      {commitmentNudges.length > 0 && (function () {
+      {!(operatorReport && (operatorReport.report_prose || (operatorReport.plan_items && operatorReport.plan_items.length))) && commitmentNudges.length > 0 && (function () {
         var n = commitmentNudges[0];
         var dueLabel = n.isOverdue
           ? Math.abs(n.daysUntilDue) + "d overdue"
