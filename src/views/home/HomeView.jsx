@@ -209,6 +209,9 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
   // brief is suppressed (so Pip isn't paid for twice). A null report (first
   // day, or a skipped idle weekend) falls back to the on-open daily brief.
   var { report: operatorReport, drafts: operatorDrafts, loaded: operatorLoaded } = useOperatorReport(userId);
+  // True when the operator produced something worth showing — drives the Home
+  // dashboard (Pip read card + section cards) and suppresses the legacy summary.
+  var operatorActive = !!(operatorReport && (operatorReport.report_prose || (Array.isArray(operatorReport.plan_items) && operatorReport.plan_items.length > 0)));
 
   useEffect(function () {
     var t = setTimeout(function () { setMounted(true); }, 60);
@@ -231,7 +234,7 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
     // Wait for the operator-report check to resolve, then suppress the live
     // brief entirely when the nightly loop already produced today's report.
     if (!operatorLoaded) return;
-    if (operatorReport && (operatorReport.report_prose || (operatorReport.plan_items && operatorReport.plan_items.length))) return;
+    if (operatorActive) return;
     var todayStr = new Date().toISOString().slice(0, 10);
     // v9: flushes any brief cached before account data finished loading (the
     // "Unknown accounts" short brief from opening two tabs at once). v8 added
@@ -997,6 +1000,7 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
         padding: isMobile ? "24px 16px 28px" : "32px 32px 36px",
       }}>
         <PipOrb size="xxl" heartbeat />
+        {!operatorActive && (
         <div style={{
           fontFamily: SERIF, fontSize: isMobile ? 18 : 22,
           color: C.text, lineHeight: 1.45, letterSpacing: "-0.01em",
@@ -1006,6 +1010,7 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
         }}>
           {heroLine}
         </div>
+        )}
         <div style={{
           display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center",
           opacity: mounted ? 1 : 0,
@@ -1066,91 +1071,105 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
         </div>
       </div>
 
-      {operatorReport && (operatorReport.report_prose || (Array.isArray(operatorReport.plan_items) && operatorReport.plan_items.length > 0)) && (function () {
+      {operatorActive && (function () {
         var ranAt = operatorReport.generated_at
           ? new Date(operatorReport.generated_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
           : null;
         var sections = Array.isArray(operatorReport.plan_items) ? operatorReport.plan_items : [];
         var SECTION_META = {
-          fire:   { label: "Needs you today", color: C.red },
-          watch:  { label: "This week",       color: C.yellow },
-          win:    { label: "Good news",       color: C.accent },
-          signal: { label: "Pattern",         color: C.textMuted },
+          fire:   { label: "Today",     color: C.red },
+          watch:  { label: "This week", color: C.yellow },
+          win:    { label: "Good news", color: C.accent },
+          signal: { label: "Pattern",   color: C.textMuted },
         };
         function draftFor(name) {
           return (operatorDrafts || []).find(function (d) { return d.account_name === name; });
         }
+        function byKind(k) {
+          return sections.find(function (s) { return s && s.kind === k && Array.isArray(s.items) && s.items.length; });
+        }
+
+        function renderRow(it, ii, meta, big) {
+          var acc = it.account_name ? (accounts || []).find(function (a) { return a.name === it.account_name; }) : null;
+          var draft = it.has_draft && it.account_name ? draftFor(it.account_name) : null;
+          var fs = big ? 14 : 13;
+          return (
+            <div key={ii} style={{ display: "flex", alignItems: "baseline", gap: 7, flexWrap: "wrap" }}>
+              {it.account_name && (acc
+                ? <Glow onClick={function () { onOpenAccount(acc.id); }}>{it.account_name}</Glow>
+                : <span style={{ fontFamily: INTER, fontSize: fs, color: C.accent, fontWeight: 600 }}>{it.account_name}</span>)}
+              {it.line && <span style={{ fontFamily: INTER, fontSize: fs, color: C.textSoft }}>{it.account_name ? "— " : ""}{it.line}</span>}
+              {it.action && (
+                <span style={{ fontFamily: MONO, fontSize: 9.5, color: meta.color, textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>→ {it.action}</span>
+              )}
+              {acc && (
+                <button onClick={function () { onOpenAccount(acc.id); }}
+                  style={{ fontFamily: MONO, fontSize: 9.5, color: C.textMuted, background: "none", border: "1px solid " + C.rule, borderRadius: 6, padding: "2px 8px", cursor: "pointer" }}>Open</button>
+              )}
+              {draft && (
+                <button onClick={function () { try { navigator.clipboard.writeText(draft.email); showToast("Draft copied — review before sending"); } catch (_) { showToast("Couldn't copy"); } }}
+                  style={{ fontFamily: MONO, fontSize: 9.5, color: C.accent, background: C.accentFaint, border: "1px solid " + C.accentLine, borderRadius: 6, padding: "2px 8px", cursor: "pointer" }}>✦ Draft ready</button>
+              )}
+            </div>
+          );
+        }
+
+        function sectionCard(sec, big) {
+          var meta = SECTION_META[sec.kind] || { label: "Notes", color: C.textMuted };
+          return (
+            <div style={{
+              background: C.surface, border: "1px solid " + C.rule,
+              borderLeft: "2px solid " + meta.color, borderRadius: 12,
+              padding: big ? "15px 17px 16px" : "13px 15px 14px", height: "100%",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 11 }}>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: meta.color, flexShrink: 0 }} />
+                <span style={{ fontFamily: MONO, fontSize: big ? 10.5 : 9.5, color: meta.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>{meta.label}</span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: big ? 11 : 9 }}>
+                {sec.items.map(function (it, ii) { return renderRow(it, ii, meta, big); })}
+              </div>
+            </div>
+          );
+        }
+
+        var fire = byKind("fire");
+        var gridCards = [byKind("watch"), byKind("signal"), byKind("win")].filter(Boolean);
+
         return (
           <div style={{
-            padding: isMobile ? "0 12px 12px" : "0 32px 12px",
+            padding: isMobile ? "0 12px 14px" : "0 32px 14px",
             maxWidth: 980, margin: "0 auto",
             opacity: mounted ? 1 : 0,
             transition: "opacity 0.4s ease 0.4s",
+            display: "flex", flexDirection: "column", gap: 12,
           }}>
-            <div style={{
-              background: C.surface,
-              border: "1px solid " + C.rule,
-              borderLeft: "2px solid " + C.accent,
-              borderRadius: 12,
-              padding: "14px 16px 16px",
-            }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, gap: 8 }}>
-                <div style={{ fontFamily: MONO, fontSize: 10, color: C.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>
-                  ✦ Pip · Operator Report
+            {/* Pip's read — his voice, the paragraph */}
+            {operatorReport.report_prose && (
+              <div style={{ background: C.surface, border: "1px solid " + C.rule, borderLeft: "2px solid " + C.accent, borderRadius: 12, padding: "14px 16px 16px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 9, gap: 8 }}>
+                  <div style={{ fontFamily: MONO, fontSize: 10, color: C.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>✦ Pip</div>
+                  <div style={{ fontFamily: MONO, fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>
+                    {(operatorReport.accounts_worked || 0) + " worked"}{ranAt ? " · " + ranAt : ""}
+                  </div>
                 </div>
-                <div style={{ fontFamily: MONO, fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>
-                  {(operatorReport.accounts_worked || 0) + " worked"}{ranAt ? " · " + ranAt : ""}
-                </div>
-              </div>
-
-              {/* Opening paragraph — Pip's read, in his voice */}
-              {operatorReport.report_prose && (
                 <MarkdownText
                   text={operatorReport.report_prose}
                   linkify={makeAccountLinkify(accounts, onOpenAccount)}
                   style={{ fontFamily: INTER, fontSize: 14.5, color: C.textSoft, lineHeight: 1.7 }}
                 />
-              )}
+              </div>
+            )}
 
-              {/* Fused sections — each line tappable, drafts inline on the row */}
-              {sections.map(function (sec, si) {
-                if (!sec || !Array.isArray(sec.items) || !sec.items.length) return null;
-                var meta = SECTION_META[sec.kind] || { label: "Notes", color: C.textMuted };
-                return (
-                  <div key={si} style={{ marginTop: 15 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 9 }}>
-                      <span style={{ width: 7, height: 7, borderRadius: "50%", background: meta.color, flexShrink: 0 }} />
-                      <span style={{ fontFamily: MONO, fontSize: 9.5, color: meta.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>{meta.label}</span>
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                      {sec.items.map(function (it, ii) {
-                        var acc = it.account_name ? (accounts || []).find(function (a) { return a.name === it.account_name; }) : null;
-                        var draft = it.has_draft && it.account_name ? draftFor(it.account_name) : null;
-                        return (
-                          <div key={ii} style={{ display: "flex", alignItems: "baseline", gap: 7, flexWrap: "wrap", paddingLeft: 14 }}>
-                            {it.account_name && (acc
-                              ? <Glow onClick={function () { onOpenAccount(acc.id); }}>{it.account_name}</Glow>
-                              : <span style={{ fontFamily: INTER, fontSize: 13.5, color: C.accent, fontWeight: 600 }}>{it.account_name}</span>)}
-                            {it.line && <span style={{ fontFamily: INTER, fontSize: 13.5, color: C.textSoft }}>{it.account_name ? "— " : ""}{it.line}</span>}
-                            {it.action && (
-                              <span style={{ fontFamily: MONO, fontSize: 9.5, color: meta.color, textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>→ {it.action}</span>
-                            )}
-                            {acc && (
-                              <button onClick={function () { onOpenAccount(acc.id); }}
-                                style={{ fontFamily: MONO, fontSize: 9.5, color: C.textMuted, background: "none", border: "1px solid " + C.rule, borderRadius: 6, padding: "2px 8px", cursor: "pointer" }}>Open</button>
-                            )}
-                            {draft && (
-                              <button onClick={function () { try { navigator.clipboard.writeText(draft.email); showToast("Draft copied — review before sending"); } catch (_) { showToast("Couldn't copy"); } }}
-                                style={{ fontFamily: MONO, fontSize: 9.5, color: C.accent, background: C.accentFaint, border: "1px solid " + C.accentLine, borderRadius: 6, padding: "2px 8px", cursor: "pointer" }}>✦ Draft ready</button>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            {/* Today — bigger, full width */}
+            {fire && sectionCard(fire, true)}
+
+            {/* The rest — 2-up grid on desktop, stacked on mobile */}
+            {gridCards.length > 0 && (
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, alignItems: "stretch" }}>
+                {gridCards.map(function (sec, i) { return <div key={i}>{sectionCard(sec, false)}</div>; })}
+              </div>
+            )}
           </div>
         );
       })()}
@@ -1250,7 +1269,7 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
       )}
 
       {/* Commitment nudge card — amber warning for ✦ commitments due soon or overdue */}
-      {!(operatorReport && (operatorReport.report_prose || (operatorReport.plan_items && operatorReport.plan_items.length))) && commitmentNudges.length > 0 && (function () {
+      {!operatorActive && commitmentNudges.length > 0 && (function () {
         var n = commitmentNudges[0];
         var dueLabel = n.isOverdue
           ? Math.abs(n.daysUntilDue) + "d overdue"
