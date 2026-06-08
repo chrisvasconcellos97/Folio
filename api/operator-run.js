@@ -247,7 +247,22 @@ function pickMovedAccounts(accounts, activitySinceIds, snapshotsById, lastRunIso
 
 // ── per-user processing ────────────────────────────────────────────────
 
-async function processUser(admin, client, userId, tz) {
+// Count real writes since `sinceIso` for the weekend gate. folio_activity
+// alone misses task adds (only meetings/completions/status changes log there),
+// so also count folio_tasks touched in the window — otherwise "I added a task
+// Saturday" wouldn't wake the Sunday run.
+async function countWritesSince(admin, userId, sinceIso) {
+  var a = await admin.from("folio_activity")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId).gt("created_at", sinceIso);
+  if ((a.count || 0) > 0) return a.count;
+  var t = await admin.from("folio_tasks")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId).gt("updated_at", sinceIso);
+  return t.count || 0;
+}
+
+async function processUser(admin, client, userId, tz, force) {
   var local = localParts(tz);
 
   // Last run = most recent operator report for this user.
@@ -259,15 +274,17 @@ async function processUser(admin, client, userId, tz) {
 
   var ranReason = "weeknight";
 
-  // Weekend opt-in gate.
+  // Weekend opt-in gate — only the scheduled cron is gated. A manual/forced
+  // trigger (a human hitting the URL) always runs.
   if (isWeekendMorning(local.weekday)) {
-    var sinceIso = lastRunIso || new Date(Date.now() - 48 * 3600 * 1000).toISOString();
-    var act = await admin.from("folio_activity")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId).gt("created_at", sinceIso);
-    var n = typeof act.count === "number" ? act.count : 0;
-    if (n === 0) return { userId: userId, skipped: "weekend-idle", weekday: local.weekday };
-    ranReason = "weekend-activity";
+    if (force) {
+      ranReason = "weekend-forced";
+    } else {
+      var sinceIso = lastRunIso || new Date(Date.now() - 48 * 3600 * 1000).toISOString();
+      var n = await countWritesSince(admin, userId, sinceIso);
+      if (n === 0) return { userId: userId, skipped: "weekend-idle", weekday: local.weekday };
+      ranReason = "weekend-activity";
+    }
   }
 
   // Load the active book.
@@ -278,12 +295,16 @@ async function processUser(admin, client, userId, tz) {
   var accounts = (accRes.data || []).filter(function (a) { return a.account_type !== "internal_team"; });
   if (!accounts.length) return { userId: userId, skipped: "no-accounts" };
 
-  // Activity since last run → which accounts moved.
+  // Activity since last run → which accounts moved. Pull from folio_activity
+  // AND folio_tasks (task adds/edits don't log to folio_activity).
   var activitySinceIds = {};
   if (lastRunIso) {
     var aRes = await admin.from("folio_activity")
       .select("account_id").eq("user_id", userId).gt("created_at", lastRunIso).not("account_id", "is", null).limit(2000);
     (aRes.data || []).forEach(function (r) { if (r.account_id) activitySinceIds[r.account_id] = true; });
+    var tRes = await admin.from("folio_tasks")
+      .select("account_id").eq("user_id", userId).gt("updated_at", lastRunIso).not("account_id", "is", null).limit(2000);
+    (tRes.data || []).forEach(function (r) { if (r.account_id) activitySinceIds[r.account_id] = true; });
   }
 
   // Today's snapshots, indexed by account.
@@ -398,6 +419,9 @@ export default async function handler(req, res) {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return res.status(500).json({ error: "SUPABASE_SERVICE_ROLE_KEY not configured." });
 
   var tz = process.env.OPERATOR_TZ || "America/New_York";
+  // A human hitting the URL with ?secret= (vs the cron's Bearer header), or an
+  // explicit ?force=1, bypasses the weekend gate — an explicit run is intent.
+  var force = (qSecret === secret) || (req.query && (req.query.force === "1" || req.query.force === "true"));
 
   try {
     var client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -420,7 +444,7 @@ export default async function handler(req, res) {
     var results = [];
     for (var i = 0; i < userIds.length; i++) {
       try {
-        results.push(await processUser(admin, client, userIds[i], tz));
+        results.push(await processUser(admin, client, userIds[i], tz, force));
       } catch (e) {
         console.error("[operator-run] user failed", userIds[i], e && e.message);
         results.push({ userId: userIds[i], error: e && e.message });
