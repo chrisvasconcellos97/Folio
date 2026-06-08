@@ -29,8 +29,14 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
 
+// Give the function a real time budget — it does several model calls. 60s is
+// valid on every Vercel plan; with the per-account passes parallelized below
+// (waves of ACCOUNT_CONCURRENCY) the whole sweep finishes well inside it.
+export const config = { maxDuration: 60 };
+
 var OPERATOR_MODEL = process.env.PIP_OPERATOR_MODEL || "claude-sonnet-4-6";
-var MAX_DEEP_PER_USER = 12;       // cap deep per-account passes per user per night
+var MAX_DEEP_PER_USER = 8;        // cap deep per-account passes per user per run
+var ACCOUNT_CONCURRENCY = 4;      // model calls in flight at once (rate-limit safe)
 var MAX_USERS = 200;              // safety bound
 
 // ── helpers ────────────────────────────────────────────────────────────
@@ -283,16 +289,24 @@ async function processUser(admin, client, userId, tz) {
 
   var moved = pickMovedAccounts(accounts, activitySinceIds, snapById, lastRunIso);
 
-  // Deep pass per moved account.
+  // Deep pass per moved account — run in bounded-concurrency waves so the whole
+  // sweep finishes well inside the function's time budget. Sequential here meant
+  // ~10s × N accounts, which blew past Vercel's timeout and killed the run
+  // before it could write the report.
   var worked = [];
-  for (var i = 0; i < moved.length; i++) {
-    var acc = moved[i];
-    try {
-      var ctx = await gatherAndRun(admin, client, userId, acc, snapById[acc.id]);
-      worked.push(Object.assign({ id: acc.id, name: acc.name, tier: acc.tier, has_draft: !!ctx.draft_email }, ctx));
-    } catch (e) {
-      console.error("[operator-run] account pass failed", acc.id, e && e.message);
-    }
+  for (var start = 0; start < moved.length; start += ACCOUNT_CONCURRENCY) {
+    var wave = moved.slice(start, start + ACCOUNT_CONCURRENCY);
+    var settled = await Promise.all(wave.map(function (acc) {
+      return gatherAndRun(admin, client, userId, acc, snapById[acc.id])
+        .then(function (ctx) {
+          return Object.assign({ id: acc.id, name: acc.name, tier: acc.tier, has_draft: !!ctx.draft_email }, ctx);
+        })
+        .catch(function (e) {
+          console.error("[operator-run] account pass failed", acc.id, e && e.message);
+          return null;
+        });
+    }));
+    settled.forEach(function (w) { if (w) worked.push(w); });
   }
 
   // Portfolio report.
