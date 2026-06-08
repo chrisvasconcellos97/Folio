@@ -19,6 +19,7 @@
 
 -- 1. Per-account operator state — additive columns on the existing table.
 alter table folio_pip_account_state add column if not exists operator_situation      text;
+alter table folio_pip_account_state add column if not exists operator_headline        text;
 alter table folio_pip_account_state add column if not exists operator_risks          text[];
 alter table folio_pip_account_state add column if not exists operator_draft_email     text;
 alter table folio_pip_account_state add column if not exists operator_proposed_moves  jsonb default '[]'::jsonb;

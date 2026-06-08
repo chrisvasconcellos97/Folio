@@ -136,6 +136,7 @@ var ACCOUNT_SYSTEM = `You are Pip, an account manager's autonomous chief of staf
 
 Return ONLY valid JSON, no prose, no code fences:
 {
+  "headline": "ONE tight sentence — the high-level read at a glance. The gist a busy AM needs before the detail. No markdown. e.g. 'Drifting — follow-up sent 9 days ago, no movement, 6 tasks still open from ABPA.'",
   "situation": "2-4 sentence read of where this account actually stands right now. Specific. Name people, tasks, numbers. Not a summary of the data — a judgement.",
   "risks": ["short risk phrases — overdue commitments, a blocker, cooling tone, a stuck project. [] if genuinely none."],
   "draft_email": "A ready-to-send follow-up email IF one is clearly warranted (an open commitment, a promised deliverable, a gone-quiet major account). Plain text, no markdown, includes a greeting and sign-off as '[Your name]'. Empty string if no email is warranted today — do NOT manufacture one.",
@@ -162,6 +163,7 @@ async function runAccountPass(client, ctxText) {
   var raw = msg.content && msg.content[0] && msg.content[0].type === "text" ? msg.content[0].text : "";
   var parsed = safeJsonParse(raw) || {};
   return {
+    headline: typeof parsed.headline === "string" ? parsed.headline.trim() : "",
     situation: typeof parsed.situation === "string" ? parsed.situation : "",
     risks: Array.isArray(parsed.risks) ? parsed.risks.filter(function (r) { return typeof r === "string" && r.trim(); }) : [],
     draft_email: typeof parsed.draft_email === "string" ? parsed.draft_email.trim() : "",
@@ -401,6 +403,7 @@ async function gatherAndRun(admin, client, userId, acc, snapshot) {
   var existing = await admin.from("folio_pip_account_state")
     .select("account_id").eq("account_id", acc.id).maybeSingle();
   var fields = {
+    operator_headline: out.headline,
     operator_situation: out.situation,
     operator_risks: out.risks,
     operator_draft_email: out.draft_email,

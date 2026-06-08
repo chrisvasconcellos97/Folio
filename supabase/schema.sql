@@ -602,6 +602,7 @@ create table if not exists folio_pip_account_state (
   -- state written by the nightly loop (api/operator-run.js). Read by every
   -- Pip surface instead of making its own LLM call. See supabase/pip_operator.sql.
   operator_situation      text,
+  operator_headline       text,
   operator_risks          text[],
   operator_draft_email    text,
   operator_proposed_moves jsonb default '[]'::jsonb,
