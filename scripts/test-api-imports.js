@@ -20,6 +20,7 @@ var handlers = [
   "api/profile-synthesis.js",
   "api/detect-terminology.js",
   "api/generate-questions.js",
+  "api/operator-run.js",
 ];
 
 var failed = false;

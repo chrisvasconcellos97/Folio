@@ -7,6 +7,7 @@ import { MarkdownText } from "../../components/MarkdownText";
 import { useBreakpoint } from "../../hooks/useBreakpoint";
 import { getNextOccurrence, formatTime } from "../../lib/cadenceUtils";
 import { useAccountSnapshots } from "../../hooks/useAccountSnapshots";
+import { useOperatorReport } from "../../hooks/useOperatorReport";
 import { callPortfolioBriefPip } from "../../lib/pip";
 import { isProjectComplete } from "../../lib/gaugeStatus";
 import { suggestionLabel } from "../pip/PipCatchUp";
@@ -167,6 +168,12 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
 
   var { snapshots, snapshotHistory } = useAccountSnapshots(userId);
 
+  // Operator report — the materialized output of the nightly Pip loop. When a
+  // report exists for today it becomes the head of Home and the live daily
+  // brief is suppressed (so Pip isn't paid for twice). A null report (first
+  // day, or a skipped idle weekend) falls back to the on-open daily brief.
+  var { report: operatorReport, drafts: operatorDrafts, loaded: operatorLoaded } = useOperatorReport(userId);
+
   useEffect(function () {
     var t = setTimeout(function () { setMounted(true); }, 60);
     return function () { clearTimeout(t); };
@@ -185,6 +192,10 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
   // Only fires when snapshots are ready and the brief hasn't been generated today.
   useEffect(function () {
     if (!userId) return;
+    // Wait for the operator-report check to resolve, then suppress the live
+    // brief entirely when the nightly loop already produced today's report.
+    if (!operatorLoaded) return;
+    if (operatorReport && operatorReport.report_prose) return;
     var todayStr = new Date().toISOString().slice(0, 10);
     // v9: flushes any brief cached before account data finished loading (the
     // "Unknown accounts" short brief from opening two tabs at once). v8 added
@@ -462,7 +473,7 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
       });
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [snapshots.length, (items || []).length, briefNonce, userId]);
+  }, [snapshots.length, (items || []).length, briefNonce, userId, operatorLoaded, operatorReport]);
 
   var accountById = useMemo(function () {
     var m = {};
@@ -1013,6 +1024,100 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
           </div>
         </div>
       </div>
+
+      {operatorReport && operatorReport.report_prose && (function () {
+        var ranAt = operatorReport.generated_at
+          ? new Date(operatorReport.generated_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+          : null;
+        var planItems = Array.isArray(operatorReport.plan_items) ? operatorReport.plan_items : [];
+        return (
+          <div style={{
+            padding: isMobile ? "0 12px 12px" : "0 32px 12px",
+            maxWidth: 980, margin: "0 auto",
+            opacity: mounted ? 1 : 0,
+            transition: "opacity 0.4s ease 0.4s",
+          }}>
+            <div style={{
+              background: C.surface,
+              border: "1px solid " + C.rule,
+              borderLeft: "2px solid " + C.accent,
+              borderRadius: 12,
+              padding: "14px 16px 16px",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8, gap: 8 }}>
+                <div style={{ fontFamily: MONO, fontSize: 10, color: C.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                  Pip · Operator Report
+                </div>
+                <div style={{ fontFamily: MONO, fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>
+                  {(operatorReport.accounts_worked || 0) + " worked"}{ranAt ? " · " + ranAt : ""}
+                </div>
+              </div>
+
+              <MarkdownText
+                text={operatorReport.report_prose}
+                linkify={makeAccountLinkify(accounts, onOpenAccount)}
+                style={{ fontFamily: INTER, fontSize: 14, color: C.textSoft, lineHeight: 1.7 }}
+              />
+
+              {planItems.length > 0 && (
+                <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 7 }}>
+                  {planItems.map(function (c, i) {
+                    var acc = (accounts || []).find(function (a) { return a.name === c.account_name; });
+                    var dotColor = c.priority === "now" ? C.red : c.priority === "this_week" ? C.yellow : C.textMuted;
+                    return (
+                      <div key={i} style={{ display: "flex", alignItems: "baseline", gap: 6, flexWrap: "wrap" }}>
+                        <span style={{ color: dotColor, fontSize: 14, lineHeight: 1, flexShrink: 0 }}>•</span>
+                        {c.account_name && (acc
+                          ? <Glow onClick={function () { onOpenAccount(acc.id); }}>{c.account_name}</Glow>
+                          : <span style={{ fontFamily: INTER, fontSize: 13, color: C.accent }}>{c.account_name}</span>
+                        )}
+                        {c.action && <span style={{ fontFamily: INTER, fontSize: 13, color: C.text, fontWeight: 600 }}>→ {c.action}</span>}
+                        {c.reason && <span style={{ fontFamily: INTER, fontSize: 13, color: C.textMuted }}>— {c.reason}</span>}
+                        {c.has_draft && (
+                          <span style={{ fontFamily: MONO, fontSize: 9, color: C.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 }}>✦ draft</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {operatorDrafts && operatorDrafts.length > 0 && (
+                <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid " + C.rule }}>
+                  <div style={{ fontFamily: MONO, fontSize: 9, color: C.textMuted, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
+                    ✦ Pip drafted {operatorDrafts.length} follow-up{operatorDrafts.length > 1 ? "s" : ""} — review &amp; send
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {operatorDrafts.map(function (d) {
+                      var acc = (accounts || []).find(function (a) { return a.id === d.account_id; });
+                      return (
+                        <div key={d.account_id} style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                          {acc
+                            ? <Glow onClick={function () { onOpenAccount(acc.id); }}>{d.account_name}</Glow>
+                            : <span style={{ fontFamily: INTER, fontSize: 13, color: C.accent }}>{d.account_name}</span>}
+                          <button
+                            onClick={function () {
+                              try {
+                                navigator.clipboard.writeText(d.email);
+                                showToast("Draft copied — review before sending");
+                              } catch (_) { showToast("Couldn't copy"); }
+                            }}
+                            style={{ fontFamily: MONO, fontSize: 10, color: C.accent, background: C.accentFaint, border: "1px solid " + C.accentLine, borderRadius: 6, padding: "3px 9px", cursor: "pointer" }}
+                          >Copy</button>
+                          <a
+                            href={"mailto:?body=" + encodeURIComponent(d.email)}
+                            style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, background: "none", border: "1px solid " + C.rule, borderRadius: 6, padding: "3px 9px", textDecoration: "none" }}
+                          >Open in Mail</a>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {(dailyBrief || briefLoading) && (
         <div style={{

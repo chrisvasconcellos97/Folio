@@ -1,6 +1,6 @@
 # Folios — AI Governance
 
-*Last updated: 2026-06-05*
+*Last updated: 2026-06-08*
 
 This document describes how Folios uses AI (Pip) responsibly. It
 covers what Pip can and can't do, what guardrails are in place, how
@@ -160,6 +160,13 @@ efficiency where it doesn't:
   (`PIP_CHAT_MODEL`, `PIP_QUESTIONS_MODEL`, `PIP_DAILY_BRIEF_MODEL`,
   `PIP_PROFILE_MODEL`, `PIP_QBR_MODEL`) so the tier can be re-dialed
   without a code change.
+- **The Autonomous Operator loop** (`/api/operator-run`, the nightly
+  scheduled sweep) runs on Sonnet (`PIP_OPERATOR_MODEL` override). Its
+  cost is bounded structurally, not just by rate limit: deep per-account
+  passes run *only on accounts that changed* since the last run and are
+  capped per night, plus one portfolio roll-up call — so a night's spend
+  scales with what moved, and an idle weekend costs nothing (the
+  weekend-skip decision is a database check, not a model call).
 - No Opus calls in production code.
 
 ### Prompt caching

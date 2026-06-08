@@ -597,7 +597,17 @@ create table if not exists folio_pip_account_state (
   generated_at        timestamptz not null default now(),
   stale_at            timestamptz,
   lessons_learned     text,
-  last_compression_at timestamptz
+  last_compression_at timestamptz,
+  -- Pip Autonomous Operator (Phase 1) — materialized per-account operator
+  -- state written by the nightly loop (api/operator-run.js). Read by every
+  -- Pip surface instead of making its own LLM call. See supabase/pip_operator.sql.
+  operator_situation      text,
+  operator_risks          text[],
+  operator_draft_email    text,
+  operator_proposed_moves jsonb default '[]'::jsonb,
+  operator_agenda         text,
+  operator_delta          text,
+  operator_generated_at   timestamptz
 );
 alter table folio_pip_account_state enable row level security;
 
@@ -1068,6 +1078,33 @@ create index if not exists pip_promise_log_user_account_idx
 -- once per day from health signals, items, and Gauge project data.
 -- Foundation for Pip's cross-portfolio intelligence.
 -- ──────────────────────────────────────────────────────────────────────
+-- Pip Autonomous Operator (Phase 1) — portfolio-level "operator report", one
+-- row per user per local day, produced by the nightly loop. The Home operator
+-- report card reads this; a missing row means the loop hasn't run today (first
+-- day, or a skipped idle weekend) and Home falls back to the live daily brief.
+create table if not exists folio_operator_reports (
+  id              uuid primary key default gen_random_uuid(),
+  user_id         uuid not null references auth.users(id) on delete cascade,
+  report_date     date not null,
+  headline        text,
+  report_prose    text,
+  plan_items      jsonb not null default '[]'::jsonb,
+  accounts_worked integer not null default 0,
+  accounts_total  integer not null default 0,
+  ran_reason      text,            -- 'weeknight' | 'weekend-activity'
+  generated_at    timestamptz not null default now(),
+  unique (user_id, report_date)
+);
+alter table folio_operator_reports enable row level security;
+drop policy if exists "operator_reports_owner_select" on folio_operator_reports;
+create policy "operator_reports_owner_select" on folio_operator_reports
+  for select using (auth.uid() = user_id);
+drop policy if exists "operator_reports_owner_write" on folio_operator_reports;
+create policy "operator_reports_owner_write" on folio_operator_reports
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create index if not exists folio_operator_reports_user_date
+  on folio_operator_reports (user_id, report_date desc);
+
 create table if not exists folio_account_snapshots (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,

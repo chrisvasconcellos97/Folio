@@ -1,6 +1,6 @@
 # Folios — Upgrade Log
 
-*Last updated: 2026-06-06 (Teach Pip on-demand questions)*
+*Last updated: 2026-06-08 (Pip Autonomous Operator — Phase 1)*
 
 Plain-English log of major upgrades shipped to Folios. Date, time, and
 a short explanation written in terms anyone can read — not technical
@@ -14,6 +14,25 @@ For the technical changelog with full release detail, see
 architectural changes, anything that meaningfully changes what Folios
 *does* or *is*. Not bug fixes, styling tweaks, or doc-only updates —
 those live in git history.
+
+---
+
+## 2026-06-08 — Pip Autonomous Operator: Pip works the book overnight (Phase 1)
+
+**What I built:** Pip now works your accounts overnight on a schedule, instead of only thinking when you open the app. Each morning there's an "operator report" waiting on your Home screen — a prioritized plan for the day with follow-up emails already drafted, ready for you to review and send.
+
+**Problem it solves:** Until now every smart thing Pip did happened the moment you opened a screen — Pip was reacting. The daily brief told you *what's happening*; you still had to go do all of it. This turns Pip from an advisor you consult into a chief of staff who's already started the work before you sit down.
+
+**What changed:**
+- A scheduled job runs each night and reviews your whole book. It only does the deep thinking on the accounts that actually moved since the last run — the quiet ones are skipped — so it stays cheap and fast.
+- For each account that moved, Pip writes down where things stand, the risks, a drafted follow-up email where one's warranted, and suggested next moves. That work is saved, not thrown away.
+- It all rolls up into one morning report on Home: the day's plan, with the drafted emails one tap from your clipboard or your mail app.
+- **Nothing is sent and nothing is changed without you.** Everything Pip produces overnight is a draft you approve. Pip never reaches outside Folios — no email accounts connected, no customer data leaving the app.
+- **Weekends are opt-in.** If you don't add anything over the weekend, Pip doesn't run and doesn't cost anything. Add work on Saturday and the report is ready Sunday morning.
+
+**What you see today:** On a morning after the loop ran, the top of your Home screen is the **Pip · Operator Report** instead of the usual daily brief — the prioritized plan plus a "Pip drafted N follow-ups" section with Copy / Open in Mail buttons. On a quiet day (or before the first run), you get the normal live daily brief as before.
+
+**Why it matters:** This is the leap from "an external brain you feed" to "a digital chief of staff that works the book." The relationship knowledge doesn't just sit in Folios — Pip acts on it for you, every night, and none of it walks out the door. (Phase 1 lands the engine and the Home report; later phases will feed the same overnight work into the Cadence Hub, Gauge, and account screens so every Pip surface shows pre-done work instead of recomputing.)
 
 ---
 

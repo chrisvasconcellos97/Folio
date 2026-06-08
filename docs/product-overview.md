@@ -1,6 +1,6 @@
 # Folios — Product Overview
 
-*Last updated: 2026-06-06 (leadership tasks + Pip chief-of-staff finish)*
+*Last updated: 2026-06-08 (Pip Autonomous Operator — Phase 1)*
 
 This is the substantive product read after the [one-pager](./one-pager.md).
 Covers what Folios does, how it's structured, and what makes the Pip
@@ -239,6 +239,37 @@ sections can carry one of Pip's own inline status glyphs (a small on-brand
 icon set — needs-now, keep-an-eye, good-news, cross-account-pattern, done) in
 place of generic emoji, so a brief reads at a glance. Email drafts stay plain
 prose (no markup) since they're meant to be sent as-is.
+
+### Autonomous Operator — Pip works the book overnight
+
+Pip is not only pull-triggered. A scheduled nightly loop runs the portfolio
+before the day starts, so the user wakes up to work that's already been done
+rather than a dashboard to interpret.
+
+- **Signal-gated sweep.** Each night a server-side job reviews the book and
+  runs a deep per-account pass *only on the accounts that moved* since the last
+  run (new activity, or a health/at-risk signal). Accounts that didn't change
+  are skipped — cost and effort scale with what actually changed, not with
+  portfolio size. The per-account passes are capped per night.
+- **Materialized operator state.** For each worked account Pip writes a
+  durable state object: a read of the situation, the risks, a **pre-drafted
+  follow-up email** where one is warranted, proposed task/project moves, a
+  pre-built cadence agenda, and a "what changed since last run" delta. This is
+  stored, not regenerated on every screen open — surfaces read it instead of
+  making their own model call.
+- **The operator report.** Those per-account reads roll up into one
+  prioritized morning report on the Home screen: the plan for the day, with the
+  drafted follow-ups ready to review and send. It replaces the live daily brief
+  on days the loop ran ("here's what's happening" becomes "here's what's
+  happening, and I drafted the first pass of it").
+- **Propose, don't act.** Everything the loop produces is a draft the user
+  approves — nothing is created live and nothing is sent automatically. This
+  keeps the data boundary clean: Pip never reaches outside Folios.
+- **Weekend opt-in.** Friday- and Saturday-night runs are skipped entirely
+  unless the user added something that day (a cheap activity check, no model
+  call to decide). Touch nothing over the weekend and the loop costs nothing;
+  add work Saturday and the report is waiting Sunday morning. "Night" and
+  "weekend" resolve to the user's local timezone.
 
 ### The V2 brain — Pip's learning loop
 
