@@ -43,30 +43,66 @@ function isToday(d) {
   return dt.getFullYear() === s.getFullYear() && dt.getMonth() === s.getMonth() && dt.getDate() === s.getDate();
 }
 
-function pickHeroLine(counts) {
-  // Template-driven hero line. The genius Pip rewrite happens later (V2 brain);
-  // for now we pick a tone based on the actual numbers and write in Pip's voice.
-  var calls    = counts.calls;
-  var overdue  = counts.overdue;
+function pickHeroLine(c) {
+  // Short, accurate, Pip-voiced one-liner for under the orb. The DETAILED read
+  // lives in the operator report below — this is just the at-a-glance vibe.
+  // Accurate to the real workload; varies day to day, stable within a day.
+  var calls       = c.calls || 0;
+  var overdue     = c.overdue || 0;
+  var cold        = c.cold || 0;
+  var commitments = c.commitments || 0;
+  var load        = overdue + commitments;
 
-  if (calls === 0 && overdue === 0) {
-    return "Quiet day. Nothing pressing — let's stay ahead.";
+  function pick(arr) {
+    var d = new Date();
+    return arr[(d.getDate() + d.getMonth()) % arr.length];
   }
-  if (calls > 0 && overdue === 0) {
-    return calls === 1
-      ? "One call today. Nothing burning."
-      : calls + " calls today. Nothing burning.";
+
+  // Heavy day — lots to get done.
+  if (load >= 5 || (load >= 3 && calls >= 2)) {
+    return pick([
+      "Busy one today. Let's dig in.",
+      "Lot on the plate — start with the fires.",
+      "Big day. Let's pick a path and go.",
+      "Plenty to get through. Triage first.",
+    ]);
   }
-  if (calls === 0 && overdue > 0) {
-    return overdue === 1
-      ? "Quiet calendar — but one thing needs your eyes."
-      : "Quiet calendar — but " + overdue + " things need your eyes.";
+  // A promise or two is the story.
+  if (commitments > 0 && overdue <= 1) {
+    return pick([
+      commitments === 1 ? "A promise due — don't let it slip." : commitments + " promises due. Stay on them.",
+      "You made some promises — let's keep them.",
+    ]);
   }
-  // Both
-  if (calls >= 4 || overdue >= 8) {
-    return "Big day. " + calls + " call" + (calls !== 1 ? "s" : "") + ", " + overdue + " thing" + (overdue !== 1 ? "s" : "") + " overdue. Let's pick a path.";
+  // Some things need eyes.
+  if (overdue > 0) {
+    return pick([
+      overdue === 1 ? "One thing needs your eyes today." : overdue + " things need your eyes.",
+      "A few loose ends to tie up.",
+      "Couple things to clear — won't take long.",
+    ]);
   }
-  return calls + " call" + (calls !== 1 ? "s" : "") + " today, " + overdue + " thing" + (overdue !== 1 ? "s" : "") + " needing eyes.";
+  // Calls on the books, nothing burning.
+  if (calls > 0) {
+    return pick([
+      calls === 1 ? "One call today, nothing burning." : calls + " calls today, nothing burning.",
+      calls === 1 ? "A call on the books. Otherwise clear." : calls + " calls booked. Otherwise clear.",
+    ]);
+  }
+  // Quiet — nudge toward proactive outreach.
+  if (cold > 0) {
+    return pick([
+      "Slow day — good time to warm up a cold account.",
+      cold === 1 ? "Quiet. One account's gone cold — reach out?" : "Quiet. A few accounts have gone cold — reach out?",
+      "Calm one. Let's get ahead of someone we haven't talked to.",
+    ]);
+  }
+  // Genuinely clear.
+  return pick([
+    "Calm morning. Nothing pressing.",
+    "Quiet day. Let's stay ahead.",
+    "All clear — good day to get proactive.",
+  ]);
 }
 
 function Panel({ title, accent, children }) {
@@ -686,15 +722,15 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
     return rows.slice(0, 5);
   }, [cadences, meetings, accounts, accountById]);
 
-  // Pip says something true. When the operator has a headline, that's the read
-  // (it reflects the real workload). Only fall back to the template line when
-  // there's no operator headline yet — never a canned "quiet day" over chaos.
-  var heroLine = (operatorReport && operatorReport.headline)
-    ? operatorReport.headline
-    : pickHeroLine({
-        calls: todaysCalls.length + todaysScheduled.length,
-        overdue: burningRows.filter(function (r) { return r.kind === "item"; }).length,
-      });
+  // Hero line stays SHORT and accurate — Pip's at-a-glance read. The detailed,
+  // Pip-voiced headline lives in the operator report card below, so we don't
+  // repeat it up here.
+  var heroLine = pickHeroLine({
+    calls: todaysCalls.length + todaysScheduled.length,
+    overdue: burningRows.filter(function (r) { return r.kind === "item"; }).length,
+    cold: burningRows.filter(function (r) { return r.kind === "cold"; }).length,
+    commitments: commitmentNudges.length,
+  });
 
   // ── Panels ──────────────────────────────────────────────────────────
   // ── Brief writers — Pip's narrative per panel ────────────────────────

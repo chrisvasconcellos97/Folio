@@ -452,13 +452,13 @@
         border: 1px solid var(--accent-border); opacity: 0; pointer-events: none;
       }
       @media (prefers-reduced-motion: no-preference) {
-        .pip.heartbeat::before, .pip.heartbeat::after { animation: pip-heartbeat 1.9s ease-out infinite; }
-        .pip.heartbeat::after { animation-delay: 0.26s; }
+        .pip.heartbeat::before, .pip.heartbeat::after { animation: pip-heartbeat 3.4s ease-out infinite; }
+        .pip.heartbeat::after { animation-delay: 0.34s; }
       }
       @keyframes pip-heartbeat {
-        0%   { transform: scale(1);   opacity: 0.6; }
-        20%  { transform: scale(1.85); opacity: 0; }
-        100% { transform: scale(1.85); opacity: 0; }
+        0%   { transform: scale(1);    opacity: 0.55; }
+        14%  { transform: scale(1.8);  opacity: 0; }
+        100% { transform: scale(1.8);  opacity: 0; }
       }
       .pip.xs  { width: 12px;  height: 12px;  box-shadow: 0 0 6px var(--accent-shadow); }
       .pip.sm  { width: 22px;  height: 22px;  box-shadow: 0 0 10px var(--accent-shadow); }
