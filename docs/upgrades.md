@@ -28,7 +28,7 @@ those live in git history.
 - For each account that moved, Pip writes down where things stand, the risks, a drafted follow-up email where one's warranted, and suggested next moves. That work is saved, not thrown away.
 - It all rolls up into one morning report on Home: the day's plan, with the drafted emails one tap from your clipboard or your mail app.
 - **Nothing is sent and nothing is changed without you.** Everything Pip produces overnight is a draft you approve. Pip never reaches outside Folios — no email accounts connected, no customer data leaving the app.
-- **Weekends are opt-in.** If you don't add anything over the weekend, Pip doesn't run and doesn't cost anything. Add work on Saturday and the report is ready Sunday morning.
+- **It runs every morning, but only thinks hard about what changed.** The expensive per-account work only happens on accounts that actually moved since the last run, so the cost tracks activity, not the size of your book.
 
 **What you see today:** On a morning after the loop ran, the top of your Home screen is the **Pip · Operator Report** instead of the usual daily brief — the prioritized plan plus a "Pip drafted N follow-ups" section with Copy / Open in Mail buttons. The same overnight work also shows up where you act on it: each **account screen** has a "Pip worked this overnight" panel (the situation, the drafted email, and proposed next steps you approve or dismiss one tap at a time), the **Cadence Hub** shows a pre-built agenda before a call, and the **Gauge** Pip card lists proposed moves across your whole book as a quick approve/dismiss queue. On a quiet day (or before the first run), you get the normal live daily brief as before.
 

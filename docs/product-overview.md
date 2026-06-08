@@ -273,11 +273,9 @@ rather than a dashboard to interpret.
 - **Propose, don't act.** Everything the loop produces is a draft the user
   approves — nothing is created live and nothing is sent automatically. This
   keeps the data boundary clean: Pip never reaches outside Folios.
-- **Weekend opt-in.** Friday- and Saturday-night runs are skipped entirely
-  unless the user added something that day (a cheap activity check, no model
-  call to decide). Touch nothing over the weekend and the loop costs nothing;
-  add work Saturday and the report is waiting Sunday morning. "Night" and
-  "weekend" resolve to the user's local timezone.
+- **Cost scales with change, not size.** The deep per-account pass only runs on
+  accounts that moved since the last run, capped per night, plus one portfolio
+  roll-up — so the nightly spend tracks what actually changed across the book.
 
 ### The V2 brain — Pip's learning loop
 

@@ -165,8 +165,7 @@ efficiency where it doesn't:
   cost is bounded structurally, not just by rate limit: deep per-account
   passes run *only on accounts that changed* since the last run and are
   capped per night, plus one portfolio roll-up call — so a night's spend
-  scales with what moved, and an idle weekend costs nothing (the
-  weekend-skip decision is a database check, not a model call).
+  scales with what moved across the book, not with portfolio size.
 - No Opus calls in production code.
 
 ### Prompt caching

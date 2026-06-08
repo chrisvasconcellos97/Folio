@@ -44,12 +44,6 @@ function localParts(tz) {
   return { weekday: wd, date: date };
 }
 
-function isWeekendMorning(weekday) {
-  // The cron fires in the early morning. Saturday morning = Friday night's
-  // work; Sunday morning = Saturday night's. Those are the gated runs.
-  return weekday === "Sat" || weekday === "Sun";
-}
-
 function safeJsonParse(raw) {
   if (!raw) return null;
   var s = String(raw).replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/, "").trim();
@@ -247,45 +241,18 @@ function pickMovedAccounts(accounts, activitySinceIds, snapshotsById, lastRunIso
 
 // ── per-user processing ────────────────────────────────────────────────
 
-// Count real writes since `sinceIso` for the weekend gate. folio_activity
-// alone misses task adds (only meetings/completions/status changes log there),
-// so also count folio_tasks touched in the window — otherwise "I added a task
-// Saturday" wouldn't wake the Sunday run.
-async function countWritesSince(admin, userId, sinceIso) {
-  var a = await admin.from("folio_activity")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId).gt("created_at", sinceIso);
-  if ((a.count || 0) > 0) return a.count;
-  var t = await admin.from("folio_tasks")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId).gt("updated_at", sinceIso);
-  return t.count || 0;
-}
-
-async function processUser(admin, client, userId, tz, force) {
+async function processUser(admin, client, userId, tz) {
   var local = localParts(tz);
 
-  // Last run = most recent operator report for this user.
+  // Last run = most recent operator report for this user. Used to decide which
+  // accounts moved since then (signal-gating); the loop runs every morning.
   var lastRunIso = null;
   var lastRes = await admin.from("folio_operator_reports")
     .select("generated_at").eq("user_id", userId)
     .order("generated_at", { ascending: false }).limit(1);
   if (lastRes.data && lastRes.data[0]) lastRunIso = lastRes.data[0].generated_at;
 
-  var ranReason = "weeknight";
-
-  // Weekend opt-in gate — only the scheduled cron is gated. A manual/forced
-  // trigger (a human hitting the URL) always runs.
-  if (isWeekendMorning(local.weekday)) {
-    if (force) {
-      ranReason = "weekend-forced";
-    } else {
-      var sinceIso = lastRunIso || new Date(Date.now() - 48 * 3600 * 1000).toISOString();
-      var n = await countWritesSince(admin, userId, sinceIso);
-      if (n === 0) return { userId: userId, skipped: "weekend-idle", weekday: local.weekday };
-      ranReason = "weekend-activity";
-    }
-  }
+  var ranReason = "scheduled";
 
   // Load the active book.
   var accRes = await admin.from("folio_accounts")
@@ -419,9 +386,6 @@ export default async function handler(req, res) {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return res.status(500).json({ error: "SUPABASE_SERVICE_ROLE_KEY not configured." });
 
   var tz = process.env.OPERATOR_TZ || "America/New_York";
-  // A human hitting the URL with ?secret= (vs the cron's Bearer header), or an
-  // explicit ?force=1, bypasses the weekend gate — an explicit run is intent.
-  var force = (qSecret === secret) || (req.query && (req.query.force === "1" || req.query.force === "true"));
 
   try {
     var client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -444,7 +408,7 @@ export default async function handler(req, res) {
     var results = [];
     for (var i = 0; i < userIds.length; i++) {
       try {
-        results.push(await processUser(admin, client, userIds[i], tz, force));
+        results.push(await processUser(admin, client, userIds[i], tz));
       } catch (e) {
         console.error("[operator-run] user failed", userIds[i], e && e.message);
         results.push({ userId: userIds[i], error: e && e.message });
