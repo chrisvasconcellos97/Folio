@@ -450,6 +450,33 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 33. *(shipped — see Already shipped: Project builder searchable multi-account picker)*
 
+34. **Pip Autonomous Operator — nightly loop + materialized operator state + dynamic Pip cards everywhere** — *(queued June 8 2026)* turn Pip from a pull-triggered advisor into a scheduled agent that works the book of business overnight and pre-fills every Pip surface in the app. The morning brief is the read-only *head* of this; the loop is the body. **Design locked:**
+
+    - **The loop:** Vercel cron runs nightly, weekday mornings (Sun→Thu nights). Sweeps the portfolio via the *existing* Pip endpoints — no new permissions, no email/corporate integration (deliberately off the table: compliance + Chris can get in trouble forwarding customer data). For each account that *moved*, runs a deep per-account pass (read account → decide next action → draft the artifact → propose assignee/agenda). Accounts that didn't move ride the cheap compressed path. The loop is **not latency-bound**, so it can afford per-account reasoning the synchronous brief can't (the brief is one compressed Sonnet call because you're staring at a spinner; the loop is unhurried batch depth).
+
+    - **Materialized operator state (the core architecture):** the loop writes a per-account "operator state" object to Supabase — extends existing `pip_account_state` / `folio_account_snapshots` (decide `pip_account_state` extension vs. new `folio_operator_state` at build). Holds: situation, flagged risks, **pre-drafted follow-up email(s)**, proposed task/project moves, pre-built cadence agenda, and a **"what changed since last run" delta**. This object is the single source of truth.
+
+    - **Dynamic Pip cards = lenses on one brain:** every Pip surface *reads the materialized state* instead of making its own LLM call on open. Same brain, different window per surface:
+        - **Home** → the "operator report": prioritized plan with pre-drafted artifacts to approve/adjust/send (evolves the daily brief from "what's happening" → "what's happening + I drafted it").
+        - **Cadence Hub** → pre-built agenda + queued drafts for that account, instant (replaces the current on-open Haiku brief call).
+        - **Gauge / PipGaugeCard** → proposed project moves as a *decision queue* ("stalled 14d, re-route the legal task to Dana — approve?").
+        - **Account detail / Brief Me** → brief pre-written + delta since last look.
+        - **Calendar** → the plan projected onto the timeline.
+        - Side benefit: this **kills the parity-rule drift** — one materialized brain means no more hand-wiring each new field into both `pipContext.js` *and* `pip.js`. (Until fully migrated, keep both paths fed.)
+
+    - **Three locked guardrails:**
+        1. **Signal-gated** — deep passes only on accounts that changed (snapshot/activity diff); the rest stay cheap. If *nothing* moved, there's **no run** — work scales to what changed.
+        2. **Weekend opt-in** — Fri-night and Sat-night runs **skip entirely** unless `folio_activity` shows a write since the last run (cheap DB count, zero LLM to decide). Add things Saturday → Sunday morning the work is done and waiting; touch nothing → $0, no report. "Weekend"/"night" resolve to **Chris's local timezone**, not server time.
+        3. **Pre-compute once, render everywhere, refresh only on real signal** — cards read pre-computed DB state (a net *cost reduction* on per-surface opens: DB read vs. LLM call). Refresh a card only on a genuine event (new meeting summarized, task closed) — **never on a timer, never on every render.** Respects the render-thrash concern + the "don't make it busy" lesson from the revenue rip. Dynamic ≠ constantly recomputing.
+
+    - **Cost model:** one batched Sonnet sweep/night over *changed accounts only*; per-card opens become DB reads. Net per-surface cost goes *down*; weekend floor is $0 when idle.
+
+    - **Push layer (optional companion):** PWA push — "Pip has your operator report ✦" — content stays in-app (no account names in the notification text, nothing on a lockscreen). Turns Pip pull→push without leaking anything.
+
+    - **Positioning:** the leap from "external brain you feed" → "digital chief of staff that works the book." Defensible angle: **institutional relationship memory that runs itself** — the context never walks out the door when an AM leaves.
+
+    - **On ship:** SQL + fold into `schema.sql`; `docs/product-overview.md` (Pip capability) + `docs/upgrades.md` entry + regenerate PDFs. Parity rule applies until the materialized state fully replaces dual-wiring.
+
 15. *(shipped — see Already shipped)*
 
 16. *(ripped — Route Builder removed, not needed)*
