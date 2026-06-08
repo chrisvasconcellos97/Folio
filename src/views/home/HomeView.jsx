@@ -8,6 +8,8 @@ import { useBreakpoint } from "../../hooks/useBreakpoint";
 import { getNextOccurrence, formatTime } from "../../lib/cadenceUtils";
 import { useAccountSnapshots } from "../../hooks/useAccountSnapshots";
 import { useOperatorReport } from "../../hooks/useOperatorReport";
+import { useSportsFeed } from "../../hooks/useSportsFeed";
+import { SportsCard } from "./SportsCard";
 import { callPortfolioBriefPip } from "../../lib/pip";
 import { isProjectComplete } from "../../lib/gaugeStatus";
 import { suggestionLabel } from "../pip/PipCatchUp";
@@ -212,6 +214,16 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
   // True when the operator produced something worth showing — drives the Home
   // dashboard (Pip read card + section cards) and suppresses the legacy summary.
   var operatorActive = !!(operatorReport && (operatorReport.report_prose || (Array.isArray(operatorReport.plan_items) && operatorReport.plan_items.length > 0)));
+
+  // "Off the clock" personal feed (soccer). Hideable for screen-shares.
+  var [showSports, setShowSports] = useState(function () {
+    try { return localStorage.getItem("folio_show_sports") !== "0"; } catch (_) { return true; }
+  });
+  var sportsFeed = useSportsFeed(showSports);
+  function hideSports() {
+    try { localStorage.setItem("folio_show_sports", "0"); } catch (_) { /* ignore */ }
+    setShowSports(false);
+  }
 
   useEffect(function () {
     var t = setTimeout(function () { setMounted(true); }, 60);
@@ -1647,6 +1659,10 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
           );
         })}
       </div>
+
+      {showSports && sportsFeed.data && (
+        <SportsCard data={sportsFeed.data} isMobile={isMobile} onHide={hideSports} />
+      )}
 
       {isMobile && (
         <div style={{
