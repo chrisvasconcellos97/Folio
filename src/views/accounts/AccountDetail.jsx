@@ -15,6 +15,7 @@ import { callBriefMePip } from "../../lib/pip";
 import { BusinessReviewModal } from "./BusinessReviewModal";
 import { PipMemoryPanel } from "./PipMemoryPanel";
 import { usePipAccountState } from "../../hooks/usePipAccountState";
+import { OperatorPanel } from "../../components/OperatorPanel";
 import { AccountDetailHeader } from "./AccountDetailHeader";
 import { AccountDetailTabs } from "./AccountDetailTabs";
 import { OverviewTab } from "./tabs/OverviewTab";
@@ -519,6 +520,13 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
         confirmDelete={confirmDelete}
         onConfirmDelete={function () { setConfirmDelete(true); }}
         onCancelDelete={function () { setConfirmDelete(false); }}
+      />
+
+      <OperatorPanel
+        stateRow={pipAcctState.getStateRow(account.id) || null}
+        accountName={account.name}
+        onAddTask={function (title) { return addItem(Object.assign({ account_id: account.id }, { text: title })); }}
+        onChanged={pipAcctState.refetch}
       />
 
       <AccountDetailTabs

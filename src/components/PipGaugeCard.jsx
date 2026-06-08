@@ -10,6 +10,7 @@
 //
 // All sections gracefully hide when empty so a quiet board renders short.
 
+import { useState } from "react";
 import { PipOrb } from "./PipMark";
 import { Glow } from "./Glow";
 import { C } from "../lib/colors";
@@ -35,9 +36,11 @@ function daysUntil(d) {
   return Math.floor((t - new Date(new Date().toDateString()).getTime()) / 86400000);
 }
 
-export function PipGaugeCard({ projects, accountsById, handlers }) {
+export function PipGaugeCard({ projects, accountsById, handlers, operatorMoves }) {
   var prjs = projects || [];
   var h    = handlers || {};
+  var opMoves = (operatorMoves || []).slice(0, 8);
+  var [opBusy, setOpBusy] = useState(null);
 
   var active  = prjs.filter(function (p) { return p.status === "in_progress"; });
   var blocked = prjs.filter(function (p) { return p.status === "blocked"; });
@@ -185,6 +188,45 @@ export function PipGaugeCard({ projects, accountsById, handlers }) {
           </div>
         </div>
       </div>
+
+      {/* Pip proposes — overnight operator moves across the book, approve/dismiss */}
+      {opMoves.length > 0 && (
+        <div style={{ borderTop: "1px solid " + C.rule, paddingTop: 12 }}>
+          <div style={{ fontFamily: MONO, fontSize: 9, color: C.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
+            ✦ Pip proposes
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+            {opMoves.map(function (mv, i) {
+              var busy = opBusy === i;
+              return (
+                <div key={i} style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+                  <span style={{ flex: "1 1 180px", minWidth: 0 }}>
+                    {mv.accountName && (
+                      h.onSelectAccount
+                        ? <Glow onClick={function () { h.onSelectAccount(mv.account_id); }}>{mv.accountName}</Glow>
+                        : <span style={{ fontFamily: INTER, fontSize: 12, color: C.accent }}>{mv.accountName}</span>
+                    )}{" "}
+                    <span style={{ fontFamily: INTER, fontSize: 13, color: C.text, fontWeight: 600 }}>{mv.title}</span>
+                    {mv.detail && <span style={{ fontFamily: INTER, fontSize: 12, color: C.textMuted }}> — {mv.detail}</span>}
+                  </span>
+                  <span style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                    <button disabled={busy} onClick={function () {
+                      setOpBusy(i);
+                      Promise.resolve(h.onApproveMove ? h.onApproveMove(mv) : null)
+                        .catch(function () { /* ignore */ }).then(function () { setOpBusy(null); });
+                    }} style={{ fontFamily: MONO, fontSize: 10, color: C.accent, background: C.accentFaint, border: "1px solid " + C.accentLine, borderRadius: 6, padding: "3px 9px", cursor: busy ? "default" : "pointer", opacity: busy ? 0.5 : 1 }}>+ Add task</button>
+                    <button disabled={busy} onClick={function () {
+                      setOpBusy(i);
+                      Promise.resolve(h.onDismissMove ? h.onDismissMove(mv) : null)
+                        .catch(function () { /* ignore */ }).then(function () { setOpBusy(null); });
+                    }} style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, background: "none", border: "1px solid " + C.rule, borderRadius: 6, padding: "3px 9px", cursor: busy ? "default" : "pointer", opacity: busy ? 0.5 : 1 }}>Dismiss</button>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Three-up counters */}
       <div style={{

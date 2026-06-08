@@ -262,6 +262,14 @@ rather than a dashboard to interpret.
   drafted follow-ups ready to review and send. It replaces the live daily brief
   on days the loop ran ("here's what's happening" becomes "here's what's
   happening, and I drafted the first pass of it").
+- **Surfaced across the app, one brain.** The same materialized state is read
+  directly by every relevant surface — no extra model call when a screen opens:
+  the **account screen** shows a full operator panel (situation, "since last
+  run" delta, risks, the drafted email, and proposed moves you approve or
+  dismiss one tap at a time); the **Cadence Hub** shows the pre-built agenda
+  before a call; the **Gauge Pip card** shows proposed moves as a cross-account
+  decision queue. Approving a proposed move creates the task; the proposal is
+  then marked handled so it doesn't reappear.
 - **Propose, don't act.** Everything the loop produces is a draft the user
   approves — nothing is created live and nothing is sent automatically. This
   keeps the data boundary clean: Pip never reaches outside Folios.

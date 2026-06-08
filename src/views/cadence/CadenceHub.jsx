@@ -1603,16 +1603,40 @@ export function CadenceHub({
       onRefresh={handleRefreshPortfolioBrief}
     />
   ) : (
-    <PipBriefPanel
-      brief={cadence.pip_brief}
-      briefAt={cadence.pip_brief_at}
-      loading={briefLoading}
-      error={briefError}
-      onRefresh={handleRefreshBrief}
-      mobileCollapsed={isMobile && !briefExpanded}
-      onExpand={function () { setBriefExpanded(true); }}
-      lessonsLearned={pipLessonsLearned || null}
-    />
+    <>
+      {pipAccountStateRow && pipAccountStateRow.operator_generated_at &&
+        (pipAccountStateRow.operator_agenda || pipAccountStateRow.operator_situation) && (
+        <div style={{
+          background: C.surface, border: "1px solid " + C.rule, borderLeft: "2px solid " + C.accent,
+          borderRadius: 12, padding: "12px 14px 14px", marginBottom: 10,
+        }}>
+          <div style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 10, color: C.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 7 }}>
+            ✦ Pip prepped this overnight
+          </div>
+          {pipAccountStateRow.operator_situation && (
+            <MarkdownText text={pipAccountStateRow.operator_situation} style={{ fontSize: 13.5, color: C.textSub, lineHeight: 1.6 }} />
+          )}
+          {pipAccountStateRow.operator_agenda && (
+            <div style={{ marginTop: 9, paddingTop: 9, borderTop: "1px solid " + C.rule }}>
+              <div style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 9, color: C.textMuted, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 5 }}>
+                Suggested agenda
+              </div>
+              <div style={{ fontSize: 13, color: C.textSub, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{pipAccountStateRow.operator_agenda}</div>
+            </div>
+          )}
+        </div>
+      )}
+      <PipBriefPanel
+        brief={cadence.pip_brief}
+        briefAt={cadence.pip_brief_at}
+        loading={briefLoading}
+        error={briefError}
+        onRefresh={handleRefreshBrief}
+        mobileCollapsed={isMobile && !briefExpanded}
+        onExpand={function () { setBriefExpanded(true); }}
+        lessonsLearned={pipLessonsLearned || null}
+      />
+    </>
   );
 
   var startMeetingSection = (

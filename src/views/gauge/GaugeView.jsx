@@ -19,7 +19,9 @@ import { Glow } from "../../components/Glow";
 import { Mark } from "../../components/Mark";
 import { pickV } from "../../lib/metricsUtils";
 import { useBreakpoint } from "../../hooks/useBreakpoint";
-import { useTasks, updateTask } from "../../hooks/useTasks";
+import { useTasks, updateTask, insertTask } from "../../hooks/useTasks";
+import { usePipAccountState } from "../../hooks/usePipAccountState";
+import { supabase } from "../../lib/supabase";
 import { FlatTaskQueue } from "./FlatTaskQueue";
 import { LeaderProjectsView } from "./LeaderProjectsView";
 import { TeammateDetailView } from "./TeammateDetailView";
@@ -158,6 +160,7 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
   var { projects, loading, error: projectsError, refetch: refetchProjects, addProject, updateProject, deleteProject, templates, addTemplate, updateTemplate, deleteTemplate } = useProjects(userId, null, orgId);
   // Phase 3 — flat task queue. Defaults to Tasks tab for Admin lens, Projects for everyone else.
   var { tasks: flatTasks, refetch: refetchTasks } = useTasks(userId);
+  var pipAcctState = usePipAccountState(userId);
   function handleToggleDone(task) {
     var newDone = !task.done;
     // status must satisfy the folio_tasks check constraint
@@ -341,7 +344,44 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
     return Object.entries(seen).map(function (entry) { return { id: entry[0], name: entry[1] }; }).sort(function (a, b) { return a.name.localeCompare(b.name); });
   }, [projects, accountsById]);
 
+  // Operator moves — pending proposals from the nightly loop, flattened across
+  // the book so the Gauge Pip card can present them as one decision queue.
+  var operatorMoves = useMemo(function () {
+    var out = [];
+    (pipAcctState.states || []).forEach(function (s) {
+      if (!s.operator_generated_at) return;
+      var moves = Array.isArray(s.operator_proposed_moves) ? s.operator_proposed_moves : [];
+      moves.forEach(function (m, idx) {
+        if (!m || m.status) return; // already applied/dismissed
+        out.push({
+          account_id: s.account_id,
+          accountName: (accountsById[s.account_id] || {}).name || "",
+          title: m.title, detail: m.detail, confidence: m.confidence,
+          _idx: idx,
+        });
+      });
+    });
+    return out;
+  }, [pipAcctState.states, accountsById]);
+
+  function markOperatorMove(accountId, idx, status) {
+    var row = (pipAcctState.states || []).find(function (s) { return s.account_id === accountId; });
+    if (!row) return Promise.resolve();
+    var next = (Array.isArray(row.operator_proposed_moves) ? row.operator_proposed_moves : []).slice();
+    next[idx] = Object.assign({}, next[idx], { status: status });
+    return supabase.from("folio_pip_account_state")
+      .update({ operator_proposed_moves: next })
+      .eq("account_id", accountId)
+      .then(function () { pipAcctState.refetch(); });
+  }
+
   var gaugeHandlers = {
+    onApproveMove: function (mv) {
+      return insertTask(userId, { title: mv.title, account_id: mv.account_id })
+        .then(function () { refetchTasks(); })
+        .then(function () { return markOperatorMove(mv.account_id, mv._idx, "applied"); });
+    },
+    onDismissMove: function (mv) { return markOperatorMove(mv.account_id, mv._idx, "dismissed"); },
     onClickOverdue: function () { setStatusFilter("all"); setScopeFilter("all"); setOverdueOnly(true); },
     onClickBlocked: function () { setOverdueOnly(false); setStatusFilter("blocked"); },
     onClickProject: function (id) {
@@ -563,6 +603,7 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
                 projects={projects}
                 accountsById={accountsById}
                 handlers={gaugeHandlers}
+                operatorMoves={operatorMoves}
               />
             </div>
           )}
@@ -1338,6 +1379,7 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
               projects={projects}
               accountsById={accountsById}
               handlers={gaugeHandlers}
+              operatorMoves={operatorMoves}
             />
           </div>
         )}
