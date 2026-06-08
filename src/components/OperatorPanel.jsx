@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { C } from "../lib/colors";
 import { MarkdownText } from "./MarkdownText";
 import { PipCard } from "./PipCard";
@@ -35,13 +35,30 @@ function firstSentence(s) {
 export function OperatorPanel({ stateRow, accountName, onAddTask, onChanged, fallback }) {
   var [emailOpen, setEmailOpen] = useState(false);
   var [busyIdx, setBusyIdx] = useState(null);
+  var [readAt, setReadAt] = useState(null);
 
-  var hasOperator = stateRow && stateRow.operator_generated_at;
+  // Unread = the operator wrote this account's state more recently than the
+  // last time this device opened the card. Opening it stores the timestamp, so
+  // the amber glow clears until the next run produces something newer.
+  var genAt   = stateRow && stateRow.operator_generated_at;
+  var accId   = stateRow && stateRow.account_id;
+  var readKey = accId ? "folio_op_read_" + accId : null;
+  useEffect(function () {
+    if (!readKey) { setReadAt(null); return; }
+    try { setReadAt(localStorage.getItem(readKey)); } catch (_) { setReadAt(null); }
+  }, [readKey]);
 
   // No operator read yet — show the lightweight fallback as a head-only card.
-  if (!hasOperator) {
+  if (!genAt) {
     if (!fallback) return null;
     return <PipCard headline={fallback} />;
+  }
+
+  var unread = !readAt || new Date(readAt) < new Date(genAt);
+  function markRead() {
+    if (!readKey) return;
+    try { localStorage.setItem(readKey, genAt); } catch (_) { /* ignore */ }
+    setReadAt(genAt);
   }
 
   var situation = stateRow.operator_situation || "";
@@ -184,6 +201,8 @@ export function OperatorPanel({ stateRow, accountName, onAddTask, onChanged, fal
       timestamp={relTime(stateRow.operator_generated_at)}
       metaChips={chips}
       defaultCollapsed={true}
+      unread={unread}
+      onRead={markRead}
     >
       {body}
     </PipCard>

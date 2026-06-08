@@ -13,7 +13,7 @@ var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 // shell so Pip reads as one assistant, not five widgets: high-level first,
 // details on tap. When there are no children it's just a head (the
 // shallow-water fallback for accounts the loop hasn't worked yet).
-export function PipCard({ label, headline, timestamp, metaChips, children, defaultCollapsed }) {
+export function PipCard({ label, headline, timestamp, metaChips, children, defaultCollapsed, unread, onRead }) {
   var hasBody = !!children;
   var [collapsed, setCollapsed] = useState(defaultCollapsed !== false);
 
@@ -21,20 +21,37 @@ export function PipCard({ label, headline, timestamp, metaChips, children, defau
 
   var chips = (metaChips || []).filter(Boolean);
 
-  function toggle() { if (hasBody) setCollapsed(function (v) { return !v; }); }
+  function toggle() {
+    if (!hasBody) return;
+    var willExpand = collapsed;
+    setCollapsed(!collapsed);
+    // Opening an unread card marks it read — the glow clears.
+    if (willExpand && unread && onRead) onRead();
+  }
 
   return (
-    <div style={{
-      background: C.surface,
-      border: "1px solid " + C.rule,
-      borderLeft: "2px solid " + C.accent,
-      borderRadius: 12,
-      padding: "13px 15px 14px",
-      marginBottom: 14,
-    }}>
+    <div
+      className={unread ? "pip-unread" : undefined}
+      style={{
+        background: C.surface,
+        border: "1px solid " + C.rule,
+        borderLeft: "2px solid " + C.accent,
+        borderRadius: 12,
+        padding: "13px 15px 14px",
+        marginBottom: 14,
+      }}
+    >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: headline ? 7 : 0 }}>
-        <div style={{ fontFamily: MONO, fontSize: 10, color: C.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>
-          ✦ Pip{label ? " · " + label : ""}
+        <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+          <div style={{ fontFamily: MONO, fontSize: 10, color: C.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+            ✦ Pip{label ? " · " + label : ""}
+          </div>
+          {unread && (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontFamily: MONO, fontSize: 8.5, fontWeight: 700, color: C.yellow, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: C.yellow, display: "inline-block" }} />
+              New
+            </span>
+          )}
         </div>
         {timestamp && (
           <span style={{ fontFamily: MONO, fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>
