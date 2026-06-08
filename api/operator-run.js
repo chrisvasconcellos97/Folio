@@ -309,26 +309,64 @@ async function processUser(admin, client, userId, tz) {
     settled.forEach(function (w) { if (w) worked.push(w); });
   }
 
-  // Portfolio report.
-  var report = { headline: "", report_prose: "", plan_items: [] };
-  if (worked.length) {
-    try { report = await runReportPass(client, worked, accounts.length); }
+  // Build the morning report from the whole prepped book — this run's fresh
+  // passes PLUS accounts still carrying recent operator state — so the report
+  // reflects everything, not just tonight's deltas, and a quiet night doesn't
+  // blank it out.
+  var acctById = {};
+  accounts.forEach(function (a) { acctById[a.id] = a; });
+  var workedIds = {};
+  worked.forEach(function (w) { workedIds[w.id] = true; });
+
+  var reportInput = worked.slice();
+  var stateRes = await admin.from("folio_pip_account_state")
+    .select("account_id, operator_situation, operator_risks, operator_draft_email, operator_proposed_moves")
+    .eq("user_id", userId)
+    .not("operator_generated_at", "is", null)
+    .gt("operator_generated_at", new Date(Date.now() - 4 * 86400000).toISOString());
+  (stateRes.data || []).forEach(function (r) {
+    if (workedIds[r.account_id]) return;          // already have a fresh pass
+    var a = acctById[r.account_id];
+    if (!a || !r.operator_situation) return;       // skip unknown / empty
+    reportInput.push({
+      id: r.account_id, name: a.name, tier: a.tier,
+      situation: r.operator_situation,
+      risks: r.operator_risks || [],
+      has_draft: !!r.operator_draft_email,
+      proposed_moves: Array.isArray(r.operator_proposed_moves)
+        ? r.operator_proposed_moves.filter(function (m) { return m && !m.status; }) : [],
+    });
+  });
+
+  // Does today already have a report with content? If so and nothing moved this
+  // run, leave it — never clobber a good report with an empty one, and don't
+  // re-spend on a roll-up that wouldn't change.
+  var todayRes = await admin.from("folio_operator_reports")
+    .select("report_prose").eq("user_id", userId).eq("report_date", local.date).maybeSingle();
+  var haveTodayReport = !!(todayRes.data && todayRes.data.report_prose);
+
+  var shouldBuild = reportInput.length > 0 && (worked.length > 0 || !haveTodayReport);
+
+  if (shouldBuild) {
+    var report = { headline: "", report_prose: "", plan_items: [] };
+    try { report = await runReportPass(client, reportInput, accounts.length); }
     catch (e) { console.error("[operator-run] report pass failed", userId, e && e.message); }
+    if (report.report_prose) {
+      await admin.from("folio_operator_reports").upsert({
+        user_id: userId,
+        report_date: local.date,
+        headline: report.headline,
+        report_prose: report.report_prose,
+        plan_items: report.plan_items,
+        accounts_worked: worked.length,
+        accounts_total: accounts.length,
+        ran_reason: ranReason,
+        generated_at: new Date().toISOString(),
+      }, { onConflict: "user_id,report_date" });
+    }
   }
 
-  await admin.from("folio_operator_reports").upsert({
-    user_id: userId,
-    report_date: local.date,
-    headline: report.headline,
-    report_prose: report.report_prose,
-    plan_items: report.plan_items,
-    accounts_worked: worked.length,
-    accounts_total: accounts.length,
-    ran_reason: ranReason,
-    generated_at: new Date().toISOString(),
-  }, { onConflict: "user_id,report_date" });
-
-  return { userId: userId, worked: worked.length, total: accounts.length, ranReason: ranReason };
+  return { userId: userId, worked: worked.length, reportAccounts: reportInput.length, total: accounts.length, ranReason: ranReason };
 }
 
 // Gather one account's context, run the deep pass, persist operator state.
