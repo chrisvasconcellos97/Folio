@@ -9,10 +9,19 @@ import { showToast } from "../components/Toast";
 var PROXY_URL    = import.meta.env.VITE_PIP_PROXY_URL || "/api/pip";
 var ASK_PIP_URL  = "/api/ask-pip";
 var TIMEOUT_MS   = 30000;
+// Buffered meeting summaries run on Sonnet over a large meeting + context and
+// can legitimately take longer than a chat reply. Give them a longer leash so
+// a big meeting doesn't get aborted mid-generation at 30s (the server's
+// maxDuration is 60s — see api/pip.js — so 70s covers the full run + network).
+var SUMMARY_TIMEOUT_MS = 70000;
 
-function fetchWithTimeout(url, options) {
+function timeoutForMode(mode) {
+  return mode === "summary" ? SUMMARY_TIMEOUT_MS : TIMEOUT_MS;
+}
+
+function fetchWithTimeout(url, options, timeoutMs) {
   var controller = new AbortController();
-  var timer = setTimeout(function () { controller.abort(); }, TIMEOUT_MS);
+  var timer = setTimeout(function () { controller.abort(); }, timeoutMs || TIMEOUT_MS);
   return fetch(url, Object.assign({}, options, { signal: controller.signal }))
     .then(function (res) { clearTimeout(timer); return res; })
     .catch(function (err) { clearTimeout(timer); throw err; });
@@ -34,8 +43,8 @@ function logPipFailure(url, status, err) {
   } catch (_) {}
 }
 
-function pipFetch(url, options, retried) {
-  return fetchWithTimeout(url, options).then(function (res) {
+function pipFetch(url, options, retried, timeoutMs) {
+  return fetchWithTimeout(url, options, timeoutMs).then(function (res) {
     if (res.status === 429) {
       var busy = new Error("Pip is busy, try again in a moment");
       logPipFailure(url, 429, busy);
@@ -44,7 +53,7 @@ function pipFetch(url, options, retried) {
     if (res.status >= 500 && !retried) {
       // Don't log yet — let the retry decide. If the retry also fails this
       // function is called with retried=true and we'll log there.
-      return pipFetch(url, options, true);
+      return pipFetch(url, options, true, timeoutMs);
     }
     if (!res.ok) {
       return res.text().then(function (txt) {
@@ -474,7 +483,7 @@ export function callPipApi(messages, context, opts) {
         method: "POST",
         headers: headers,
         body:    JSON.stringify(body),
-      }).then(function (j) {
+      }, false, timeoutForMode(body.mode)).then(function (j) {
         return { content: j.content || "", toolCalls: j.tool_calls || [], meta: j.meta || null };
       });
     });

@@ -4,6 +4,12 @@ import { curateContext, renderContextProse } from "../src/lib/pipContext.js";
 import { PIP_TOOLS } from "../src/lib/pipTools.js";
 import { logPipUsage } from "./_pipUsage.js";
 
+// Buffered meeting summaries (Sonnet, large meeting + context, up to 3072
+// output tokens) can run well past the default function timeout. Give the
+// function room so a big summary completes instead of being cut short — the
+// client mirrors this with a 70s timeout for summary mode (src/lib/pip.js).
+export const config = { maxDuration: 60 };
+
 // ----- Static (cached) system prompt blocks -----------------------------
 //
 // PIP_PERSONA + PIP_FORMATTING + PIP_CONTEXT_FORMAT + PIP_FEWSHOTS together
