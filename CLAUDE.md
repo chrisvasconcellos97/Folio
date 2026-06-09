@@ -439,6 +439,11 @@ This app is currently single-user but should be built with multi-tenancy in mind
    - **The wrinkle:** the summarize call returns a structured JSON object (the plan that drives `PipSummarizePreview`), not prose — you can't usefully stream raw JSON tokens to the UI. So this is a real change to the summarize flow, not a flag flip. Likely shape: a **two-phase** flow — stream a readable prose recap first (visible immediately), then resolve the structured plan and open the preview modal — OR restructure the model output so the prose recap comes first as plain text and the JSON plan follows a delimiter, streaming the prose portion live and parsing the plan on completion. Decide at build; watch cost (don't double the Sonnet call needlessly — Chris is cost-sensitive).
    - Touches `summarizeDraftPip` (`src/lib/pip.js`), the `summary` mode in `api/pip.js`, and the callers (CadenceHub / CadenceMeetingMode / AccountDetail) + `PipSummarizePreview`. Other slow surfaces (daily brief) stay as-is — they're cached once/day.
 
+**40. Pip heartbeat — more frequent beats, slower/gentler pulse** — *(queued June 2026)* Chris wants the centerpiece Home orb's heartbeat retimed: the beats should come **more often** (shorten the long rest/gap between cycles so it pulses more frequently) but **each individual beat should be a slower, softer swell** rather than the current quick thump. Net feel: a calmer, steadier, more-alive pulse — not a sharp double-thump with a long pause.
+   - **Where:** the `.pip.heartbeat` keyframe in `index.html` (currently ~3.4s "thump-thump-rest", reduced-motion-gated) + the `heartbeat` prop path on `PipOrb` (`src/components/PipMark.jsx`). Only the centerpiece Home orb uses it.
+   - **Mechanics:** reduce the dead time between cycles (more frequent) AND ease the scale transition over more of the keyframe (slower per-beat motion). Keep reduced-motion gating intact. Pure CSS/animation tweak — no JS logic, no schema.
+
+
 
 1. *(ripped — see "Ripped (deliberate simplification)" below)*
 
