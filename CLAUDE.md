@@ -443,6 +443,20 @@ This app is currently single-user but should be built with multi-tenancy in mind
    - **Where:** the `.pip.heartbeat` keyframe in `index.html` (currently ~3.4s "thump-thump-rest", reduced-motion-gated) + the `heartbeat` prop path on `PipOrb` (`src/components/PipMark.jsx`). Only the centerpiece Home orb uses it.
    - **Mechanics:** reduce the dead time between cycles (more frequent) AND ease the scale transition over more of the keyframe (slower per-beat motion). Keep reduced-motion gating intact. Pure CSS/animation tweak — no JS logic, no schema.
 
+**41. In-meeting per-project note blocks — split-screen meeting mode** — *(queued June 2026, design LOCKED with Chris)* In `CadenceMeetingMode`, clicking a project in the sidebar today just flags it `discussed` (teal → `discussedProjectIds` → Pip routing hint at summarize). Chris wants per-project notes captured *within the meeting*, separate from the main freeform notes, so Pip knows which notes belong to which project.
+   - **Layout (split screen):** the meeting body splits in two — one side the **projects panel** (project cards), the other side the **general notes** (current textarea, unchanged). The per-project note field lives **inside each project card itself** — nothing animates/moves over. Click a card → activates "discussed" + reveals its own note field (+ optionally its task list via item 30's inline actions). Today's sidebar already gives the two-pane bones; this rebalances toward ~50/50 and makes projects primary.
+   - **DECISIONS LOCKED (June 2026):**
+     - **Mobile:** a top **"Notes | Projects" toggle** — two full-width modes (type general notes in one, flip to Projects and tap a card to type its notes). Same two-spaces model, stacked in time on a phone.
+     - **Left/projects panel:** **Projects is the default content**, with **Open Items + People as small collapsible sections beneath** — stays project-focused but you can still tick an item / check attendees.
+     - **"Discussed" is implicit:** engaging a card (opening its note field) marks it discussed = the routing signal Pip needs; the note text itself is **optional** (you can discuss a project and type nothing). Never forced.
+     - **Moving a chunk of general notes into a project: NOT built** — Chris will copy/paste manually. No select-text→send-to-project affordance.
+     - **Un-discuss:** confirm before discarding a project's typed notes — a stray tap must never nuke notes.
+     - **Optional throughout:** general notes still catches everything (cross-account routing, unknown people, etc.); project blocks are additive.
+   - **Data model:** new `folio_meetings.project_notes jsonb` = `{ [projectId]: noteText }`. Keep `notes` as the general blob. Structured > parsing one delimited blob — clean provenance for Pip.
+   - **The payoff:** summarize gets project-scoped notes keyed by project → Pip routes that project's action items to *that* project precisely, and can **auto-suggest a Gauge "Latest update" status pulse** from its notes (ties into shipped `gauge_projects.status_updates`). Plan modal could group rows by project. Parity rule: wire `project_notes` into both `pip.js` summarize payload + the preview flow.
+   - **Build touchpoints:** `CadenceMeetingMode.jsx` (split layout + per-card note fields + mobile toggle + collapsible Items/People), `folio_meetings.project_notes` migration (+ fold into `schema.sql`), `summarizeDraftPip`/`pip.js` (inject project_notes), `PipSummarizePreview` (group by project + status-pulse suggestion). Wired through CadenceHub / AccountDetail / AdHocConversationFlow callers.
+
+
 
 
 1. *(ripped — see "Ripped (deliberate simplification)" below)*
