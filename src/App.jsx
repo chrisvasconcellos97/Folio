@@ -13,6 +13,9 @@ import { useProjects } from "./hooks/useProjects";
 import { useOrg } from "./hooks/useOrg";
 import { usePipAccountState } from "./hooks/usePipAccountState";
 import { useUserProfile } from "./hooks/useUserProfile";
+import { useMode } from "./hooks/useMode";
+import { useLifeItems } from "./hooks/useLifeItems";
+import { AddLifeItemModal } from "./views/life/AddLifeItemModal";
 import { useCustomWorkspaces } from "./hooks/useCustomWorkspaces";
 import { AuthView } from "./views/auth/AuthView";
 import { AccountsView } from "./views/accounts/AccountsView";
@@ -27,6 +30,7 @@ import { PipLoader } from "./components/PipLoader";
 // Code-split heavy views — only fetched when navigated to. Cuts initial
 // bundle and speeds up first paint by ~30-40%.
 var HomeView       = lazy(function () { return import("./views/home/HomeView").then(function (m) { return { default: m.HomeView }; }); });
+var LifeHome       = lazy(function () { return import("./views/life/LifeHome").then(function (m) { return { default: m.LifeHome }; }); });
 var CalendarView   = lazy(function () { return import("./views/calendar/CalendarView").then(function (m) { return { default: m.CalendarView }; }); });
 var PipView        = lazy(function () { return import("./views/pip/PipView").then(function (m) { return { default: m.PipView }; }); });
 var CadenceView    = lazy(function () { return import("./views/cadence/CadenceView").then(function (m) { return { default: m.CadenceView }; }); });
@@ -273,6 +277,11 @@ export default function App() {
     });
   }
   var { tasks, addTask, updateTask, deleteTask, error: tasksError } = useQuickTasks(userId);
+  // Work / Life mode + the Life module's personal items (appointments, events,
+  // honey-do). Hooks live above the authLoading early return (hook-order rule).
+  var { mode, setMode } = useMode();
+  var lifeApi = useLifeItems(userId);
+  var [showAddLife, setShowAddLife] = useState(false);
   var { projects: allProjects, error: projectsErrorApp, refetch: refetchProjectsApp, addProject: addProjectApp } = useProjects(userId);
   var pipAcctStateApp = usePipAccountState(userId);
   var { workspaces: customWorkspaces, addWorkspace: addCustomWorkspace, deleteWorkspace: deleteCustomWorkspace } = useCustomWorkspaces(userId);
@@ -1464,15 +1473,54 @@ export default function App() {
     </div>
   );
 
+  // Life mode — Folios' personal lens. Replaces the work content entirely with
+  // the Life home screen (dusty-blue palette applied via data-mode in the DOM).
+  // Work mode is byte-for-byte unchanged; Life is purely additive. Pip spans
+  // both. Toggling back to Work restores wherever the user left off.
+  if (mode === "life") {
+    mainContent = (
+      <LifeHome
+        userName={(userMeta && userMeta.full_name) ? String(userMeta.full_name).split(" ")[0] : ""}
+        items={lifeApi.items}
+        completeItem={lifeApi.completeItem}
+        onAddLifeItem={function () { setShowAddLife(true); }}
+        isMobile={!isDesktop}
+      />
+    );
+  }
+
+  // Switching modes: entering Life parks the nav on Home so the home item lights
+  // up and Work returns there; leaving Life just drops the data-mode palette.
+  function handleToggleMode() {
+    if (mode === "life") { setMode("work"); }
+    else { setMode("life"); handleSetView("home"); }
+  }
+  // In Life mode, clicking a Work nav destination implies "take me to work."
+  function modeAwareSetView(v) {
+    if (mode === "life") setMode("work");
+    handleSetView(v);
+  }
+
+  var lifeModal = showAddLife ? (
+    <AddLifeItemModal
+      initialKind="todo"
+      onSave={function (payload) { return lifeApi.addItem(payload); }}
+      onClose={function () { setShowAddLife(false); }}
+    />
+  ) : null;
+
   if (isDesktop) {
     return (
       <>
         <Toast />
         {reminderBanner}
         {inviteBanner}
+        {lifeModal}
         <DesktopLayout
+          mode={mode}
+          onToggleMode={handleToggleMode}
           view={view}
-          setView={handleSetView}
+          setView={modeAwareSetView}
           onAddAccount={function () {
             var t = view === "departments" ? "internal_team"
                   : view === "partners"    ? "partner"
@@ -1483,7 +1531,7 @@ export default function App() {
           onSignOut={signOut}
           onTour={replayTour}
           userMeta={userMeta}
-          accountsPane={isWorkspaceView ? accountsListPane : null}
+          accountsPane={(mode !== "life" && isWorkspaceView) ? accountsListPane : null}
           detailPane={
             <ErrorBoundary key={"view-" + view} label={"view:" + view} inline>
               <Suspense fallback={<PipLoader />}>{mainContent}</Suspense>
@@ -1567,8 +1615,10 @@ export default function App() {
         />
       )}
       <MobileLayout
+        mode={mode}
+        onToggleMode={handleToggleMode}
         view={view}
-        setView={handleSetView}
+        setView={modeAwareSetView}
         onAddAccount={function () {
           var t = view === "departments" ? "internal_team"
                 : view === "partners"    ? "partner"
@@ -1588,6 +1638,7 @@ export default function App() {
           <Suspense fallback={<PipLoader />}>{mainContent}</Suspense>
         </ErrorBoundary>
       </MobileLayout>
+      {lifeModal}
       {addAccountModal}
       {startConvModal}
       {scheduleMeetingModal}

@@ -5,6 +5,7 @@ import { GaugeIcon } from "../components/GaugeIcon";
 import { PipOrb } from "../components/PipMark";
 import { AmberBtn } from "../components/Buttons";
 import { UserMenu } from "../components/UserMenu";
+import { ModeToggle } from "../components/ModeToggle";
 import { ConnectionStatus } from "../components/ConnectionStatus";
 import { Mark } from "../components/Mark";
 import { FirstRunTooltip } from "../components/Tooltip";
@@ -29,7 +30,7 @@ var NAV_ITEMS = [
   { id: "commitments", label: "Commitments", icon: "◇"     },
 ];
 
-export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, onSettings, onTeam, onDiagnostics, diagnosticsCount, userMeta, children }) {
+export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, onSettings, onTeam, onDiagnostics, diagnosticsCount, userMeta, mode, onToggleMode, children }) {
   var scrollRef = useRef(null);
   var [wsOpen, setWsOpen] = useState(false);
   var isWorkspaceView = WORKSPACE_IDS.indexOf(view) !== -1;
@@ -100,9 +101,7 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <AmberBtn onClick={onAddAccount} style={{ fontSize: 10, padding: "5px 10px" }}>
-              {view === "departments" ? "+ Dept" : view === "partners" ? "+ Partner" : "+ Account"}
-            </AmberBtn>
+            {onToggleMode && <ModeToggle mode={mode} onToggle={onToggleMode} compact />}
             <UserMenu userMeta={userMeta} onSignOut={onSignOut} onTour={onTour} onSettings={onSettings} onTeam={onTeam} onDiagnostics={onDiagnostics} diagnosticsCount={diagnosticsCount} />
           </div>
         </div>

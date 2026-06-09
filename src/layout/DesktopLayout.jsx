@@ -6,6 +6,7 @@ import { AmberBtn } from "../components/Buttons";
 import { LitPill } from "../components/LitPill";
 import { UserMenu } from "../components/UserMenu";
 import { ConnectionStatus } from "../components/ConnectionStatus";
+import { ModeToggle } from "../components/ModeToggle";
 
 var MONO = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
@@ -34,6 +35,8 @@ export function DesktopLayout({
   detailPane,
   children,
   diagnosticsCount,
+  mode,
+  onToggleMode,
 }) {
   // Phase 6 — show Diagnostics nav only when there are unresolved errors in
   // the last 7 days. Keeps the sidebar quiet during normal operation.
@@ -212,6 +215,11 @@ export function DesktopLayout({
           >
             {view === "departments" ? "Add Department" : view === "partners" ? "Add Partner" : "Add Account"}
           </LitPill>
+          {onToggleMode && (
+            <div style={{ display: "flex", justifyContent: "center" }}>
+              <ModeToggle mode={mode} onToggle={onToggleMode} />
+            </div>
+          )}
           <div style={{ borderTop: "1px solid " + C.rule, paddingTop: 10 }}>
             <UserMenu userMeta={userMeta} onSignOut={onSignOut} onTour={onTour} onSettings={function () { setView("settings"); }} dropUp />
           </div>

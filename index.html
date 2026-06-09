@@ -21,6 +21,15 @@
         } catch (e) {
           document.documentElement.dataset.theme = "dark";
         }
+        // Apply Work/Life mode pre-mount too (dusty-blue Life palette) — same
+        // no-flash trick as theme. Default "work".
+        try {
+          var m = localStorage.getItem("folio_mode");
+          if (m !== "life" && m !== "work") m = "work";
+          document.documentElement.dataset.mode = m;
+        } catch (e2) {
+          document.documentElement.dataset.mode = "work";
+        }
       })();
     </script>
     <style>
@@ -409,6 +418,76 @@
         .hover-lift:hover {
           transform: translateY(-2px);
         }
+      }
+
+      /* ── Life mode (dusty blue) ──────────────────────────────────────────
+         Work = shades of green (canonical). Life = shades of dusty blue — the
+         off-the-clock palette. Same token system as theme: `data-mode="life"`
+         on <html> swaps the accent family (and nudges surfaces blue) so the
+         whole app recolors instantly. Placed AFTER the theme blocks so it wins
+         at equal specificity for the tokens it redefines. Works under both
+         dark (this block) and light (the more-specific block below). */
+      :root[data-mode="life"] {
+        --accent:        #6f93bd;
+        --accent-deep:   #56789f;
+        --accent-dim:    #3d566f;
+        --accent-glow:   rgba(111,147,189,0.14);
+        --accent-glow-2: rgba(111,147,189,0.22);
+        --accent-border: rgba(111,147,189,0.42);
+        --accent-shadow: rgba(111,147,189,0.55);
+
+        --c-accent:        #6f93bd;
+        --c-accent-deep:   #56789f;
+        --c-accent-dim:    #3d566f;
+        --c-accent-glow:   rgba(111,147,189,0.14);
+        --c-accent-glow-2: rgba(111,147,189,0.22);
+        --c-accent-faint:  rgba(111,147,189,0.08);
+        --c-accent-mid:    rgba(111,147,189,0.16);
+        --c-accent-subtle: rgba(111,147,189,0.12);
+        --c-accent-line:   rgba(111,147,189,0.22);
+        --c-accent-ring:   rgba(111,147,189,0.30);
+        --c-accent-border: rgba(111,147,189,0.42);
+        --c-accent-shadow: rgba(111,147,189,0.50);
+        --c-folio-shadow:  rgba(111,147,189,0.20);
+
+        /* Subtle blue cast through the surfaces/rules (shades of dusty blue). */
+        --c-bg:         #080d13;
+        --c-surface:    #0c131b;
+        --c-surface-2:  #111c27;
+        --c-rule:       #1d2a3a;
+        --c-rule-soft:  #16212e;
+        --c-rail-bg:    #0c131b;
+      }
+
+      :root[data-theme="light"][data-mode="life"] {
+        --accent:        #4f73a0;
+        --accent-deep:   #3d5d86;
+        --accent-dim:    #6b86a8;
+        --accent-glow:   rgba(79,115,160,0.14);
+        --accent-glow-2: rgba(79,115,160,0.22);
+        --accent-border: rgba(79,115,160,0.42);
+        --accent-shadow: rgba(79,115,160,0.45);
+
+        --c-accent:        #4f73a0;
+        --c-accent-deep:   #3d5d86;
+        --c-accent-dim:    #6b86a8;
+        --c-accent-glow:   rgba(79,115,160,0.14);
+        --c-accent-glow-2: rgba(79,115,160,0.22);
+        --c-accent-faint:  rgba(79,115,160,0.08);
+        --c-accent-mid:    rgba(79,115,160,0.16);
+        --c-accent-subtle: rgba(79,115,160,0.12);
+        --c-accent-line:   rgba(79,115,160,0.30);
+        --c-accent-ring:   rgba(79,115,160,0.34);
+        --c-accent-border: rgba(79,115,160,0.42);
+        --c-accent-shadow: rgba(79,115,160,0.45);
+        --c-folio-shadow:  rgba(79,115,160,0.18);
+
+        --c-bg:         #eef1f6;
+        --c-surface:    #ffffff;
+        --c-surface-2:  #f5f7fb;
+        --c-rule:       #d9e0ea;
+        --c-rule-soft:  #e6ebf2;
+        --c-rail-bg:    #f0f3f8;
       }
 
       /* Canonical Pip orb */
