@@ -163,7 +163,7 @@ export function CadenceView({ cadences, cadencesError, onRetryCadences, accounts
   if (!cadences || cadences.length === 0) {
     return (
       <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <Mark tab="cadence" size={52} />
             <div>
@@ -243,7 +243,7 @@ export function CadenceView({ cadences, cadencesError, onRetryCadences, accounts
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <Mark tab="cadence" size={52} />
           <div>
