@@ -10,6 +10,7 @@ import { useAccountSnapshots } from "../../hooks/useAccountSnapshots";
 import { useOperatorReport } from "../../hooks/useOperatorReport";
 import { useSportsFeed } from "../../hooks/useSportsFeed";
 import { SportsCard } from "./SportsCard";
+import { OperatorHub } from "./OperatorHub";
 import { callPortfolioBriefPip } from "../../lib/pip";
 import { isProjectComplete } from "../../lib/gaugeStatus";
 import { suggestionLabel } from "../pip/PipCatchUp";
@@ -1008,10 +1009,10 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
 
       <div style={{
         display: "flex", flexDirection: "column", alignItems: "center",
-        gap: isMobile ? 16 : 20,
-        padding: isMobile ? "24px 16px 28px" : "32px 32px 36px",
+        gap: isMobile ? 14 : 20,
+        padding: isMobile ? (operatorActive ? "16px 16px 18px" : "22px 16px 26px") : "32px 32px 36px",
       }}>
-        <PipOrb size="xxl" heartbeat />
+        <PipOrb size={isMobile ? (operatorActive ? "xl" : "xxl") : "xxl"} heartbeat />
         {!operatorActive && (
         <div style={{
           fontFamily: SERIF, fontSize: isMobile ? 18 : 22,
@@ -1083,108 +1084,71 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
         </div>
       </div>
 
-      {operatorActive && (function () {
-        var ranAt = operatorReport.generated_at
-          ? new Date(operatorReport.generated_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
-          : null;
-        var sections = Array.isArray(operatorReport.plan_items) ? operatorReport.plan_items : [];
-        var SECTION_META = {
-          fire:   { label: "Today",     color: C.red },
-          watch:  { label: "This week", color: C.yellow },
-          win:    { label: "Good news", color: C.accent },
-          signal: { label: "Pattern",   color: C.textMuted },
-        };
-        function draftFor(name) {
-          return (operatorDrafts || []).find(function (d) { return d.account_name === name; });
-        }
-        function byKind(k) {
-          return sections.find(function (s) { return s && s.kind === k && Array.isArray(s.items) && s.items.length; });
-        }
+      {operatorActive && (
+        <OperatorHub
+          report={operatorReport}
+          drafts={operatorDrafts}
+          accounts={accounts}
+          isMobile={isMobile}
+          mounted={mounted}
+          onOpenAccount={onOpenAccount}
+          linkify={makeAccountLinkify(accounts, onOpenAccount)}
+        />
+      )}
 
-        function renderRow(it, ii, meta, big) {
-          var acc = it.account_name ? (accounts || []).find(function (a) { return a.name === it.account_name; }) : null;
-          var draft = it.has_draft && it.account_name ? draftFor(it.account_name) : null;
-          var fs = big ? 14 : 13;
-          return (
-            <div key={ii} style={{ display: "flex", alignItems: "baseline", gap: 7, flexWrap: "wrap" }}>
-              {it.account_name && (acc
-                ? <Glow onClick={function () { onOpenAccount(acc.id); }}>{it.account_name}</Glow>
-                : <span style={{ fontFamily: INTER, fontSize: fs, color: C.accent, fontWeight: 600 }}>{it.account_name}</span>)}
-              {it.line && <span style={{ fontFamily: INTER, fontSize: fs, color: C.textSoft }}>{it.account_name ? "— " : ""}{it.line}</span>}
-              {it.action && (
-                <span style={{ fontFamily: MONO, fontSize: 9.5, color: meta.color, textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>→ {it.action}</span>
-              )}
-              {acc && (
-                <button onClick={function () { onOpenAccount(acc.id); }}
-                  style={{ fontFamily: MONO, fontSize: 9.5, color: C.textMuted, background: "none", border: "1px solid " + C.rule, borderRadius: 6, padding: "2px 8px", cursor: "pointer" }}>Open</button>
-              )}
-              {draft && (
-                <button onClick={function () { try { navigator.clipboard.writeText(draft.email); showToast("Draft copied — review before sending"); } catch (_) { showToast("Couldn't copy"); } }}
-                  style={{ fontFamily: MONO, fontSize: 9.5, color: C.accent, background: C.accentFaint, border: "1px solid " + C.accentLine, borderRadius: 6, padding: "2px 8px", cursor: "pointer" }}>✦ Draft ready</button>
-              )}
-            </div>
-          );
-        }
-
-        function sectionCard(sec, big) {
-          var meta = SECTION_META[sec.kind] || { label: "Notes", color: C.textMuted };
-          return (
-            <div style={{
-              background: C.surface, border: "1px solid " + C.rule,
-              borderLeft: "2px solid " + meta.color, borderRadius: 12,
-              padding: big ? "15px 17px 16px" : "13px 15px 14px", height: "100%",
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 11 }}>
-                <span style={{ width: 7, height: 7, borderRadius: "50%", background: meta.color, flexShrink: 0 }} />
-                <span style={{ fontFamily: MONO, fontSize: big ? 10.5 : 9.5, color: meta.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>{meta.label}</span>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: big ? 11 : 9 }}>
-                {sec.items.map(function (it, ii) { return renderRow(it, ii, meta, big); })}
-              </div>
-            </div>
-          );
-        }
-
-        var fire = byKind("fire");
-        var gridCards = [byKind("watch"), byKind("signal"), byKind("win")].filter(Boolean);
-
-        return (
+      {/* Calls today — real scheduling (with times) the operator report doesn't
+          carry. Shown inside the hub since the four narrative panels below are
+          suppressed when the operator report is active. */}
+      {operatorActive && todaysCalls.length > 0 && (
+        <div style={{
+          maxWidth: 980, margin: "0 auto",
+          padding: isMobile ? "0 12px 14px" : "0 32px 14px",
+          opacity: mounted ? 1 : 0, transition: "opacity 0.4s ease 0.45s",
+        }}>
           <div style={{
-            padding: isMobile ? "0 12px 14px" : "0 32px 14px",
-            maxWidth: 980, margin: "0 auto",
-            opacity: mounted ? 1 : 0,
-            transition: "opacity 0.4s ease 0.4s",
-            display: "flex", flexDirection: "column", gap: 12,
+            background: C.surface, border: "1px solid " + C.rule, borderRadius: 14, overflow: "hidden",
           }}>
-            {/* Pip's read — his voice, the paragraph */}
-            {operatorReport.report_prose && (
-              <div style={{ background: C.surface, border: "1px solid " + C.rule, borderLeft: "2px solid " + C.accent, borderRadius: 12, padding: "14px 16px 16px" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 9, gap: 8 }}>
-                  <div style={{ fontFamily: MONO, fontSize: 10, color: C.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>✦ Pip</div>
-                  <div style={{ fontFamily: MONO, fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>
-                    {(operatorReport.accounts_worked || 0) + " worked"}{ranAt ? " · " + ranAt : ""}
+            <div style={{
+              display: "flex", alignItems: "center", gap: 8, padding: "9px 14px",
+              background: C.accentFaint, borderBottom: "1px solid " + C.rule,
+            }}>
+              <span style={{ color: C.accent, fontSize: 11, lineHeight: 1 }}>◷</span>
+              <span style={{ fontFamily: MONO, fontSize: 10.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", color: C.accent }}>
+                On the Calendar
+              </span>
+              <span style={{
+                marginLeft: "auto", fontFamily: MONO, fontSize: 10, fontWeight: 700, color: C.accent,
+                minWidth: 18, textAlign: "center", border: "1px solid " + C.accent, borderRadius: 999, padding: "1px 7px",
+              }}>
+                {todaysCalls.length}
+              </span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              {todaysCalls.map(function (call, i) {
+                var t = call.cadence.meeting_time ? formatTime(call.cadence.meeting_time) : "—";
+                return (
+                  <div
+                    key={call.cadence.id}
+                    onClick={function () { onOpenCadenceHub(call.account.id, call.cadence.id); }}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpenCadenceHub(call.account.id, call.cadence.id); } }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 12,
+                      padding: "11px 14px", cursor: "pointer",
+                      borderTop: i === 0 ? "none" : "1px solid " + C.ruleSoft,
+                    }}
+                  >
+                    <span style={{ fontFamily: MONO, fontSize: 12, fontWeight: 700, color: C.text, fontVariantNumeric: "tabular-nums", flexShrink: 0, minWidth: 52 }}>{t}</span>
+                    <span style={{ fontFamily: INTER, fontSize: 14, fontWeight: 600, color: C.text, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{call.account.name}</span>
+                    <span style={{ fontFamily: MONO, fontSize: 9, color: C.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 }}>Prep →</span>
                   </div>
-                </div>
-                <MarkdownText
-                  text={operatorReport.report_prose}
-                  linkify={makeAccountLinkify(accounts, onOpenAccount)}
-                  style={{ fontFamily: INTER, fontSize: 14.5, color: C.textSoft, lineHeight: 1.7 }}
-                />
-              </div>
-            )}
-
-            {/* Today — bigger, full width */}
-            {fire && sectionCard(fire, true)}
-
-            {/* The rest — 2-up grid on desktop, stacked on mobile */}
-            {gridCards.length > 0 && (
-              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, alignItems: "stretch" }}>
-                {gridCards.map(function (sec, i) { return <div key={i}>{sectionCard(sec, false)}</div>; })}
-              </div>
-            )}
+                );
+              })}
+            </div>
           </div>
-        );
-      })()}
+        </div>
+      )}
 
       {(dailyBrief || briefLoading) && (
         <div style={{
@@ -1637,28 +1601,34 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
         </div>
       )}
 
-      <div style={{
-        padding: isMobile ? "0 12px 16px" : "0 32px 24px",
-        display: "grid",
-        gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
-        gap: isMobile ? 10 : 14,
-        maxWidth: 980, margin: "0 auto",
-      }}>
-        {(isMobile ? mobileOrder : desktopOrder).map(function (panel, i) {
-          return (
-            <div
-              key={i}
-              style={{
-                opacity: mounted ? 1 : 0,
-                transform: mounted ? "translateY(0)" : "translateY(6px)",
-                transition: "opacity 0.32s ease " + (0.45 + i * 0.08) + "s, transform 0.32s ease " + (0.45 + i * 0.08) + "s",
-              }}
-            >
-              {panel}
-            </div>
-          );
-        })}
-      </div>
+      {/* Narrative panels — the fallback hub when the nightly operator report
+          hasn't run. When the operator report IS active, its structured section
+          cards cover this ground, so we suppress the panels to avoid a long,
+          duplicative scroll. */}
+      {!operatorActive && (
+        <div style={{
+          padding: isMobile ? "0 12px 16px" : "0 32px 24px",
+          display: "grid",
+          gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+          gap: isMobile ? 10 : 14,
+          maxWidth: 980, margin: "0 auto",
+        }}>
+          {(isMobile ? mobileOrder : desktopOrder).map(function (panel, i) {
+            return (
+              <div
+                key={i}
+                style={{
+                  opacity: mounted ? 1 : 0,
+                  transform: mounted ? "translateY(0)" : "translateY(6px)",
+                  transition: "opacity 0.32s ease " + (0.45 + i * 0.08) + "s, transform 0.32s ease " + (0.45 + i * 0.08) + "s",
+                }}
+              >
+                {panel}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {showSports && sportsFeed.data && (
         <SportsCard data={sportsFeed.data} isMobile={isMobile} onHide={hideSports} />
