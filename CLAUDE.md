@@ -399,6 +399,17 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 ## Pending Updates
 
+**36. Pip follow-up questions (conversational Teach Pip)** — *(queued June 2026)* When the user answers one of Pip's questions (drip / "Teach Pip" / Catch Up), Pip should **sometimes** fire a follow-up that digs into *that specific answer* — instead of always jumping to the next pre-generated question. Makes Teach Pip feel like a real conversation, not a form.
+   - **Trigger:** not every answer (Chris said "sometimes") — gate on substance (answer length / has a concrete noun) + a probability, and don't follow up on a follow-up more than ~1 level deep (avoid rabbit-holing).
+   - **Mechanism:** on answer, one cheap AI call takes the Q + the user's answer and returns a single sharper follow-up; insert it as the next queued `folio_pip_questions` row (new `source='followup'` or `trigger_context` linking the parent) so it surfaces immediately in the same Catch Up session.
+   - **Cost guard:** ≤1 follow-up call per answer, Haiku (cheap), skip when the answer is thin. Reuse the same auth'd-client pattern as `generate-questions` (server client MUST carry the user JWT — see the RLS fix).
+   - Folds into `profile_prose` + `folio_pip_facts` like every other answer. Surfaces in `PipCatchUp` + the Home drip card.
+
+**37. Pip should reason about the user's org structure (departments/teams)** — *(queued June 2026)* Pip asked Chris "who owns the MSO relationship?" when he has an **"MSO Team" department** (`internal_team` account) sitting right next to his three MSO accounts (Classic/Gerber/Caliber Collision). The data is there — `generate-questions` dumps all accounts into one flat list and never frames `internal_team` rows as "YOUR internal teams," so Pip doesn't connect a team to the work it covers.
+   - **Quick win:** in `generate-questions` (+ `detect-terminology`, + parity across Pip surfaces) break departments into a labeled "YOUR INTERNAL TEAMS / DEPARTMENTS" block (name + objective + `is_my_department`) and instruct Pip to factor in org structure — don't ask things a team's existence already answers. Would've made the question "Your MSO Team handles Classic/Gerber/Caliber — what's your role vs theirs?"
+   - **Bigger:** let the user explicitly LINK a department to the accounts/segment it covers (today it's only inferable from name match, e.g. "MSO Team" ↔ mso accounts). Removes the guesswork.
+   - Respect the Pip context parity rule — wire departments into both generators + chat + summarize.
+
 1. *(ripped — see "Ripped (deliberate simplification)" below)*
 
 2. **Code quality:** *(no open items)*
