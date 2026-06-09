@@ -1489,16 +1489,12 @@ export default function App() {
     );
   }
 
-  // Switching modes: entering Life parks the nav on Home so the home item lights
-  // up and Work returns there; leaving Life just drops the data-mode palette.
+  // Switching modes is done ONLY via the toggle (the nav is mode-scoped, so
+  // Life shows just Home). Entering Life parks the nav on Home; leaving Life
+  // drops the data-mode palette and returns to wherever Work was.
   function handleToggleMode() {
     if (mode === "life") { setMode("work"); }
     else { setMode("life"); handleSetView("home"); }
-  }
-  // In Life mode, clicking a Work nav destination implies "take me to work."
-  function modeAwareSetView(v) {
-    if (mode === "life") setMode("work");
-    handleSetView(v);
   }
 
   var lifeModal = showAddLife ? (
@@ -1520,7 +1516,7 @@ export default function App() {
           mode={mode}
           onToggleMode={handleToggleMode}
           view={view}
-          setView={modeAwareSetView}
+          setView={handleSetView}
           onAddAccount={function () {
             var t = view === "departments" ? "internal_team"
                   : view === "partners"    ? "partner"
@@ -1618,7 +1614,7 @@ export default function App() {
         mode={mode}
         onToggleMode={handleToggleMode}
         view={view}
-        setView={modeAwareSetView}
+        setView={handleSetView}
         onAddAccount={function () {
           var t = view === "departments" ? "internal_team"
                 : view === "partners"    ? "partner"

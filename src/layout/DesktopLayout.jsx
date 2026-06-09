@@ -3,7 +3,6 @@ import { FolioIcon } from "../components/FolioIcon";
 import { PipOrb } from "../components/PipMark";
 import { Mark } from "../components/Mark";
 import { AmberBtn } from "../components/Buttons";
-import { LitPill } from "../components/LitPill";
 import { UserMenu } from "../components/UserMenu";
 import { ConnectionStatus } from "../components/ConnectionStatus";
 import { ModeToggle } from "../components/ModeToggle";
@@ -24,6 +23,11 @@ var NAV_ITEMS = [
 
 ];
 
+// Life mode shows none of the work modules — just the personal Home.
+var LIFE_NAV_ITEMS = [
+  { id: "home", label: "Home", icon: "◉" },
+];
+
 export function DesktopLayout({
   view,
   setView,
@@ -38,11 +42,17 @@ export function DesktopLayout({
   mode,
   onToggleMode,
 }) {
-  // Phase 6 — show Diagnostics nav only when there are unresolved errors in
-  // the last 7 days. Keeps the sidebar quiet during normal operation.
-  var navItems = NAV_ITEMS;
-  if (diagnosticsCount > 0) {
-    navItems = NAV_ITEMS.concat([{ id: "diagnostics", label: "Diagnostics", icon: "!", badge: diagnosticsCount }]);
+  // Life mode hides the work modules (Accounts, Gauge, Team, …) — Pip's
+  // personal lens only shows Home. Work mode keeps the full nav, plus the
+  // Diagnostics entry when there are unresolved errors (Phase 6).
+  var navItems;
+  if (mode === "life") {
+    navItems = LIFE_NAV_ITEMS;
+  } else {
+    navItems = NAV_ITEMS;
+    if (diagnosticsCount > 0) {
+      navItems = NAV_ITEMS.concat([{ id: "diagnostics", label: "Diagnostics", icon: "!", badge: diagnosticsCount }]);
+    }
   }
   return (
     <div
@@ -125,7 +135,7 @@ export function DesktopLayout({
             paddingLeft: 4,
           }}
         >
-          Workspace
+          {mode === "life" ? "Life" : "Workspace"}
         </div>
 
         {/* Nav */}
@@ -207,14 +217,9 @@ export function DesktopLayout({
           })}
         </nav>
 
-        {/* Footer — lit-pill primary CTA */}
+        {/* Footer — mode toggle + user menu. (Add Account now lives at the top
+            of the Accounts view, not here.) */}
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
-          <LitPill
-            onClick={onAddAccount}
-            style={{ width: "100%", justifyContent: "center" }}
-          >
-            {view === "departments" ? "Add Department" : view === "partners" ? "Add Partner" : "Add Account"}
-          </LitPill>
           {onToggleMode && (
             <div style={{ display: "flex", justifyContent: "center" }}>
               <ModeToggle mode={mode} onToggle={onToggleMode} />

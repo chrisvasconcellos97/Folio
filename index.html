@@ -428,35 +428,46 @@
          at equal specificity for the tokens it redefines. Works under both
          dark (this block) and light (the more-specific block below). */
       :root[data-mode="life"] {
-        --accent:        #6f93bd;
-        --accent-deep:   #56789f;
-        --accent-dim:    #3d566f;
-        --accent-glow:   rgba(111,147,189,0.14);
-        --accent-glow-2: rgba(111,147,189,0.22);
-        --accent-border: rgba(111,147,189,0.42);
-        --accent-shadow: rgba(111,147,189,0.55);
+        /* "Dusk slate" — a medium dusty blue, sitting between dark and light:
+           softer/lighter than the near-black dark theme, but still calm and
+           cool (off the clock). Light text on a mid-slate ground. */
+        --accent:        #8fb8e0;
+        --accent-deep:   #6f9bc8;
+        --accent-dim:    #58769a;
+        --accent-glow:   rgba(143,184,224,0.16);
+        --accent-glow-2: rgba(143,184,224,0.24);
+        --accent-border: rgba(143,184,224,0.45);
+        --accent-shadow: rgba(143,184,224,0.50);
 
-        --c-accent:        #6f93bd;
-        --c-accent-deep:   #56789f;
-        --c-accent-dim:    #3d566f;
-        --c-accent-glow:   rgba(111,147,189,0.14);
-        --c-accent-glow-2: rgba(111,147,189,0.22);
-        --c-accent-faint:  rgba(111,147,189,0.08);
-        --c-accent-mid:    rgba(111,147,189,0.16);
-        --c-accent-subtle: rgba(111,147,189,0.12);
-        --c-accent-line:   rgba(111,147,189,0.22);
-        --c-accent-ring:   rgba(111,147,189,0.30);
-        --c-accent-border: rgba(111,147,189,0.42);
-        --c-accent-shadow: rgba(111,147,189,0.50);
-        --c-folio-shadow:  rgba(111,147,189,0.20);
+        --c-accent:        #8fb8e0;
+        --c-accent-deep:   #6f9bc8;
+        --c-accent-dim:    #58769a;
+        --c-accent-glow:   rgba(143,184,224,0.16);
+        --c-accent-glow-2: rgba(143,184,224,0.24);
+        --c-accent-faint:  rgba(143,184,224,0.12);
+        --c-accent-mid:    rgba(143,184,224,0.20);
+        --c-accent-subtle: rgba(143,184,224,0.16);
+        --c-accent-line:   rgba(143,184,224,0.30);
+        --c-accent-ring:   rgba(143,184,224,0.38);
+        --c-accent-border: rgba(143,184,224,0.45);
+        --c-accent-shadow: rgba(143,184,224,0.45);
+        --c-folio-shadow:  rgba(143,184,224,0.22);
 
-        /* Subtle blue cast through the surfaces/rules (shades of dusty blue). */
-        --c-bg:         #080d13;
-        --c-surface:    #0c131b;
-        --c-surface-2:  #111c27;
-        --c-rule:       #1d2a3a;
-        --c-rule-soft:  #16212e;
-        --c-rail-bg:    #0c131b;
+        /* Medium dusk-slate surfaces — the "between dark and light" ground. */
+        --c-bg:          #3b4d60;
+        --c-surface:     #43576b;
+        --c-surface-2:   #4c6175;
+        --c-surface-3:   #556a80;
+        --c-bg-dropdown: #43576b;
+        --c-rule:        #5b6f84;
+        --c-rule-soft:   #4e6276;
+        --c-rail-bg:     #43576b;
+
+        /* Cooler, lighter text for contrast on the mid-slate ground. */
+        --c-text:       #f1f5f9;
+        --c-text-soft:  #cdd8e4;
+        --c-text-muted: #98a6b6;
+        --c-text-faint: #7d8c9c;
       }
 
       :root[data-theme="light"][data-mode="life"] {

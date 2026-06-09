@@ -30,10 +30,16 @@ var NAV_ITEMS = [
   { id: "commitments", label: "Commitments", icon: "◇"     },
 ];
 
+// Life mode shows none of the work modules in the bottom nav — just Home.
+var LIFE_NAV_ITEMS = [
+  { id: "home", label: "Home", icon: "◉" },
+];
+
 export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, onSettings, onTeam, onDiagnostics, diagnosticsCount, userMeta, mode, onToggleMode, children }) {
   var scrollRef = useRef(null);
   var [wsOpen, setWsOpen] = useState(false);
   var isWorkspaceView = WORKSPACE_IDS.indexOf(view) !== -1;
+  var navItems = mode === "life" ? LIFE_NAV_ITEMS : NAV_ITEMS;
 
   useEffect(function () {
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
@@ -199,11 +205,11 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(5, 1fr)",
+            gridTemplateColumns: "repeat(" + navItems.length + ", 1fr)",
             width: "100%",
           }}
         >
-          {NAV_ITEMS.map(function (item) {
+          {navItems.map(function (item) {
             var isWorkspaces = !!item.isWorkspaces;
             var active = isWorkspaces ? isWorkspaceView : view === item.id;
             var isGauge = item.id === "gauge";

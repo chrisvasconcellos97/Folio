@@ -382,11 +382,11 @@ export function AccountsView({ accounts, allAccounts, loading, onSelect, onAddAc
             {workspaceSubtitle}
           </div>
         </div>
-        {/* Mobile +Account — relocated here from the global header, which now
-            holds the Work/Life toggle. Desktop has the rail's Add CTA. */}
-        {isMobile && onAddAccount && (
-          <AmberBtn onClick={onAddAccount} style={{ marginLeft: "auto", fontSize: 11, padding: "7px 12px", flexShrink: 0 }}>
-            {typeFilter === "internal_team" ? "+ Dept" : typeFilter === "partner" ? "+ Partner" : "+ Account"}
+        {/* +Account lives here now (both mobile and desktop) — the rail's Add
+            CTA and the mobile header's were removed in favor of this. */}
+        {onAddAccount && (
+          <AmberBtn onClick={onAddAccount} style={{ marginLeft: "auto", fontSize: isMobile ? 11 : 13, padding: isMobile ? "7px 12px" : "8px 16px", flexShrink: 0 }}>
+            {typeFilter === "internal_team" ? "+ Department" : typeFilter === "partner" ? "+ Partner" : "+ Account"}
           </AmberBtn>
         )}
       </div>
