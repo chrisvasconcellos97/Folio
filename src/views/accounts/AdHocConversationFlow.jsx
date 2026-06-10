@@ -8,6 +8,7 @@ import { usePipCorrections } from "../../hooks/usePipCorrections";
 import { useGlossary } from "../../hooks/useGlossary";
 import { useUserProfile } from "../../hooks/useUserProfile";
 import { usePipFacts } from "../../hooks/usePipFacts";
+import { useAccountUpdates } from "../../hooks/useAccountUpdates";
 import { summarizeDraftPip } from "../../lib/pip";
 import { applyPipPlan } from "../../lib/pipPlanApply";
 import { updateTask, insertTask } from "../../hooks/useTasks";
@@ -56,6 +57,7 @@ export function AdHocConversationFlow({
   var userProfileApi = useUserProfile(userId);
   var profileProse   = userProfileApi.profile && userProfileApi.profile.profile_prose ? userProfileApi.profile.profile_prose : null;
   var pipFactsApi    = usePipFacts(userId);
+  var updatesApi     = useAccountUpdates(userId, account.id);
 
   var accountRoster = useMemo(function () {
     var glossaryEntries = glossaryApi.entries || [];
@@ -131,6 +133,7 @@ export function AdHocConversationFlow({
       profileProse:        profileProse,
       facts:               pipFactsApi.activeFactStrings || [],
       servicedStates:      account.serviced_states || null,
+      recentUpdates:       (updatesApi.updates || []).slice(0, 6),
       discussedProjectIds: discussedProjectIds || [],
       discussedItemIds:    discussedItemIds    || [],
     }).then(function (out) {

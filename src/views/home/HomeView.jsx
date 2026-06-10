@@ -1017,11 +1017,13 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
           opacity: mounted ? 1 : 0,
           transition: "opacity 0.4s ease 0.35s",
         }}>
+          {todaysCalls.length > 0 && (
           <LitPill onClick={function () {
-            if (todaysCalls.length > 0) onOpenCadenceHub(todaysCalls[0].account.id, todaysCalls[0].cadence.id);
+            onOpenCadenceHub(todaysCalls[0].account.id, todaysCalls[0].cadence.id);
           }}>
-            {todaysCalls.length > 0 ? "Open brief →" : "No brief today"}
+            Open brief →
           </LitPill>
+          )}
           <div style={{ position: "relative" }}>
             <LitPill onClick={function () { setCaptureMenuOpen(function (prev) { return !prev; }); }}>
               Quick capture +
@@ -1233,7 +1235,7 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
       )}
 
       {/* Commitment nudge card — amber warning for ✦ commitments due soon or overdue */}
-      {!operatorActive && commitmentNudges.length > 0 && (function () {
+      {commitmentNudges.length > 0 && (function () {
         var n = commitmentNudges[0];
         var dueLabel = n.isOverdue
           ? Math.abs(n.daysUntilDue) + "d overdue"
@@ -1553,7 +1555,7 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
                       {acct ? acct.name : "Account"}
                     </div>
                     <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, marginTop: 2, letterSpacing: "0.04em" }}>
-                      Follow-up ready · last met {m.meeting_date}
+                      Follow-up ready · last met {m.meeting_date ? new Date(m.meeting_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""}
                     </div>
                   </div>
                   <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>

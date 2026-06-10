@@ -155,9 +155,21 @@ export default async function handler(req, res) {
       logPipUsage(userClient, user.id, "ask-pip", "meeting", MODEL_HAIKU, response.usage);
 
       var text = response.content[0]?.text || "";
+      var truncated = response.stop_reason === "max_tokens";
       var jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error("Invalid response format");
-      var parsed = JSON.parse(jsonMatch[0]);
+      var parsed = null;
+      if (jsonMatch) {
+        try { parsed = JSON.parse(jsonMatch[0]); } catch (_) { /* salvage below */ }
+      }
+      if (!parsed || (truncated && !parsed.summary)) {
+        var summaryMatch = text.match(/"summary"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        if (summaryMatch) {
+          var salvaged = summaryMatch[1]
+            .replace(/\\n/g, " ").replace(/\\"/g, '"').replace(/\\\\/g, "\\").trim();
+          return res.status(200).json({ summary: salvaged, email: "" });
+        }
+        return res.status(500).json({ error: "Pip's summary got cut off — try again." });
+      }
       return res.status(200).json({ summary: parsed.summary, email: parsed.email });
     }
 

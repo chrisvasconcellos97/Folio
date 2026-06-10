@@ -153,7 +153,7 @@ Rules:
 - A "commitment" (✦) that's overdue is the most important thing — lead your situation with it and draft the email to close it.
 - Keep it tight. This feeds a morning report; the human skims it fast.`;
 
-async function runAccountPass(client, ctxText) {
+async function runAccountPass(client, ctxText, accountName) {
   var msg = await client.messages.create({
     model: OPERATOR_MODEL,
     max_tokens: 1100,
@@ -161,7 +161,11 @@ async function runAccountPass(client, ctxText) {
     messages: [{ role: "user", content: ctxText }],
   });
   var raw = msg.content && msg.content[0] && msg.content[0].type === "text" ? msg.content[0].text : "";
-  var parsed = safeJsonParse(raw) || {};
+  var parsed = safeJsonParse(raw);
+  if (!parsed) {
+    console.error("[operator-run] JSON parse failed for account:", accountName, "| raw (first 500):", String(raw).slice(0, 500));
+    return null;
+  }
   return {
     headline: typeof parsed.headline === "string" ? parsed.headline.trim() : "",
     situation: typeof parsed.situation === "string" ? parsed.situation : "",
@@ -411,7 +415,8 @@ async function gatherAndRun(admin, client, userId, acc, snapshot) {
     pRes.data || [], uRes.data || [], sRes.data || null, snapshot
   );
 
-  var out = await runAccountPass(client, ctxText);
+  var out = await runAccountPass(client, ctxText, acc.name);
+  if (!out) return { headline: "", situation: "", risks: [], draft_email: "", proposed_moves: [], agenda: "", delta: "" };
 
   // Persist operator state. Insert a fresh row if none exists (state_prose is
   // NOT NULL → seed it from the situation); otherwise update operator_* only.

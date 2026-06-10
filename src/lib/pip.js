@@ -108,6 +108,19 @@ function fetchWithAuthRetry(url, body) {
   });
 }
 
+// Renders recent account update-calendar entries so Pip can cross-reference
+// what changed (new pricing, integrations, events) against what was discussed.
+function renderRecentUpdatesBlock(updates) {
+  if (!Array.isArray(updates) || updates.length === 0) return "";
+  var lines = updates.slice(0, 6).map(function (u) {
+    var bits = [(u.update_date || ""), (u.update_type || ""), (u.title || "")];
+    if (u.owner) bits.push("owner: " + u.owner);
+    if (u.observed_impact) bits.push("impact: " + String(u.observed_impact).slice(0, 80));
+    return "- " + bits.filter(Boolean).join(" · ");
+  }).join("\n");
+  return "── RECENT ACCOUNT UPDATES (update calendar) ──\n" + lines + "\n\n";
+}
+
 // Renders the glossary block for system prompts.
 function renderGlossaryBlock(glossary) {
   var entries = Array.isArray(glossary) ? glossary.filter(function (g) { return g && g.term && g.definition; }) : [];
@@ -542,7 +555,7 @@ export function callBriefMePip(payload) {
         return { text: i.text, due: i.due_date, owner: i.owner, created_at: i.created_at, is_commitment: !!i.is_commitment };
       }),
       contacts: contacts.map(function (c) {
-        return { name: c.name, title: c.title, email: c.email, is_poc: c.is_poc };
+        return { name: c.name, title: c.title, email: c.email, is_poc: c.is_poc, relationship_role: c.relationship_role || null, relationship_note: c.relationship_note || null };
       }),
       activeProjects: activeProjects.map(function (p) {
         return { title: p.title, status: p.status, due_date: p.due_date, status_updates: Array.isArray(p.status_updates) ? p.status_updates.slice(0, 3) : [] };
@@ -711,6 +724,7 @@ export function summarizeDraftPip(payload) {
   var healthSnapshots  = Array.isArray(payload.healthSnapshots) ? payload.healthSnapshots : [];
   var servicedStates   = Array.isArray(payload.servicedStates)  ? payload.servicedStates  : [];
   var promiseStats     = payload.promiseStats  || null;
+  var recentUpdates    = Array.isArray(payload.recentUpdates)   ? payload.recentUpdates   : [];
   var openItems          = Array.isArray(payload.openItems)          ? payload.openItems          : existingItems;
   var discussedProjectIds = Array.isArray(payload.discussedProjectIds) ? payload.discussedProjectIds.slice() : [];
   var discussedItemIds    = Array.isArray(payload.discussedItemIds)    ? payload.discussedItemIds    : [];
@@ -904,6 +918,7 @@ export function summarizeDraftPip(payload) {
     renderSnapshotMetricsBlock(healthSnapshots) +
     renderContactsBlock(contacts) +
     renderCadenceScheduleBlock(cadence) +
+    renderRecentUpdatesBlock(recentUpdates) +
     renderCommitmentsInBlock(openItems, todayISOForCommitments) +
     renderPromiseLogBlock(promiseStats) +
     correctionBlock;

@@ -1,6 +1,22 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
 
+export const config = { maxDuration: 60 };
+
+// In-memory per-user rate limit: 10 requests per 60-second window.
+var rateLimitMap = new Map();
+var WINDOW_MS    = 60 * 1000;
+var MAX_REQUESTS = 10;
+
+function isRateLimited(userId) {
+  var now = Date.now();
+  var timestamps = (rateLimitMap.get(userId) || []).filter(function (t) { return now - t < WINDOW_MS; });
+  if (timestamps.length >= MAX_REQUESTS) return true;
+  timestamps.push(now);
+  rateLimitMap.set(userId, timestamps);
+  return false;
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
 
@@ -20,6 +36,8 @@ export default async function handler(req, res) {
   } catch (authErr) {
     return res.status(401).json({ error: "Unauthorized" });
   }
+
+  if (isRateLimited(user.id)) return res.status(429).json({ error: "rate_limited" });
 
   var { snapshots, projects, overdueTasks, commitmentsDue, commitmentsOverdue, todayCadences, coldAccounts, looseEnds, healthDeltas, relationshipSignals, toneSignals, anomalySignals, leadershipTasks, portfolioThemes, facts, profileProse } = req.body || {};
   snapshots = snapshots || [];

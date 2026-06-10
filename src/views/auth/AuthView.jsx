@@ -234,8 +234,8 @@ export function AuthView({ onSignIn, onSignUp }) {
                 role="alert"
                 aria-live="polite"
                 style={{
-                  background: "rgba(248,113,113,0.1)",
-                  border: "1px solid rgba(248,113,113,0.25)",
+                  background: C.redFaint,
+                  border: "1px solid " + C.redLine,
                   borderRadius: 8,
                   padding: "10px 14px",
                   fontSize: 12,
@@ -250,8 +250,8 @@ export function AuthView({ onSignIn, onSignUp }) {
             {success && (
               <div
                 style={{
-                  background: "rgba(74,222,128,0.08)",
-                  border: "1px solid rgba(74,222,128,0.2)",
+                  background: C.accentFaint,
+                  border: "1px solid " + C.accentLine,
                   borderRadius: 8,
                   padding: "10px 14px",
                   fontSize: 12,

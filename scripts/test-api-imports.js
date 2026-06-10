@@ -22,6 +22,7 @@ var handlers = [
   "api/generate-questions.js",
   "api/operator-run.js",
   "api/sports.js",
+  "api/invite.js",
 ];
 
 var failed = false;

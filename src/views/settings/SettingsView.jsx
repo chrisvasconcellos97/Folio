@@ -1372,7 +1372,7 @@ function NotificationsSection() {
             position: "absolute",
             top: 1, left: banners ? 21 : 1,
             width: 20, height: 20, borderRadius: "50%",
-            background: "#fff",
+            background: "#fff", /* no token equivalent — toggle thumb is always light */
             transition: "left 0.18s ease",
             boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
           }} />
@@ -1601,7 +1601,7 @@ function PipQuestionsSection({ userId, onStartInterview, onOpenCatchUp }) {
             position: "absolute",
             top: 1, left: paused ? 21 : 1,
             width: 20, height: 20, borderRadius: "50%",
-            background: "#fff",
+            background: "#fff", /* no token equivalent — toggle thumb is always light */
             transition: "left 0.18s ease",
             boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
           }} />
@@ -1684,7 +1684,7 @@ function PersonalSection() {
           width: 42, height: 24, borderRadius: 12, cursor: "pointer", flexShrink: 0,
           background: on ? C.accent : C.rule, position: "relative", transition: "background 0.18s ease",
         }}>
-          <span style={{ position: "absolute", top: 2, left: on ? 20 : 2, width: 20, height: 20, borderRadius: "50%", background: "#fff", transition: "left 0.18s ease" }} />
+          <span style={{ position: "absolute", top: 2, left: on ? 20 : 2, width: 20, height: 20, borderRadius: "50%", background: "#fff" /* no token equivalent — toggle thumb is always light */, transition: "left 0.18s ease" }} />
         </div>
       </div>
     </Card>

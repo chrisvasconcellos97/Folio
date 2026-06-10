@@ -699,9 +699,12 @@ export default function App() {
       },
       body: JSON.stringify({ manual: true }),
     })
-      .then(function (r) { return r.json(); })
+      .then(function (r) {
+        if (!r.ok && r.status !== 200) return r.json().then(function (e) { throw new Error(e.detail || e.error || r.status); });
+        return r.json();
+      })
       .then(function (out) {
-        if (out) console.log("[teach-pip] inserted:", out.inserted, "modelReturned:", out.modelReturned, "modelError:", out.modelError, "skipped:", out.reason || out.skipped);
+        if (out) console.log("[teach-pip] inserted:", out.inserted, "modelReturned:", out.modelReturned, "skipped:", out.reason || out.skipped);
         return dripHook.refetch().then(function () { return out; });
       })
       .catch(function (err) { console.warn("[teach-pip] failed:", err && err.message); return null; });

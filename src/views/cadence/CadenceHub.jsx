@@ -20,6 +20,7 @@ import { useLeadershipTasks } from "../../hooks/useLeadershipTasks";
 import { useGlossary } from "../../hooks/useGlossary";
 import { useAccountSnapshots } from "../../hooks/useAccountSnapshots";
 import { usePipPromiseLog } from "../../hooks/usePipPromiseLog";
+import { useAccountUpdates } from "../../hooks/useAccountUpdates";
 import { useUserProfile } from "../../hooks/useUserProfile";
 import { applyPipPlan } from "../../lib/pipPlanApply";
 import { updateTask, insertTask } from "../../hooks/useTasks";
@@ -1204,6 +1205,7 @@ export function CadenceHub({
   var glossaryApi    = useGlossary(userId, null, accountId);
   var snapshotsApi   = useAccountSnapshots(userId);
   var promiseLog     = usePipPromiseLog(userId, accountId);
+  var updatesApi     = useAccountUpdates(userId, accountId);
   var userProfileApi = useUserProfile(userId);
   var userProfile    = userProfileApi.profile;
 
@@ -1475,6 +1477,7 @@ export function CadenceHub({
       facts:             pipFactsApi.activeFactStrings || [],
       healthSnapshots:   (snapshotsApi.snapshots || []).filter(function (s) { return s.account_id === accountId; }),
       promiseStats:      promiseLog || null,
+      recentUpdates:     (updatesApi.updates || []).slice(0, 6),
       openItems:         openItems,
       profileProse:      userProfile && userProfile.profile_prose ? userProfile.profile_prose : null,
       discussedProjectIds: discussedProjectIds || [],

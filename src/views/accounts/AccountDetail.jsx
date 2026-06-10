@@ -300,6 +300,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
       profileProse:        profileProse,
       facts:               pipFactsApi.activeFactStrings || [],
       servicedStates:      account.serviced_states || null,
+      recentUpdates:       (updates || []).slice(0, 6),
       discussedProjectIds: discussedProjectIds || [],
       discussedItemIds:    discussedItemIds    || [],
     }).then(function (out) {

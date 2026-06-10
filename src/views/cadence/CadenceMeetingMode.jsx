@@ -350,6 +350,7 @@ export function CadenceMeetingMode({
   var attendeesTimer = useRef(null);
   var projectNotesTimer = useRef(null);
   var notesRef  = useRef(null);
+  var handleCloseRef = useRef(null);
 
   // Auto-collapse sidebar whenever crossing into mobile width.
   useEffect(function () {
@@ -460,17 +461,16 @@ export function CadenceMeetingMode({
     return function () { clearTimeout(timer); };
   }, [notes, projects, openItems]);
 
-  // ESC closes. Depend on notes AND attendees so handleClose/flushPendingSave
-  // close over the latest values — pressing ESC right after toggling an
-  // attendee (with no subsequent keystroke) previously flushed a stale list.
+  // ESC closes. handleCloseRef.current is updated on every render so this
+  // stable (empty-dep) listener always invokes the latest handleClose without
+  // re-registering on every keystroke.
   useEffect(function () {
     function onKey(e) {
-      if (e.key === "Escape") handleClose();
+      if (e.key === "Escape") handleCloseRef.current && handleCloseRef.current();
     }
     window.addEventListener("keydown", onKey);
     return function () { window.removeEventListener("keydown", onKey); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notes, attendees, projectNotes]);
+  }, []); // stable — never re-registers
 
   // Stop recognition on unmount so the mic doesn't stay open if the overlay closes.
   useEffect(function () {
@@ -547,6 +547,9 @@ export function CadenceMeetingMode({
       if (onClose) onClose();
     });
   }
+  // Keep the ref current on every render so the stable ESC listener always
+  // calls the latest handleClose (which closes over current notes/attendees).
+  handleCloseRef.current = handleClose;
 
   function handleSummarize() {
     if (summarizing) return;

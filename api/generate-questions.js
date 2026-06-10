@@ -82,7 +82,7 @@ export default async function handler(req, res) {
         .eq("user_id", userId).not("theme", "is", null)
         .order("created_at", { ascending: false }).limit(80),
       supabase.from("gauge_projects")
-        .select("title, status")
+        .select("title, status, status_updates")
         .eq("user_id", userId).in("status", ["in_progress", "blocked", "planned"]).limit(20),
       supabase.from("folio_pip_facts")
         .select("fact").eq("user_id", userId).eq("active", true).limit(40),
@@ -144,7 +144,10 @@ export default async function handler(req, res) {
       .join("\n");
 
     var projectLines = projects.slice(0, 15).map(function (p) {
-      return "- " + (p.title || "untitled") + " [" + (p.status || "?") + "]";
+      var bits = ["- " + (p.title || "untitled") + " [" + (p.status || "?") + "]"];
+      var latest = Array.isArray(p.status_updates) && p.status_updates[0];
+      if (latest) bits.push('latest: "' + String(latest.body || "").slice(0, 100) + '" (' + (latest.at ? String(latest.at).slice(0, 10) : "") + ')');
+      return bits.join(" · ");
     }).join("\n");
 
     var factLines = facts.map(function (f) { return "- " + f.fact; }).join("\n");
@@ -281,14 +284,15 @@ export default async function handler(req, res) {
       });
     }
 
-    if (!rows.length) return res.status(200).json({ inserted: 0, modelReturned: questions.length, modelError: modelError });
+    if (modelError && !rows.length) return res.status(502).json({ error: "question generation failed", detail: modelError });
+    if (!rows.length) return res.status(200).json({ inserted: 0, modelReturned: questions.length });
 
     var ins = await supabase.from("folio_pip_questions").insert(rows);
     if (ins.error) {
       console.error("[generate-questions] insert error:", ins.error.message);
       return res.status(500).json({ error: "Failed to insert questions.", detail: ins.error.message });
     }
-    return res.status(200).json({ inserted: rows.length, modelReturned: questions.length, modelError: modelError });
+    return res.status(200).json({ inserted: rows.length, modelReturned: questions.length });
   } catch (err) {
     console.error("[generate-questions] error:", err && err.message);
     return res.status(500).json({ error: "Question generation unavailable.", detail: err && err.message });

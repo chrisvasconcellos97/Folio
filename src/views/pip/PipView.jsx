@@ -231,6 +231,7 @@ export function PipView(props) {
         var todayStr = new Date().toISOString().slice(0, 10);
         var healthSignals = gatherSignals(a, allItems, projects || [], todayStr);
         var computedHealth = computeAccountHealth(a, healthSignals);
+        var operatorRow = (pipAcctState.states || []).find(function (s) { return s.account_id === a.id; });
         return {
           id:      a.id,
           name:    a.name,
@@ -260,6 +261,11 @@ export function PipView(props) {
           recentUpdates:   acctUpdates,
           cachedState:     cachedStateMap[a.id] || null,
           portfolioThemes: recentThemes,
+          // Operator fields — Pip's overnight read on this account
+          operator_headline:  operatorRow ? (operatorRow.operator_headline || null)  : null,
+          operator_situation: operatorRow ? (operatorRow.operator_situation || null) : null,
+          operator_risks:     operatorRow ? (operatorRow.operator_risks || [])       : [],
+          operator_delta:     operatorRow ? (operatorRow.operator_delta || null)     : null,
         };
       }),
       // Flat item arrays so the deterministic intent classifier (which reads

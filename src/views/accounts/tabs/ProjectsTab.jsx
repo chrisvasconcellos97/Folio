@@ -8,12 +8,13 @@ import { supabase } from "../../../lib/supabase";
 
 var MONO = "'JetBrains Mono', ui-monospace, monospace";
 
+// Use design-system tokens; each entry provides bg, text, and border for the status badge.
 var STATUS_COLORS = {
-  planned:     "rgba(103,200,249,0.9)",
-  in_progress: "rgba(74,155,130,0.9)",
-  blocked:     "rgba(224,92,92,0.9)",
-  complete:    "rgba(78,222,128,0.9)",
-  on_hold:     "rgba(251,191,36,0.9)",
+  planned:     C.statusPlanned,
+  in_progress: C.statusInProgress,
+  blocked:     C.statusBlocked,
+  complete:    C.statusComplete,
+  on_hold:     C.statusOnHold,
 };
 
 var STATUS_LABELS = {
@@ -30,8 +31,8 @@ var PRIORITY_COLORS = {
   low:    C.green,
 };
 
-var GB     = "rgba(103,200,249,0.12)";
-var GB_BDR = "rgba(103,200,249,0.25)";
+var GB     = C.statusPlanned.bg;      // faint blue fill
+var GB_BDR = C.statusPlanned.border;  // blue border
 
 function fmt(dateStr) {
   if (!dateStr) return null;
@@ -156,7 +157,7 @@ export function ProjectsTab({ projects, accounts, accountId, userId, addProject,
         </div>
         <button
           onClick={function () { setShowAdd(true); }}
-          style={{ background: GB, border: "1px solid " + GB_BDR, borderRadius: 20, padding: "5px 13px", color: "rgba(103,200,249,0.9)", fontSize: 11, fontWeight: 600, fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer" }}
+          style={{ background: GB, border: "1px solid " + GB_BDR, borderRadius: 20, padding: "5px 13px", color: C.statusPlanned.text, fontSize: 11, fontWeight: 600, fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer" }}
         >
           + New Request
         </button>
@@ -178,8 +179,8 @@ export function ProjectsTab({ projects, accounts, accountId, userId, addProject,
               key={p.id}
               onClick={function () { setEditing(p); }}
               style={Object.assign({}, glass, {
-                border: "1px solid " + (blocked ? "rgba(224,92,92,0.3)" : p.status === "in_progress" ? GB_BDR : "rgba(255,255,255,0.06)"),
-                borderLeft: blocked ? "3px solid rgba(224,92,92,0.8)" : undefined,
+                border: "1px solid " + (blocked ? C.statusBlocked.border : p.status === "in_progress" ? GB_BDR : "rgba(255,255,255,0.06)"),
+                borderLeft: blocked ? "3px solid " + C.statusBlocked.text : undefined,
                 borderRadius: 10,
                 padding: "11px 13px",
                 cursor: "pointer",
@@ -200,7 +201,7 @@ export function ProjectsTab({ projects, accounts, accountId, userId, addProject,
                       TEAM
                     </div>
                   )}
-                  <div style={{ background: STATUS_COLORS[p.status] + "20", border: "1px solid " + STATUS_COLORS[p.status] + "40", borderRadius: 16, padding: "2px 9px", fontSize: 9, fontWeight: 600, color: STATUS_COLORS[p.status], whiteSpace: "nowrap" }}>
+                  <div style={{ background: (STATUS_COLORS[p.status] || C.statusPlanned).bg, border: "1px solid " + (STATUS_COLORS[p.status] || C.statusPlanned).border, borderRadius: 16, padding: "2px 9px", fontSize: 9, fontWeight: 600, color: (STATUS_COLORS[p.status] || C.statusPlanned).text, whiteSpace: "nowrap" }}>
                     {STATUS_LABELS[p.status] || p.status}
                   </div>
                 </div>

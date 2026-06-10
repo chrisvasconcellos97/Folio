@@ -20,7 +20,11 @@ export function useMeetings(userId, accountId, orgId) {
       .select("*, folio_accounts(name)")
       .eq("user_id", userId)
       .order("meeting_date", { ascending: false });
-    if (accountId) query = query.eq("account_id", accountId);
+    if (accountId) {
+      query = query.eq("account_id", accountId);
+    } else {
+      query = query.limit(300);
+    }
     timed("meetings.fetch", function () { return query; }).then(function (result) {
       setLoading(false);
       if (result.error) {
@@ -32,7 +36,10 @@ export function useMeetings(userId, accountId, orgId) {
       } else {
         setError(null);
         setMeetings(result.data || []);
-        if (cacheKey) localStorage.setItem(cacheKey, JSON.stringify(result.data || []));
+        if (cacheKey) {
+          var str = JSON.stringify(result.data || []);
+          if (str.length <= 400000) localStorage.setItem(cacheKey, str);
+        }
       }
     });
   }, [userId, accountId, cacheKey]);

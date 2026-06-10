@@ -30,7 +30,8 @@ export function useAccounts(userId) {
         }
         setError(null);
         setAccounts(result.data || []);
-        localStorage.setItem(cacheKey, JSON.stringify(result.data || []));
+        var str = JSON.stringify(result.data || []);
+        if (str.length <= 400000) localStorage.setItem(cacheKey, str);
       });
   }, [userId, cacheKey]);
 

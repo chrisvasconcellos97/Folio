@@ -41,17 +41,21 @@ export function usePipDripQuestions(userId, profile, onTermLearned) {
 
   useEffect(function () { fetch(); }, [fetch]);
 
-  // ── Throttle computation ────────────────────────────────────────────────
+  // ── Throttle + re-synthesis count (single query) ───────────────────────
+  //
+  // Queries 2 + 3 collapsed: one fetch over answered/skipped/dismissed rows
+  // going back to the earlier of (24h ago) or (prose_generated_at) covers both
+  // the daily-cap check (last24) and the re-synthesis counter (answeredSince).
 
-  // Returns Promise<{paused, dailyCountReached}> — surface a question only if
-  // we're under the daily cap. Each answer/skip/dismiss in the last 24h counts
-  // toward the cap, so the stream stops after a handful but lets you power
-  // through several in one sitting.
-  function loadThrottleState() {
-    if (!userId) return Promise.resolve({ paused: true, dailyCountReached: true });
+  // Returns Promise<{paused, dailyCountReached, answeredSince}>
+  function loadThrottleAndCount() {
+    if (!userId) return Promise.resolve({ paused: true, dailyCountReached: true, answeredSince: 0 });
 
     var now = Date.now();
     var h24ago = new Date(now - 24 * 60 * 60 * 1000).toISOString();
+    var since  = (profile && profile.prose_generated_at) || "1970-01-01T00:00:00Z";
+    // Use the earlier timestamp as the query floor so one round-trip covers both windows.
+    var floor  = since < h24ago ? since : h24ago;
 
     return supabase
       .from("folio_pip_questions")
@@ -59,16 +63,21 @@ export function usePipDripQuestions(userId, profile, onTermLearned) {
       .eq("user_id", userId)
       .eq("source", "gap_observed")
       .in("status", ["answered", "skipped", "dismissed"])
+      .gt("answered_at", floor)
       .order("answered_at", { ascending: false })
-      .limit(30)
+      .limit(200)
       .then(function (r) {
         var hist = r.data || [];
         var last24 = hist.filter(function (row) {
           return row.answered_at && row.answered_at > h24ago;
         }).length;
+        var answeredSince = hist.filter(function (row) {
+          return row.status === "answered" && row.answered_at && row.answered_at > since;
+        }).length;
         return {
           paused:            false,
           dailyCountReached: last24 >= DAILY_CAP,
+          answeredSince:     answeredSince,
         };
       });
   }
@@ -82,8 +91,9 @@ export function usePipDripQuestions(userId, profile, onTermLearned) {
     if (!userId) { setActiveQuestion(null); return; }
     if (profile && profile.pip_questions_paused) { setActiveQuestion(null); setThrottleLoaded(true); return; }
 
-    loadThrottleState().then(function (t) {
+    loadThrottleAndCount().then(function (t) {
       setThrottleLoaded(true);
+      setAnsweredSince(t.answeredSince);
       if (t.paused || t.dailyCountReached) {
         setActiveQuestion(null);
         return;
@@ -94,21 +104,21 @@ export function usePipDripQuestions(userId, profile, onTermLearned) {
 
       // Mark as 'asked' if it's still 'queued' (first time shown).
       if (candidate.status === "queued") {
-        var now = new Date().toISOString();
+        var nowISO = new Date().toISOString();
         supabase
           .from("folio_pip_questions")
-          .update({ status: "asked", asked_at: now })
+          .update({ status: "asked", asked_at: nowISO })
           .eq("id", candidate.id)
           .eq("user_id", userId)
           .then(function (r) {
             if (r.error) return;
             setRows(function (prev) {
               return prev.map(function (row) {
-                return row.id === candidate.id ? Object.assign({}, row, { status: "asked", asked_at: now }) : row;
+                return row.id === candidate.id ? Object.assign({}, row, { status: "asked", asked_at: nowISO }) : row;
               });
             });
           });
-        setActiveQuestion(Object.assign({}, candidate, { status: "asked", asked_at: now }));
+        setActiveQuestion(Object.assign({}, candidate, { status: "asked", asked_at: nowISO }));
       } else {
         setActiveQuestion(candidate);
       }
@@ -119,7 +129,7 @@ export function usePipDripQuestions(userId, profile, onTermLearned) {
     });
   // Re-run when rows change (after fetch) or profile paused flag changes.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, rows.length, profile && profile.pip_questions_paused]);
+  }, [userId, rows.length, profile && profile.pip_questions_paused, profile && profile.prose_generated_at]);
 
   // ── Actions ─────────────────────────────────────────────────────────────
 
@@ -182,35 +192,15 @@ export function usePipDripQuestions(userId, profile, onTermLearned) {
 
   // ── Re-synthesis signal ─────────────────────────────────────────────────
   // Count of answered drip questions since the profile was last synthesized.
-  // DB-driven (not a session counter) so it accumulates across days/devices —
-  // the daily throttle means answers trickle in one at a time, so a session
-  // counter would never reach the threshold.
+  // Derived from the combined throttle+count query above; updated on each
+  // throttle check and after each answer.
   var [answeredSince, setAnsweredSince] = useState(0);
 
-  var countAnsweredSince = useCallback(function () {
-    if (!userId) return;
-    // prose_generated_at marks the last synthesis; null → count every answer.
-    var since = (profile && profile.prose_generated_at) || "1970-01-01T00:00:00Z";
-    supabase
-      .from("folio_pip_questions")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .eq("source", "gap_observed")
-      .eq("status", "answered")
-      .gt("answered_at", since)
-      .then(function (r) {
-        if (r.error) return;
-        setAnsweredSince(r.count || 0);
-      });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, profile && profile.prose_generated_at]);
-
-  useEffect(function () { countAnsweredSince(); }, [countAnsweredSince]);
-
-  // Wrap answerQuestion to refresh the re-synthesis count afterward.
+  // Wrap answerQuestion to refresh the throttle+count state afterward.
   function answerAndCount(id, text) {
     return answerQuestion(id, text).then(function (result) {
-      countAnsweredSince();
+      // Trigger a fresh throttle+count check so answeredSince updates.
+      loadThrottleAndCount().then(function (t) { setAnsweredSince(t.answeredSince); }).catch(function () {});
       return result;
     });
   }

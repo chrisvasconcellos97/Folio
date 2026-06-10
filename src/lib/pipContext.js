@@ -447,6 +447,18 @@ function renderAccountFull(a, userId) {
     lines.push(renderPortfolioThemesBlock(a.portfolioThemes).trim());
   }
 
+  // Operator state — Pip's overnight read on this account (if available).
+  if (a.operator_headline || a.operator_situation) {
+    lines.push("");
+    lines.push("── PIP'S OVERNIGHT OPERATOR READ ──");
+    if (a.operator_headline) lines.push("Headline: " + a.operator_headline);
+    if (a.operator_situation) lines.push("Situation: " + a.operator_situation);
+    if (Array.isArray(a.operator_risks) && a.operator_risks.length) {
+      lines.push("Risks: " + a.operator_risks.join(" · "));
+    }
+    if (a.operator_delta) lines.push("Since last run: " + a.operator_delta);
+  }
+
   return lines.join("\n");
 }
 

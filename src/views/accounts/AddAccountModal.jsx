@@ -384,7 +384,7 @@ export function AddAccountModal({ userId, onSave, onAddContacts, onClose, existi
             >
               <span style={{
                 position: 'absolute', top: 2, left: accountType === 'mso' ? 18 : 2,
-                width: 16, height: 16, borderRadius: '50%', background: '#fff',
+                width: 16, height: 16, borderRadius: '50%', background: '#fff', /* no token equivalent — toggle thumb is always light */
                 transition: 'left 0.2s',
               }} />
             </button>
@@ -811,8 +811,8 @@ export function AddAccountModal({ userId, onSave, onAddContacts, onClose, existi
             role="alert"
             aria-live="polite"
             style={{
-              background: "rgba(248,113,113,0.1)",
-              border: "1px solid rgba(248,113,113,0.2)",
+              background: C.redFaint,
+              border: "1px solid " + C.redLine,
               borderRadius: 8,
               padding: "8px 12px",
               fontSize: 12,

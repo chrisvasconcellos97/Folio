@@ -1,6 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
 
+export const config = { maxDuration: 60 };
+
 // Sonnet: the QBR is a low-frequency, high-stakes synthesis that goes in front
 // of clients/leadership. Override in Vercel env without a redeploy.
 var MODEL = process.env.PIP_QBR_MODEL || "claude-sonnet-4-6";

@@ -1,6 +1,6 @@
 # Folios — Upgrade Log
 
-*Last updated: 2026-06-10 (split-screen meeting mode)*
+*Last updated: 2026-06-10 (Work/Life mode, mobile Home hub, split-screen meeting mode)*
 
 Plain-English log of major upgrades shipped to Folios. Date, time, and
 a short explanation written in terms anyone can read — not technical
@@ -14,6 +14,42 @@ For the technical changelog with full release detail, see
 architectural changes, anything that meaningfully changes what Folios
 *does* or *is*. Not bug fixes, styling tweaks, or doc-only updates —
 those live in git history.
+
+---
+
+## 2026-06-10 — Work / Life mode: Folios becomes your whole-day assistant
+
+**What I built:** A second mode alongside the work mode — a personal assistant side of the app (dusty-blue palette, dusty-orange Pip) for appointments, important dates with escalating reminder ladders, and a honey-do list. A single toggle switches the whole app between Work and Life.
+
+**Problem it solves:** The app only knew about your job. Everything outside work — dentist appointments, your anniversary, the fence that needs fixing — lived in your head or scattered across calendar apps. This gives Pip a place to carry the personal side of your life too, eventually unifying into one morning read.
+
+**What changed:**
+- **Mode toggle** in the desktop rail and the mobile header flips between Work (green) and Life (dusty blue + orange Pip). The app recolors instantly — same CSS token system as the light/dark switch.
+- **Life Home** has three sections: Upcoming appointments and events, a honey-do list prioritized by how long it's been open and how complex the job is, and the soccer card (moved from work Home).
+- **VIP heads-up ladder** — mark an event as important (anniversary, spouse's birthday, Christmas) and Pip escalates the nudge over time: first a soft heads-up three weeks out, then harder reminders at one week, three days, one day, and the day itself. Set it once; Pip carries it forward every year.
+- **Work mode is byte-for-byte unchanged.** Life is entirely additive.
+
+**What you see today:** Tap the toggle → the app goes dusty blue, Pip's orb goes orange, and you see your personal calendar/tasks. Tap back → full work mode, green, all your accounts.
+
+**Why it matters:** "Folios is my portable brain" means *your whole brain*, not just the work part. This is the foundation; Phase 2 (planned) turns honey-do into a Pip coaching session — how to do the job, what to buy, step by step.
+
+---
+
+## 2026-06-10 — Mobile Home redesigned as a structured hub
+
+**What I built:** A new mobile Home screen that replaces a single wall-of-text Pip card with a set of compact, scannable section cards.
+
+**Problem it solves:** On a phone, the previous Home showed the full operator report as one long prose block — you had to scroll through all of it to find what you needed. Accounts, fires, upcoming calls, and wins were buried in the same paragraph.
+
+**What changed:**
+- A compact **Pip glance card** at the top shows the one-line headline, scan-able count chips (fires / watches / wins), and a "Show details" expander for the full read.
+- Below it, **Today / This Week / Good News / Pattern** each get their own card with a tinted header strip and stacked rows — each row is one account, tappable.
+- An **"On the Calendar" card** shows any meetings scheduled for today.
+- The old redundant narrative panels (Burning / Calls / Loose / Ahead) are hidden when the operator report has content, so nothing repeats.
+
+**What you see today:** Open the app on your phone → a tight stack of clearly labeled cards instead of a prose dump. Today's fires are Today. The week's watches are This Week. No scrolling to find the bit that's relevant to the next fifteen minutes.
+
+**Why it matters:** The morning brief is only useful if you can actually read it on your phone while you're starting your day. This makes it work on a four-inch screen.
 
 ---
 

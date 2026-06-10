@@ -1,6 +1,6 @@
 # Folios — Product Overview
 
-*Last updated: 2026-06-10 (split-screen meeting mode with per-project notes)*
+*Last updated: 2026-06-10 (Work/Life mode, mobile Home hub, Teach Pip, split-screen meeting mode)*
 
 This is the substantive product read after the [one-pager](./one-pager.md).
 Covers what Folios does, how it's structured, and what makes the Pip
@@ -530,6 +530,58 @@ Multi-tenant ready from day 1:
 
 Today: single-user pilot, no real org sharing in production.
 Architecture is ready when team mode lights up.
+
+---
+
+## Work / Life mode
+
+Folios has two top-level modes — **Work** (green palette, account
+management) and **Life** (dusty-blue palette, personal assistant).
+A toggle in the desktop rail (bottom-left) and the mobile header
+switches modes instantly; the app recolors via CSS custom property
+swap, same mechanism as the light/dark theme.
+
+**Work mode** is the full account management OS — accounts, cadences,
+Gauge, calendar, meetings. Unchanged by the Life build.
+
+**Life mode** (Phase 1, June 2026) surfaces:
+- **Upcoming** — appointments and events, with a VIP heads-up ladder
+  (anniversary / spouse's birthday / Christmas get multi-stage escalating
+  nudges: 3wk soft → 1wk → 3d → 1d → day-of; annual recurrence set once)
+- **Honey-do list** — open home tasks prioritized by aging + complexity
+- **Soccer card** — Man United / Brazil / USMNT news + scores (moved
+  from work Home into Life Home)
+
+Phase 2 (planned) = honey-do brain: Pip as a home-project partner with
+how-to coaching, materials lists, and step-by-step guidance.
+
+Pip's orb recolors to dusty orange in Life mode (reads `--accent`).
+Both modes share one Supabase project and one Pip brain.
+
+---
+
+## Mobile Home — structured hub
+
+The mobile Home screen is an `OperatorHub` layout (since June 2026):
+a compact Pip glance card (headline chip + count chips + collapsed full
+read) followed by section cards (Today / This Week / Good News / Pattern)
+with tinted header strips, count badges, and clean stacked rows. An
+"On the Calendar" card surfaces same-day meetings. Redundant narrative
+panels are suppressed when an operator report is active.
+
+---
+
+## Teach Pip — on-demand knowledge-building
+
+Beyond the passive weekly drip question, the user can open a "Catch up
+with Pip" session anytime (Home card when no question is queued, or
+Settings → Pip's Questions). The session works through the question
+queue and offers a "Pip, ask me more →" button that fires a fresh
+manual generation pass (bypassing the 6-hour throttle) so the session
+never dead-ends. Deterministic account-anchored fallback questions
+guarantee at least one question per session even when the model
+abstains. Every answer folds into `profile_prose` and `folio_pip_facts`
+within minutes (re-synthesis throttled at 5 min).
 
 ---
 

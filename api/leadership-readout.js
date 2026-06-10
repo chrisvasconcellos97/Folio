@@ -74,10 +74,13 @@ export default async function handler(req, res) {
     var client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     var resp = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 600,
+      max_tokens: 900,
       system: systemPrompt,
       messages: [{ role: "user", content: userPrompt }],
     });
+    if (resp.stop_reason === "max_tokens") {
+      return res.status(502).json({ error: "Readout was cut off — please retry." });
+    }
     var email = resp.content[0].type === "text" ? resp.content[0].text.trim() : "";
     return res.status(200).json({ email: email });
   } catch (err) {
