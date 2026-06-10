@@ -92,10 +92,20 @@ export default async function handler(req, res) {
     var facts     = factsResult.data     || [];
     var existingQ = existingQResult.data || [];
 
-    // Build known-terms set (lowercased).
+    // Build known-terms set (lowercased). Index full names AND their individual
+    // words — "Fenix" must be known because "Fenix Auto Parts" is an account
+    // (the detector once asked what Fenix was... around Fenix Auto Parts).
     var knownTerms = new Set();
-    contacts.forEach(function (c) { if (c.name) knownTerms.add(c.name.toLowerCase()); });
-    accounts.forEach(function (a) { if (a.name) knownTerms.add(a.name.toLowerCase()); });
+    function addWithWords(name) {
+      if (!name) return;
+      var lc = name.toLowerCase();
+      knownTerms.add(lc);
+      lc.split(/[\s/&·-]+/).forEach(function (w) {
+        if (w.length > 2) knownTerms.add(w);
+      });
+    }
+    contacts.forEach(function (c) { addWithWords(c.name); });
+    accounts.forEach(function (a) { addWithWords(a.name); });
     glossary.forEach(function (g) {
       if (g.term) knownTerms.add(g.term.toLowerCase());
       if (Array.isArray(g.aliases)) g.aliases.forEach(function (a) { knownTerms.add(a.toLowerCase()); });
@@ -148,8 +158,14 @@ export default async function handler(req, res) {
     var terms = Array.isArray(parsed.terms) ? parsed.terms : [];
 
     // Filter to threshold ≥3 and not already asked.
+    var accountNamesLc = accounts.map(function (a) { return (a.name || "").toLowerCase(); });
     var newTerms = terms.filter(function (t) {
-      return t.term && t.meeting_count >= 3 && !alreadyAsked.has(t.term.toLowerCase()) && !knownTerms.has(t.term.toLowerCase());
+      if (!t.term || t.meeting_count < 3) return false;
+      var lc = t.term.toLowerCase();
+      if (alreadyAsked.has(lc) || knownTerms.has(lc)) return false;
+      // Substring of any account name (multi-word terms like "Fenix Auto") → known.
+      if (accountNamesLc.some(function (n) { return n && n.indexOf(lc) !== -1; })) return false;
+      return true;
     });
 
     if (!newTerms.length) return res.status(200).json({ inserted: 0 });
