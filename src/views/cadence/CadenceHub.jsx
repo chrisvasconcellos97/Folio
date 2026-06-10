@@ -319,16 +319,60 @@ export function PipBriefPanel({ brief, briefAt, loading, error, onRefresh, mobil
   );
 }
 
-/* ---- Meeting history row (with CADENCE/AD-HOC tag) ---- */
-function HistoryRow({ meeting, onEdit, onDelete, accountId, openItems, addItem, isCadenceTied }) {
+/* ---- Meeting history row (with CADENCE/AD-HOC tag) ----
+   Tap to expand: full raw notes (kept verbatim on every summarized meeting),
+   per-project meeting notes, and the tasks that came out of the meeting
+   (folio_tasks.source_meeting_id). Collapsed view keeps the summary preview. */
+function HistoryRow({ meeting, onEdit, onDelete, accountId, openItems, addItem, isCadenceTied, projectTitleById }) {
   var [confirm, setConfirm] = useState(false);
+  var [open, setOpen] = useState(false);
+  var [tasks, setTasks] = useState(null);      // null = not fetched yet
+  var [tasksLoading, setTasksLoading] = useState(false);
   var tagBg    = isCadenceTied ? C.accentFaint : C.surface2;
   var tagBorder = isCadenceTied ? C.accentLine : C.rule;
   var tagColor = isCadenceTied ? C.accent     : C.textMuted;
+
+  function toggleOpen() {
+    var next = !open;
+    setOpen(next);
+    if (next && tasks === null && !tasksLoading) {
+      setTasksLoading(true);
+      supabase
+        .from("folio_tasks")
+        .select("id, title, done, status, assignee_email, recipient, due_date, is_commitment")
+        .eq("source_meeting_id", meeting.id)
+        .order("created_at", { ascending: true })
+        .then(function (res) {
+          setTasks(res.error ? [] : (res.data || []));
+          setTasksLoading(false);
+        });
+    }
+  }
+
+  var projectNotes = meeting.project_notes && typeof meeting.project_notes === "object"
+    ? Object.keys(meeting.project_notes).filter(function (pid) {
+        return (meeting.project_notes[pid] || "").trim().length > 0;
+      })
+    : [];
+
+  var labelStyle = {
+    fontSize: 9, fontWeight: 700, color: C.textMuted, fontFamily: MONO,
+    letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 5,
+  };
+
   return (
     <div style={Object.assign({}, glass, { borderRadius: 10, padding: "11px 13px" })}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={toggleOpen}
+          onKeyDown={function (e) {
+            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleOpen(); }
+          }}
+          aria-expanded={open}
+          style={{ flex: 1, minWidth: 0, cursor: "pointer" }}
+        >
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3, flexWrap: "wrap" }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{meeting.title || "Conversation"}</span>
             <span style={{
@@ -354,6 +398,9 @@ function HistoryRow({ meeting, onEdit, onDelete, accountId, openItems, addItem, 
                 ✓ Tasks added
               </span>
             )}
+            <span aria-hidden="true" style={{ fontSize: 10, color: C.textMuted, marginLeft: "auto", flexShrink: 0 }}>
+              {open ? "▴ Close" : "▾ Open"}
+            </span>
           </div>
           <div style={{ fontSize: 11, color: C.textMuted, fontVariantNumeric: "tabular-nums" }}>
             {meeting.meeting_date && new Date(meeting.meeting_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
@@ -361,7 +408,7 @@ function HistoryRow({ meeting, onEdit, onDelete, accountId, openItems, addItem, 
           {meeting.pip_summary && (
             <MarkdownText text={meeting.pip_summary} style={{ fontSize: 13, color: C.textSub, lineHeight: 1.6, marginTop: 6 }} />
           )}
-          {!meeting.pip_summary && meeting.notes && (
+          {!meeting.pip_summary && meeting.notes && !open && (
             <div style={{ fontSize: 13, color: C.textSub, lineHeight: 1.6, marginTop: 6, whiteSpace: "pre-wrap" }}>
               {meeting.notes.length > 240 ? meeting.notes.slice(0, 240) + "…" : meeting.notes}
             </div>
@@ -371,8 +418,80 @@ function HistoryRow({ meeting, onEdit, onDelete, accountId, openItems, addItem, 
               Follow-up: {new Date(meeting.follow_up_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
             </div>
           )}
+
+          {open && (
+            <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 12 }}>
+              {meeting.notes && (
+                <div>
+                  <div style={labelStyle}>Your notes</div>
+                  <div style={{
+                    fontSize: 13, color: C.textSub, lineHeight: 1.6, whiteSpace: "pre-wrap",
+                    background: "var(--c-input-fill)", border: "1px solid " + C.ruleSoft,
+                    borderRadius: 8, padding: "10px 12px",
+                  }}>
+                    {meeting.notes}
+                  </div>
+                </div>
+              )}
+              {projectNotes.map(function (pid) {
+                return (
+                  <div key={pid}>
+                    <div style={labelStyle}>
+                      Project notes · {(projectTitleById && projectTitleById[pid]) || "Project"}
+                    </div>
+                    <div style={{
+                      fontSize: 13, color: C.textSub, lineHeight: 1.6, whiteSpace: "pre-wrap",
+                      background: "var(--c-input-fill)", border: "1px solid " + C.ruleSoft,
+                      borderRadius: 8, padding: "10px 12px",
+                    }}>
+                      {meeting.project_notes[pid]}
+                    </div>
+                  </div>
+                );
+              })}
+              <div>
+                <div style={labelStyle}>Tasks from this meeting</div>
+                {tasksLoading && (
+                  <div style={{ fontSize: 12, color: C.textMuted }}>Loading…</div>
+                )}
+                {!tasksLoading && tasks && tasks.length === 0 && (
+                  <div style={{ fontSize: 12, color: C.textMuted }}>No tasks were created from this meeting.</div>
+                )}
+                {!tasksLoading && tasks && tasks.length > 0 && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                    {tasks.map(function (t) {
+                      var closed = t.done || t.status === "complete";
+                      return (
+                        <div key={t.id} style={{ display: "flex", alignItems: "flex-start", gap: 7 }}>
+                          <span aria-hidden="true" style={{
+                            fontSize: 12, lineHeight: "19px", flexShrink: 0,
+                            color: closed ? C.accent : C.textMuted,
+                          }}>
+                            {closed ? "✓" : "◯"}
+                          </span>
+                          <span style={{
+                            fontSize: 13, color: closed ? C.textMuted : C.textSub, lineHeight: 1.5,
+                            textDecoration: closed ? "line-through" : "none",
+                          }}>
+                            {t.is_commitment ? "✦ " : ""}{t.title}
+                            {(t.assignee_email || t.due_date) && (
+                              <span style={{ fontSize: 11, color: C.textMuted, marginLeft: 6, fontVariantNumeric: "tabular-nums" }}>
+                                {t.assignee_email ? "· " + t.assignee_email + " " : ""}
+                                {t.due_date ? "· due " + new Date(t.due_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""}
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {meeting.action_items && addItem && accountId && (
-            <div style={{ marginTop: 8 }}>
+            <div style={{ marginTop: 8 }} onClick={function (e) { e.stopPropagation(); }}>
               <AddToTasksButton
                 actionItemsText={meeting.action_items}
                 accountId={accountId}
@@ -1271,6 +1390,14 @@ export function CadenceHub({
     return map;
   }, [accounts]);
 
+  // Titles for ALL projects (incl. completed) so expanded history rows can
+  // label per-project meeting notes even after the project ships.
+  var projectTitleById = useMemo(function () {
+    var map = {};
+    (projects || []).forEach(function (p) { map[p.id] = p.title; });
+    return map;
+  }, [projects]);
+
   var activeProjects = useMemo(function () {
     return (projects || [])
       .filter(function (p) { return p.status !== "complete"; })
@@ -1837,6 +1964,7 @@ export function CadenceHub({
                   openItems={openItems}
                   addItem={addItem}
                   isCadenceTied={!!m.cadence_id}
+                  projectTitleById={projectTitleById}
                 />
                 {isPersonCadence && m.pip_summary && (
                   <button
