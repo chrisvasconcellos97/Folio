@@ -549,7 +549,7 @@ export function AccountsView({ accounts, allAccounts, loading, onSelect, onAddAc
                   gap: 10,
                 }}>
                   <button
-                    onClick={function () { updateTask(t.id, { done: true, status: "complete" }); }}
+                    onClick={function () { updateTask(t.id, { done: true }); }}  /* folio_quick_tasks has no status column — done is its only completion flag */
                     title="Mark done"
                     style={{
                       width: 18,
