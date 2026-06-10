@@ -22,12 +22,14 @@ var TOOLTIP_TIPS = {
 var WORKSPACE_IDS = ["accounts", "departments", "partners"];
 var WORKSPACE_LABELS = { accounts: "Accounts", departments: "Departments", partners: "Partners" };
 
+// Item 43 (LOCKED June 10 2026): Pip front and center with presence;
+// Commitments lost the slot (it lives on via Home's "Your word").
 var NAV_ITEMS = [
   { id: "home",        label: "Home",        icon: "◉"     },
   { id: "workspaces",  label: "Accounts",    icon: "▣",  isWorkspaces: true },
+  { id: "pip",         label: "Pip",         icon: "pip", isPip: true },
   { id: "meetings",    label: "Calendar",    icon: "◷"     },
   { id: "gauge",       label: "Gauge",       icon: "gauge"  },
-  { id: "commitments", label: "Commitments", icon: "◇"     },
 ];
 
 // Life mode shows none of the work modules in the bottom nav — just Home.
@@ -257,9 +259,11 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
                 <span style={{
                   display: "inline-flex", alignItems: "center", justifyContent: "center",
                   width: 22, height: 22, flexShrink: 0,
-                  opacity: active ? 1 : 0.78,
+                  opacity: active || item.isPip ? 1 : 0.78,
                 }}>
-                  <Mark tab={item.id} size={22} active={active} />
+                  {item.isPip
+                    ? <PipOrb size="xs" />
+                    : <Mark tab={item.id} size={22} active={active} />}
                 </span>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 3, lineHeight: 1 }}>
                   {displayLabel}

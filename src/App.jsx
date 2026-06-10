@@ -304,7 +304,7 @@ export default function App() {
   var { mode, setMode } = useMode();
   var lifeApi = useLifeItems(userId);
   var [showAddLife, setShowAddLife] = useState(false);
-  var { projects: allProjects, error: projectsErrorApp, refetch: refetchProjectsApp, addProject: addProjectApp } = useProjects(userId);
+  var { projects: allProjects, error: projectsErrorApp, refetch: refetchProjectsApp, addProject: addProjectApp, updateProject: updateProjectApp } = useProjects(userId);
   var pipAcctStateApp = usePipAccountState(userId);
   var { workspaces: customWorkspaces, addWorkspace: addCustomWorkspace, deleteWorkspace: deleteCustomWorkspace } = useCustomWorkspaces(userId);
 
@@ -1114,6 +1114,8 @@ export default function App() {
         commitmentNudges={commitmentNudgesHook.nudges}
         onSnoozeNudge={commitmentNudgesHook.snooze}
         onMarkNudgeDone={commitmentNudgesHook.markDone}
+        onCloseItem={closeItem}
+        onUpdateProject={updateProjectApp}
         contacts={allContacts}
         themes={recentThemes}
         scheduledMeetings={scheduledMeetings}

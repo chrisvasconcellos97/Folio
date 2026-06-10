@@ -9,6 +9,8 @@ import { getNextOccurrence, formatTime } from "../../lib/cadenceUtils";
 import { useAccountSnapshots } from "../../hooks/useAccountSnapshots";
 import { useOperatorReport } from "../../hooks/useOperatorReport";
 import { OperatorHub } from "./OperatorHub";
+import { CheckInCard } from "./CheckInCard";
+import { generateCheckInQuestions } from "../../lib/checkIn";
 import { callPortfolioBriefPip } from "../../lib/pip";
 import { isProjectComplete } from "../../lib/gaugeStatus";
 import { suggestionLabel } from "../pip/PipCatchUp";
@@ -172,7 +174,7 @@ function makeAccountLinkify(accounts, onOpenAccount) {
   };
 }
 
-export function HomeView({ userName, userId, accounts, meetings, items, cadences, projects, contacts, themes, onOpenAccount, onOpenAccountTab, onOpenCadenceHub, onOpenConversation, onOpenQuickTask, showOnboardingCard, onStartInterview, onDismissOnboardingCard, dripQuestion, dripQueueCount, onOpenCatchUp, onApplySuggestion, onAnswerDrip, onSkipDrip, onDismissDrip, commitmentNudges, onSnoozeNudge, onMarkNudgeDone, pipFacts, profileProse, scheduledMeetings, onOpenScheduled }) {
+export function HomeView({ userName, userId, accounts, meetings, items, cadences, projects, contacts, themes, onOpenAccount, onOpenAccountTab, onOpenCadenceHub, onOpenConversation, onOpenQuickTask, showOnboardingCard, onStartInterview, onDismissOnboardingCard, dripQuestion, dripQueueCount, onOpenCatchUp, onApplySuggestion, onAnswerDrip, onSkipDrip, onDismissDrip, commitmentNudges, onSnoozeNudge, onMarkNudgeDone, onCloseItem, onUpdateProject, pipFacts, profileProse, scheduledMeetings, onOpenScheduled }) {
   commitmentNudges = commitmentNudges || [];
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
@@ -554,6 +556,57 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
     rows.sort(function (a, b) { return (b.days || 0) - (a.days || 0); });
     return rows.slice(0, 6);
   }, [projects, items]);
+
+  // ── Morning check-in (Phase 1.2) — Pip asks before he declares ────────
+  var checkInKey = "folio_checkin_" + userId + "_" + todayISO;
+  var [checkInAnswered, setCheckInAnswered] = useState(function () {
+    try { return JSON.parse(localStorage.getItem(checkInKey) || "{}"); } catch (e) { return {}; }
+  });
+  var [checkInReceipts, setCheckInReceipts] = useState([]);
+  var checkInQuestions = useMemo(function () {
+    return generateCheckInQuestions({
+      items: items || [], projects: projects || [], meetings: meetings || [],
+      accounts: accounts || [], todayISO: todayISO, answered: checkInAnswered,
+    });
+  }, [items, projects, meetings, accounts, todayISO, checkInAnswered]);
+
+  function handleCheckInAnswer(q, optId) {
+    var next = Object.assign({}, checkInAnswered);
+    next[q.id] = optId;
+    setCheckInAnswered(next);
+    try { localStorage.setItem(checkInKey, JSON.stringify(next)); } catch (e) { /* quota */ }
+
+    var receipt = null;
+    if (q.kind === "deadline_passed" && optId === "done") {
+      if (q.targetKind === "item" && onCloseItem) {
+        onCloseItem(q.targetId);
+        receipt = "Marked it done — the report won't cry wolf about it.";
+      } else if (q.targetKind === "project" && onUpdateProject) {
+        onUpdateProject(q.targetId, { status: "complete" });
+        receipt = "Project marked complete — corrected before the day starts.";
+      }
+    } else if (q.kind === "deadline_passed" && optId === "still_open") {
+      receipt = "Noted — it stays on your list.";
+    } else if (q.kind === "stalled_hold" && optId === "it_moved") {
+      if (onUpdateProject) onUpdateProject(q.targetId, { waiting_on: null, waiting_on_since: null });
+      receipt = "Cleared the hold" + (q.who ? " on " + q.who : "") + " — good news.";
+    } else if (q.kind === "stalled_hold" && optId === "still_stuck") {
+      var proj = (projects || []).find(function (p) { return p.id === q.targetId; });
+      var msg = "Hi " + (q.who || "").split(" ")[0] + " — checking in on \"" +
+        ((proj && proj.title) || "the project") + "\". Where do things stand? Anything you need from me to move it? Thanks!";
+      if (navigator.clipboard) navigator.clipboard.writeText(msg);
+      receipt = "Chase note for " + q.who + " copied — paste into email or Teams.";
+    } else if (q.kind === "stale_draft" && optId === "open_it") {
+      receipt = "Taking you to the draft.";
+      if (q.accountId && onOpenAccountTab) onOpenAccountTab(q.accountId, "meetings");
+    } else if (q.kind === "stale_draft" && optId === "ignore") {
+      receipt = "Letting that one go.";
+    }
+    if (receipt) {
+      setCheckInReceipts(function (prev) { return prev.concat([receipt]); });
+      showToast(receipt);
+    }
+  }
 
   // ── Today's Calls ────────────────────────────────────────────────────
   var todaysCalls = useMemo(function () {
@@ -1106,16 +1159,135 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
         </div>
       </div>
 
-      {operatorActive && (
-        <OperatorHub
-          report={operatorReport}
-          drafts={operatorDrafts}
-          accounts={accounts}
-          isMobile={isMobile}
-          mounted={mounted}
-          onOpenAccount={onOpenAccount}
-          linkify={makeAccountLinkify(accounts, onOpenAccount)}
-        />
+      <CheckInCard
+        questions={checkInQuestions}
+        receipts={checkInReceipts}
+        onAnswer={handleCheckInAnswer}
+        isMobile={isMobile}
+      />
+
+      {/* ── Your word (Phase 1.5) — what you owe people + what they owe you.
+          The keeper-of-his-word surface; commitments lost their nav slot to
+          Pip (item 43) and live here instead. ── */}
+      {(commitmentNudges.length > 0 || waitingOnRows.length > 0) && (
+        <div style={{
+          maxWidth: 600,
+          margin: isMobile ? "0 16px 12px" : "0 auto 12px",
+          background: C.surface,
+          border: "1px solid " + C.rule,
+          borderLeft: "3px solid " + C.yellow,
+          borderRadius: 12,
+          padding: "14px 16px",
+        }}>
+          <div style={{
+            fontFamily: MONO, fontSize: 10, color: C.yellow, fontWeight: 700,
+            letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10,
+          }}>
+            ✦ Your word
+          </div>
+
+          {commitmentNudges.length > 0 && (
+            <div style={{ marginBottom: waitingOnRows.length ? 12 : 0 }}>
+              <div style={{ fontFamily: MONO, fontSize: 9, color: C.textMuted, letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 7 }}>
+                You owe ({commitmentNudges.length})
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {commitmentNudges.slice(0, 3).map(function (n) {
+                  var dueLabel = n.isOverdue
+                    ? Math.abs(n.daysUntilDue) + "d overdue"
+                    : n.daysUntilDue === 0 ? "due today"
+                    : n.daysUntilDue === 1 ? "due tomorrow"
+                    : "due in " + n.daysUntilDue + "d";
+                  return (
+                    <div key={n.taskId} style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <div style={{ flex: 1, minWidth: 180, fontSize: 13, color: C.text }}>
+                        {n.title}
+                        {n.accountName ? <span style={{ color: C.textMuted, fontSize: 12 }}>{" · " + n.accountName}</span> : null}
+                      </div>
+                      <span style={{ fontFamily: MONO, fontSize: 10, color: n.isOverdue ? C.red : C.yellow, whiteSpace: "nowrap", fontFeatureSettings: '"tnum"' }}>
+                        {dueLabel}
+                      </span>
+                      <button
+                        onClick={function () { if (onMarkNudgeDone) onMarkNudgeDone(n.taskId); }}
+                        style={{ background: C.accentFaint, border: "1px solid " + C.accentLine, borderRadius: 6, padding: "3px 10px", fontFamily: MONO, fontSize: 10.5, color: C.accent, cursor: "pointer" }}
+                      >
+                        Done ✓
+                      </button>
+                      <button
+                        onClick={function () { if (onSnoozeNudge) onSnoozeNudge(n.taskId); }}
+                        style={{ background: "none", border: "1px solid " + C.rule, borderRadius: 6, padding: "3px 10px", fontFamily: MONO, fontSize: 10.5, color: C.textMuted, cursor: "pointer" }}
+                      >
+                        Snooze
+                      </button>
+                    </div>
+                  );
+                })}
+                {commitmentNudges.length > 3 && (
+                  <span style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted }}>
+                    {"+" + (commitmentNudges.length - 3) + " more"}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {waitingOnRows.length > 0 && (
+            <div>
+              <div style={{ fontFamily: MONO, fontSize: 9, color: C.textMuted, letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 7 }}>
+                ⏳ They owe you ({waitingOnRows.length})
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {waitingOnRows.map(function (r) {
+                  var acct = r.accountId ? accountById[r.accountId] : null;
+                  return (
+                    <div key={r.kind + r.id} style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                      <div style={{ flex: 1, minWidth: 180 }}>
+                        <span style={{ fontSize: 13, color: C.text, fontWeight: 600 }}>{r.who}</span>
+                        <span style={{ fontSize: 12.5, color: C.textSoft }}> · {r.what}</span>
+                        {acct && (
+                          <span
+                            role="button"
+                            tabIndex={0}
+                            onClick={function () { onOpenAccount(acct.id); }}
+                            onKeyDown={function (e) { if (e.key === "Enter") onOpenAccount(acct.id); }}
+                            style={{ fontSize: 11.5, color: C.accent, cursor: "pointer", marginLeft: 6 }}
+                          >
+                            {acct.name}
+                          </span>
+                        )}
+                      </div>
+                      {r.days !== null && (
+                        <span style={{
+                          fontFamily: MONO, fontSize: 10, fontFeatureSettings: '"tnum"',
+                          color: r.days > 10 ? C.red : C.yellow, whiteSpace: "nowrap",
+                        }}>
+                          {r.days}d held
+                        </span>
+                      )}
+                      <button
+                        onClick={function () {
+                          var msg = "Hi " + r.who.split(" ")[0] + " — checking in on \"" + r.what + "\"" +
+                            (r.days ? " (with you for " + r.days + " days now)" : "") +
+                            ". Where do things stand? Anything you need from me to move it? Thanks!";
+                          navigator.clipboard && navigator.clipboard.writeText(msg);
+                          showToast("Chase note copied — paste into email or Teams");
+                        }}
+                        style={{
+                          background: C.accentFaint, border: "1px solid " + C.accentLine,
+                          borderRadius: 6, padding: "3px 10px",
+                          fontSize: 10.5, color: C.accent, fontFamily: MONO,
+                          cursor: "pointer", whiteSpace: "nowrap",
+                        }}
+                      >
+                        Copy chase
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Calls today — real scheduling (with times) the operator report doesn't
@@ -1266,118 +1438,17 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
         </div>
       )}
 
-      {/* They owe you — waiting-on layer (Phase 1.4). Oldest holds first;
-          one-tap chase template to the clipboard. */}
-      {waitingOnRows.length > 0 && (
-        <div style={{
-          background: C.surface, border: "1px solid " + C.rule,
-          borderLeft: "3px solid " + C.yellow,
-          borderRadius: 12, padding: "14px 16px", marginBottom: 14,
-        }}>
-          <div style={{
-            fontFamily: MONO, fontSize: 9.5, color: C.yellow, fontWeight: 700,
-            letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10,
-          }}>
-            ⏳ They owe you ({waitingOnRows.length})
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {waitingOnRows.map(function (r) {
-              var acct = r.accountId ? accountById[r.accountId] : null;
-              return (
-                <div key={r.kind + r.id} style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                  <div style={{ flex: 1, minWidth: 180 }}>
-                    <span style={{ fontSize: 13, color: C.text, fontWeight: 600 }}>{r.who}</span>
-                    <span style={{ fontSize: 12.5, color: C.textSoft }}> · {r.what}</span>
-                    {acct && (
-                      <span
-                        role="button"
-                        tabIndex={0}
-                        onClick={function () { onOpenAccount(acct.id); }}
-                        onKeyDown={function (e) { if (e.key === "Enter") onOpenAccount(acct.id); }}
-                        style={{ fontSize: 11.5, color: C.accent, cursor: "pointer", marginLeft: 6 }}
-                      >
-                        {acct.name}
-                      </span>
-                    )}
-                  </div>
-                  {r.days !== null && (
-                    <span style={{
-                      fontFamily: MONO, fontSize: 10, fontFeatureSettings: '"tnum"',
-                      color: r.days > 10 ? C.red : C.yellow, whiteSpace: "nowrap",
-                    }}>
-                      {r.days}d held
-                    </span>
-                  )}
-                  <button
-                    onClick={function () {
-                      var msg = "Hi " + r.who.split(" ")[0] + " — checking in on \"" + r.what + "\"" +
-                        (r.days ? " (with you for " + r.days + " days now)" : "") +
-                        ". Where do things stand? Anything you need from me to move it? Thanks!";
-                      navigator.clipboard && navigator.clipboard.writeText(msg);
-                      showToast("Chase note copied — paste into email or Teams");
-                    }}
-                    style={{
-                      background: C.accentFaint, border: "1px solid " + C.accentLine,
-                      borderRadius: 6, padding: "3px 10px",
-                      fontSize: 10.5, color: C.accent, fontFamily: MONO,
-                      cursor: "pointer", whiteSpace: "nowrap",
-                    }}
-                  >
-                    Copy chase
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+      {operatorActive && (
+        <OperatorHub
+          report={operatorReport}
+          drafts={operatorDrafts}
+          accounts={accounts}
+          isMobile={isMobile}
+          mounted={mounted}
+          onOpenAccount={onOpenAccount}
+          linkify={makeAccountLinkify(accounts, onOpenAccount)}
+        />
       )}
-
-      {/* Commitment nudge card — amber warning for ✦ commitments due soon or overdue */}
-      {commitmentNudges.length > 0 && (function () {
-        var n = commitmentNudges[0];
-        var dueLabel = n.isOverdue
-          ? Math.abs(n.daysUntilDue) + "d overdue"
-          : n.daysUntilDue === 0 ? "due today"
-          : n.daysUntilDue === 1 ? "due tomorrow"
-          : "due in " + n.daysUntilDue + "d";
-        return (
-          <div style={{
-            maxWidth: 600,
-            margin: isMobile ? "0 16px 12px" : "0 auto 12px",
-            background: C.yellowFaint,
-            border: "1px solid " + C.yellow,
-            borderRadius: 10,
-            padding: "14px 16px",
-          }}>
-            <div style={{ fontFamily: MONO, fontSize: 10, color: C.yellow, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>
-              {"✦ Commitment · " + dueLabel}
-            </div>
-            <div style={{ fontSize: 14, color: C.text, lineHeight: 1.4, marginBottom: 10 }}>
-              {n.title}
-              {n.accountName ? <span style={{ color: C.textMuted }}>{" · " + n.accountName}</span> : null}
-            </div>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <button
-                onClick={function () { if (onMarkNudgeDone) onMarkNudgeDone(n.taskId); }}
-                style={{ background: C.accentFaint, border: "1px solid " + C.accentLine, borderRadius: 6, padding: "5px 12px", fontFamily: MONO, fontSize: 11, color: C.accent, cursor: "pointer" }}
-              >
-                {"Mark done ✓"}
-              </button>
-              <button
-                onClick={function () { if (onSnoozeNudge) onSnoozeNudge(n.taskId); }}
-                style={{ background: "none", border: "1px solid " + C.rule, borderRadius: 6, padding: "5px 12px", fontFamily: MONO, fontSize: 11, color: C.textMuted, cursor: "pointer" }}
-              >
-                Snooze
-              </button>
-              {commitmentNudges.length > 1 && (
-                <span style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, alignSelf: "center" }}>
-                  {"+" + (commitmentNudges.length - 1) + " more"}
-                </span>
-              )}
-            </div>
-          </div>
-        );
-      })()}
 
       {/* Teach Pip — persistent entry to the Catch Up session even when no
           question is queued (the session can generate fresh ones on demand). */}
@@ -1408,8 +1479,9 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
         </div>
       )}
 
-      {/* Drip question card — between daily brief and four-panel grid */}
-      {dripQuestion && (
+      {/* Drip question card — suppressed when the operator report runs the
+          morning (the check-in is the conversation that matters then). */}
+      {!operatorActive && dripQuestion && (
         <div style={{
           maxWidth: 600,
           margin: isMobile ? "0 16px 12px" : "0 auto 12px",
@@ -1621,8 +1693,9 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
         </div>
       )}
 
-      {/* Draft-ahead — follow-up emails Pip already wrote, waiting to send */}
-      {draftAhead.length > 0 && (
+      {/* Draft-ahead — duplicate of OperatorHub's draft rows when the report
+          is active, so it only renders on fallback mornings. */}
+      {!operatorActive && draftAhead.length > 0 && (
         <div style={{
           maxWidth: 600,
           margin: isMobile ? "0 16px 12px" : "0 auto 12px",

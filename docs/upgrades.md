@@ -17,6 +17,18 @@ those live in git history.
 
 ---
 
+## 2026-06-10 — The morning check-in, "Your word," and Pip takes center stage on mobile
+
+**What I built:** Three connected changes to how the day starts. First, the **morning check-in**: before you read Pip's overnight report, he asks up to three one-tap verification questions — "that audit was due Friday, did it land?" / "still stuck on Danny? He's had it 12 days" / "that Tuesday draft was never summarized — still needed?" Each answer immediately fixes the data underneath (marks the item done, clears the hold, routes you to the draft) with a visible receipt. Second, **"Your word"** — one card near the top of Home with both sides of your ledger: what you owe (commitments due or slipping, with Done/Snooze) and what they owe you (everything blocked on someone, with chase notes). Third, **Pip is now front and center in the mobile bottom nav** — his living orb sits in the middle slot; Commitments gave up the slot and lives on inside "Your word."
+
+**Problem it solves:** The report used to declare things at full confidence on stale data (the "All Star Monday" — work done over the weekend, just unmarked, reported as a fire). And the things that define being flat-footed — forgotten promises, silent holds — had no single home. And the assistant the app is named for wasn't reachable from the phone nav at all.
+
+**What you see today:** Open Folios in the morning → Pip's check-in card (when he has something to verify), then Your word, then today's calls, then the corrected report. Duplicates are gone — drafted follow-ups and the question-of-the-day no longer repeat below the report on operator mornings. On your phone, the middle nav button is Pip himself.
+
+**Why it matters:** "Flat-footed = I forgot something I said I'd do." The morning sequence is now built around exactly that — verify, keep your word, then read the day. The check-in costs nothing to run (no AI calls — it's computed from your own data) and ten seconds to answer.
+
+---
+
 ## 2026-06-10 — Waiting-on layer + the account Overview becomes a strategic face
 
 **What I built:** Every project and task can now record **who's holding the ball** — "waiting on Danny since June 4" — set from the project editor or task panel with one picker. Everything blocked on someone else rolls up to a **"They owe you"** card on Home, oldest holds first, each with a one-tap **chase note** copied to your clipboard ready for email or Teams. And the account Overview tab was rebuilt as the account's strategic face: big meeting CTAs on top (start/log, cadence hub, history), the account's projects in flight with status + ball-holder + latest pulse, your open commitments, and the last conversation — with all the existing depth intact below and in the tabs.
