@@ -695,26 +695,16 @@ export function ProjectModal({
         {/* Requested By */}
         <div>
           <FL>Requested By</FL>
-          {contacts.length > 0 ? (
-            <SelectField
-              value={requestedBy}
-              onChange={function (e) { setRequestedBy(e.target.value); }}
-            >
-              <option value="">Select a contact…</option>
-              {contacts.map(function (c) {
-                var acct = (accounts || []).find(function (a) { return a.id === c.account_id; });
-                return (
-                  <option key={c.id} value={c.name}>{c.name}{acct ? " (" + acct.name + ")" : ""}</option>
-                );
-              })}
-            </SelectField>
-          ) : (
-            <InputField
-              value={requestedBy}
-              onChange={function (e) { setRequestedBy(e.target.value); }}
-              placeholder="Who asked for this?"
-            />
-          )}
+          <PersonPicker
+            value={requestedBy || null}
+            onChange={function(v) { setRequestedBy(v || ""); }}
+            members={members}
+            contacts={allContacts && allContacts.length ? allContacts : contacts}
+            accounts={accounts}
+            accountIds={accountIds}
+            noneLabel="— No requestor —"
+            contactValue={function(c) { return c.name; }}
+          />
         </div>
 
         {/* Custom columns schema — drives the task detail panel + standing board */}
@@ -853,30 +843,22 @@ export function ProjectModal({
                   {/* Assignee row */}
                   <div style={{ display: "flex", gap: 8, marginTop: 6, alignItems: "center" }}>
                     {s.is_external ? (
-                      // External: contact dropdown or free text
-                      contacts.length > 0 ? (
-                        <SelectField
-                          value={s.external_contact_id || ""}
-                          onChange={function (e) {
-                            var c = contacts.find(function (x) { return x.id === e.target.value; });
-                            updateStageField(i, "external_contact_id", e.target.value);
-                            updateStageField(i, "external_contact_name", c ? c.name : "");
-                          }}
-                          style={{ fontSize: 12, padding: "4px 10px", flex: 1 }}
-                        >
-                          <option value="">External contact…</option>
-                          {contacts.map(function (c) {
-                            return <option key={c.id} value={c.id}>{c.name}</option>;
-                          })}
-                        </SelectField>
-                      ) : (
-                        <InputField
-                          value={s.external_contact_name || ""}
-                          onChange={function (e) { updateStageField(i, "external_contact_name", e.target.value); }}
-                          placeholder="External contact name"
-                          style={{ fontSize: 12, padding: "4px 10px", flex: 1 }}
-                        />
-                      )
+                      // External: workspace-grouped person picker storing contact name
+                      <PersonPicker
+                        value={s.external_contact_name || null}
+                        onChange={function(v) {
+                          var c = (contacts || []).find(function(x) { return x.name === v; });
+                          updateStageField(i, "external_contact_name", v || "");
+                          updateStageField(i, "external_contact_id", c ? c.id : null);
+                        }}
+                        members={members}
+                        contacts={contacts}
+                        accounts={accounts}
+                        accountIds={accountIds}
+                        noneLabel="— None —"
+                        contactValue={function(c) { return c.name; }}
+                        style={{ fontSize: 12 }}
+                      />
                     ) : (
                       // Internal: workspace-grouped people picker (account
                       // contacts first → team → others) + free-text escape hatch.

@@ -35,7 +35,7 @@ export function PersonPicker({ value, onChange, members, contacts, accounts, acc
   var cons = contacts || [];
   var accts = accounts || [];
   var primaryIds = (accountIds || []).filter(Boolean);
-  var valueOf = contactValue || function (c) { return c.email || c.name; };
+  var valueOf = contactValue || function (c) { return c.name; };
   var primaryKey = primaryIds.join(",");
 
   var acctName = useMemo(function () {

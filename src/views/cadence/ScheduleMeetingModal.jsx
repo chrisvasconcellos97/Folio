@@ -35,12 +35,13 @@ function autoTitle(method, dateISO) {
  *
  * Props:
  *  - accounts       Array of all accounts (required, inactive accounts filtered)
+ *  - contacts       Array of all contacts (optional, for attendee toggles)
  *  - defaultDate    ISO date string to prefill (e.g. from clicking a calendar day)
- *  - onSchedule({ account_id, meeting_date, meeting_time, method, agenda, title,
- *                 status:'scheduled', cadence_id:null, user_id: ... })
+ *  - onSchedule({ account_id, account_ids, meeting_date, meeting_time, method,
+ *                 agenda, title, attendees, status:'scheduled', cadence_id:null })
  *  - onClose
  */
-export function ScheduleMeetingModal({ accounts, defaultDate, onSchedule, onClose }) {
+export function ScheduleMeetingModal({ accounts, contacts, defaultDate, onSchedule, onClose }) {
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
 
@@ -50,48 +51,58 @@ export function ScheduleMeetingModal({ accounts, defaultDate, onSchedule, onClos
       .sort(function (a, b) { return (a.name || "").localeCompare(b.name || ""); });
   }, [accounts]);
 
-  var [search, setSearch]       = useState("");
-  var [selectedAccountId, setSelectedAccountId] = useState("");
-  var [method, setMethod]       = useState("");
-  var [date, setDate]           = useState(defaultDate || todayISO());
-  var [time, setTime]           = useState("");
-  var [agenda, setAgenda]       = useState("");
-  var [loading, setLoading]     = useState(false);
-  var [error, setError]         = useState(null);
+  var [search, setSearch]             = useState("");
+  var [selectedAccountIds, setSelectedAccountIds] = useState([]);
+  var [method, setMethod]             = useState("");
+  var [date, setDate]                 = useState(defaultDate || todayISO());
+  var [time, setTime]                 = useState("");
+  var [agenda, setAgenda]             = useState("");
+  var [attendees, setAttendees]       = useState([]);
+  var [loading, setLoading]           = useState(false);
+  var [error, setError]               = useState(null);
 
-  var selectedAccount = useMemo(function () {
-    if (!selectedAccountId) return null;
-    return activeAccounts.find(function (a) { return a.id === selectedAccountId; }) || null;
-  }, [selectedAccountId, activeAccounts]);
+  // Contacts for the primary account (first selected)
+  var accountContacts = useMemo(function () {
+    var primaryId = selectedAccountIds[0];
+    if (!primaryId) return [];
+    return (contacts || []).filter(function (c) { return c.account_id === primaryId; });
+  }, [contacts, selectedAccountIds]);
 
   // Auto-select when the search narrows to exactly one match.
   useEffect(function () {
     var q = search.trim().toLowerCase();
-    if (!q || selectedAccountId) return;
+    if (!q || selectedAccountIds.length > 0) return;
     var matches = activeAccounts.filter(function (a) {
       return (a.name || "").toLowerCase().includes(q);
     });
     if (matches.length === 1) {
-      setSelectedAccountId(matches[0].id);
+      setSelectedAccountIds([matches[0].id]);
+      setSearch("");
     }
-  }, [search, activeAccounts, selectedAccountId]);
+  }, [search, activeAccounts, selectedAccountIds]);
 
   var filteredAccounts = useMemo(function () {
     var q = search.trim().toLowerCase();
-    if (!q) return activeAccounts.slice(0, 50);
-    return activeAccounts.filter(function (a) {
-      return (a.name || "").toLowerCase().indexOf(q) >= 0;
+    var base = q
+      ? activeAccounts.filter(function (a) {
+          return (a.name || "").toLowerCase().indexOf(q) >= 0;
+        })
+      : activeAccounts;
+    // Exclude already-selected accounts from the dropdown
+    return base.filter(function (a) {
+      return !selectedAccountIds.includes(a.id);
     }).slice(0, 50);
-  }, [search, activeAccounts]);
+  }, [search, activeAccounts, selectedAccountIds]);
 
-  var canSchedule = Boolean(selectedAccountId && method && date && !loading);
+  var canSchedule = Boolean(selectedAccountIds.length && method && date && !loading);
 
   function handleSchedule() {
     if (!canSchedule) return;
     setError(null);
     setLoading(true);
     var payload = {
-      account_id:   selectedAccountId,
+      account_id:   selectedAccountIds[0] || null,
+      account_ids:  selectedAccountIds,
       meeting_date: date,
       meeting_time: time.trim() || null,
       method:       method,
@@ -99,6 +110,7 @@ export function ScheduleMeetingModal({ accounts, defaultDate, onSchedule, onClos
       title:        autoTitle(method, date),
       status:       "scheduled",
       cadence_id:   null,
+      attendees:    attendees.length ? attendees : null,
     };
     Promise.resolve(onSchedule(payload)).then(function () {
       setLoading(false);
@@ -112,13 +124,13 @@ export function ScheduleMeetingModal({ accounts, defaultDate, onSchedule, onClos
     <Modal title="Schedule Meeting" onClose={onClose} width={460}>
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
 
-        {/* Account picker */}
+        {/* Account picker — multi-select */}
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
             <FL htmlFor="sched-acct">Account</FL>
-            {selectedAccount ? (
+            {selectedAccountIds.length > 0 ? (
               <span style={{ fontSize: 10.5, color: C.accent, fontFamily: "'JetBrains Mono', ui-monospace, monospace", letterSpacing: "0.06em", textTransform: "uppercase" }}>
-                ✓ {selectedAccount.name}
+                ✓ {selectedAccountIds.length} account{selectedAccountIds.length > 1 ? "s" : ""}
               </span>
             ) : (
               <span style={{ fontSize: 10.5, color: C.textMuted, fontFamily: "'JetBrains Mono', ui-monospace, monospace", letterSpacing: "0.06em", textTransform: "uppercase" }}>
@@ -126,21 +138,41 @@ export function ScheduleMeetingModal({ accounts, defaultDate, onSchedule, onClos
               </span>
             )}
           </div>
+
+          {/* Selected account chips */}
+          {selectedAccountIds.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 6 }}>
+              {selectedAccountIds.map(function(id) {
+                var a = activeAccounts.find(function(x) { return x.id === id; });
+                return (
+                  <span key={id} style={{
+                    display: "inline-flex", alignItems: "center", gap: 4,
+                    background: C.accentFaint, border: "1px solid " + C.accentBorder,
+                    borderRadius: 12, padding: "3px 8px", fontSize: 11, color: C.accent,
+                    fontFamily: INTER,
+                  }}>
+                    {a ? a.name : id}
+                    <button type="button" onClick={function() {
+                      setSelectedAccountIds(function(prev) { return prev.filter(function(x) { return x !== id; }); });
+                    }} style={{ background: "transparent", border: "none", color: C.textMuted, cursor: "pointer", padding: 0, fontSize: 13, lineHeight: 1 }}>×</button>
+                  </span>
+                );
+              })}
+            </div>
+          )}
+
           <div style={{ position: "relative" }}>
             <input
               id="sched-acct"
               type="text"
               value={search}
-              onChange={function (e) {
-                setSearch(e.target.value);
-                if (selectedAccountId) setSelectedAccountId("");
-              }}
-              placeholder={selectedAccount ? selectedAccount.name : "Type an account name…"}
+              onChange={function (e) { setSearch(e.target.value); }}
+              placeholder="Add an account…"
               autoComplete="off"
               style={{
                 width: "100%",
                 background: C.bgDark,
-                border: "1px solid " + (selectedAccount ? C.accentBorder : C.border),
+                border: "1px solid " + (selectedAccountIds.length > 0 ? C.accentBorder : C.border),
                 borderRadius: 10,
                 padding: "10px 36px 10px 14px",
                 color: C.text,
@@ -150,11 +182,11 @@ export function ScheduleMeetingModal({ accounts, defaultDate, onSchedule, onClos
                 boxSizing: "border-box",
               }}
             />
-            {(search || selectedAccount) && (
+            {search && (
               <button
                 type="button"
-                onClick={function () { setSearch(""); setSelectedAccountId(""); }}
-                aria-label="Clear account"
+                onClick={function () { setSearch(""); }}
+                aria-label="Clear search"
                 style={{
                   position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)",
                   background: "transparent", border: "none", color: C.textMuted,
@@ -165,7 +197,7 @@ export function ScheduleMeetingModal({ accounts, defaultDate, onSchedule, onClos
               </button>
             )}
           </div>
-          {!selectedAccount && (
+          {(search || selectedAccountIds.length === 0) && (
             <div style={{
               marginTop: 6,
               maxHeight: 200, overflowY: "auto",
@@ -175,7 +207,7 @@ export function ScheduleMeetingModal({ accounts, defaultDate, onSchedule, onClos
             }}>
               {filteredAccounts.length === 0 ? (
                 <div style={{ padding: "10px 14px", fontSize: 12, color: C.textMuted, fontFamily: INTER }}>
-                  No matches.
+                  {search ? "No matches." : "Type to search accounts…"}
                 </div>
               ) : (
                 filteredAccounts.map(function (a) {
@@ -184,7 +216,9 @@ export function ScheduleMeetingModal({ accounts, defaultDate, onSchedule, onClos
                       key={a.id}
                       type="button"
                       onClick={function () {
-                        setSelectedAccountId(a.id);
+                        setSelectedAccountIds(function(prev) {
+                          return prev.includes(a.id) ? prev : prev.concat(a.id);
+                        });
                         setSearch("");
                       }}
                       style={{
@@ -273,6 +307,42 @@ export function ScheduleMeetingModal({ accounts, defaultDate, onSchedule, onClos
           />
         </div>
 
+        {/* Attendees — shown only when primary account has contacts */}
+        {accountContacts.length > 0 && (
+          <div>
+            <FL>Attendees <span style={{ color: C.textMuted, fontWeight: 400 }}>(optional)</span></FL>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {accountContacts.map(function(c) {
+                var on = attendees.includes(c.name);
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={function() {
+                      setAttendees(function(prev) {
+                        return on ? prev.filter(function(n) { return n !== c.name; }) : prev.concat(c.name);
+                      });
+                    }}
+                    style={{
+                      background: on ? C.accentMid : "var(--c-input-fill)",
+                      border: "1px solid " + (on ? C.accentBorder : C.border),
+                      borderRadius: 20,
+                      padding: "5px 12px",
+                      fontSize: 12,
+                      fontWeight: on ? 600 : 400,
+                      color: on ? C.accent : C.textMuted,
+                      fontFamily: INTER,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {c.name}{c.title ? " · " + c.title : ""}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {error && (
           <div
             role="alert"
@@ -295,7 +365,7 @@ export function ScheduleMeetingModal({ accounts, defaultDate, onSchedule, onClos
             fontFamily: INTER, fontSize: 11.5, color: C.textMuted,
             marginTop: -4, marginBottom: -4, textAlign: "right",
           }}>
-            {!selectedAccountId ? "Pick an account to continue."
+            {!selectedAccountIds.length ? "Pick an account to continue."
               : !method ? "Pick a method to continue."
               : !date ? "Pick a date to continue."
               : ""}

@@ -188,6 +188,13 @@ function renderPromiseLogBlock(promiseStats) {
   return lines.join("\n");
 }
 
+function normalizePerson(str) {
+  if (!str) return str;
+  // If it looks like an email, return the local part with dots/underscores as spaces
+  if (str.indexOf("@") > 0) return str.split("@")[0].replace(/[._]/g, " ");
+  return str;
+}
+
 function renderAccountFull(a, userId) {
   var lines = [];
   var headerSuffix = "";
@@ -268,6 +275,7 @@ function renderAccountFull(a, userId) {
     lines.push("Upcoming scheduled meetings (" + upcoming.length + "):");
     upcoming.forEach(function (m) {
       var head = "- " + (m.date || "?") + (m.time ? " " + m.time : "") + (m.method ? " · " + m.method : "");
+      if (Array.isArray(m.account_ids) && m.account_ids.length > 1) head += " [multi-account meeting]";
       if (m.agenda) head += " — agenda: " + trunc(m.agenda, 160);
       lines.push(head);
     });
@@ -294,7 +302,7 @@ function renderAccountFull(a, userId) {
       var tail = i.due
         ? " (due " + i.due + ")"
         : (ageDays != null ? " · opened " + ageDays + "d ago, no due date" : "");
-      if (i.owner) tail += " · owner: " + i.owner;
+      if (i.owner) tail += " · owner: " + normalizePerson(i.owner);
       lines.push(prefix + (i.text || "—") + tail);
     });
   }
@@ -366,12 +374,22 @@ function renderAccountFull(a, userId) {
     projects.forEach(function (p) {
       var line = "- " + p.title + " · " + (p.status || "—").replace("_", " ");
       if (p.due_date) line += " · due " + p.due_date;
+      if (p.assignee) line += " · assigned: " + normalizePerson(p.assignee);
+      if (p.requested_by) line += " · requested by: " + normalizePerson(p.requested_by);
       lines.push(line);
       // Latest pulse + prior two for momentum sense (cheap: latest + last 2 only).
       var ups = Array.isArray(p.status_updates) ? p.status_updates.slice(0, 3) : [];
       ups.forEach(function (u, i) {
         if (!u || !u.body) return;
         lines.push("    " + (i === 0 ? "latest" : "prior") + " (" + (u.at ? String(u.at).slice(0, 10) : "?") + "): " + trunc(u.body, 140));
+      });
+      // Surface task assignees so Pip knows who owns what
+      var tasks = Array.isArray(p.stages) ? p.stages.filter(function(t) { return !t.completed_at; }).slice(0, 5) : [];
+      tasks.forEach(function(t) {
+        var tLine = "    task: " + (t.title || t.text || "—");
+        if (t.assignee_email) tLine += " — assigned: " + normalizePerson(t.assignee_email);
+        if (t.recipient) tLine += " — recipient: " + normalizePerson(t.recipient);
+        lines.push(tLine);
       });
     });
   }
@@ -384,7 +402,7 @@ function renderAccountFull(a, userId) {
     recentUpdates.forEach(function (u) {
       var parts = ["- " + (u.update_date || "?")];
       if (u.update_type) parts.push(u.update_type);
-      if (u.owner)       parts.push(u.owner);
+      if (u.owner)       parts.push(normalizePerson(u.owner));
       var head = parts.join(" · ") + " · " + (u.title || "—");
       if (u.observed_impact) head += " [impact: " + u.observed_impact + "]";
       lines.push(head);

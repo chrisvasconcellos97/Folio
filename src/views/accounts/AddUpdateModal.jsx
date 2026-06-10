@@ -1,10 +1,11 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { C } from "../../lib/colors";
 import { Modal } from "../../components/Modal";
 import { AmberBtn, SecBtn } from "../../components/Buttons";
 import { InputField, TextArea } from "../../components/InputField";
 import { FL } from "../../components/FieldLabel";
 import { ChipDropdown } from "../../components/ChipDropdown";
+import { PersonPicker } from "../../components/PersonPicker";
 import {
   UPDATE_TYPES, UPDATE_TYPE_LABELS,
   IMPACT_OPTIONS, IMPACT_LABELS,
@@ -17,112 +18,7 @@ function todayIso() {
   return d.getFullYear() + "-" + m + "-" + day;
 }
 
-// Hybrid owner input — text input + small typeahead listing org members.
-// Stored value is the final string only (no FK), so a free-text "Dev" or
-// "Supplier X" stays valid alongside a member-name pick.
-function OwnerInput({ value, onChange, members }) {
-  var [open, setOpen] = useState(false);
-  var inputRef = useRef(null);
-
-  var memberOptions = (members || [])
-    .map(function (m) {
-      // Org members carry invited_email, not email — include it or the
-      // typeahead shows blank/filtered-out members.
-      var email = m.email || m.invited_email || "";
-      var name  = m.display_name || m.full_name || m.name || (email ? email.split("@")[0] : "");
-      return { name: name, email: email };
-    })
-    .filter(function (m) { return m.name; });
-
-  var lower = (value || "").trim().toLowerCase();
-  var filtered = lower
-    ? memberOptions.filter(function (m) {
-        return m.name.toLowerCase().indexOf(lower) !== -1
-            || (m.email && m.email.toLowerCase().indexOf(lower) !== -1);
-      })
-    : memberOptions;
-
-  return (
-    <div style={{ position: "relative" }}>
-      <input
-        ref={inputRef}
-        id="update-owner"
-        type="text"
-        value={value}
-        onChange={function (e) { onChange(e.target.value); setOpen(true); }}
-        onFocus={function () { setOpen(true); }}
-        onBlur={function () { setTimeout(function () { setOpen(false); }, 120); }}
-        placeholder="Who did this? (e.g. Dev, Supplier X, or a teammate)"
-        style={{
-          width: "100%",
-          background: C.bgDark,
-          border: "1px solid " + C.border,
-          borderRadius: 10,
-          padding: "10px 14px",
-          color: C.text,
-          fontSize: 16,
-          fontFamily: "'Inter', system-ui, sans-serif",
-          outline: "none",
-          boxSizing: "border-box",
-        }}
-      />
-      {open && filtered.length > 0 && (
-        <div
-          style={{
-            position: "absolute",
-            top: "calc(100% + 4px)",
-            left: 0,
-            right: 0,
-            background: C.bgDropdown,
-            border: "1px solid " + C.border,
-            borderRadius: 10,
-            padding: 4,
-            zIndex: 100,
-            maxHeight: 180,
-            overflowY: "auto",
-          }}
-        >
-          {filtered.slice(0, 8).map(function (m, i) {
-            return (
-              <button
-                key={i}
-                type="button"
-                onMouseDown={function (e) {
-                  // Prevent input's onBlur from closing the menu before click fires
-                  e.preventDefault();
-                }}
-                onClick={function () {
-                  onChange(m.name);
-                  setOpen(false);
-                }}
-                style={{
-                  display: "block",
-                  width: "100%",
-                  textAlign: "left",
-                  background: "transparent",
-                  border: "none",
-                  padding: "8px 10px",
-                  borderRadius: 6,
-                  cursor: "pointer",
-                  color: C.text,
-                  fontFamily: "'Inter', system-ui, sans-serif",
-                  fontSize: 13,
-                }}
-              >
-                <span style={{ color: C.text }}>{m.name}</span>
-                {m.email && (
-                  <span style={{ color: C.textMuted, fontSize: 11, marginLeft: 6 }}>{m.email}</span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-export function AddUpdateModal({ orgMembers, existing, onSave, onClose }) {
+export function AddUpdateModal({ orgMembers, contacts, existing, onSave, onClose }) {
   var isEdit = !!existing;
   var [title, setTitle]               = useState(existing ? existing.title || "" : "");
   var [updateDate, setUpdateDate]     = useState(existing ? existing.update_date || todayIso() : todayIso());
@@ -196,11 +92,13 @@ export function AddUpdateModal({ orgMembers, existing, onSave, onClose }) {
         </div>
 
         <div>
-          <FL htmlFor="update-owner">Owner</FL>
-          <OwnerInput
-            value={owner}
-            onChange={setOwner}
+          <FL>Owner</FL>
+          <PersonPicker
+            value={owner || null}
+            onChange={function(v) { setOwner(v || ""); }}
             members={orgMembers}
+            contacts={contacts || []}
+            noneLabel="— No owner —"
           />
         </div>
 

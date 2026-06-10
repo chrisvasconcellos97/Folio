@@ -1309,6 +1309,7 @@ export default function App() {
   var scheduleMeetingModal = showScheduleModal && (
     <ScheduleMeetingModal
       accounts={accounts}
+      contacts={allContacts}
       defaultDate={schedulePrefillDate}
       onSchedule={function (data) {
         return addMeeting(Object.assign({}, data, { user_id: userId })).then(function () {

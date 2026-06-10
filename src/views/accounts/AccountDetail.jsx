@@ -744,6 +744,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
             account={account}
             updates={updates}
             orgMembers={members}
+            contacts={contacts}
             addUpdate={addUpdate}
             updateUpdate={updateUpdate}
             deleteUpdate={deleteUpdate}

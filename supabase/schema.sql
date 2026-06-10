@@ -731,6 +731,9 @@ create trigger pip_glossary_updated_at
 
 -- folio_meetings: Pip-extracted one-word theme tag.
 alter table folio_meetings add column if not exists theme text;
+
+-- folio_meetings: multi-account support (account_ids mirrors gauge_projects pattern).
+alter table folio_meetings add column if not exists account_ids uuid[] default '{}';
 create index if not exists folio_meetings_theme_idx
   on folio_meetings(user_id, theme, meeting_date) where theme is not null;
 

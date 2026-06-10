@@ -64,7 +64,7 @@ function TypePill({ type }) {
   );
 }
 
-export function UpdatesTab({ account, updates, orgMembers, addUpdate, updateUpdate, deleteUpdate }) {
+export function UpdatesTab({ account, updates, orgMembers, contacts, addUpdate, updateUpdate, deleteUpdate }) {
   var [showModal, setShowModal]               = useState(false);
   var [editingUpdate, setEditingUpdate]       = useState(null);
   var [confirmDeleteId, setConfirmDeleteId]   = useState(null);
@@ -208,6 +208,7 @@ export function UpdatesTab({ account, updates, orgMembers, addUpdate, updateUpda
       {showModal && (
         <AddUpdateModal
           orgMembers={orgMembers}
+          contacts={contacts || []}
           onSave={function (data) {
             return addUpdate(data).then(function (u) {
               showToast("Update logged");
@@ -221,6 +222,7 @@ export function UpdatesTab({ account, updates, orgMembers, addUpdate, updateUpda
       {editingUpdate && (
         <AddUpdateModal
           orgMembers={orgMembers}
+          contacts={contacts || []}
           existing={editingUpdate}
           onSave={function (data) {
             return updateUpdate(editingUpdate.id, data).then(function (u) {

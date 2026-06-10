@@ -26,7 +26,7 @@ function resolveAssignee(emailOrName, members) {
   var m = (members || []).find(function (x) {
     return (x.invited_email || x.email || "") === emailOrName;
   });
-  if (m) return m.full_name || (m.invited_email || "").split("@")[0] || emailOrName;
+  if (m) return m.full_name || m.display_name || emailOrName;
   return emailOrName;
 }
 
