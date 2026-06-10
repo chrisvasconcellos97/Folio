@@ -1509,6 +1509,34 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
           <div style={{ fontFamily: INTER, fontSize: 14, color: C.text, lineHeight: 1.55, marginBottom: 12 }}>
             {dripQuestion.question_text}
           </div>
+          {dripQuestion.suggestion && dripQuestion.suggestion.guess && !dripAnswer.trim() && (
+            <button
+              type="button"
+              disabled={dripSaving}
+              onClick={function () {
+                if (dripSaving) return;
+                setDripSaving(true);
+                var text = dripQuestion.suggestion.guess;
+                var willApply = !dripApplyOff && onApplySuggestion;
+                var p = onAnswerDrip ? onAnswerDrip(dripQuestion.id, text) : Promise.resolve();
+                (p || Promise.resolve()).then(function () {
+                  if (willApply) onApplySuggestion(dripQuestion.suggestion, text);
+                  setDripSaving(false);
+                  setDripApplyOff(false);
+                  showToast("Locked in ✦ Pip reads it that way everywhere now");
+                }).catch(function () { setDripSaving(false); });
+              }}
+              style={{
+                display: "block", marginBottom: 10,
+                background: C.accentFaint, border: "1px solid " + C.accentLine,
+                borderRadius: 8, padding: "8px 14px",
+                fontSize: 13, fontWeight: 700, color: C.accent,
+                fontFamily: INTER, cursor: "pointer", textAlign: "left",
+              }}
+            >
+              ✓ Right — lock it in
+            </button>
+          )}
           <textarea
             value={dripAnswer}
             onChange={function (e) { setDripAnswer(e.target.value); }}

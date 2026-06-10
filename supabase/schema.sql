@@ -118,6 +118,7 @@ create table if not exists folio_cadences (
   id            uuid default gen_random_uuid() primary key,
   user_id       uuid references auth.users(id) on delete cascade not null,
   account_id    uuid references folio_accounts(id) on delete cascade,
+  account_ids   uuid[] default '{}',  -- multi-department cadences (primary = account_id)
   contact_id    uuid references folio_contacts(id) on delete set null,
   cadence_scope text not null default 'account',
   type          text not null default 'meeting' check (type in ('meeting', 'task')),

@@ -55,6 +55,15 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues, acco
   var [monthlyType,   setMonthlyType]   = useState(seed.monthly_type    || 'day_of_month');
   var [monthlyOrdinal, setMonthlyOrdinal] = useState(seed.monthly_ordinal || 'first');
   var [selectedAccountId,  setSelectedAccountId]  = useState(null);
+  // Multi-department cadences (Game Plan 1.8): one internal cadence can span
+  // several departments; the merged attendee roster shows everyone.
+  var [extraDeptIds, setExtraDeptIds] = useState(function () {
+    var seedIds = seed.account_ids;
+    if (Array.isArray(seedIds) && seedIds.length > 1) {
+      return seedIds.filter(function (id) { return id !== seed.account_id; });
+    }
+    return [];
+  });
   var [selectedAccountIds, setSelectedAccountIds] = useState([]);
   var [defaultAttendees, setDefaultAttendees]   = useState(existing ? (existing.default_attendees || []) : []);
   var [hour,   setHour]   = useState(init.hour);
@@ -133,7 +142,12 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues, acco
       notes:           notes.trim() || null,
       default_attendees: effectiveType === 'meeting' && defaultAttendees.length > 0 ? defaultAttendees : null,
     };
-    if (accounts && effectiveType === 'meeting') payload.account_id = selectedAccountId;
+    if (accounts && effectiveType === 'meeting') {
+      payload.account_id  = selectedAccountId;
+      payload.account_ids = extraDeptIds.length
+        ? [selectedAccountId].concat(extraDeptIds.filter(function (id) { return id !== selectedAccountId; }))
+        : [];
+    }
     if (isMultiTask) payload.account_ids = selectedAccountIds;
     else if (accounts && selectedAccountId) payload.account_id = selectedAccountId;
     onSave(payload)
@@ -242,6 +256,54 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues, acco
               onChange={function (id) { setSelectedAccountId(id || null); }}
               placeholder="Search accounts…"
             />
+            {(function () {
+              var depts = (accounts || []).filter(function (a) {
+                return a.account_type === "internal_team" && !a.is_inactive && a.id !== selectedAccountId;
+              });
+              if (!depts.length || effectiveType !== "meeting") return null;
+              return (
+                <div style={{ marginTop: 10 }}>
+                  <FL>Also include departments (joint cadence)</FL>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {depts.map(function (d) {
+                      var on = extraDeptIds.indexOf(d.id) !== -1;
+                      return (
+                        <div
+                          key={d.id}
+                          role="button"
+                          tabIndex={0}
+                          onClick={function () {
+                            setExtraDeptIds(function (prev) {
+                              return prev.indexOf(d.id) !== -1
+                                ? prev.filter(function (x) { return x !== d.id; })
+                                : prev.concat([d.id]);
+                            });
+                          }}
+                          onKeyDown={function (e) {
+                            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.target.click(); }
+                          }}
+                          style={{
+                            padding: "5px 11px", borderRadius: 999, cursor: "pointer",
+                            fontSize: 12, fontFamily: "'Inter', system-ui, sans-serif",
+                            background: on ? C.accentGlow : 'transparent',
+                            border: '1px solid ' + (on ? C.accentBorder : C.rule),
+                            color: on ? C.accent : C.textMuted,
+                            fontWeight: on ? 700 : 400, userSelect: "none",
+                          }}
+                        >
+                          {on ? "✓ " : ""}{d.name}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {extraDeptIds.length > 0 && (
+                    <div style={{ fontSize: 11, color: C.textMuted, marginTop: 5 }}>
+                      The cadence hub and meeting attendees will show people from all selected departments.
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         )}
 

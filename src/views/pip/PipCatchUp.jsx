@@ -32,6 +32,7 @@ export function PipCatchUp({ questions, onAnswer, onSkip, onClose, onApplySugges
   var [busy, setBusy]     = useState({});
   var [applyOff, setApplyOff] = useState({}); // ids where the user unchecked "also save"
   var [asking, setAsking] = useState(false);
+  var [answeredCount, setAnsweredCount] = useState(0); // receipts: progress this session
 
   function askMore() {
     if (asking || typeof onAskMore !== "function") return;
@@ -53,15 +54,17 @@ export function PipCatchUp({ questions, onAnswer, onSkip, onClose, onApplySugges
   function markBusy(id)    { setBusy(function (p) { return Object.assign({}, p, { [id]: true }); }); }
   function clearBusy(id)   { setBusy(function (p) { var n = Object.assign({}, p); delete n[id]; return n; }); }
 
-  function answer(q) {
-    var text = (drafts[q.id] || "").trim();
+  function answer(q, overrideText) {
+    var text = (overrideText || drafts[q.id] || "").trim();
     if (!text || busy[q.id]) return;
     markBusy(q.id);
     var willApply = q.suggestion && !applyOff[q.id] && typeof onApplySuggestion === "function";
     Promise.resolve(onAnswer(q.id, text))
       .then(function () {
+        setAnsweredCount(function (n) { return n + 1; });
         if (willApply) onApplySuggestion(q.suggestion, text);  // shows its own toast
-        else showToast("Got it — thanks");
+        else if (q.category === "terminology") showToast("Locked in ✦ Pip reads it that way everywhere now");
+        else showToast("Got it — folded into what Pip knows ✦");
       })
       .catch(function () { clearBusy(q.id); showToast("Couldn't save — try again", "error"); });
   }
@@ -85,9 +88,15 @@ export function PipCatchUp({ questions, onAnswer, onSkip, onClose, onApplySugges
           border: "1px solid " + C.accentLine, borderRadius: 8,
         }}>
           <PipMark size={8} color={C.accent} glow />
-          <div style={{ fontSize: 12, color: C.textSub, lineHeight: 1.5 }}>
+          <div style={{ fontSize: 12, color: C.textSub, lineHeight: 1.5, flex: 1 }}>
             Answer as many as you like — each one teaches me something about your world. Skip anything that doesn't apply.
           </div>
+          <span style={{
+            fontFamily: MONO, fontSize: 10, color: C.accent, whiteSpace: "nowrap",
+            fontFeatureSettings: '"tnum"',
+          }}>
+            {sorted.length} left{answeredCount > 0 ? " · " + answeredCount + " answered" : ""}
+          </span>
         </div>
 
         {sorted.length === 0 ? (
@@ -135,6 +144,22 @@ export function PipCatchUp({ questions, onAnswer, onSkip, onClose, onApplySugges
               <div style={{ fontSize: 14, color: C.text, fontFamily: INTER, lineHeight: 1.5 }}>
                 {q.question_text}
               </div>
+              {q.suggestion && q.suggestion.guess && !filled && (
+                <button
+                  type="button"
+                  disabled={isBusy}
+                  onClick={function () { answer(q, q.suggestion.guess); }}
+                  style={{
+                    alignSelf: "flex-start",
+                    background: C.accentFaint, border: "1px solid " + C.accentLine,
+                    borderRadius: 8, padding: "7px 13px",
+                    fontSize: 12.5, fontWeight: 700, color: C.accent,
+                    fontFamily: INTER, cursor: "pointer",
+                  }}
+                >
+                  ✓ Right — lock it in
+                </button>
+              )}
               <textarea
                 value={drafts[q.id] || ""}
                 onChange={function (e) { setDraft(q.id, e.target.value); }}

@@ -1208,6 +1208,30 @@ export function CadenceHub({
   var snapshotsApi   = useAccountSnapshots(userId);
   var promiseLog     = usePipPromiseLog(userId, accountId);
   var updatesApi     = useAccountUpdates(userId, accountId);
+
+  // Multi-department cadences (Game Plan 1.8): when the cadence spans extra
+  // departments (account_ids beyond the primary), merge their contacts into
+  // the roster so attendees/briefs/summarize see everyone.
+  var [extraContacts, setExtraContacts] = useState([]);
+  useEffect(function () {
+    var extraIds = (cadence && Array.isArray(cadence.account_ids) ? cadence.account_ids : [])
+      .filter(function (id) { return id && id !== accountId; });
+    if (!extraIds.length || !userId) { setExtraContacts([]); return; }
+    var cancelled = false;
+    supabase.from("folio_contacts").select("*").eq("user_id", userId).in("account_id", extraIds)
+      .then(function (r) { if (!cancelled && !r.error) setExtraContacts(r.data || []); });
+    return function () { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cadence && cadence.id, (cadence && Array.isArray(cadence.account_ids) ? cadence.account_ids.join(",") : ""), userId]);
+  var rosterContacts = useMemo(function () {
+    if (!extraContacts.length) return contacts || [];
+    var seen = {};
+    return (contacts || []).concat(extraContacts).filter(function (c) {
+      if (seen[c.id]) return false;
+      seen[c.id] = true;
+      return true;
+    });
+  }, [contacts, extraContacts]);
   var userProfileApi = useUserProfile(userId);
   var userProfile    = userProfileApi.profile;
 
@@ -1317,7 +1341,7 @@ export function CadenceHub({
       accountObjective: account ? (account.objective || "") : "",
       accountSystems:   account ? (account.systems   || []) : [],
       glossary:         glossaryApi.entries,
-      contacts:         contacts || [],
+      contacts:         rosterContacts || [],
       pipAccountState:  pipAccountStateRow || null,
       facts:            pipFactsApi.activeFactStrings || [],
       profileProse:     userProfile && userProfile.profile_prose ? userProfile.profile_prose : null,
@@ -1474,7 +1498,7 @@ export function CadenceHub({
       pipAccountState:   pipAccountStateRow || null,
       isPersonCadence:   isPersonCadence,
       contactName:       contact ? contact.name : null,
-      contacts:          contacts || [],
+      contacts:          rosterContacts || [],
       meetingHistory:    (meetings || [])
         .filter(function (m) { return m.status === "summarized" || m.pip_summary; })
         .slice(0, 5),
@@ -1904,7 +1928,7 @@ export function CadenceHub({
       briefAt={isPersonCadence ? null : cadence.pip_brief_at}
       projects={activeProjects}
       openItems={openItems}
-      contacts={contacts || []}
+      contacts={rosterContacts || []}
       contactAliases={contactAliases || []}
       accounts={accounts}
       members={members}
@@ -1967,7 +1991,7 @@ export function CadenceHub({
           status: "planned",
         }));
       } : undefined}
-      accountContacts={contacts || []}
+      accountContacts={rosterContacts || []}
       discussedProjectIds={lastDiscussedProjectIds}
       discussedItemIds={lastDiscussedItemIds}
     />

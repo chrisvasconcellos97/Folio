@@ -17,6 +17,18 @@ those live in git history.
 
 ---
 
+## 2026-06-10 — Pip's questions grow up: guess-first, one-tap, with receipts
+
+**What I built:** Three upgrades to how Pip learns. **Terminology questions now lead with Pip's guess** — instead of "what is Fuse5?" he says "'Fuse5' — my read: a parts system they run. Am I right?" with a one-tap **"✓ Right — lock it in"** button; only corrections need typing. Questions are **ranked by how much confusion a term actually causes** (the ones appearing most get asked first). **Every answer now shows a receipt** — "Locked in ✦ Pip reads it that way everywhere now" — and the Catch Up session shows a live "5 left · 3 answered" counter so teaching Pip feels like progress, not a void. Also: **one internal cadence can now span multiple departments** (pick extra departments when setting it up; the meeting roster shows everyone), and the **notes editor** finally auto-capitalizes sentence starts and indents sub-bullets visibly deeper.
+
+**The data line, now enforced inside Pip himself:** the question generators carry a hard rule — never ask for revenue, volumes, customer counts, rosters, pricing, or contract terms; directional questions only. The assistant is designed not to solicit company data, and that's now true in the prompts, not just the policy.
+
+**Also fixed along the way:** multi-account *task* cadences had been silently broken (the app wrote a database column that never existed) — repairing the schema for multi-department meetings fixed those too.
+
+**Why it matters:** You said you genuinely answer Pip's questions but never knew what they did. Now the common case is one tap, the order reflects what's actually confusing him, and every answer visibly lands.
+
+---
+
 ## 2026-06-10 — The two-brain bridge: your work day finally reaches Folios
 
 **What I built:** A digest handoff between your work Claude (which sees your email and Teams) and Folios (which can't, by design). Two matched halves: a **prompt you add to your work-Claude routine** that makes it output a sanitized "Folios digest" — commitments you made, things you're waiting on, threads gone quiet, notable exchanges — and a **paste box in Folios** (Home → Quick capture → "Paste work digest") that files every line onto the right account in one tap: commitments become tracked commitments, waiting-ons get a holder and a clock, touchpoints land in account history.

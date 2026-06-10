@@ -122,9 +122,10 @@ export default async function handler(req, res) {
 
     var knownList = Array.from(knownTerms).slice(0, 100).join(", ");
     var systemPrompt = [
-      "You scan meeting notes for unknown proper nouns. ",
+      "You scan meeting notes for unknown proper nouns and make a best GUESS at what each one is from context. ",
+      "Never extract or guess at quantitative business data (revenue, volumes, customer counts, rosters, pricing) — terms only. ",
       "Return ONLY valid JSON — no markdown fences, no extra text. ",
-      "Format: { \"terms\": [{ \"term\": \"string\", \"meeting_count\": number }] }",
+      "Format: { \"terms\": [{ \"term\": \"string\", \"meeting_count\": number, \"guess\": \"one short phrase guessing what it is, e.g. 'a parts POS system they run' or 'an internal program name' — null if you truly can't tell\" }] }",
     ].join("");
 
     var userPrompt = "Identify proper nouns, brand names, program names, or internal codenames that appear " +
@@ -178,23 +179,39 @@ export default async function handler(req, res) {
       return top && acctById[top] ? top : null;
     }
 
+    // Rank by confusion caused: terms that appear most get asked first.
+    newTerms.sort(function (a, b) { return (b.meeting_count || 0) - (a.meeting_count || 0); });
+
     var rows = newTerms.slice(0, 8).map(function (t) {
       var acctId   = dominantAccountIdFor(t.term);
       var acctName = acctId ? acctById[acctId] : null;
-      var q = acctName
-        ? "You keep mentioning " + t.term + " around " + acctName + ". What is it: a system they use, a brand, a program, or a person?"
-        : "You keep mentioning " + t.term + ". What is it: a system, a brand, a program, or a person?";
+      var guess    = t.guess && typeof t.guess === "string" ? t.guess.trim().slice(0, 120) : null;
+      // Guess-and-confirm (questions reboot, Phase 1.7): lead with Pip's read
+      // so the common case is a one-tap confirm, not an essay.
+      var q;
+      if (guess) {
+        q = "\u201C" + t.term + "\u201D" + (acctName ? " (comes up a lot around " + acctName + ")" : "") +
+          " — my read: " + guess + ". Am I right?";
+      } else {
+        q = acctName
+          ? "You keep mentioning " + t.term + " around " + acctName + ". What is it: a system they use, a brand, a program, or a person?"
+          : "You keep mentioning " + t.term + ". What is it: a system, a brand, a program, or a person?";
+      }
       return {
         user_id:        userId,
         question_text:  q,
         category:       "terminology",
         source:         "gap_observed",
         status:         "queued",
-        priority:       7,
+        priority:       7 + Math.min(2, Math.floor((t.meeting_count || 3) / 3)),
         trigger_context: t.term,
         // Approved answers become a structured "systems they use" entry on the
-        // account whose notes mention the term most.
-        suggestion:     acctId ? { type: "account_system", account_id: acctId, account_name: acctName, term: t.term } : null,
+        // account whose notes mention the term most. `guess` enables the
+        // one-tap "✓ Right" confirm in the drip card / Catch Up.
+        suggestion:     Object.assign(
+          acctId ? { type: "account_system", account_id: acctId, account_name: acctName, term: t.term } : { term: t.term },
+          guess ? { guess: guess } : {}
+        ),
       };
     });
 

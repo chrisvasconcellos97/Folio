@@ -186,6 +186,7 @@ export default async function handler(req, res) {
       "  - \"term\": a SIMPLE clarifier when you see a proper noun, acronym, brand, or system you don't understand (and it isn't already in known facts). e.g. \"You mention <X> a lot — what is it?\". Set the \"term\" field to that word.",
       "Voice: first person, plain, a little eager-to-help. Never generic personality-quiz filler ('what does a great week look like'). Every question must be impossible to ask without having read THIS portfolio.",
       "Do NOT ask anything already answered by Known facts / profile, and do NOT repeat anything in Already asked.",
+      "HARD DATA LINE (locked rule — never violate): NEVER ask for revenue figures, transaction volumes, customer counts, shop lists or rosters, pricing, or contract terms. This notebook deliberately excludes the employer's quantitative business data. When business performance matters, ask DIRECTIONALLY ('is volume trending up or down since the integration?') — never for a number, a count, or a list of customers.",
       "Return ONLY JSON, no markdown fences: { \"questions\": [ { \"question\": \"...\", \"kind\": \"portfolio\"|\"term\", \"term\": \"only for kind=term\" } ] }. Return at most " + maxNew + ". If you have nothing genuinely insightful, return fewer or an empty array — quality over quantity.",
     ].join("\n");
 
