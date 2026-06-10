@@ -530,11 +530,20 @@ Built from the audit + the interview. Organizing principle is Chris's own arc: *
 
 ### Phase 2 — SHINE (promotion-visible)
 1. **Monday 1:1 pack** — auto-generated before the Monday 1:1: everything that moved last week, promised-vs-done sweep (nothing surprises him in front of the boss), talking points. The operator cron already runs at the right time; teach it Mondays matter.
-2. **Team request queue in Folios (eat the Excel).** The Tuesday tracker's columns as a Folios surface + a clean meeting-ready view he screen-shares (single-user build, multi-eye display). Ends the two-system drift.
+2. **Team request queue in Folios — Folios is the MASTER, the Excel is an OUTPUT (design LOCKED with Chris, June 10 2026).** The Tuesday tracker's columns (Priority · Date of Request · Owner · Supplier · # of Shops · Email Thread · Initiative · Required Completion Date · Connection Macro Date · Integration Macro Date · Comments) become a Folios surface where Chris manages requests. He then **exports changed rows as tab-separated lines in the sheet's exact column order** (pastes straight into Excel cells) for the team/admin who work off the sheet. Folios **tracks dirty rows since last export and reminds him** — timing-aware (Mon afternoon / Tue morning, before the team meeting): "4 updates aren't on the team sheet yet — copy them?" One tap copies exactly those lines. This fixes the thing Chris says he's currently bad at (keeping the sheet updated) and kills the two-system drift without requiring the admin or boss to change behavior. Plus a clean meeting-ready view he can screen-share Tuesdays.
 3. **Win log / brag file + commitment integrity stats** — operator-detected wins persist on one-tap confirm; "promises kept" stats; feeds QBR/leadership readout and review season.
 4. **Pip Wrap** — Friday week-in-review (kept/slipped, accounts touched/neglected, what moved in Gauge, one pattern about how he worked).
 5. **Portable-brain depth:** semantic search over all notes/summaries (pgvector); "since you were here" per-account deltas (operator delta + per-device last-open already exist); meeting-aware timing (prep surfaces auto-raised ~15 min before calls; first real use of PWA push).
 6. **Instruction-writer for the admin** (work-Claude side owns file analysis; Pip drafts the crayon-level instruction docs from account/project context; track handoff status in the waiting-on layer).
+
+### Success criteria (~3 months out — check these, don't vibe them)
+1. Chris opens Folios at 9am and in <60s knows what he owes, what's today, and has answered Pip's ≤3 check-in questions — and the corrected report is accurate.
+2. No flat-footed Mondays — the 1:1 pack means nothing the boss raises is a surprise.
+3. Most meeting summaries apply with zero cleanup; task counts are small and right.
+4. The email/Teams day reaches Folios daily via the digest, and it shows — account pages worth opening, chat worth asking.
+5. Chris never maintains the same information in two places by hand — the team sheet is generated from Folios (export + reminder loop); the drift problem is dead.
+
+If any criterion stays false, that's where we dig next — design failure, not user failure (especially #4: if the digest habit doesn't stick in 3 weeks, redesign the friction, don't blame the habit).
 
 ---
 
