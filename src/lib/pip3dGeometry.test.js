@@ -27,7 +27,7 @@ function djb2(str) {
 
 // ── Expected output hash at t=1.1 ────────────────────────────────────────────
 // Computed once from the locked geometry. If this changes, the design drifted.
-var EXPECTED_HASH_T11 = 2308624145; // updated June 10 2026 (2nd): motionScale 0.4 added — all rotation/twist slowed, approved by Chris in-session
+var EXPECTED_HASH_T11 = 3986080911; // updated June 10 2026 (3rd): breath 2.4->4.8s + motionScale back to 1.0 — the breath was the fast motion, approved by Chris in-session
 var EXPECTED_HASH_T0  = 910385610;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -48,7 +48,7 @@ describe("PIP_SPEC — locked parameters", function () {
   it("ring tiltX = 0.40", function () { expect(PIP_SPEC.ring.tiltX).toBe(0.40); });
   it("ring tiltY = -0.48", function () { expect(PIP_SPEC.ring.tiltY).toBe(-0.48); });
   it("ring spin = 0.18 rad/s (slowed from 0.45, Chris June 10 2026)", function () { expect(PIP_SPEC.ring.spin).toBe(0.18); });
-  it("motionScale = 0.4 (rotation/twist only, breath unaffected — Chris June 10 2026)", function () { expect(PIP_SPEC.motionScale).toBe(0.4); });
+  it("motionScale = 1.0 (rotation was never the issue — Chris June 10 2026)", function () { expect(PIP_SPEC.motionScale).toBe(1.0); });
   it("ring sw (stroke-width) = 1.6", function () { expect(PIP_SPEC.ring.sw).toBe(1.6); });
   it("ring warp = 16", function () { expect(PIP_SPEC.ring.warp).toBe(16); });
   it("ring wob = 6", function () { expect(PIP_SPEC.ring.wob).toBe(6); });
@@ -77,7 +77,7 @@ describe("PIP_SPEC — locked parameters", function () {
   it("sphere focal length FS = 5", function () { expect(PIP_SPEC.FS).toBe(5); });
 
   // Breath
-  it("breath period = 2.4s", function () { expect(PIP_SPEC.breathPeriod).toBe(2.4); });
+  it("breathPeriod = 4.8s (slowed from 2.4, Chris June 10 2026 — breath was the nauseating motion)", function () { expect(PIP_SPEC.breathPeriod).toBe(4.8); });
 
   // ViewBox
   it("viewBox = '-118 -118 236 236'", function () { expect(PIP_SPEC.viewBox).toBe("-118 -118 236 236"); });

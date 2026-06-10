@@ -50,17 +50,17 @@ export var PIP_SPEC = Object.freeze({
     phase:   1.7,
   }),
   // Global motion scale — multiplies rotation/twist time, NOT breath.
-  // Added June 10 2026 (Chris: "still seems just as fast" — the traveling
-  // twist waves dominated perceived speed, so all motion slows together).
-  motionScale: 0.4,
+  // 1.0 since June 10 2026 round 3: the fast motion was the BREATH, not the
+  // rotation (Chris). Knob kept for future tuning.
+  motionScale: 1.0,
   // Perspective focal lengths
   FP: 480,   // ring perspective focal (screen units)
   FS: 5,     // sphere perspective focal (unit-sphere units)
   // ViewBox
   viewBox: "-118 -118 236 236",
   // Breath
-  breathPeriod: 2.4,   // seconds
-  // breath = 0.5 - 0.5*cos(2πt/2.4)
+  breathPeriod: 4.8,   // seconds — slowed from 2.4 June 10 2026 to match the spin's calm pace (Chris); classic small orbs keep the 2.4s CSS breathe
+  // breath = 0.5 - 0.5*cos(2πt/breathPeriod)
   // hex scale bs = 0.55 + 0.56*breath  (shared by ALL hexes: ring + spheres)
   // sphere core glow opacity: 0.55 + 0.45*breath
   // outer glow opacity:       0.50 + 0.45*breath
