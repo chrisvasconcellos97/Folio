@@ -12,27 +12,50 @@ import { computeContactEngagement } from "./contactEngagement.js";
 
 // Resolve account names mentioned in the message + the prior assistant message
 // (for follow-up context). Returns array of account objects, deduped.
+// Also resolves via contact names — if a person's name matches a contact on an
+// account, that account is focused (e.g. "Tony" → Aftermarket Team because Tony
+// is a contact there).
 function resolveMentionedAccounts(accounts, messageText) {
   if (!accounts || !accounts.length || !messageText) return [];
   var lower = String(messageText).toLowerCase();
   var matches = [];
+  var seen = {};
   accounts.forEach(function (a) {
     if (!a || !a.name) return;
     var name = a.name.toLowerCase();
-    // Full name substring match
+    // Full account name substring match
     if (name.length >= 3 && lower.indexOf(name) !== -1) {
-      matches.push(a);
+      if (!seen[a.id]) { seen[a.id] = true; matches.push(a); }
       return;
     }
-    // Otherwise check any distinctive word from the name (≥3 chars, not a stopword)
+    // Distinctive word from account name (≥3 chars, not a stopword)
     var words = name.split(/\s+/).filter(function (w) {
       return w.length >= 3 && ["and", "the", "for", "auto", "inc", "llc", "corp", "ltd", "group"].indexOf(w) === -1;
     });
     var hit = words.some(function (w) {
-      // Match as a whole word
       return new RegExp("\\b" + w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i").test(messageText);
     });
-    if (hit) matches.push(a);
+    if (hit) {
+      if (!seen[a.id]) { seen[a.id] = true; matches.push(a); }
+      return;
+    }
+    // Contact name match — check first name and full name of every contact on
+    // this account so "Tony" resolves to the account Tony is listed on.
+    if (Array.isArray(a.contacts)) {
+      var contactHit = a.contacts.some(function (c) {
+        if (!c || !c.name) return false;
+        var cname = c.name.toLowerCase().trim();
+        // Full contact name
+        if (cname.length >= 2 && lower.indexOf(cname) !== -1) return true;
+        // First name only (≥3 chars to avoid noise)
+        var firstName = cname.split(/\s+/)[0];
+        if (firstName.length >= 3) {
+          return new RegExp("\\b" + firstName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i").test(messageText);
+        }
+        return false;
+      });
+      if (contactHit && !seen[a.id]) { seen[a.id] = true; matches.push(a); }
+    }
   });
   return matches;
 }
@@ -258,9 +281,10 @@ function renderAccountFull(a, userId) {
       var head = "- " + (m.date || "?") + " — \"" + (m.title || "Meeting") + "\"";
       if (m.attendees && m.attendees.length) head += " — attendees: " + m.attendees.join(", ");
       lines.push(head);
-      // Prefer pip_summary; fall back to notes (truncated).
-      var body = m.summary && m.summary.length > 0 ? m.summary : (m.notes ? trunc(m.notes, 200) : "");
-      if (body) lines.push("  " + trunc(body, 240));
+      // Include raw notes for full searchability. Summary added as a compact
+      // digest when available so Pip has both the verbatim record and its own read.
+      if (m.notes) lines.push("  Notes: " + trunc(m.notes, 600));
+      if (m.summary && m.summary.length > 0) lines.push("  Summary: " + trunc(m.summary, 180));
       if (m.action_items) lines.push("  Action items: " + trunc(m.action_items, 200));
       if (m.follow_up) lines.push("  Follow-up: " + m.follow_up);
       if (m.theme) lines.push("  Theme: " + m.theme);
