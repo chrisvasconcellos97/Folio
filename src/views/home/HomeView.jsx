@@ -174,7 +174,7 @@ function makeAccountLinkify(accounts, onOpenAccount) {
   };
 }
 
-export function HomeView({ userName, userId, accounts, meetings, items, cadences, projects, contacts, themes, onOpenAccount, onOpenAccountTab, onOpenCadenceHub, onOpenConversation, onOpenQuickTask, showOnboardingCard, onStartInterview, onDismissOnboardingCard, dripQuestion, dripQueueCount, onOpenCatchUp, onApplySuggestion, onAnswerDrip, onSkipDrip, onDismissDrip, commitmentNudges, onSnoozeNudge, onMarkNudgeDone, onCloseItem, onUpdateProject, pipFacts, profileProse, scheduledMeetings, onOpenScheduled }) {
+export function HomeView({ userName, userId, accounts, meetings, items, cadences, projects, contacts, themes, onOpenAccount, onOpenAccountTab, onOpenCadenceHub, onOpenConversation, onOpenQuickTask, showOnboardingCard, onStartInterview, onDismissOnboardingCard, dripQuestion, dripQueueCount, onOpenCatchUp, onApplySuggestion, onAnswerDrip, onSkipDrip, onDismissDrip, commitmentNudges, onSnoozeNudge, onMarkNudgeDone, onCloseItem, onUpdateProject, onOpenDigest, pipFacts, profileProse, scheduledMeetings, onOpenScheduled }) {
   commitmentNudges = commitmentNudges || [];
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
@@ -1152,6 +1152,18 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
                   }}
                 >
                   Quick task
+                </button>
+                <button
+                  onClick={function () { setCaptureMenuOpen(false); if (onOpenDigest) onOpenDigest(); }}
+                  style={{
+                    display: "block", width: "100%", textAlign: "left",
+                    padding: "10px 14px", fontSize: 13,
+                    fontFamily: "'Inter', system-ui, sans-serif",
+                    color: C.text, background: "transparent",
+                    border: "none", cursor: "pointer",
+                  }}
+                >
+                  Paste work digest ✦
                 </button>
               </div>
             )}

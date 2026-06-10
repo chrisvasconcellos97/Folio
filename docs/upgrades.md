@@ -17,6 +17,20 @@ those live in git history.
 
 ---
 
+## 2026-06-10 — The two-brain bridge: your work day finally reaches Folios
+
+**What I built:** A digest handoff between your work Claude (which sees your email and Teams) and Folios (which can't, by design). Two matched halves: a **prompt you add to your work-Claude routine** that makes it output a sanitized "Folios digest" — commitments you made, things you're waiting on, threads gone quiet, notable exchanges — and a **paste box in Folios** (Home → Quick capture → "Paste work digest") that files every line onto the right account in one tap: commitments become tracked commitments, waiting-ons get a holder and a clock, touchpoints land in account history.
+
+**Problem it solves:** Most of the job happens in email and Teams and never reached Folios — so Pip's picture was thin, accounts looked colder than they were, and promises made in writing lived only in memory. This was THE capture gap.
+
+**The data line, enforced at the source:** the work-Claude prompt's first rule forbids revenue figures, volumes, customer counts, shop lists, pricing, and contract terms — the digest arrives already clean, Folios parses it without any AI call, and you review every row before it's filed. Documented in data-handling and AI-governance docs.
+
+**What you see today:** Run your morning email report at work, paste the digest block into Folios, tap "File it all ✦" — and your accounts, Home ledger, and Pip all know what your inbox knows. Qualitatively, never numerically.
+
+**Why it matters:** You were the manual sync layer between two AIs. Now it's one paste — and everything downstream (the check-in, Your word, the operator report, account health) runs on a full picture instead of a third of one.
+
+---
+
 ## 2026-06-10 — The morning check-in, "Your word," and Pip takes center stage on mobile
 
 **What I built:** Three connected changes to how the day starts. First, the **morning check-in**: before you read Pip's overnight report, he asks up to three one-tap verification questions — "that audit was due Friday, did it land?" / "still stuck on Danny? He's had it 12 days" / "that Tuesday draft was never summarized — still needed?" Each answer immediately fixes the data underneath (marks the item done, clears the hold, routes you to the draft) with a visible receipt. Second, **"Your word"** — one card near the top of Home with both sides of your ledger: what you owe (commitments due or slipping, with Done/Snooze) and what they owe you (everything blocked on someone, with chase notes). Third, **Pip is now front and center in the mobile bottom nav** — his living orb sits in the middle slot; Commitments gave up the slot and lives on inside "Your word."

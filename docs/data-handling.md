@@ -1,6 +1,6 @@
 # Folios — Data Handling
 
-*Last updated: 2026-05-30 (Gauge V3 Phase 1 — folio_tasks added)*
+*Last updated: 2026-06-10 (corporate data line + digest handoff)*
 
 This document inventories what data Folios stores, where it lives,
 who can access it, and what crosses the boundary to third-party AI
@@ -61,6 +61,29 @@ For broader security posture, see [security.md](./security.md).
 |---|---|---|
 | `folio_errors` | Client-side errors (React, network, Pip), with stack and context | No automatic deletion today (planned: 90 days) |
 | `folio_pip_usage` | Per-call Pip API usage (tokens, mode, timestamp) | No automatic deletion today (planned: 90 days) |
+
+---
+
+## The corporate data line (what never enters Folios)
+
+Folios is a personal notebook, deliberately separated from the user's
+employer's quantitative business data. Two enforced properties:
+
+1. **Never solicited.** No AI surface in Folios asks for revenue figures,
+   transaction volumes, customer counts, shop lists/rosters, pricing, or
+   contract terms. Where business performance matters, questions are
+   directional ("trending up or down?") — never numeric.
+2. **Sanitized at the source.** The Email/Teams Digest Handoff — the one
+   structured channel from the user's work environment into Folios — runs
+   on a fixed prompt whose first rule excludes all quantitative business
+   data. The digest carries account names, people's names, qualitative
+   conclusions, and dates only. Folios parses it deterministically (no AI
+   call) and the user reviews every row before anything is filed.
+
+Raw user-typed notes are stored verbatim (it's the user's notebook), but
+AI-authored memory (facts, profiles, summaries, account state) is
+instructed to generalize any quantitative business data rather than
+retain it.
 
 ---
 

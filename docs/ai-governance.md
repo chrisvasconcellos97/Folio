@@ -1,6 +1,6 @@
 # Folios — AI Governance
 
-*Last updated: 2026-06-08*
+*Last updated: 2026-06-10 (data line rule)*
 
 This document describes how Folios uses AI (Pip) responsibly. It
 covers what Pip can and can't do, what guardrails are in place, how
@@ -57,6 +57,21 @@ Folios takes AI seriously. Pip is built on three principles:
 | Override user corrections | Corrections are immutable; Pip reads them as instructions |
 
 ---
+
+## The data line (locked design rule)
+
+The assistant neither asks for nor retains the user's employer's
+quantitative business data:
+
+- **Never ask:** no Pip surface (questions, chat, summaries, check-ins)
+  may solicit revenue, volumes, customer counts, rosters, pricing, or
+  contract terms. Enforced in the prompts of every question-generating
+  surface and in the work-side digest prompt.
+- **Never retain:** Pip-authored memory layers (glossary facts, profile
+  synthesis, account state, summaries) are instructed to generalize any
+  quantitative business data the user discloses ("high-volume supplier,
+  trending healthy" — never the number). The user's own raw notes are
+  never silently edited.
 
 ## Where the user is always in control
 

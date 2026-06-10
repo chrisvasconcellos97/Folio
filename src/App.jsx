@@ -44,6 +44,7 @@ var ScheduleMeetingModal   = lazy(function () { return import("./views/cadence/S
 var AddLifeItemModal       = lazy(function () { return import("./views/life/AddLifeItemModal").then(function (m) { return { default: m.AddLifeItemModal }; }); });
 var OnboardingTour         = lazy(function () { return import("./views/welcome/OnboardingTour").then(function (m) { return { default: m.OnboardingTour }; }); });
 var PipCatchUp             = lazy(function () { return import("./views/pip/PipCatchUp").then(function (m) { return { default: m.PipCatchUp }; }); });
+var DigestIngestModal      = lazy(function () { return import("./views/home/DigestIngestModal").then(function (m) { return { default: m.DigestIngestModal }; }); });
 import { DesktopLayout } from "./layout/DesktopLayout";
 import { MobileLayout } from "./layout/MobileLayout";
 import { PipOrb, PipMark } from "./components/PipMark";
@@ -84,6 +85,7 @@ export default function App() {
   var [pipTransition, setPipTransition] = useState("idle");
   var [showPalette, setShowPalette]     = useState(false);
   var [showStartConv, setShowStartConv] = useState(false);
+  var [showDigestIngest, setShowDigestIngest] = useState(false);
   var [convPrefillDate, setConvPrefillDate] = useState(null); // ISO date string from calendar click
   var [adHocFlow, setAdHocFlow]         = useState(null); // { accountId, draftId }
   var [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -1116,6 +1118,7 @@ export default function App() {
         onMarkNudgeDone={commitmentNudgesHook.markDone}
         onCloseItem={closeItem}
         onUpdateProject={updateProjectApp}
+        onOpenDigest={function () { setShowDigestIngest(true); }}
         contacts={allContacts}
         themes={recentThemes}
         scheduledMeetings={scheduledMeetings}
@@ -1527,6 +1530,15 @@ export default function App() {
     else { setMode("life"); handleSetView("home"); }
   }
 
+  var digestModal = showDigestIngest ? (
+    <Suspense fallback={null}><DigestIngestModal
+      accounts={accounts}
+      userId={userId}
+      addMeeting={addMeeting}
+      onClose={function () { setShowDigestIngest(false); }}
+    /></Suspense>
+  ) : null;
+
   var lifeModal = showAddLife ? (
     <Suspense fallback={null}><AddLifeItemModal
       initialKind="todo"
@@ -1541,7 +1553,7 @@ export default function App() {
         <Toast />
         {reminderBanner}
         {inviteBanner}
-        {lifeModal}
+        {lifeModal}{digestModal}
         <DesktopLayout
           mode={mode}
           onToggleMode={handleToggleMode}
@@ -1664,7 +1676,7 @@ export default function App() {
           <Suspense fallback={<PipLoader />}>{mainContent}</Suspense>
         </ErrorBoundary>
       </MobileLayout>
-      {lifeModal}
+      {lifeModal}{digestModal}
       {addAccountModal}
       {startConvModal}
       {scheduleMeetingModal}
