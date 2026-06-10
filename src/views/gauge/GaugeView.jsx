@@ -1219,6 +1219,24 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
                       </div>
                     </>
                   )}
+                  {p.waiting_on && p.status !== "complete" && (function () {
+                    var heldDays = p.waiting_on_since
+                      ? Math.max(0, Math.floor((Date.now() - new Date(p.waiting_on_since + "T00:00:00").getTime()) / 86400000))
+                      : null;
+                    var stale = heldDays !== null && heldDays > 10;
+                    return (
+                      <div style={{
+                        fontFamily: MONO, fontSize: 9.5, fontFeatureSettings: '"tnum"',
+                        padding: "3px 10px", borderRadius: 999,
+                        background: stale ? C.redFaint : C.yellowFaint,
+                        border: "1px solid " + (stale ? C.red : C.yellow),
+                        color: stale ? C.red : C.yellow,
+                        whiteSpace: "nowrap", fontWeight: 600,
+                      }}>
+                        ⏳ {p.waiting_on}{heldDays !== null ? " · " + heldDays + "d" : ""}
+                      </div>
+                    );
+                  })()}
                   {p.due_date && (
                     <div style={{
                       fontFamily: MONO, fontSize: 9.5, fontFeatureSettings: '"tnum"',

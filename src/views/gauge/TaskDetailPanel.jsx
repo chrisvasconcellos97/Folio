@@ -52,6 +52,7 @@ export function TaskDetailPanel({
   var [title, setTitle]         = useState(task ? task.title || "" : "");
   var [assignee, setAssignee]   = useState(task ? task.assignee_email || "" : "");
   var [recipient, setRecipient] = useState(task ? task.recipient || "" : "");
+  var [waitingOn, setWaitingOn] = useState(task ? task.waiting_on || "" : "");
   var [accountId, setAccountId] = useState(task ? task.account_id || "" : "");
   var [taskStatus, setTaskStatus] = useState(task ? (task.task_status || statusColumns[0]) : statusColumns[0]);
   var [completed, setCompleted] = useState(task ? !!task.completed_at : false);
@@ -117,6 +118,10 @@ export function TaskDetailPanel({
       title:          newTitle,
       assignee_email: assignee || null,
       recipient:      recipient || null,
+      waiting_on:       waitingOn || null,
+      waiting_on_since: waitingOn
+        ? ((task && task.waiting_on === waitingOn && task.waiting_on_since) || new Date().toISOString().slice(0, 10))
+        : null,
       account_id:     accountId || null,
       task_status:    taskStatus,
       completed_at:   completed ? (task && task.completed_at ? task.completed_at : new Date().toISOString()) : null,
@@ -334,6 +339,15 @@ export function TaskDetailPanel({
           {personSelect(recipient, setRecipient, "— No recipient —")}
           <div style={{ fontFamily: INTER, fontSize: 11, color: C.textMuted, marginTop: 4 }}>
             Who this is for — who you’ll send something to or do this for.
+          </div>
+        </div>
+
+        {/* Waiting on — who's holding the ball right now (Phase 1.4) */}
+        <div>
+          <FL>Waiting on</FL>
+          {personSelect(waitingOn, setWaitingOn, "— Nobody (not blocked) —")}
+          <div style={{ fontFamily: INTER, fontSize: 11, color: C.textMuted, marginTop: 4 }}>
+            Who you're blocked on. Surfaces on Home under "They owe you" with days held.
           </div>
         </div>
 

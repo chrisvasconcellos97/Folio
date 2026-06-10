@@ -16,6 +16,11 @@ export function AccountDetailTabs({ tabs, activeTab, onChange, shopCount }) {
         marginBottom: 16,
         borderBottom: "1px solid " + C.rule,
         paddingBottom: 0,
+        // 7-8 tabs (MSO accounts) overflow narrow screens — scroll instead of
+        // clipping. Scrollbar hidden via the inline noScrollbar trick below.
+        overflowX: "auto",
+        WebkitOverflowScrolling: "touch",
+        scrollbarWidth: "none",
       }}
     >
       {tabs.map(function (t) {
@@ -33,6 +38,8 @@ export function AccountDetailTabs({ tabs, activeTab, onChange, shopCount }) {
             style={{
               padding: "8px 0",
               marginRight: 26,
+              flexShrink: 0,
+              whiteSpace: "nowrap",
               cursor: "pointer",
               fontFamily: MONO,
               fontSize: 10.5,

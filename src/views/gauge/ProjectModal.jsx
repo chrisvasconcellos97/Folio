@@ -87,6 +87,7 @@ export function ProjectModal({
   var [accountIds, setAccountIds]   = useState(initAccountIds);
   var [scope, setScope]             = useState(existing ? existing.scope || "personal" : "personal");
   var [assigneeEmail, setAssignee]  = useState(existing ? existing.assignee || "" : "");
+  var [waitingOn, setWaitingOn]     = useState(existing ? existing.waiting_on || "" : "");
   var [requestedBy, setRequestedBy] = useState(existing ? existing.requested_by || "" : "");
   var [blockedReason, setBlockedReason] = useState(existing ? existing.blocked_reason || "" : "");
   var [stages, setStages]           = useState(
@@ -354,6 +355,12 @@ export function ProjectModal({
       scope,
       assignee:      (scope === "team" && assigneeEmail) ? assigneeEmail : null,
       requested_by:  requestedBy || null,
+      // Waiting-on: stamp the since-date when the holder is set or changed;
+      // clear both together. "Who's holding the ball" — Phase 1.4.
+      waiting_on:       waitingOn.trim() || null,
+      waiting_on_since: waitingOn.trim()
+        ? ((existing && existing.waiting_on === waitingOn.trim() && existing.waiting_on_since) || new Date().toISOString().slice(0, 10))
+        : null,
       blocked_reason: status === "blocked" ? blockedReason.trim() : null,
       stages,
       is_standing:   isStanding,
@@ -691,6 +698,26 @@ export function ProjectModal({
             />
           </div>
         )}
+
+        {/* Waiting on — who's holding the ball (Phase 1.4) */}
+        <div>
+          <FL>Waiting on (who's holding the ball)</FL>
+          <PersonPicker
+            value={waitingOn}
+            members={members}
+            contacts={allContacts && allContacts.length ? allContacts : contacts}
+            accounts={accounts}
+            accountIds={accountIds}
+            onChange={function (v) { setWaitingOn(v || ""); }}
+            noneLabel="— Nobody (not blocked) —"
+            contactValue={function (c) { return c.name; }}
+          />
+          {existing && existing.waiting_on && existing.waiting_on_since && (
+            <div style={{ fontSize: 10.5, color: C.textMuted, marginTop: 4, fontFamily: "'JetBrains Mono', ui-monospace, monospace" }}>
+              held since {existing.waiting_on_since}
+            </div>
+          )}
+        </div>
 
         {/* Requested By */}
         <div>

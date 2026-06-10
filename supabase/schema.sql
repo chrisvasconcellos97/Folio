@@ -1203,3 +1203,14 @@ create index if not exists idx_pip_correction_log_account_id     on pip_correcti
 create index if not exists idx_pip_promise_log_account_id        on pip_promise_log(account_id);
 create index if not exists idx_pip_promise_log_item_id           on pip_promise_log(item_id);
 create index if not exists idx_folio_pip_questions_user_source_status on folio_pip_questions(user_id, source, status);
+
+-- ──────────────────────────────────────────────────────────────────────
+-- Waiting-on layer (June 10 2026) — who's holding the ball (Phase 1.4)
+-- (see supabase/waiting_on_layer.sql; applied to prod via MCP)
+-- ──────────────────────────────────────────────────────────────────────
+alter table folio_tasks
+  add column if not exists waiting_on text,
+  add column if not exists waiting_on_since date;
+alter table gauge_projects
+  add column if not exists waiting_on text,
+  add column if not exists waiting_on_since date;

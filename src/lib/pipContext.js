@@ -376,6 +376,7 @@ function renderAccountFull(a, userId) {
       if (p.due_date) line += " · due " + p.due_date;
       if (p.assignee) line += " · assigned: " + normalizePerson(p.assignee);
       if (p.requested_by) line += " · requested by: " + normalizePerson(p.requested_by);
+      if (p.waiting_on) line += " · WAITING ON: " + p.waiting_on + (p.waiting_on_since ? " (since " + p.waiting_on_since + ")" : "");
       lines.push(line);
       // Latest pulse + prior two for momentum sense (cheap: latest + last 2 only).
       var ups = Array.isArray(p.status_updates) ? p.status_updates.slice(0, 3) : [];

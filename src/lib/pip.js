@@ -963,6 +963,7 @@ export function summarizeDraftPip(payload, opts) {
           var l = "- " + p.id + " · " + (p.title || "Untitled");
           var latest = Array.isArray(p.status_updates) && p.status_updates[0];
           if (latest && latest.body) l += " · latest: \"" + String(latest.body).slice(0, 100) + "\"";
+          if (p.waiting_on) l += " · WAITING ON: " + p.waiting_on + (p.waiting_on_since ? " (since " + p.waiting_on_since + ")" : "");
           return l;
         }).join("\n")
       : "(none)") + "\n\n" +

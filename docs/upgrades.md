@@ -17,6 +17,18 @@ those live in git history.
 
 ---
 
+## 2026-06-10 — Waiting-on layer + the account Overview becomes a strategic face
+
+**What I built:** Every project and task can now record **who's holding the ball** — "waiting on Danny since June 4" — set from the project editor or task panel with one picker. Everything blocked on someone else rolls up to a **"They owe you"** card on Home, oldest holds first, each with a one-tap **chase note** copied to your clipboard ready for email or Teams. And the account Overview tab was rebuilt as the account's strategic face: big meeting CTAs on top (start/log, cadence hub, history), the account's projects in flight with status + ball-holder + latest pulse, your open commitments, and the last conversation — with all the existing depth intact below and in the tabs.
+
+**Problem it solves:** Stalled projects are what anger top suppliers, and stalls usually mean someone else — a POC gone quiet, the product team, the admin — has the ball. That dimension was never tracked, so chasing depended on memory. Meanwhile the account page buried its most-used actions under everything else.
+
+**What you see today:** Set "Waiting on" on any project or task → an hourglass chip appears on the Gauge card (red past 10 days), it shows on the account Overview per project, Pip sees it in chat and summarize, and Home tells you who owes you what every morning with the chase note one tap away. Account pages open to action buttons and the strategic picture first. The account tabs also scroll on phones now instead of clipping.
+
+**Why it matters:** "Who's holding the ball" was the single missing dimension behind the projects-stall problem — now it's first-class, visible everywhere, and chaseable in one tap.
+
+---
+
 ## 2026-06-10 — Summarize precision: Pip recognizes your world and stops inventing tasks
 
 **What I built:** Three changes to how Pip turns meeting notes into a plan. First, he now carries a **people directory** of everyone you already know — every contact on every account, your partners' people, your internal teammates — so mentioning a name from another account no longer makes him suggest them as a "new contact." Second, his task extraction was retuned from volume to **precision**: notes are treated as a journal, and only genuine commitments, direct asks, and explicitly marked lines become tasks — "no tasks" is now an acceptable answer. Third, **receipts**: the plan preview shows a small "What Pip used" note naming the stored knowledge he actually applied (a term you taught him, a person he recognized, an update event he connected).

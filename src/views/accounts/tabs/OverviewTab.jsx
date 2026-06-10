@@ -118,6 +118,30 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
 
   var openCount = openItems.filter(function (i) { return !i.done; }).length;
 
+  // ── Strategic face (Phase 1.6) — the Overview is the account's launcher +
+  // strategic snapshot: meeting CTAs, this account's Gauge projects with
+  // who-has-ball, last conversation, open commitments. Depth stays in tabs.
+  var strategicProjects = useMemo(function () {
+    return (projects || [])
+      .filter(function (p) { return p.status !== "complete" && p.status !== "draft"; })
+      .slice(0, 5)
+      .map(function (p) {
+        var latest = Array.isArray(p.status_updates) && p.status_updates[0] ? p.status_updates[0] : null;
+        var heldDays = p.waiting_on && p.waiting_on_since
+          ? Math.max(0, Math.floor((Date.now() - new Date(p.waiting_on_since + "T00:00:00").getTime()) / 86400000))
+          : null;
+        return { p: p, latest: latest, heldDays: heldDays };
+      });
+  }, [projects]);
+
+  var lastMeeting = useMemo(function () {
+    return (meetings || []).find(function (m) { return m.status === "summarized" || m.pip_summary; }) || null;
+  }, [meetings]);
+
+  var openCommitments = useMemo(function () {
+    return (openItems || []).filter(function (i) { return i.is_commitment && !i.done; });
+  }, [openItems]);
+
   var lastMeeting = meetings && meetings.length > 0 ? meetings[0] : null;
   var followUp = lastMeeting && lastMeeting.follow_up_date ? lastMeeting.follow_up_date : null;
   var today = new Date().toISOString().slice(0, 10);
@@ -188,6 +212,124 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {/* ── Strategic face (Phase 1.6): launcher CTAs + projects + your word ── */}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <button
+          onClick={function () { onLogMeeting && onLogMeeting(); }}
+          style={{
+            flex: "1 1 160px",
+            background: C.accentDeep, border: "none", borderRadius: 10,
+            padding: "12px 16px", fontSize: 13.5, fontWeight: 700,
+            color: C.bg, fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer",
+          }}
+        >
+          ▶ Start / log a meeting
+        </button>
+        <button
+          onClick={function () { onSwitchTab && onSwitchTab("cadence"); }}
+          style={{
+            flex: "1 1 130px",
+            background: C.accentFaint, border: "1px solid " + C.accentLine, borderRadius: 10,
+            padding: "12px 16px", fontSize: 13, fontWeight: 600,
+            color: C.accent, fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer",
+          }}
+        >
+          Cadence hub →
+        </button>
+        <button
+          onClick={function () { onSwitchTab && onSwitchTab("meetings"); }}
+          style={{
+            flex: "0 1 110px",
+            background: "transparent", border: "1px solid " + C.rule, borderRadius: 10,
+            padding: "12px 14px", fontSize: 13, color: C.textSoft,
+            fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer",
+          }}
+        >
+          History
+        </button>
+      </div>
+
+      {(lastMeeting || openCommitments.length > 0) && (
+        <div style={{ display: "flex", gap: 14, flexWrap: "wrap", padding: "0 2px" }}>
+          {lastMeeting && (
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={function () { onSwitchTab && onSwitchTab("meetings"); }}
+              onKeyDown={function (e) { if (e.key === "Enter") onSwitchTab && onSwitchTab("meetings"); }}
+              style={{ fontSize: 12, color: C.textMuted, cursor: "pointer" }}
+            >
+              Last conversation: <span style={{ color: C.textSoft }}>{lastMeeting.meeting_date
+                ? new Date(lastMeeting.meeting_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                : "—"}{lastMeeting.pip_short_title ? " · " + lastMeeting.pip_short_title : ""}</span>
+            </span>
+          )}
+          {openCommitments.length > 0 && (
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={function () { onSwitchTab && onSwitchTab("tasks"); }}
+              onKeyDown={function (e) { if (e.key === "Enter") onSwitchTab && onSwitchTab("tasks"); }}
+              style={{ fontSize: 12, color: C.yellow, cursor: "pointer", fontWeight: 600 }}
+            >
+              ✦ {openCommitments.length} open commitment{openCommitments.length === 1 ? "" : "s"} — your word
+            </span>
+          )}
+        </div>
+      )}
+
+      {strategicProjects.length > 0 && (
+        <div style={{
+          background: C.surface, border: "1px solid " + C.rule,
+          borderRadius: 12, padding: "13px 15px",
+        }}>
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={function () { onSwitchTab && onSwitchTab("projects"); }}
+            onKeyDown={function (e) { if (e.key === "Enter") onSwitchTab && onSwitchTab("projects"); }}
+            style={{
+              fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+              fontSize: 9.5, color: C.textMuted, fontWeight: 700,
+              letterSpacing: "0.08em", textTransform: "uppercase",
+              marginBottom: 10, cursor: "pointer",
+            }}
+          >
+            ⊞ Projects in flight ({strategicProjects.length}) →
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+            {strategicProjects.map(function (sp) {
+              var p = sp.p;
+              return (
+                <div key={p.id} style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 13, color: C.text, fontWeight: 600 }}>{p.title || "Untitled"}</span>
+                  <span style={{
+                    fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+                    fontSize: 9, color: p.status === "blocked" ? C.red : C.textMuted,
+                    textTransform: "uppercase", letterSpacing: "0.06em",
+                  }}>
+                    {(p.status || "").replace("_", " ")}
+                  </span>
+                  {sp.heldDays !== null && (
+                    <span style={{
+                      fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+                      fontSize: 9.5, color: sp.heldDays > 10 ? C.red : C.yellow, fontWeight: 600,
+                    }}>
+                      ⏳ {p.waiting_on} · {sp.heldDays}d
+                    </span>
+                  )}
+                  {sp.latest && sp.latest.body && (
+                    <span style={{ fontSize: 11.5, color: C.textMuted, flexBasis: "100%" }}>
+                      “{String(sp.latest.body).slice(0, 90)}”
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Pip status card — hidden when the nightly operator read supersedes it
           (the OperatorPanel above gives a deeper, current read; showing both
           risks contradicting each other). */}

@@ -523,6 +523,38 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
 
   var todayISO = startOfToday().toISOString().slice(0, 10);
 
+  // ── They owe you — waiting-on layer (Phase 1.4) ──────────────────────
+  // Projects + tasks blocked on a named person, oldest hold first. Pure
+  // in-memory derivation from data Home already loads — zero extra queries.
+  var waitingOnRows = useMemo(function () {
+    var rows = [];
+    (projects || []).forEach(function (p) {
+      if (!p.waiting_on || p.status === "complete") return;
+      rows.push({
+        kind: "project", id: p.id, who: p.waiting_on,
+        what: p.title || "Untitled project",
+        since: p.waiting_on_since || null,
+        accountId: p.account_id || null,
+      });
+    });
+    (items || []).forEach(function (it) {
+      if (!it.waiting_on || it.done || it.status === "complete") return;
+      rows.push({
+        kind: "task", id: it.id, who: it.waiting_on,
+        what: it.text || it.title || "Task",
+        since: it.waiting_on_since || null,
+        accountId: it.account_id || null,
+      });
+    });
+    rows.forEach(function (r) {
+      r.days = r.since
+        ? Math.max(0, Math.floor((Date.now() - new Date(r.since + "T00:00:00").getTime()) / 86400000))
+        : null;
+    });
+    rows.sort(function (a, b) { return (b.days || 0) - (a.days || 0); });
+    return rows.slice(0, 6);
+  }, [projects, items]);
+
   // ── Today's Calls ────────────────────────────────────────────────────
   var todaysCalls = useMemo(function () {
     var today = startOfToday();
@@ -1230,6 +1262,72 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
                 </div>
               )
             }
+          </div>
+        </div>
+      )}
+
+      {/* They owe you — waiting-on layer (Phase 1.4). Oldest holds first;
+          one-tap chase template to the clipboard. */}
+      {waitingOnRows.length > 0 && (
+        <div style={{
+          background: C.surface, border: "1px solid " + C.rule,
+          borderLeft: "3px solid " + C.yellow,
+          borderRadius: 12, padding: "14px 16px", marginBottom: 14,
+        }}>
+          <div style={{
+            fontFamily: MONO, fontSize: 9.5, color: C.yellow, fontWeight: 700,
+            letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10,
+          }}>
+            ⏳ They owe you ({waitingOnRows.length})
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {waitingOnRows.map(function (r) {
+              var acct = r.accountId ? accountById[r.accountId] : null;
+              return (
+                <div key={r.kind + r.id} style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <div style={{ flex: 1, minWidth: 180 }}>
+                    <span style={{ fontSize: 13, color: C.text, fontWeight: 600 }}>{r.who}</span>
+                    <span style={{ fontSize: 12.5, color: C.textSoft }}> · {r.what}</span>
+                    {acct && (
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        onClick={function () { onOpenAccount(acct.id); }}
+                        onKeyDown={function (e) { if (e.key === "Enter") onOpenAccount(acct.id); }}
+                        style={{ fontSize: 11.5, color: C.accent, cursor: "pointer", marginLeft: 6 }}
+                      >
+                        {acct.name}
+                      </span>
+                    )}
+                  </div>
+                  {r.days !== null && (
+                    <span style={{
+                      fontFamily: MONO, fontSize: 10, fontFeatureSettings: '"tnum"',
+                      color: r.days > 10 ? C.red : C.yellow, whiteSpace: "nowrap",
+                    }}>
+                      {r.days}d held
+                    </span>
+                  )}
+                  <button
+                    onClick={function () {
+                      var msg = "Hi " + r.who.split(" ")[0] + " — checking in on \"" + r.what + "\"" +
+                        (r.days ? " (with you for " + r.days + " days now)" : "") +
+                        ". Where do things stand? Anything you need from me to move it? Thanks!";
+                      navigator.clipboard && navigator.clipboard.writeText(msg);
+                      showToast("Chase note copied — paste into email or Teams");
+                    }}
+                    style={{
+                      background: C.accentFaint, border: "1px solid " + C.accentLine,
+                      borderRadius: 6, padding: "3px 10px",
+                      fontSize: 10.5, color: C.accent, fontFamily: MONO,
+                      cursor: "pointer", whiteSpace: "nowrap",
+                    }}
+                  >
+                    Copy chase
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
