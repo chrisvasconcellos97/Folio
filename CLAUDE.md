@@ -231,6 +231,23 @@ release-note formality. Bug fixes, styling tweaks, and doc-only
 updates do NOT belong in upgrades.md — those live in git history.
 Technical release-notes detail still goes in `changelog.md`.
 
+## Pip Data Line Rule (locked by Chris, June 10 2026 — compliance-critical)
+
+Folios is Chris's **personal notebook**. OEC's quantitative business data must never live in it — that's Chris's hard line and his professional exposure. Two halves, both enforced in every Pip prompt:
+
+1. **Never ask.** No Pip surface (drip questions, terminology lane, Teach Pip, morning check-in, chat, summarize follow-ups) may ever solicit: revenue figures, transaction volumes, customer counts, shop lists/rosters, pricing, or contract terms. When business performance matters, ask **directionally** ("trending up or down since the integration?") — never for the number.
+2. **Never retain.** Every layer Pip *writes* (glossary facts, profile prose, summaries, account state, operator state, question suggestions) must **generalize** any quantitative business data Chris discloses — store "high-volume supplier, volume healthy," never "$2M/month." Chris's **raw meeting notes stay verbatim** (his notebook, his words — Pip never silently edits user-typed text); the rule governs Pip-authored memory only.
+
+When implemented, document the property in `docs/data-handling.md` + `docs/ai-governance.md` so Chris has a paper trail if work ever asks: *"the assistant neither asks for nor retains company data."* Any new Pip surface must comply before shipping. Trax / Power BI data never crosses into Folios in any form — no CSVs, no pastes, no imports.
+
+## App Coherence Rule (no more Frankenstein — June 10 2026)
+
+Chris's words: *"Claude has only changed certain sections of the app and not the areas that are tied to that section… so I have this Frankenstein thing that doesn't speak well to each other."* He's right (audit-confirmed: 10+ date-format implementations, fields named differently across tabs, bespoke pickers next to shared ones). This is the Pip context-parity rule **generalized to the whole app**:
+
+1. **No section gets changed without updating every surface wired to it** — same field names, same components, same formats. Before shipping a change, grep for sibling surfaces that render or write the same data and update them in the same commit.
+2. **Shared utils over local reimplementations** — date/relative-time formatting, pills, pickers, empty states. If you're about to write a small helper inline, check `src/lib/` + `src/components/` first.
+3. **Inconsistent fields/naming degrade Pip directly** (he reads these fields) — coherence is an AI-quality issue, not just polish.
+
 ## Patch — Background Build Agent
 
 **Patch** is the name for the background agent used to execute large batch builds. When a batch of queued items is ready to ship, spawn Patch via the Agent tool with `isolation: "worktree"` so it works in a clean copy of the repo without disrupting the main conversation.
@@ -252,6 +269,32 @@ A Playwright stress/fuzz/integrity bot that exercises **production** (`folioshq.
 - **Design rules (keep these):** drive the real UI but **verify outcomes via the Supabase REST API** (robust); UI-drive steps that can't find an element emit `skipped:true` with a diagnostic, NOT a hard fail — reserve red for genuine app failures. Source maps are emitted (`vite.config.js` `sourcemap:"hidden"`) so crash stacks decode to real `src/` lines.
 - **AI cost guard:** ~5 authenticated Pip calls per run (Chris is cost-sensitive) — do NOT add big Pip bursts to scenarios.
 - **Found real bugs:** the `account.name.split` crash on Accounts/Partners (guarded — see Already shipped), and the account-merge data-loss bug (see Already shipped) — the latter caught by inspecting the live DB while building the merge test.
+
+## Chris's Job — Operating Context (THE INTERVIEW, June 10 2026 — read before designing anything)
+
+A 17-question deep interview. This is the ground truth every feature decision serves. Correct it only when Chris says reality changed.
+
+**The job:** Chris manages OEC's **top aftermarket suppliers** in the collision division, on **OPS Trax**. Suppliers pay OEC a **transaction fee per order**; **MSO connections drive the volume**. His work: spotting supplier gaps (shop-list coverage, "dropped shops" = shops that stopped ordering), running **audits** (supplier sends full customer list → scrubbed against OPS DB → data team fuzzy-matches → admin connects matched shops; plus a **monthly shop-list status report** to each supplier: connected/integrated breakdown), facilitating supplier strategic projects (integrations with product, regional expansions with admin, account shutdowns/merges), and constant cross-department coordination (the dotted lines are why the Departments workspace exists).
+
+**How he's measured:** the department is young; his boss is fluid, not numbers-driven. The metric is **"are my suppliers happy."** Happiness = (1) **fast responses**, (2) **projects that don't stall** (these are large strategic initiatives — a stalled project genuinely angers a top supplier), (3) **Chris knowing their account cold** — *"problem solving is my secret sauce but I can't do that unless I fully understand their account."* Stalls come from both sides: OEC's product team ("kind of sucks") AND supplier POCs going dark. **"Who's holding the ball" is the missing tracked dimension.**
+
+**The team:** Boss (1:1 every **Monday**, assigns work through Chris mid-week: "where are we on X / is Y happy / handle this fire"). **Business analyst** (new, Chris is training him; will absorb file-prep work, build Power BI reports, produce the monthly executive summary, eventually hunt gaps proactively — a delegation arc in progress). **Admin** (owns shop-list uploads, macros, batch ops, account adds, settings changes — a lone wolf, slow, hard to track, needs explicit crayon-level instructions; Chris currently does the file-interpretation for him; a frequent stall source and a first-class assignee Folios must support everywhere). Weekly rhythm: **Mon 1:1 (run from Folios) · Tue aftermarket team (run from the Excel request tracker) · Fri joint aftermarket+MSO (fluid, sometimes product)** — Folios notes in all three. "Flat-footed = I forgot something I said I'd do."
+
+**The Excel request tracker** (team-shared, reviewed in the Tuesday meeting, boss assigns into it; columns: Priority · Date of Request · Owner · Supplier · # of Shops · Email Thread · Initiative · Required Completion Date · Connection Macro Date · Integration Macro Date · Comments). Dying since Folios — Chris can't maintain two systems; "tons of projects in Folios aren't on that sheet." Folios should eventually own it and emit a meeting-ready shared view (others only need to SEE it weekly — no multi-user build needed).
+
+**The day:** starts 9am; Outlook + Teams + Folios always open. **Almost completely reactive, inbox-shaped.** Most supplier + internal interaction happens in **email and Teams and never reaches Folios** — this is THE capture gap and why Pip's picture is thin. He runs Pip's daily brief AND a **work-Claude email report** (what's unanswered, what he's waiting on, what he committed to) every morning — **Chris is the manual sync layer between the two AIs.** He doesn't check Power BI enough (reactive wins). Folios opens for: every meeting (notes), client phone calls, the 1:1. Heavy phone use away from desk.
+
+**THE DATA LINE (see Pip Data Line Rule):** no revenue, no shop lists/rosters, no customer counts in Folios — ever. Qualitative/directional conclusions in his own words are fine ("the rest is just my notebook"). **Two-brain architecture:** work Claude handles the corporate-data side (file interpretation, email analysis, anything touching real numbers); Pip owns memory, workflow, relationships, accountability. The handoff seam between them is a design surface (→ Email/Teams Digest Handoff in the game plan).
+
+**Known failure modes (his own inventory):** missed emails "so many fucking emails," forgotten circle-backs on threads, audits delivered late (missed commitments), projects late, walking into calls unprepped. In the summarize preview, when rushed he **accepts wrong rows** ("fuck it") — wrong data enters the system and poisons downstream surfaces. Pip's two worst habits (his magic-wand answer): **(1) failing to recognize people he already knows** (suggests 3rd-party partners and internal OEC people as new contacts on the current account — needs a global-roster check: all accounts' contacts + org/departments + partners + glossary, and a "mentioned vs met" distinction), **(2) manufacturing tasks from journal notes** (Pip acts like extraction volume = helpfulness; Chris ends up with "a shit ton of tasks when I really should have only had a couple" — precision over volume; "no tasks" is a respectable answer).
+
+**Pip usage honestly:** brief + summarize are the workhorses. Chat is rarely used ("he doesn't have enough info to truly answer"). He genuinely answers Pip's questions and is **fully committed to feeding Pip daily** — but needs receipts (visible proof answers changed something). The operator report rarely changes his day: Pip lacks scope, and has **no humility about staleness** (the All Star Monday: project's final step was done over the weekend, just unmarked — Pip screamed "overdue fire" at full confidence while the actual work of the day got no help). The approved fix direction: **the morning brief becomes a 10-second two-way check-in** — Pip asks ≤3 verification questions BEFORE declaring anything, answers immediately correct the brief/state.
+
+**App feel:** Home is "a nightmare to look at" — too much everywhere; Accounts detail is the worst screen. He can't vocalize design ("I know what it should do") — derive form from function. Approved Home design: **(1) "Your word" — what I owe people / what they owe me, (2) Today with prep attached, (3) Pip's check-in (questions first, then the read)** — everything else below the fold. Account **Overview = strategic face** (meeting CTAs + that account's Gauge projects + who-has-ball), tabs stay for depth — the account page is really a **launcher** (start/log meeting, check history). Cadences in Folios are accurate and used a lot; one gap: **multi-department internal cadences** (can only attach one department today). Ad-hoc conversations are constant, internal + external. Notes editor annoyances: no auto-capitalization at sentence start, sub-bullets indented too shallow, generally loose structure.
+
+**Who he is:** 29, proven fast riser (moves up every couple of years), a few months into this role. Sequence: **safety first** (nothing dropped, never flat-footed) **then shine** (promotion-visible: exec-ready artifacts, always knowing the answer — within the dept, OEC, or elsewhere in collision). Folios is his **portable brain** — it compounds for HIM and travels with him; the data line is what keeps it his. Why Folios exists: *"I forget shit all the time and OneNote wasn't helping. I needed a tailored accounts list connection. I'm doing all this work so it can make my job easier down the road."* The investment has to flip from costing effort to paying back.
+
+---
 
 ## Architecture
 
@@ -382,7 +425,17 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 ---
 
-## Session Handoff — June 10 2026 (read first)
+## Session Handoff — June 10 2026 PM (read first): Full audit + THE INTERVIEW
+
+**What happened this session (no code shipped — docs/CLAUDE.md only):**
+1. **Full app audit** (4 parallel agents + live Supabase advisors). Findings condensed into **Game Plan Phase 0** below — the chat transcript is gone, the Phase 0 list is the durable record. Highlights: `ask-pip.js` shows raw JSON on truncated summaries (P0); CI never runs `npm run test` (P0); 670 kB main bundle from eager `AccountDetail`→`CadenceHub` imports; ~27 Supabase queries on cold open; `useMeetings` unbounded (+ localStorage quota risk); 76 RLS policies re-evaluate `auth.uid()` per row + 90 duplicate policies (live-DB advisors); commitment nudges wrongly suppressed when operator report active; docs/ suite 7 commits stale. All CLAUDE.md locked rules PASSED (hook order, Anthropic-in-try-catch, JWT clients, fonts, mobile inputs).
+2. **THE INTERVIEW** — 17 questions on Chris's actual job. Distilled into the new **"Chris's Job — Operating Context"** section above; read it before designing anything. Two new locked rules came out of it: **Pip Data Line Rule** (never ask / never retain quantitative business data) and **App Coherence Rule** (no Frankenstein drift).
+3. **Game Plan drafted (DRAFT — Chris has NOT approved it yet; ALL BUILDS PAUSED until he tears it apart).** See the Game Plan section above Pending Updates.
+4. **Decisions locked by Chris:** mobile nav — **Commitments out, Pip in, front and center with pulse** (item 43). The non-Folios tables in the shared Supabase project (`families`, `grocery_items`, etc.) are **another live project — leave them alone**. Life mode is WIP — deprioritize Life-side polish; focus Work side.
+5. **⚠️ Item 41 discrepancy:** Chris said he built + pushed the split-screen meeting mode (projects left / notes right, per-project note fields) "today" — but **it is NOT on `main`** (no `project_notes` anywhere in the code; latest commits are person-picker/multi-account work). It's likely stranded in another session's unpushed local commits (the env-reset gotcha). **Recover or rebuild before he tries to test it.**
+6. The audit's full UX/perf/Pip findings beyond Phase 0 (account-header CTA hierarchy, Settings grouping, 8-tab overflow, PipCatchUp counter, etc.) are folded into Game Plan Phases 1–2 items where they belong.
+
+## Session Handoff — June 10 2026 AM
 
 **Where things stand:** Production (`folioshq.com`) is current on `main` and live — this session pushed ~10 commits to `main`. One prod schema change applied via MCP (`life_items`) + folded into `schema.sql`; no migrations pending. **Environment note:** this remote env keeps **resetting local-only commits back to the remote tip** between turns — local commits silently vanished twice. **The only durable storage is `main`.** So: push captures/specs to `main` as you make them (they're just CLAUDE.md notes, but they get lost otherwise). Code/feature builds still wait for Chris's explicit "push."
 
@@ -451,7 +504,45 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 ---
 
+## 🎯 GAME PLAN — DRAFT (June 10 2026 — awaiting Chris's teardown; ALL BUILDS PAUSED until he approves)
+
+Built from the audit + the interview. Organizing principle is Chris's own arc: **Phase 0 harden → Phase 1 safety (nothing dropped, never flat-footed) → Phase 2 shine (promotion-visible).** Every item must respect the Pip Data Line Rule + App Coherence Rule.
+
+### Phase 0 — Hardening (audit fixes; no behavior redesigns; mostly one Patch batch)
+- **Bugs:** `api/ask-pip.js` raw-JSON-on-truncation (copy portfolio-brief's regex-salvage + check `stop_reason`); `api/operator-run.js` silent empty operator state on JSON parse failure (log raw output to console/`folio_errors`); un-suppress commitment nudges when operator report active (`HomeView.jsx` ~line 1236); dead "Open brief →" pill when no calls today (~line 1020); ISO date leaking into draft-ahead card.
+- **Safety nets:** add `npm run test` to `.github/workflows/ci.yml`; write tests for `accountHealth.js` + `pipPlanApply.js` (+ `lifeLadder.js` later); register `api/invite.js` in `scripts/test-api-imports.js`; attach JWT to `profile-synthesis.js` client (latent footgun).
+- **API guards:** server rate-limit on `portfolio-brief.js`; `export const config = { maxDuration: 60 }` on `portfolio-brief.js` + `business-review.js`; truncation detection in `leadership-readout.js`; `generate-questions.js` model failures → 500 (not 200-with-modelError).
+- **Performance:** lazy-load `AccountDetail` + `StartConversationModal` + `AddAccountModal` + `PipCatchUp` (cuts ~150–200 kB off the 670 kB index chunk); dynamic-import `pip.js` out of App.jsx (only `compressCorrectionsPip` used); `.limit()` on global `useMeetings` + size-guard its localStorage cache; fix `CadenceMeetingMode` ESC-handler re-registration on every keystroke (useRef); reduce cold-open queries ~27→~15 (move `fetchAllContacts`/`fetchAllUpdates` into AccountDetail; collapse drip-question triple query; pass in-memory data to `computeAndSaveSnapshots`).
+- **DB (apply via MCP + fold into schema.sql):** wrap RLS `auth.uid()` in `(select auth.uid())` (76 lints); consolidate duplicate permissive policies (90 lints, worst: `folio_quick_tasks`, `folio_accounts`); add missing FK indexes / drop unused ones.
+- **Cheap Pip parity wins (from audit):** wire `recentUpdates` (update calendar) into summarize payload; inject operator state (`operator_situation`/`risks`/`headline`) into chat context; add `relationship_role` to Brief Me contacts; add `status_updates` pulse to generate-questions' project query.
+- **Docs catch-up:** June 10 features into `product-overview.md` + `upgrades.md`, regenerate PDFs (standing rule currently violated).
+- **Theme-token sweep:** worst offenders (`ProjectsTab.jsx` status map, `SettingsView` `#fff`, `AddAccountModal`, `AuthView`).
+
+### Phase 1 — SAFETY (the keeper of his word)
+1. **Summarize precision overhaul (the magic wand).** (a) Global roster resolution before any "new contact" suggestion — all accounts' contacts + org members/departments + known partners + glossary terms; distinguish "mentioned" vs "met"; (b) note-vs-commitment classification — journal lines are NOT tasks; precision over volume; 2 right tasks beat 9 cleanups; "no tasks" is valid; (c) make creating/re-tying projects inside `PipSummarizePreview` easy; (d) item 39 streaming (prose recap streams first, plan parses after) folds in here; (e) receipts — show what taught knowledge was used.
+2. **Morning check-in (two-way brief).** Before the operator report declares anything, Pip asks ≤3 verification questions (one-tap answers): deadline-just-passed items ("did All Star land?"), stalled-project blame ("blocked on them or us?"), staleness checks. Answers immediately rewrite the report + account state, with receipts. Kills confident-wrongness (the All Star Monday class). Data Line Rule applies to question generation.
+3. **Email/Teams Digest Handoff (the two-brain bridge).** Design as a matched pair: a tailored work-Claude report format (sanitized: account names + qualitative conclusions only — commitments made, replies owed/awaited, threads gone quiet) + a dedicated Folios ingest surface where one paste files everything per-account (commitments, waiting-ons, touchpoints). Closes THE capture gap (most of his job never reaches Folios today).
+4. **Waiting-on layer.** First-class "blocked on [person] since [date]" on tasks/projects (incl. the admin + supplier POCs + product); surfaced on Home ("what they owe me"), account Overview (who-has-ball per project), and chase-email drafts.
+5. **Home redesign (approved shape).** (1) "Your word" — commitments due/slipping + waiting-ons; (2) Today with one-tap prep (Monday leads with the 1:1 pack); (3) Pip check-in then short corrected read. Everything else below fold. Kill duplicate surfaces (draft-ahead vs OperatorHub rows, double tap-targets). **Item 43 (mobile nav: Pip in, Commitments out, pulsing) lands here.**
+6. **Account Overview = strategic face.** Meeting CTAs up top + that account's Gauge projects (status, who-has-ball) + last meeting/commitments. Nothing removed — tabs keep the depth. Fix 8-tab overflow on mobile.
+7. **Pip questions reboot.** Three lanes with receipts: operational check-ins (primary), terminology guess-and-confirm (one-tap, ranked by confusion caused, e.g. Fuse5), biographical (rare garnish). Every answer visibly changes something. Data Line enforced (never ask / never retain) + documented in docs/.
+8. **Small locked items:** multi-department cadences (one cadence spanning multiple departments, merged attendee roster); notes editor polish (sentence auto-capitalization, deeper sub-bullet indent, general structure feel).
+
+### Phase 2 — SHINE (promotion-visible)
+1. **Monday 1:1 pack** — auto-generated before the Monday 1:1: everything that moved last week, promised-vs-done sweep (nothing surprises him in front of the boss), talking points. The operator cron already runs at the right time; teach it Mondays matter.
+2. **Team request queue in Folios (eat the Excel).** The Tuesday tracker's columns as a Folios surface + a clean meeting-ready view he screen-shares (single-user build, multi-eye display). Ends the two-system drift.
+3. **Win log / brag file + commitment integrity stats** — operator-detected wins persist on one-tap confirm; "promises kept" stats; feeds QBR/leadership readout and review season.
+4. **Pip Wrap** — Friday week-in-review (kept/slipped, accounts touched/neglected, what moved in Gauge, one pattern about how he worked).
+5. **Portable-brain depth:** semantic search over all notes/summaries (pgvector); "since you were here" per-account deltas (operator delta + per-device last-open already exist); meeting-aware timing (prep surfaces auto-raised ~15 min before calls; first real use of PWA push).
+6. **Instruction-writer for the admin** (work-Claude side owns file analysis; Pip drafts the crayon-level instruction docs from account/project context; track handoff status in the waiting-on layer).
+
+---
+
 ## Pending Updates
+
+**🛑 ALL BUILDS PAUSED (June 10 2026)** — Chris is reviewing the Game Plan draft above. Nothing ships until he approves. Items 36–42 below remain queued; most are absorbed into Game Plan phases (36/37/38 → Phase 1 items 2+7 context; 39 → Phase 1 item 1d; 41 → see status note).
+
+**43. Mobile nav: Pip replaces Commitments (LOCKED by Chris, June 10 2026)** — remove Commitments from the mobile bottom nav; Pip goes in **front and center, with pulse/presence** (orb-style, alive). Commitments resurface via Home "Your word" (Game Plan Phase 1.5) — they lose the nav slot, not the visibility.
 
 **36. Pip follow-up questions (conversational Teach Pip)** — *(queued June 2026)* When the user answers one of Pip's questions (drip / "Teach Pip" / Catch Up), Pip should **sometimes** fire a follow-up that digs into *that specific answer* — instead of always jumping to the next pre-generated question. Makes Teach Pip feel like a real conversation, not a form.
    - **Trigger:** not every answer (Chris said "sometimes") — gate on substance (answer length / has a concrete noun) + a probability, and don't follow up on a follow-up more than ~1 level deep (avoid rabbit-holing).
@@ -479,7 +570,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
    - **Where:** the `.pip.heartbeat` keyframe in `index.html` (currently ~3.4s "thump-thump-rest", reduced-motion-gated) + the `heartbeat` prop path on `PipOrb` (`src/components/PipMark.jsx`). Only the centerpiece Home orb uses it.
    - **Mechanics:** reduce the dead time between cycles (more frequent) AND ease the scale transition over more of the keyframe (slower per-beat motion). Keep reduced-motion gating intact. Pure CSS/animation tweak — no JS logic, no schema.
 
-**41. In-meeting per-project note blocks — split-screen meeting mode** — *(queued June 2026, design LOCKED with Chris)* In `CadenceMeetingMode`, clicking a project in the sidebar today just flags it `discussed` (teal → `discussedProjectIds` → Pip routing hint at summarize). Chris wants per-project notes captured *within the meeting*, separate from the main freeform notes, so Pip knows which notes belong to which project.
+**41. In-meeting per-project note blocks — split-screen meeting mode** — *(⚠️ STATUS June 10 2026 PM: Chris says he built the split-screen himself in another session and believes he pushed it — but it is NOT on `main` (no `project_notes` in the code; CadenceMeetingMode unchanged). Likely stranded as unpushed local commits in that session (the env-reset gotcha). RECOVER OR REBUILD before he tests — he expects to see it live.)* — *(queued June 2026, design LOCKED with Chris)* In `CadenceMeetingMode`, clicking a project in the sidebar today just flags it `discussed` (teal → `discussedProjectIds` → Pip routing hint at summarize). Chris wants per-project notes captured *within the meeting*, separate from the main freeform notes, so Pip knows which notes belong to which project.
    - **Layout (split screen):** the meeting body splits in two — one side the **projects panel** (project cards), the other side the **general notes** (current textarea, unchanged). The per-project note field lives **inside each project card itself** — nothing animates/moves over. Click a card → activates "discussed" + reveals its own note field (+ optionally its task list via item 30's inline actions). Today's sidebar already gives the two-pane bones; this rebalances toward ~50/50 and makes projects primary.
    - **DECISIONS LOCKED (June 2026):**
      - **Mobile:** a top **"Notes | Projects" toggle** — two full-width modes (type general notes in one, flip to Projects and tap a card to type its notes). Same two-spaces model, stacked in time on a phone.
