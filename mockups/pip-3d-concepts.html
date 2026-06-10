@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pip — 3D concept mockups</title>
+<style>
+  :root{
+    --accent:#4db896;
+    --accent-deep:#2d8f70;
+    --accent-hi:#9ff0d2;
+    --accent-glow:rgba(77,184,150,0.14);
+    --accent-border:rgba(77,184,150,0.42);
+    --accent-shadow:rgba(77,184,150,0.55);
+    --bg:#0c1110;
+    --surface:#121917;
+    --rule:rgba(255,255,255,0.07);
+    --text:#e8efec;
+    --text-dim:#93a39d;
+    --text-mute:#5f6f69;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    padding:34px 28px 60px;
+  }
+  h1{font-family:Georgia,"Times New Roman",serif; font-weight:600; font-size:26px; margin:0 0 4px; letter-spacing:0.2px}
+  .sub{color:var(--text-dim); font-size:13.5px; max-width:760px; margin:0 0 26px}
+  .topbar{display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap}
+  button.ctl{
+    background:var(--surface); color:var(--text-dim); border:1px solid var(--rule);
+    border-radius:8px; padding:7px 14px; font-size:13px; cursor:pointer;
+  }
+  button.ctl:hover{color:var(--text); border-color:var(--accent-border)}
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(255px,1fr)); gap:18px; max-width:1500px}
+  .card{
+    background:var(--surface); border:1px solid var(--rule); border-radius:14px;
+    padding:18px 16px 16px; display:flex; flex-direction:column; align-items:center;
+  }
+  .stage{width:232px; height:232px; display:grid; place-items:center}
+  .stage svg{width:100%; height:100%; overflow:visible}
+  .card h2{font-family:Georgia,serif; font-weight:600; font-size:16.5px; margin:12px 0 2px; letter-spacing:0.2px}
+  .card .tag{font-size:10px; font-weight:700; letter-spacing:0.09em; text-transform:uppercase; color:var(--accent); margin-top:2px}
+  .card p{font-size:12.5px; color:var(--text-dim); text-align:center; margin:7px 0 14px; min-height:54px}
+  .minis{display:flex; align-items:center; gap:18px; padding:10px 16px; border-top:1px solid var(--rule); width:100%; justify-content:center}
+  .minis .m{display:flex; flex-direction:column; align-items:center; gap:5px}
+  .minis .m span{font-size:10px; color:var(--text-mute); letter-spacing:0.05em}
+  .minis svg{overflow:visible}
+
+  /* ── Current Pip, copied from index.html ── */
+  .pip{
+    position:relative; display:inline-grid; place-items:center; border-radius:50%;
+    background:var(--accent-glow); border:1px solid var(--accent-border);
+    box-shadow:0 0 24px var(--accent-shadow); flex-shrink:0;
+  }
+  .pip > svg{width:38%; height:38%; overflow:visible; transform-origin:50% 50%; animation:pip-breathe 2.4s ease-in-out infinite}
+  .pip .head{fill:var(--accent)}
+  .pip .tail{fill:var(--accent); opacity:0.42}
+  @keyframes pip-breathe{0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.08);opacity:0.88}}
+  .pip.big{width:148px;height:148px}
+  .pip.lg{width:52px;height:52px;box-shadow:0 0 14px var(--accent-shadow)}
+  .pip.sm{width:22px;height:22px;box-shadow:0 0 10px var(--accent-shadow)}
+  @media (prefers-reduced-motion: reduce){ .pip > svg{animation:none} }
+
+  .note{margin-top:26px; color:var(--text-mute); font-size:12.5px; max-width:820px}
+  .note b{color:var(--text-dim); font-weight:600}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <h1>Pip — 3D concepts</h1>
+    <p class="sub">Same bones — two orbs, top brighter than bottom, accent-token colored, 2.4s breathe —
+    rebuilt as wireframe geodesic spheres inside a tilted geometric ring. The ring's shapes and the
+    spheres expand &amp; contract with the breath; everything rotates slowly. Four takes below, current Pip first.</p>
+  </div>
+  <button class="ctl" id="pauseBtn">⏸ Pause</button>
+</div>
+
+<div class="grid" id="grid">
+  <div class="card">
+    <div class="stage"><div class="pip big"><svg viewBox="-10 -10 20 20" aria-hidden="true"><circle class="head" cx="0" cy="-4" r="4"/><circle class="tail" cx="0" cy="4.5" r="2.8"/></svg></div></div>
+    <h2>Current Pip</h2>
+    <div class="tag">As shipped</div>
+    <p>The reference. Two flat circles, faint disc + border + glow, gentle 8% breathe.</p>
+    <div class="minis">
+      <div class="m"><div class="pip lg"><svg viewBox="-10 -10 20 20"><circle class="head" cx="0" cy="-4" r="4"/><circle class="tail" cx="0" cy="4.5" r="2.8"/></svg></div><span>52px</span></div>
+      <div class="m"><div class="pip sm"><svg viewBox="-10 -10 20 20"><circle class="head" cx="0" cy="-4" r="4"/><circle class="tail" cx="0" cy="4.5" r="2.8"/></svg></div><span>22px</span></div>
+    </div>
+  </div>
+</div>
+
+<p class="note"><b>Notes:</b> breath cycle matches today's Pip (2.4s). Top orb stays the bright one; the lower orb
+runs at the same 0.42 opacity as the current tail. All color comes from the existing accent tokens, so Work-green /
+Life-orange re-skinning is automatic. Rotation honors <b>prefers-reduced-motion</b> (freezes to a still frame).
+The 52px / 22px rows show how each design collapses at rail-mark sizes.</p>
+
+<script>
+(function(){
+"use strict";
+var TAU = Math.PI*2;
+var ACCENT='#4db896', ACCENT_HI='#9ff0d2';
+var BREATH_S = 2.4;          // match current pip-breathe
+var F_ORB = 5;               // perspective focal (unit-sphere space)
+var F_RING = 420;            // perspective focal (screen space)
+
+/* ── geometry: icosphere wireframe ─────────────────────────────── */
+function norm(p){var l=Math.hypot(p[0],p[1],p[2]);return [p[0]/l,p[1]/l,p[2]/l];}
+function icosphere(level){
+  var t=(1+Math.sqrt(5))/2;
+  var verts=[[-1,t,0],[1,t,0],[-1,-t,0],[1,-t,0],[0,-1,t],[0,1,t],[0,-1,-t],[0,1,-t],[t,0,-1],[t,0,1],[-t,0,-1],[-t,0,1]].map(norm);
+  var faces=[], th=1.2, i,j,k;
+  function d(a,b){return Math.hypot(verts[a][0]-verts[b][0],verts[a][1]-verts[b][1],verts[a][2]-verts[b][2]);}
+  for(i=0;i<12;i++)for(j=i+1;j<12;j++)for(k=j+1;k<12;k++)
+    if(d(i,j)<th && d(j,k)<th && d(i,k)<th) faces.push([i,j,k]);
+  for(var l=0;l<level;l++){
+    var cache={}, nf=[];
+    var mid=function(a,b){
+      var key=a<b?a+"_"+b:b+"_"+a;
+      if(cache[key]!==undefined) return cache[key];
+      verts.push(norm([(verts[a][0]+verts[b][0])/2,(verts[a][1]+verts[b][1])/2,(verts[a][2]+verts[b][2])/2]));
+      cache[key]=verts.length-1; return cache[key];
+    };
+    faces.forEach(function(f){
+      var ab=mid(f[0],f[1]), bc=mid(f[1],f[2]), ca=mid(f[2],f[0]);
+      nf.push([f[0],ab,ca],[f[1],bc,ab],[f[2],ca,bc],[ab,bc,ca]);
+    });
+    faces=nf;
+  }
+  var eset={}, edges=[];
+  faces.forEach(function(f){
+    [[f[0],f[1]],[f[1],f[2]],[f[2],f[0]]].forEach(function(e){
+      var key=e[0]<e[1]?e[0]+"_"+e[1]:e[1]+"_"+e[0];
+      if(!eset[key]){eset[key]=1; edges.push(e);}
+    });
+  });
+  return {verts:verts, edges:edges};
+}
+var GEO = {0:icosphere(0), 1:icosphere(1)};
+
+function rotYX(v, ay, ax){
+  var x=v[0],y=v[1],z=v[2];
+  var cy=Math.cos(ay), sy=Math.sin(ay);
+  var x1=x*cy+z*sy, z1=-x*sy+z*cy;
+  var cx=Math.cos(ax), sx=Math.sin(ax);
+  var y2=y*cx-z1*sx, z2=y*sx+z1*cx;
+  return [x1,y2,z2];
+}
+
+/* ── svg helpers ────────────────────────────────────────────────── */
+var NS="http://www.w3.org/2000/svg";
+function el(name, attrs, parent){
+  var n=document.createElementNS(NS,name);
+  for(var a in attrs) n.setAttribute(a, attrs[a]);
+  if(parent) parent.appendChild(n);
+  return n;
+}
+var uid=0;
+
+/* ── one orb (geodesic sphere) ──────────────────────────────────── */
+function makeOrb(parent, o){
+  // o: {cx, cy, r, level, style:'wire'|'wiredots'|'dots', bright(0..1), spin, tilt, phase}
+  var g=el("g",{opacity:o.bright}, parent);
+  // Small/dim orbs need heavier strokes: thin wireframe at low group opacity
+  // reads far weaker than the solid disc it replaces.
+  var k = o.small ? 1.45 : 1;
+  var W = o.style==='dots' ? {b:0.06*k,m:0.14*k,f:Math.min(1,0.26*k)} : {b:0.15*k,m:Math.min(1,0.4*k),f:1};
+  var sw = o.style==='dots' ? {b:0.7*k,m:0.8*k,f:0.9*k} : {b:0.9*k,m:1.1*k,f:1.6*k};
+  var paths={
+    b: el("path",{fill:"none",stroke:ACCENT,"stroke-width":sw.b,opacity:W.b,"stroke-linecap":"round"},g),
+    m: el("path",{fill:"none",stroke:ACCENT,"stroke-width":sw.m,opacity:W.m,"stroke-linecap":"round"},g),
+    f: el("path",{fill:"none",stroke:o.style==='dots'?ACCENT:ACCENT_HI,"stroke-width":sw.f,opacity:W.f,"stroke-linecap":"round"},g)
+  };
+  var dots=null;
+  if(o.style==='wiredots'||o.style==='dots'){
+    dots={
+      b: el("path",{fill:ACCENT,opacity:0.35},g),
+      f: el("path",{fill:o.style==='dots'?ACCENT_HI:ACCENT,opacity:0.95},g)
+    };
+  }
+  var geo=GEO[o.level];
+  return function(t, scale){
+    var ay=o.phase + t*o.spin, ax=o.tilt + 0.12*Math.sin(t*0.31+o.phase);
+    var r=o.r*scale;
+    var P=new Array(geo.verts.length);
+    for(var i=0;i<geo.verts.length;i++){
+      var v=rotYX(geo.verts[i], ay, ax);
+      var pf=F_ORB/(F_ORB-v[2]);
+      P[i]=[o.cx+v[0]*pf*r, o.cy-v[1]*pf*r, v[2]];
+    }
+    var db="",dm="",df="";
+    for(i=0;i<geo.edges.length;i++){
+      var e=geo.edges[i], a=P[e[0]], b=P[e[1]];
+      var z=(a[2]+b[2])/2;
+      var seg="M"+a[0].toFixed(1)+" "+a[1].toFixed(1)+"L"+b[0].toFixed(1)+" "+b[1].toFixed(1);
+      if(z<-0.33) db+=seg; else if(z>0.33) df+=seg; else dm+=seg;
+    }
+    paths.b.setAttribute("d",db||"M0 0");
+    paths.m.setAttribute("d",dm||"M0 0");
+    paths.f.setAttribute("d",df||"M0 0");
+    if(dots){
+      var rb=(o.style==='dots'?1.7:1.1)*scale, rf=(o.style==='dots'?2.7:1.5)*(0.85+0.3*scale*scale);
+      var sb="",sf="";
+      for(i=0;i<P.length;i++){
+        var p=P[i], rr=p[2]>0?rf:rb;
+        var c="M"+(p[0]-rr).toFixed(1)+" "+p[1].toFixed(1)
+             +"a"+rr+" "+rr+" 0 1 0 "+(2*rr)+" 0"
+             +"a"+rr+" "+rr+" 0 1 0 "+(-2*rr)+" 0";
+        if(p[2]>0) sf+=c; else sb+=c;
+      }
+      dots.b.setAttribute("d",sb||"M0 0");
+      dots.f.setAttribute("d",sf||"M0 0");
+    }
+  };
+}
+
+/* ── one ring of geometric shapes ───────────────────────────────── */
+function makeRing(gBack, gFront, r){
+  // r: {n, shape:'hex'|'tri'|'diamond'|'dot', size, radius, tilt, roll, spin, selfSpin, cy}
+  var nodes=[];
+  for(var i=0;i<r.n;i++){
+    var n;
+    if(r.shape==='dot') n=el("circle",{fill:ACCENT}, gBack);
+    else n=el("polygon",{fill:"rgba(77,184,150,0.07)",stroke:ACCENT,"stroke-width":1.3,"stroke-linejoin":"round"}, gBack);
+    nodes.push(n);
+  }
+  var sides = r.shape==='hex'?6 : r.shape==='tri'?3 : 4;
+  var ct=Math.cos(r.tilt), st=Math.sin(r.tilt);
+  var cr=Math.cos(r.roll||0), sr=Math.sin(r.roll||0);
+  var zmax=r.radius*ct;
+  return function(t, breath){
+    var R=r.radius*(0.95+0.09*breath);
+    var size=r.size*(0.74+0.5*breath);
+    for(var i=0;i<r.n;i++){
+      var a=i*TAU/r.n + t*r.spin;
+      var x=Math.cos(a)*R, z0=Math.sin(a)*R;
+      var y1=-z0*st, z1=z0*ct;
+      var x2=x*cr-y1*sr, y2=x*sr+y1*cr;
+      var pf=F_RING/(F_RING-z1);
+      var px=x2*pf, py=r.cy - y2*pf; // screen y is inverted
+      var op=0.22+0.74*((z1+zmax)/(2*zmax||1));
+      var node=nodes[i];
+      node.setAttribute("opacity",op.toFixed(2));
+      if(r.shape==='dot'){
+        node.setAttribute("cx",px.toFixed(1));
+        node.setAttribute("cy",py.toFixed(1));
+        node.setAttribute("r",(size*pf).toFixed(2));
+      } else {
+        var rot=a*0.5 + t*(r.selfSpin||0), pts="";
+        var s=size*pf;
+        for(var v=0;v<sides;v++){
+          var va=rot+v*TAU/sides;
+          pts+=(px+Math.cos(va)*s).toFixed(1)+","+(py+Math.sin(va)*s).toFixed(1)+" ";
+        }
+        node.setAttribute("points",pts);
+      }
+      var want = z1>0 ? gFront : gBack;
+      if(node.parentNode!==want) want.appendChild(node);
+    }
+  };
+}
+
+/* ── a full Pip scene ───────────────────────────────────────────── */
+function makeScene(svg, cfg){
+  svg.setAttribute("viewBox","-116 -116 232 232");
+  var defs=el("defs",{},svg);
+  var gid="g"+(uid++);
+  var grad=el("radialGradient",{id:gid},defs);
+  el("stop",{offset:"0%","stop-color":ACCENT,"stop-opacity":"0.30"},grad);
+  el("stop",{offset:"55%","stop-color":ACCENT,"stop-opacity":"0.10"},grad);
+  el("stop",{offset:"100%","stop-color":ACCENT,"stop-opacity":"0"},grad);
+  var glow=el("circle",{cx:0,cy:0,r:92,fill:"url(#"+gid+")"},svg);
+  var gRingBack=el("g",{},svg);
+  var gOrbs=el("g",{},svg);
+  var gRingFront=el("g",{},svg);
+
+  var tail=makeOrb(gOrbs,{cx:0,cy:46,r:27,level:cfg.tailLevel,style:cfg.orbStyle,bright:0.42,small:true,spin:cfg.tailSpin,tilt:0.42,phase:1.7});
+  var head=makeOrb(gOrbs,{cx:0,cy:-41,r:41,level:cfg.headLevel,style:cfg.orbStyle,bright:1,spin:cfg.headSpin,tilt:0.35,phase:0.3});
+
+  var rings=cfg.rings.map(function(rc){ return makeRing(gRingBack,gRingFront,rc); });
+
+  return function(t){
+    var breath=0.5-0.5*Math.cos(TAU*t/BREATH_S);
+    var orbScale=0.97+0.06*breath;
+    glow.setAttribute("opacity",(0.45+0.5*breath).toFixed(2));
+    tail(t,orbScale);
+    head(t,orbScale);
+    for(var i=0;i<rings.length;i++) rings[i](t,breath);
+  };
+}
+
+/* ── variant configs ────────────────────────────────────────────── */
+var VARIANTS=[
+  {
+    name:"Signet", tag:"Concept A · hex band",
+    desc:"A single band of hexagons, worn like a ring at a tilt. Fine geodesic head, simpler icosa tail. The hexes swell wide on the inhale, tighten on the exhale.",
+    cfg:{ orbStyle:'wire', headLevel:1, tailLevel:0, headSpin:0.34, tailSpin:-0.28,
+      rings:[{n:11, shape:'hex', size:13, radius:82, tilt:0.62, roll:0, spin:0.22, selfSpin:0.35, cy:6}] }
+  },
+  {
+    name:"Facet", tag:"Concept B · loose triangles",
+    desc:"Chunkier, looser geometry — Epcot with the panels pried apart. Triangle ring, big icosahedron facets on both orbs, glowing vertices, counter-spin.",
+    cfg:{ orbStyle:'wiredots', headLevel:0, tailLevel:0, headSpin:0.45, tailSpin:-0.36,
+      rings:[{n:14, shape:'tri', size:11, radius:82, tilt:0.64, roll:0, spin:-0.18, selfSpin:0.6, cy:6}] }
+  },
+  {
+    name:"Orbital", tag:"Concept C · twin rings",
+    desc:"Two thinner diamond rings crossed at opposing angles, counter-rotating like a gyroscope around the geodesic orbs. The most kinetic of the four.",
+    cfg:{ orbStyle:'wire', headLevel:1, tailLevel:0, headSpin:0.3, tailSpin:0.24,
+      rings:[
+        {n:9, shape:'diamond', size:9,  radius:86, tilt:0.5, roll:0.45,  spin:0.26,  selfSpin:0.5, cy:6},
+        {n:9, shape:'diamond', size:6.5,radius:74, tilt:0.5, roll:-0.55, spin:-0.20, selfSpin:-0.4, cy:6}
+      ] }
+  },
+  {
+    name:"Constellation", tag:"Concept D · star vertices",
+    desc:"The quietest take. Spheres drawn mostly by glowing points at the facet corners, faint linework behind, a slow ring of dots. Breath carries the motion.",
+    cfg:{ orbStyle:'dots', headLevel:1, tailLevel:0, headSpin:0.16, tailSpin:-0.13,
+      rings:[{n:20, shape:'dot', size:3.4, radius:82, tilt:0.62, roll:0, spin:0.09, cy:6}] }
+  }
+];
+
+/* ── build cards ────────────────────────────────────────────────── */
+var grid=document.getElementById("grid");
+var updaters=[];
+VARIANTS.forEach(function(v){
+  var card=document.createElement("div"); card.className="card";
+  card.innerHTML='<div class="stage"></div><h2></h2><div class="tag"></div><p></p>'
+    +'<div class="minis"><div class="m"><svg width="52" height="52"></svg><span>52px</span></div>'
+    +'<div class="m"><svg width="22" height="22"></svg><span>22px</span></div></div>';
+  card.querySelector("h2").textContent=v.name;
+  card.querySelector(".tag").textContent=v.tag;
+  card.querySelector("p").textContent=v.desc;
+  var big=el("svg",{},card.querySelector(".stage"));
+  grid.appendChild(card);
+  updaters.push(makeScene(big,v.cfg));
+  card.querySelectorAll(".minis svg").forEach(function(s){ updaters.push(makeScene(s,v.cfg)); });
+});
+
+/* ── animation loop ─────────────────────────────────────────────── */
+var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+var paused=false, sim=0, last=null;
+var btn=document.getElementById("pauseBtn");
+btn.addEventListener("click",function(){
+  paused=!paused;
+  btn.textContent=paused?"▶ Play":"⏸ Pause";
+});
+function frame(ts){
+  if(last==null) last=ts;
+  if(!paused) sim+=(ts-last)/1000;
+  last=ts;
+  if(!paused) for(var i=0;i<updaters.length;i++) updaters[i](sim);
+  requestAnimationFrame(frame);
+}
+if(reduced){
+  for(var i=0;i<updaters.length;i++) updaters[i](1.1);
+  btn.style.display="none";
+} else {
+  requestAnimationFrame(frame);
+}
+})();
+</script>
+</body>
+</html>
