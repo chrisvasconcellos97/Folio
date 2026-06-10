@@ -49,6 +49,10 @@ export var PIP_SPEC = Object.freeze({
     tilt:    0.4,
     phase:   1.7,
   }),
+  // Global motion scale — multiplies rotation/twist time, NOT breath.
+  // Added June 10 2026 (Chris: "still seems just as fast" — the traveling
+  // twist waves dominated perceived speed, so all motion slows together).
+  motionScale: 0.4,
   // Perspective focal lengths
   FP: 480,   // ring perspective focal (screen units)
   FS: 5,     // sphere perspective focal (unit-sphere units)
@@ -230,6 +234,10 @@ export function buildPipFrame(t) {
   var sphereScale = 1 + 0.08 * breath;
   var coreOpacity = 0.55 + 0.45 * breath;
   var outerGlowOpacity = 0.5 + 0.45 * breath;
+  // Motion time — slows ALL rotation + twist drift together (the perceived
+  // "churn" is mostly the traveling twist waves, not the spin). Breath stays
+  // on the real 2.4s clock.
+  var mt = t * PIP_SPEC.motionScale;
 
   return {
     breath: breath,
@@ -237,10 +245,10 @@ export function buildPipFrame(t) {
     sphereScale: sphereScale,
     coreOpacity: coreOpacity,
     outerGlowOpacity: outerGlowOpacity,
-    ringPaths:   buildRingPaths(t, breath, bs),
-    headPaths:   buildSpherePaths(t, breath, bs, PIP_SPEC.sphereHead, getHeadPts()),
+    ringPaths:   buildRingPaths(mt, breath, bs),
+    headPaths:   buildSpherePaths(mt, breath, bs, PIP_SPEC.sphereHead, getHeadPts()),
     headCoreR:   (PIP_SPEC.sphereHead.r * (0.97 + 0.06 * breath) * 0.92).toFixed(1),
-    tailPaths:   buildSpherePaths(t, breath, bs, PIP_SPEC.sphereTail, getTailPts()),
+    tailPaths:   buildSpherePaths(mt, breath, bs, PIP_SPEC.sphereTail, getTailPts()),
     tailCoreR:   (PIP_SPEC.sphereTail.r * (0.97 + 0.06 * breath) * 0.92).toFixed(1),
   };
 }

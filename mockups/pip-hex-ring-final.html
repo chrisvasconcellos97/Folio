@@ -104,6 +104,7 @@ inhales together. Colors ride the accent tokens (Life-mode orange re-skins autom
 var TAU=Math.PI*2;
 var ACCENT='#4db896', ACCENT_HI='#9ff0d2', ACCENT_DEEP='#2d8f70';
 var BREATH_S=2.4;
+var MOTION_SCALE=0.4; // rotation/twist time scale (breath unaffected) — matches production PIP_SPEC.motionScale
 var FP=480;   // ring perspective focal (screen units)
 var FS=5;     // sphere perspective focal (unit-sphere units)
 
@@ -260,12 +261,13 @@ function makeScene(svg,cfg){
   return function(t){
     var breath=0.5-0.5*Math.cos(TAU*t/BREATH_S);
     var bs=0.55+0.56*breath;   // ONE breath factor for every hexagon in the figure
+    var mt=t*MOTION_SCALE;     // rotation/twist slowed together; breath stays 2.4s
     glow.setAttribute("opacity",(0.5+0.45*breath).toFixed(2));
     var s=1+0.08*breath;
     gPip.setAttribute("transform","scale("+s.toFixed(3)+")");
-    tail(t,breath,bs);
-    head(t,breath,bs);
-    ring(t,breath,bs);
+    tail(mt,breath,bs);
+    head(mt,breath,bs);
+    ring(mt,breath,bs);
   };
 }
 

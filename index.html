@@ -585,6 +585,13 @@
         height: 100% !important;
         animation: none !important;
       }
+      /* No pulse rings on the 3D form — the hex ring IS the ring. Removed at
+         Chris's request (June 10 2026); classic small orbs keep sonar/heartbeat. */
+      .pip.pip3d.sonar::before, .pip.pip3d.sonar::after,
+      .pip.pip3d.heartbeat::before, .pip.pip3d.heartbeat::after {
+        content: none !important;
+        animation: none !important;
+      }
       /* The 3D SVG fills the container exactly. The inner <svg> is sized via
          width/height:100% in the React component, so nothing more needed here. */
 
