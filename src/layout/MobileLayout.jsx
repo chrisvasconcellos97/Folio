@@ -236,7 +236,7 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
                 style={{
                   width: "100%",
                   height: 52,
-                  padding: "6px 6px",
+                  padding: item.isPip ? 0 : "6px 6px",
                   cursor: "pointer",
                   userSelect: "none",
                   fontFamily: MONO,
@@ -246,31 +246,38 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
                   background: "transparent",
                   color: active ? (isGauge ? C.blue : C.accent) : C.textMuted,
                   border: "none",
-                  borderTop: "2px solid " + (active ? (isGauge ? C.blue : C.accent) : "transparent"),
+                  borderTop: item.isPip ? "none" : "2px solid " + (active ? (isGauge ? C.blue : C.accent) : "transparent"),
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
                   justifyContent: "center",
                   gap: 3,
+                  overflow: item.isPip ? "visible" : undefined,
                 }}
                 aria-expanded={isWorkspaces ? wsOpen : undefined}
                 aria-haspopup={isWorkspaces ? "menu" : undefined}
               >
-                <span style={{
-                  display: "inline-flex", alignItems: "center", justifyContent: "center",
-                  width: 22, height: 22, flexShrink: 0,
-                  opacity: active || item.isPip ? 1 : 0.78,
-                }}>
-                  {item.isPip
-                    ? <PipOrb size="xs" />
-                    : <Mark tab={item.id} size={22} active={active} />}
-                </span>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 3, lineHeight: 1 }}>
-                  {displayLabel}
-                  {isWorkspaces && (
-                    <span style={{ fontSize: 7, opacity: 0.7 }}>{wsOpen ? "▾" : "▴"}</span>
-                  )}
-                </span>
+                {item.isPip ? (
+                  <span style={{ display: "flex", marginTop: -12 }}>
+                    <PipOrb size="lg" />
+                  </span>
+                ) : (
+                  <>
+                    <span style={{
+                      display: "inline-flex", alignItems: "center", justifyContent: "center",
+                      width: 22, height: 22, flexShrink: 0,
+                      opacity: active ? 1 : 0.78,
+                    }}>
+                      <Mark tab={item.id} size={22} active={active} />
+                    </span>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 3, lineHeight: 1 }}>
+                      {displayLabel}
+                      {isWorkspaces && (
+                        <span style={{ fontSize: 7, opacity: 0.7 }}>{wsOpen ? "▾" : "▴"}</span>
+                      )}
+                    </span>
+                  </>
+                )}
               </button>
             );
             if (TOOLTIP_TIPS[item.id]) {
