@@ -372,6 +372,10 @@ Both Folios and Lanyard use the same Pip personality — a loyal, slightly anxio
 - Never regenerate what's already saved — load from DB instead
 - Future "Ask Pip" button should check for existing output before making an API call
 
+### Pip operating context (June 10 2026)
+
+`folio_user_profile.operating_context` holds the hand-authored distillation of THE INTERVIEW (the "Chris's Job — Operating Context" section above, compressed to ~2.5k chars, data-line clean, includes the MSO not-his-relationships instruction). `useUserProfile` composes it ahead of `profile_prose`, so every client Pip surface inherits it with zero wiring; `generate-questions` and `operator-run` read it server-side directly. The periodic Q&A re-synthesis writes only `profile_prose` and can never clobber it. Update it via SQL when the interview's ground truth changes.
+
 ### Pip context parity rule
 **Both Pip entrypoints must see the same data.** There are two places Pip is called:
 1. **Ask Pip chat** — `src/lib/pipContext.js` (`renderAccountFull`) + PipView.jsx

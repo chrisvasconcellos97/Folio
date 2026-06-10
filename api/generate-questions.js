@@ -87,7 +87,7 @@ export default async function handler(req, res) {
       supabase.from("folio_pip_facts")
         .select("fact").eq("user_id", userId).eq("active", true).limit(40),
       supabase.from("folio_user_profile")
-        .select("role_title, company_name, industry, profile_prose").eq("user_id", userId).maybeSingle(),
+        .select("role_title, company_name, industry, profile_prose, operating_context").eq("user_id", userId).maybeSingle(),
       supabase.from("folio_pip_questions")
         .select("question_text").eq("user_id", userId).eq("source", "gap_observed")
         .in("status", ["queued", "asked", "answered", "skipped", "dismissed"]).limit(60),
@@ -171,6 +171,7 @@ export default async function handler(req, res) {
           profile.role_title ? "Role: " + profile.role_title : "",
           profile.company_name ? "Company: " + profile.company_name : "",
           profile.industry ? "Industry: " + profile.industry : "",
+          profile.operating_context ? "Operating context: " + String(profile.operating_context).slice(0, 2600) : "",
           profile.profile_prose ? "Narrative: " + String(profile.profile_prose).slice(0, 600) : "",
         ].filter(Boolean).join("\n")
       : "(nothing recorded yet)";

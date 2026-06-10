@@ -24,7 +24,19 @@ export function useUserProfile(userId) {
         setLoading(false);
         if (r.error) { setError(r.error.message); return; }
         setError(null);
-        setProfile(r.data || null);
+        var data = r.data || null;
+        // Operating context (hand-authored from the June 2026 interview) rides
+        // ahead of the synthesized prose everywhere profile_prose is read —
+        // composing here gives every client Pip surface the boost with zero
+        // per-surface wiring. Re-synthesis writes only profile_prose, so the
+        // context can never be clobbered.
+        if (data && data.operating_context) {
+          data = Object.assign({}, data, {
+            profile_prose: data.operating_context +
+              (data.profile_prose ? "\n\n" + data.profile_prose : ""),
+          });
+        }
+        setProfile(data);
       });
   }, [userId]);
 

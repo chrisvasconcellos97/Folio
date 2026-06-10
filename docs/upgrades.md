@@ -17,6 +17,14 @@ those live in git history.
 
 ---
 
+## 2026-06-10 — Pip gets the interview: he finally knows the job
+
+**What I built:** The deep interview about how the job actually works — what OEC suppliers pay for, how success is measured ("are my suppliers happy"), the audit workflow, the team (boss, analyst, admin), the weekly rhythm, the known failure modes, and which accounts are NOT the user's relationships — is now distilled into a durable "operating context" that rides ahead of Pip's profile in **every** surface: chat, summaries, briefs, the nightly operator run, and question generation.
+
+**Why it matters:** Pip's biggest weakness was scope — "he doesn't have enough info to truly answer." Now every Pip call starts from the same ground truth the user carries in his head, including the hard data-line rule and the instruction to stop nudging relationship upkeep on MSO accounts he doesn't own.
+
+---
+
 ## 2026-06-10 — Pip's questions grow up: guess-first, one-tap, with receipts
 
 **What I built:** Three upgrades to how Pip learns. **Terminology questions now lead with Pip's guess** — instead of "what is Fuse5?" he says "'Fuse5' — my read: a parts system they run. Am I right?" with a one-tap **"✓ Right — lock it in"** button; only corrections need typing. Questions are **ranked by how much confusion a term actually causes** (the ones appearing most get asked first). **Every answer now shows a receipt** — "Locked in ✦ Pip reads it that way everywhere now" — and the Catch Up session shows a live "5 left · 3 answered" counter so teaching Pip feels like progress, not a void. Also: **one internal cadence can now span multiple departments** (pick extra departments when setting it up; the meeting roster shows everyone), and the **notes editor** finally auto-capitalizes sentence starts and indents sub-bullets visibly deeper.

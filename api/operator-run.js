@@ -210,8 +210,9 @@ Rules:
 - The headline and opening carry your personality. The section lines stay tight and useful (light voice, but they're a scannable list, not paragraphs).
 - Don't manufacture content. A genuinely calm day is a warm headline + a one-line opening + maybe one short section. Don't pad.`;
 
-async function runReportPass(client, workedSummaries, totalAccounts) {
-  var body = "Accounts you worked (" + workedSummaries.length + " of " + totalAccounts + " in the book):\n\n" +
+async function runReportPass(client, workedSummaries, totalAccounts, userContext) {
+  var body = (userContext ? "── WHO THE USER IS ──\n" + userContext + "\n\n" : "") +
+    "Accounts you worked (" + workedSummaries.length + " of " + totalAccounts + " in the book):\n\n" +
     workedSummaries.map(function (w) {
       var parts = ["### " + w.name + (w.tier ? " (" + w.tier + ")" : "")];
       if (w.situation) parts.push(w.situation);
@@ -288,6 +289,17 @@ async function processUser(admin, client, userId, tz) {
   var accounts = (accRes.data || []).filter(function (a) { return a.account_type !== "internal_team"; });
   if (!accounts.length) return { userId: userId, skipped: "no-accounts" };
 
+  // Who the user is — interview-derived operating context + synthesized
+  // profile. The operator's biggest historical weakness was scope; this gives
+  // every overnight pass the same ground truth the human carries.
+  var profRes = await admin.from("folio_user_profile")
+    .select("operating_context, profile_prose").eq("user_id", userId).maybeSingle();
+  var userContext = "";
+  if (profRes.data) {
+    userContext = [profRes.data.operating_context || "", profRes.data.profile_prose || ""]
+      .filter(Boolean).join("\n\n").slice(0, 3500);
+  }
+
   // Activity since last run → which accounts moved. Pull from folio_activity
   // AND folio_tasks (task adds/edits don't log to folio_activity).
   var activitySinceIds = {};
@@ -317,7 +329,7 @@ async function processUser(admin, client, userId, tz) {
   for (var start = 0; start < moved.length; start += ACCOUNT_CONCURRENCY) {
     var wave = moved.slice(start, start + ACCOUNT_CONCURRENCY);
     var settled = await Promise.all(wave.map(function (acc) {
-      return gatherAndRun(admin, client, userId, acc, snapById[acc.id])
+      return gatherAndRun(admin, client, userId, acc, snapById[acc.id], userContext)
         .then(function (ctx) {
           return Object.assign({ id: acc.id, name: acc.name, tier: acc.tier, has_draft: !!ctx.draft_email }, ctx);
         })
@@ -369,7 +381,7 @@ async function processUser(admin, client, userId, tz) {
 
   if (shouldBuild) {
     var report = { headline: "", opening: "", sections: [] };
-    try { report = await runReportPass(client, reportInput, accounts.length); }
+    try { report = await runReportPass(client, reportInput, accounts.length, userContext); }
     catch (e) { console.error("[operator-run] report pass failed", userId, e && e.message); }
     // opening → report_prose (the paragraph), sections → plan_items (the rows).
     if (report.opening || (report.sections && report.sections.length)) {
@@ -391,7 +403,7 @@ async function processUser(admin, client, userId, tz) {
 }
 
 // Gather one account's context, run the deep pass, persist operator state.
-async function gatherAndRun(admin, client, userId, acc, snapshot) {
+async function gatherAndRun(admin, client, userId, acc, snapshot, userContext) {
   var mRes = await admin.from("folio_meetings")
     .select("title,meeting_date,created_at,pip_summary,pip_tone")
     .eq("account_id", acc.id).order("meeting_date", { ascending: false }).limit(5);
@@ -415,6 +427,9 @@ async function gatherAndRun(admin, client, userId, acc, snapshot) {
     pRes.data || [], uRes.data || [], sRes.data || null, snapshot
   );
 
+  if (userContext) {
+    ctxText = "── WHO THE USER IS ──\n" + userContext + "\n\n" + ctxText;
+  }
   var out = await runAccountPass(client, ctxText, acc.name);
   if (!out) return { headline: "", situation: "", risks: [], draft_email: "", proposed_moves: [], agenda: "", delta: "" };
 

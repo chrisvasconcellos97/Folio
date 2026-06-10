@@ -763,6 +763,7 @@ create table if not exists folio_user_profile (
   reporting_to       text,
   working_style      text,
   kpis               text,
+  operating_context text,  -- hand-authored interview-derived context; rides ahead of profile_prose everywhere; never touched by re-synthesis
   profile_prose      text,
   prose_generated_at timestamptz,
   completeness       integer default 0,
