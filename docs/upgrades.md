@@ -17,6 +17,18 @@ those live in git history.
 
 ---
 
+## 2026-06-10 — Summarize precision: Pip recognizes your world and stops inventing tasks
+
+**What I built:** Three changes to how Pip turns meeting notes into a plan. First, he now carries a **people directory** of everyone you already know — every contact on every account, your partners' people, your internal teammates — so mentioning a name from another account no longer makes him suggest them as a "new contact." Second, his task extraction was retuned from volume to **precision**: notes are treated as a journal, and only genuine commitments, direct asks, and explicitly marked lines become tasks — "no tasks" is now an acceptable answer. Third, **receipts**: the plan preview shows a small "What Pip used" note naming the stored knowledge he actually applied (a term you taught him, a person he recognized, an update event he connected).
+
+**Problem it solves:** The two most common summarize complaints — phantom contact suggestions for people already known, and a flood of manufactured tasks from informational notes that had to be deleted (or worse, got accepted wrong when rushed).
+
+**What you see today:** Summarize a meeting → fewer, more correct task rows; people you already know anywhere in your world are never suggested as new contacts; and a small ✦ note in the preview showing what taught knowledge contributed.
+
+**Why it matters:** Wrong rows accepted in a rush poison everything downstream. Precision at the source is what makes the rest of the system trustworthy — and receipts are the proof that teaching Pip pays.
+
+---
+
 ## 2026-06-10 — Work / Life mode: Folios becomes your whole-day assistant
 
 **What I built:** A second mode alongside the work mode — a personal assistant side of the app (dusty-blue palette, dusty-orange Pip) for appointments, important dates with escalating reminder ladders, and a honey-do list. A single toggle switches the whole app between Work and Life.

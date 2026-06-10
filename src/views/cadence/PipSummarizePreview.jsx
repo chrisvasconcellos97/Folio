@@ -508,6 +508,7 @@ export function PipSummarizePreview({
   onTitleChange,     // (newTitle) => void — called when user edits the title
   onTitleSave,       // (title: string) => void — called after successful Apply when title was set
   unknownPeople,     // [{ name, context_snippet }] — people Pip noticed but aren't contacts
+  receipts,          // [string] — knowledge Pip actually used for this plan (taught terms, recognized people, update events)
   onAddContact,      // ({ name, role, email }) => Promise — saves a new contact
   onCreateProject,   // (accountId, { title }) => Promise<project> — optional; creates a Gauge project
   accountContacts,   // optional: [{ id, name, role }] — contacts for this account as assignee options
@@ -1384,6 +1385,28 @@ export function PipSummarizePreview({
                 {grouped.skipped.map(renderRow)}
               </div>
             )}
+          </div>
+        )}
+
+        {Array.isArray(receipts) && receipts.length > 0 && (
+          <div style={{
+            marginTop: 10,
+            background: C.accentFaint, border: "1px solid " + C.accentLine,
+            borderRadius: 8, padding: "8px 12px",
+          }}>
+            <div style={{
+              fontFamily: MONO, fontSize: 9, color: C.accent,
+              letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 4,
+            }}>
+              ✦ What Pip used
+            </div>
+            {receipts.map(function (r, i) {
+              return (
+                <div key={i} style={{ fontFamily: INTER, fontSize: 11.5, color: C.textSoft, lineHeight: 1.5 }}>
+                  · {r}
+                </div>
+              );
+            })}
           </div>
         )}
 

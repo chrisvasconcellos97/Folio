@@ -213,6 +213,27 @@ export default function App() {
   }, [meetings]);
   var reminderApi = useCadenceReminders(userId, cadences, accounts, scheduledMeetings);
 
+  // Global people directory — every contact across ALL accounts + org members,
+  // compacted for Pip's summarize prompt so he recognizes people he already
+  // knows (other accounts' contacts, partners' people, internal colleagues)
+  // instead of suggesting them as new contacts on the current account.
+  var globalPeople = useMemo(function () {
+    var acctName = {};
+    (accounts || []).forEach(function (a) { acctName[a.id] = a.name || ""; });
+    var people = (allContacts || []).slice(0, 400).map(function (c) {
+      return {
+        name:    c.name || "",
+        account: acctName[c.account_id] || "",
+        title:   c.title || "",
+      };
+    }).filter(function (p) { return p.name; });
+    (members || []).forEach(function (m) {
+      var label = (m.full_name || (m.email ? m.email.split("@")[0] : "")).trim();
+      if (label) people.push({ name: label, account: "(your internal team)", title: m.role || "" });
+    });
+    return people;
+  }, [allContacts, accounts, members]);
+
   // Discreet one-time permission prompt — surfaces the first time a cadence
   // with a meeting_time exists, the user hasn't been asked yet, and the
   // browser supports Notifications. Persist "asked" so the prompt never
@@ -993,6 +1014,7 @@ export default function App() {
             orgId={orgId}
             accounts={accounts}
             members={members}
+            globalPeople={globalPeople}
             onOpenSettings={function () { handleSetView("settings"); }}
             onBack={handleBack}
             onEdit={function () { setEditingAccount(selectedAccount); }}
@@ -1385,6 +1407,7 @@ export default function App() {
         account={acct}
         accounts={accounts}
         members={members}
+        globalPeople={globalPeople}
         userId={userId}
         userEmail={userEmail}
         orgId={orgId}

@@ -121,6 +121,19 @@ function renderRecentUpdatesBlock(updates) {
   return "── RECENT ACCOUNT UPDATES (update calendar) ──\n" + lines + "\n\n";
 }
 
+// Global people directory — everyone the user already knows, across all
+// accounts + internal team. Feeds the unknown_people exclusion check.
+function renderPeopleDirectoryBlock(people) {
+  if (!Array.isArray(people) || people.length === 0) return "";
+  var lines = people.slice(0, 400).map(function (p) {
+    var bits = [p.name];
+    if (p.account) bits.push(p.account);
+    if (p.title) bits.push(p.title);
+    return "- " + bits.filter(Boolean).join(" \u00b7 ");
+  }).join("\n");
+  return "\u2500\u2500 PEOPLE DIRECTORY (everyone the user already knows \u2014 all accounts + internal team) \u2500\u2500\n" + lines + "\n\n";
+}
+
 // Renders the glossary block for system prompts.
 function renderGlossaryBlock(glossary) {
   var entries = Array.isArray(glossary) ? glossary.filter(function (g) { return g && g.term && g.definition; }) : [];
@@ -725,6 +738,7 @@ export function summarizeDraftPip(payload) {
   var servicedStates   = Array.isArray(payload.servicedStates)  ? payload.servicedStates  : [];
   var promiseStats     = payload.promiseStats  || null;
   var recentUpdates    = Array.isArray(payload.recentUpdates)   ? payload.recentUpdates   : [];
+  var globalPeople     = Array.isArray(payload.globalPeople)    ? payload.globalPeople    : [];
   var openItems          = Array.isArray(payload.openItems)          ? payload.openItems          : existingItems;
   var discussedProjectIds = Array.isArray(payload.discussedProjectIds) ? payload.discussedProjectIds.slice() : [];
   var discussedItemIds    = Array.isArray(payload.discussedItemIds)    ? payload.discussedItemIds    : [];
@@ -847,6 +861,7 @@ export function summarizeDraftPip(payload) {
     "  \"unknown_people\": [\n" +
     "    { \"name\": \"Full name as it appeared in the notes\", \"context_snippet\": \"The sentence they appeared in (max 120 chars)\" }\n" +
     "  ],\n" +
+    "  \"receipts\": [\"0-3 short strings naming stored knowledge you ACTUALLY used for this plan — a glossary term you applied, a person you recognized from the directory (and therefore did not flag as new), an update-calendar event you connected, a past correction you honored. Empty array if none. Never invent these.\"],\n" +
     "  \"plan\": [\n" +
     "    { \"kind\": \"new_item\",    \"text\": \"...\", \"due_date\": \"YYYY-MM-DD or null\", \"suggested_assignee\": \"email or null\", \"target_account_id\": \"id from YOUR ACCOUNTS list, or null if this belongs to the current account\", \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim 1-3 line slice of the draft notes that triggered this row\", \"is_commitment\": true },\n" +
     "    { \"kind\": \"update_item\", \"target_id\": \"I-...\", \"fields\": { \"due_date\": \"...\", \"text\": \"...\" }, \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim slice from notes\" },\n" +
@@ -873,8 +888,16 @@ export function summarizeDraftPip(payload) {
     "- source_excerpt MUST be a direct, verbatim quote from the draft notes — the specific 1-3 lines " +
     "that prompted this row. The user uses these to trace where each row came from and to correct " +
     "you when you misread. Keep them short and exact. Omit only for `skip` rows.\n" +
-    "- Be GENEROUS extracting commitments — promises, follow-ups, things to verify — but route " +
-    "them as updates whenever a relevant existing item/task exists.\n" +
+    "- PRECISION OVER VOLUME — the meeting notes are a JOURNAL, not a to-do list. Most lines are " +
+    "observations, context, or status the user is simply recording for memory. Create a plan row ONLY for: " +
+    "(1) explicit first-person commitments ('I'll send...', 'we'll get them...'), " +
+    "(2) direct asks — someone requested something of the user, " +
+    "(3) lines explicitly marked [ ], or " +
+    "(4) a concrete date/status/text change to an EXISTING item or task. " +
+    "Do NOT create tasks from: status descriptions, FYI facts, opinions, decisions already made, " +
+    "things other people or teams are doing on their own, or ideas nobody committed to. " +
+    "TWO correct rows beat NINE the user has to delete — over-extraction is the failure mode the user " +
+    "complains about most. An EMPTY plan is a respectable answer for an informational meeting.\n" +
     "- Watch for SCOPE CUES — phrases like \"all of these\", \"every\", \"these accounts\", " +
     "\"in general\", \"across the board\" signal a BROADER item that lives alongside any " +
     "specific example. When you see one, emit BOTH the specific item AND the broader item. " +
@@ -890,7 +913,7 @@ export function summarizeDraftPip(payload) {
     "- is_commitment: set true when this row represents a first-person promise or deliverable you are committing to — language like \"I'll get you...\", \"we'll have X by...\", \"I'll follow up on...\", \"we'll send...\", \"I'll loop in...\". Default false for tasks, observations, or things the customer will do.\n" +
     "- new_task: ONLY use this kind when the project_id is a UUID that appears in the Active Gauge projects list. If no project matches, use new_item instead — never invent a project_id.\n" +
     "- update_task / update_item: ONLY use these when you can point at a SPECIFIC existing task or item by its real id (task_id from the project's task list, or target_id from the open items list) AND you have a concrete change to make (a new due_date, status, or rewritten text). Never emit an update_* row for a project you can't tie to a specific existing task, and never with an empty fields object — create a new_task / new_item instead. A discussed project is NOT itself a task.\n" +
-    "- unknown_people: Scan the meeting notes for proper names (people, not companies or products). BEFORE adding anyone to unknown_people, check the full CONTACTS list provided above — if a name matches any contact's name (exact or first-name-only match), DO NOT include them. Also omit names already in the attendees list, and omit the current user. For INTERNAL or DEPARTMENT meetings (where account_type is 'internal_team'), treat ALL names mentioned as known internal colleagues — return empty array for unknown_people. Only include people who are genuinely not in any list and who appear to be external persons relevant to the account. Return empty array if no truly unknown people found.\n" +
+    "- unknown_people: Scan the meeting notes for proper names (people, not companies or products). BEFORE adding anyone, check IN ORDER: (1) this account's CONTACTS list, (2) the attendees list, (3) the PEOPLE DIRECTORY block — every contact across ALL the user's accounts and partners plus internal teammates, (4) the glossary — some capitalized words are systems/products, never people, (5) the current user themself. If the name matches ANY of those (exact or unambiguous first-name match), DO NOT include them — being MENTIONED in this meeting does not make someone a new contact on this account. For INTERNAL or DEPARTMENT meetings (account_type 'internal_team'), return an empty array always. unknown_people is ONLY for genuinely new external people the user met or clearly needs to track. When you exclude a recognized name, you may say so in receipts (e.g. \"Recognized Dana — Keystone contact, not new\").\n" +
     "- DISCUSSED signal: when a project or item appears in the DISCUSSED block above, you have explicit confirmation it was talked about. Prefer update_task / update_item / close_item over a new row ONLY when there's a specific existing task/item to change (per the rule above). If the discussion produced new work, create a new_task on that project instead — do not invent an update to a task that doesn't exist. Set confidence 'high' on rows related to discussed items.\n";
 
   // BP1 — system: static schema + rules, cached globally
@@ -917,6 +940,7 @@ export function summarizeDraftPip(payload) {
     renderHealthTrendBlock(healthSnapshots) +
     renderSnapshotMetricsBlock(healthSnapshots) +
     renderContactsBlock(contacts) +
+    renderPeopleDirectoryBlock(globalPeople) +
     renderCadenceScheduleBlock(cadence) +
     renderRecentUpdatesBlock(recentUpdates) +
     renderCommitmentsInBlock(openItems, todayISOForCommitments) +
@@ -1052,6 +1076,9 @@ export function summarizeDraftPip(payload) {
       var VALID_THEMES = ["pricing", "integration", "staffing", "product", "escalation", "planning", "delivery", "relationship"];
       var theme = parsed.theme && VALID_THEMES.indexOf(parsed.theme.toLowerCase()) >= 0
         ? parsed.theme.toLowerCase() : null;
+      var receipts = Array.isArray(parsed.receipts)
+        ? parsed.receipts.filter(function (r) { return typeof r === "string" && r.trim(); }).slice(0, 3)
+        : [];
       var unknownPeople = Array.isArray(parsed.unknown_people)
         ? parsed.unknown_people.filter(function (p) { return p && typeof p.name === "string" && p.name.trim(); })
         : [];
@@ -1066,6 +1093,7 @@ export function summarizeDraftPip(payload) {
           tone:            tone,
           theme:           theme,
           unknown_people:  unknownPeople,
+          receipts:        receipts,
           plan:            plan,
           // Keep legacy field populated from new_item rows for any caller
           // that hasn't migrated yet.
@@ -1098,6 +1126,7 @@ export function summarizeDraftPip(payload) {
         tone:            tone,
         theme:           theme,
         unknown_people:  unknownPeople,
+        receipts:        receipts,
         plan:            synthPlan,
         action_items:    legacyItems,
       };

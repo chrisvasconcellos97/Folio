@@ -58,7 +58,7 @@ function setDefaultTab(accountId, tab) {
   try { localStorage.setItem("folio_default_tab_" + accountId, tab); } catch(e) {}
 }
 
-export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, accounts, members, onBack, onEdit, onDelete, onReactivate, onMerge, onUpdate, onSelectAccount, pipPrefill, onPipPrefillHandled, initialHubCadenceId, onHubConsumed, initialPersonHubCadenceId, onPersonHubConsumed, autoOpenMeetingMode, onAutoOpenMeetingModeConsumed, onAddAccount, allProjects, onOpenSettings }) {
+export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, accounts, members, globalPeople, onBack, onEdit, onDelete, onReactivate, onMerge, onUpdate, onSelectAccount, pipPrefill, onPipPrefillHandled, initialHubCadenceId, onHubConsumed, initialPersonHubCadenceId, onPersonHubConsumed, autoOpenMeetingMode, onAutoOpenMeetingModeConsumed, onAddAccount, allProjects, onOpenSettings }) {
   var isInternalTeam = account.account_type === 'internal_team';
   var isPartner      = account.account_type === 'partner';
   var isCustomerType = !isInternalTeam && !isPartner;
@@ -301,6 +301,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
       facts:               pipFactsApi.activeFactStrings || [],
       servicedStates:      account.serviced_states || null,
       recentUpdates:       (updates || []).slice(0, 6),
+      globalPeople:        globalPeople || [],
       discussedProjectIds: discussedProjectIds || [],
       discussedItemIds:    discussedItemIds    || [],
     }).then(function (out) {
@@ -316,7 +317,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
     }).then(function (out) {
       setAdHocSummarizing(false);
       setAdHocTitleDraft(out.suggested_title || null);
-      setAdHocPreviewPlan({ plan: out.plan || [], summary: out.summary || "", draftId: draftPayload.id, skippedByPip: !!out.skippedByPip, suggestedTitle: out.suggested_title || null, meetingTitle: draftPayload.title || null, unknownPeople: out.unknown_people || [], discussedProjectIds: discussedProjectIds || [], discussedItemIds: discussedItemIds || [] });
+      setAdHocPreviewPlan({ plan: out.plan || [], summary: out.summary || "", draftId: draftPayload.id, skippedByPip: !!out.skippedByPip, suggestedTitle: out.suggested_title || null, meetingTitle: draftPayload.title || null, unknownPeople: out.unknown_people || [], receipts: out.receipts || [], discussedProjectIds: discussedProjectIds || [], discussedItemIds: discussedItemIds || [] });
     }).catch(function (err) {
       setAdHocSummarizing(false);
       setAdHocSummarizeErr((err && err.message) || "Pip couldn't summarize.");
@@ -394,6 +395,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
   if (hubCadence) {
     return (
       <CadenceHub
+        globalPeople={globalPeople}
         cadence={hubCadence}
         account={account}
         userId={userId}
@@ -439,6 +441,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
     // We pass the account-level meetings array; CadenceHub filters by cadence_id
     return (
       <CadenceHub
+        globalPeople={globalPeople}
         cadence={hpcCadence}
         account={null}
         contact={hpcContact}
@@ -844,6 +847,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
               .catch(function () { /* title save is nice-to-have */ });
           }}
           unknownPeople={adHocPreviewPlan.unknownPeople || []}
+          receipts={adHocPreviewPlan.receipts || []}
           onAddContact={addContact ? function (data) {
             return addContact(Object.assign({ account_id: account.id }, data));
           } : undefined}

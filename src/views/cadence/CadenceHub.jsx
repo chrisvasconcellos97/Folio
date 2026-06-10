@@ -1143,6 +1143,7 @@ export function CadenceHub({
   cadence,
   account,
   contact,
+  globalPeople,
   userId,
   userEmail,
   orgId,
@@ -1478,6 +1479,7 @@ export function CadenceHub({
       healthSnapshots:   (snapshotsApi.snapshots || []).filter(function (s) { return s.account_id === accountId; }),
       promiseStats:      promiseLog || null,
       recentUpdates:     (updatesApi.updates || []).slice(0, 6),
+      globalPeople:      globalPeople || [],
       openItems:         openItems,
       profileProse:      userProfile && userProfile.profile_prose ? userProfile.profile_prose : null,
       discussedProjectIds: discussedProjectIds || [],
@@ -1503,6 +1505,7 @@ export function CadenceHub({
         suggestedTitle: out.suggested_title || null,
         meetingTitle:   draftPayload.title || null,
         unknownPeople:  out.unknown_people || [],
+        receipts:       out.receipts || [],
       });
       // The meeting is already marked summarized; close meeting mode if it was open.
       if (meetingMode && meetingMode.draft && meetingMode.draft.id === draftId) {
@@ -1938,6 +1941,7 @@ export function CadenceHub({
           .catch(function () { /* title save is nice-to-have */ });
       }}
       unknownPeople={previewPlan.unknownPeople || []}
+      receipts={previewPlan.receipts || []}
       onAddContact={addContact ? function (data) {
         return addContact(Object.assign({ account_id: accountId }, data));
       } : undefined}

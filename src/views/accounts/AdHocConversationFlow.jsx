@@ -35,7 +35,7 @@ export function AdHocConversationFlow({
   draftId,
   account,
   accounts,
-  members,
+  members, globalPeople,
   userId,
   userEmail,
   orgId,
@@ -134,6 +134,7 @@ export function AdHocConversationFlow({
       facts:               pipFactsApi.activeFactStrings || [],
       servicedStates:      account.serviced_states || null,
       recentUpdates:       (updatesApi.updates || []).slice(0, 6),
+      globalPeople:        globalPeople || [],
       discussedProjectIds: discussedProjectIds || [],
       discussedItemIds:    discussedItemIds    || [],
     }).then(function (out) {
@@ -156,6 +157,7 @@ export function AdHocConversationFlow({
         suggestedTitle: out.suggested_title || null,
         meetingTitle:   draftPayload.title || null,
         unknownPeople:  out.unknown_people || [],
+        receipts:       out.receipts || [],
       });
     }).catch(function (err) {
       setSummarizing(false);
@@ -253,6 +255,7 @@ export function AdHocConversationFlow({
             }
           }}
           unknownPeople={previewPlan.unknownPeople || []}
+          receipts={previewPlan.receipts || []}
           accountContacts={contacts || []}
         />
       )}
