@@ -1085,7 +1085,7 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
         gap: isMobile ? 14 : 20,
         padding: isMobile ? (operatorActive ? "16px 16px 18px" : "22px 16px 26px") : "32px 32px 36px",
       }}>
-        <PipOrb size={isMobile ? (operatorActive ? "xl" : "xxl") : "xxl"} heartbeat />
+        <PipOrb size="xxl" heartbeat />
         {!operatorActive && (
         <div style={{
           fontFamily: SERIF, fontSize: isMobile ? 18 : 22,

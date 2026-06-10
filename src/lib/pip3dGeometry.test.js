@@ -27,7 +27,7 @@ function djb2(str) {
 
 // ── Expected output hash at t=1.1 ────────────────────────────────────────────
 // Computed once from the locked geometry. If this changes, the design drifted.
-var EXPECTED_HASH_T11 = 2682213558;
+var EXPECTED_HASH_T11 = 3065925558; // updated June 10 2026: ring spin 0.45->0.18, approved by Chris in-session
 var EXPECTED_HASH_T0  = 910385610;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -47,7 +47,7 @@ describe("PIP_SPEC — locked parameters", function () {
   it("ring nv = 4",  function () { expect(PIP_SPEC.ring.nv).toBe(4); });
   it("ring tiltX = 0.40", function () { expect(PIP_SPEC.ring.tiltX).toBe(0.40); });
   it("ring tiltY = -0.48", function () { expect(PIP_SPEC.ring.tiltY).toBe(-0.48); });
-  it("ring spin = 0.45 rad/s", function () { expect(PIP_SPEC.ring.spin).toBe(0.45); });
+  it("ring spin = 0.18 rad/s (slowed from 0.45, Chris June 10 2026)", function () { expect(PIP_SPEC.ring.spin).toBe(0.18); });
   it("ring sw (stroke-width) = 1.6", function () { expect(PIP_SPEC.ring.sw).toBe(1.6); });
   it("ring warp = 16", function () { expect(PIP_SPEC.ring.warp).toBe(16); });
   it("ring wob = 6", function () { expect(PIP_SPEC.ring.wob).toBe(6); });

@@ -565,7 +565,7 @@
       .pip.md  { width: 32px;  height: 32px;  box-shadow: 0 0 14px var(--accent-shadow); }
       .pip.lg  { width: 52px;  height: 52px; }
       .pip.xl  { width: 84px;  height: 84px;  box-shadow: 0 0 34px var(--accent-shadow); }
-      .pip.xxl { width: 132px; height: 132px; box-shadow: 0 0 48px var(--accent-shadow); }
+      .pip.xxl { width: 160px; height: 160px; box-shadow: 0 0 48px var(--accent-shadow); }
       .pip.static > svg { animation: none; }
 
       /* 3D Pip — the container strips classic chrome so the hex-ring scene
@@ -593,6 +593,10 @@
          Priority: speaking > thinking > alert > idle (default). */
       .pip.thinking {
         --accent: var(--c-yellow);
+        /* hi/deep MUST retint with the state or the 3D form shows mixed colors
+           (front hexes + core highlight stuck on theme accent) */
+        --accent-hi:   color-mix(in oklab, var(--c-yellow), white 35%);
+        --accent-deep: color-mix(in oklab, var(--c-yellow), black 25%);
         --accent-border: var(--c-yellow);
         --accent-shadow: var(--c-yellow-faint);
         --accent-glow:   var(--c-yellow-faint);
@@ -618,6 +622,8 @@
 
       .pip.alert {
         --accent: var(--c-red);
+        --accent-hi:   color-mix(in oklab, var(--c-red), white 35%);
+        --accent-deep: color-mix(in oklab, var(--c-red), black 25%);
         --accent-border: var(--c-red);
         --accent-shadow: var(--c-red-faint);
         --accent-glow:   var(--c-red-faint);

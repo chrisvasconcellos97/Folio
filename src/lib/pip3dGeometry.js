@@ -19,7 +19,7 @@ export var PIP_SPEC = Object.freeze({
     nv:    4,
     tiltX: 0.40,
     tiltY: -0.48,
-    spin:  0.45,
+    spin:  0.18,   // slowed from 0.45 — Chris, June 10 2026 ("making me nauseous")
     sw:    1.6,
     warp:  16,
     wob:   6,
