@@ -76,8 +76,8 @@ alter table folio_accounts enable row level security;
 drop policy if exists "Users manage own accounts" on folio_accounts;
 create policy "Users manage own accounts"
   on folio_accounts for all
-  using      (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using      ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
 drop trigger if exists folio_accounts_updated_at on folio_accounts;
 create trigger folio_accounts_updated_at
@@ -108,8 +108,8 @@ alter table folio_contacts enable row level security;
 drop policy if exists "Users manage own contacts" on folio_contacts;
 create policy "Users manage own contacts"
   on folio_contacts for all
-  using      (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using      ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
 -- ──────────────────────────────────────────────────────────────────────
 -- Cadences (declared before folio_meetings so the cadence_id FK resolves)
@@ -138,8 +138,8 @@ alter table folio_cadences enable row level security;
 drop policy if exists "Users manage their own cadences" on folio_cadences;
 create policy "Users manage their own cadences"
   on folio_cadences for all
-  using      (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using      ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
 drop trigger if exists folio_cadences_updated_at on folio_cadences;
 create trigger folio_cadences_updated_at
@@ -182,8 +182,8 @@ alter table folio_meetings enable row level security;
 drop policy if exists "Users manage own meetings" on folio_meetings;
 create policy "Users manage own meetings"
   on folio_meetings for all
-  using      (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using      ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
 drop trigger if exists folio_meetings_updated_at on folio_meetings;
 create trigger folio_meetings_updated_at
@@ -215,8 +215,8 @@ alter table folio_items enable row level security;
 drop policy if exists "Users manage own items" on folio_items;
 create policy "Users manage own items"
   on folio_items for all
-  using      (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using      ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
 -- ──────────────────────────────────────────────────────────────────────
 -- Gauge V3 — folio_tasks (unified items + tasks home)
@@ -274,16 +274,16 @@ create trigger folio_tasks_touch_updated_at
 alter table folio_tasks enable row level security;
 
 drop policy if exists "tasks_select_own" on folio_tasks;
-create policy "tasks_select_own" on folio_tasks for select using (auth.uid() = user_id);
+create policy "tasks_select_own" on folio_tasks for select using ((select auth.uid()) = user_id);
 
 drop policy if exists "tasks_insert_own" on folio_tasks;
-create policy "tasks_insert_own" on folio_tasks for insert with check (auth.uid() = user_id);
+create policy "tasks_insert_own" on folio_tasks for insert with check ((select auth.uid()) = user_id);
 
 drop policy if exists "tasks_update_own" on folio_tasks;
-create policy "tasks_update_own" on folio_tasks for update using (auth.uid() = user_id);
+create policy "tasks_update_own" on folio_tasks for update using ((select auth.uid()) = user_id);
 
 drop policy if exists "tasks_delete_own" on folio_tasks;
-create policy "tasks_delete_own" on folio_tasks for delete using (auth.uid() = user_id);
+create policy "tasks_delete_own" on folio_tasks for delete using ((select auth.uid()) = user_id);
 
 -- ──────────────────────────────────────────────────────────────────────
 -- Quick Tasks
@@ -304,8 +304,8 @@ alter table folio_quick_tasks enable row level security;
 drop policy if exists "Users manage own quick tasks" on folio_quick_tasks;
 create policy "Users manage own quick tasks"
   on folio_quick_tasks for all
-  using      (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using      ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
 -- ──────────────────────────────────────────────────────────────────────
 -- Team / Org layer
@@ -321,8 +321,8 @@ alter table folio_orgs enable row level security;
 drop policy if exists "orgs_owner_all" on folio_orgs;
 create policy "orgs_owner_all" on folio_orgs
   for all
-  using      (auth.uid() = owner_id)
-  with check (auth.uid() = owner_id);
+  using      ((select auth.uid()) = owner_id)
+  with check ((select auth.uid()) = owner_id);
 
 -- Helper functions for org membership lookups (break RLS recursion)
 create or replace function folio_user_org_ids()
@@ -330,7 +330,7 @@ returns setof uuid
 language sql security definer stable set search_path = public
 as $$
   select org_id from folio_org_members
-  where user_id = auth.uid() and accepted = true
+  where user_id = (select auth.uid()) and accepted = true
 $$;
 grant execute on function folio_user_org_ids() to authenticated;
 
@@ -339,7 +339,7 @@ returns setof uuid
 language sql security definer stable set search_path = public
 as $$
   select org_id from folio_org_members
-  where user_id = auth.uid() and accepted = true and role in ('owner','member')
+  where user_id = (select auth.uid()) and accepted = true and role in ('owner','member')
 $$;
 grant execute on function folio_user_writable_org_ids() to authenticated;
 
@@ -371,8 +371,8 @@ alter table folio_account_notes enable row level security;
 drop policy if exists "notes_owner" on folio_account_notes;
 create policy "notes_owner"
   on folio_account_notes for all
-  using      (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using      ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
 create table if not exists folio_activity (
   id         uuid primary key default gen_random_uuid(),
@@ -456,13 +456,13 @@ alter table gauge_projects enable row level security;
 drop policy if exists "Gauge owner access" on gauge_projects;
 create policy "Gauge owner access"
   on gauge_projects for all
-  using      (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using      ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
 drop policy if exists "Gauge assignee select" on gauge_projects;
 create policy "Gauge assignee select"
   on gauge_projects for select
-  using (assignee = auth.email());
+  using (assignee = (select auth.email()));
 
 -- The full assignee-update policy (with gauge_owner_unchanged guard) lives
 -- in phase1_security.sql. Re-running that file installs it on top.
@@ -490,8 +490,8 @@ alter table gauge_templates enable row level security;
 drop policy if exists "Template owner access" on gauge_templates;
 create policy "Template owner access"
   on gauge_templates for all
-  using      (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using      ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
 -- ──────────────────────────────────────────────────────────────────────
 -- Account updates (Revenue-impact Update Calendar)
@@ -526,8 +526,8 @@ alter table folio_account_updates enable row level security;
 drop policy if exists "Users manage own updates" on folio_account_updates;
 create policy "Users manage own updates"
   on folio_account_updates for all
-  using      (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using      ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
 create index if not exists folio_account_updates_account_idx
   on folio_account_updates(account_id, update_date desc);
@@ -560,11 +560,11 @@ alter table folio_pip_usage enable row level security;
 
 drop policy if exists "pip_usage_owner_select" on folio_pip_usage;
 create policy "pip_usage_owner_select" on folio_pip_usage
-  for select using (auth.uid() = user_id);
+  for select using ((select auth.uid()) = user_id);
 
 drop policy if exists "pip_usage_owner_insert" on folio_pip_usage;
 create policy "pip_usage_owner_insert" on folio_pip_usage
-  for insert with check (auth.uid() = user_id);
+  for insert with check ((select auth.uid()) = user_id);
 
 -- ──────────────────────────────────────────────────────────────────────
 -- Pip memory — facts + account-state cache
@@ -582,11 +582,11 @@ alter table folio_pip_facts enable row level security;
 
 drop policy if exists "facts_owner_select" on folio_pip_facts;
 create policy "facts_owner_select" on folio_pip_facts
-  for select using (auth.uid() = user_id);
+  for select using ((select auth.uid()) = user_id);
 
 drop policy if exists "facts_owner_write" on folio_pip_facts;
 create policy "facts_owner_write" on folio_pip_facts
-  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  for all using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 
 create table if not exists folio_pip_account_state (
   account_id          uuid primary key references folio_accounts(id) on delete cascade,
@@ -615,11 +615,11 @@ alter table folio_pip_account_state enable row level security;
 
 drop policy if exists "state_owner_select" on folio_pip_account_state;
 create policy "state_owner_select" on folio_pip_account_state
-  for select using (auth.uid() = user_id);
+  for select using ((select auth.uid()) = user_id);
 
 drop policy if exists "state_owner_write" on folio_pip_account_state;
 create policy "state_owner_write" on folio_pip_account_state
-  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  for all using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 
 -- ──────────────────────────────────────────────────────────────────────
 -- Pip assignment hints — learned defaults for who gets which task on
@@ -640,8 +640,8 @@ alter table pip_assignment_hints enable row level security;
 drop policy if exists "Users manage own hints" on pip_assignment_hints;
 create policy "Users manage own hints"
   on pip_assignment_hints for all
-  using      (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using      ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
 -- ──────────────────────────────────────────────────────────────────────
 -- Pip correction log (V2 brain foundation) — every disagreement the user
@@ -669,8 +669,8 @@ alter table pip_correction_log enable row level security;
 drop policy if exists "Users manage own corrections" on pip_correction_log;
 create policy "Users manage own corrections"
   on pip_correction_log for all
-  using      (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using      ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
 -- ──────────────────────────────────────────────────────────────────────
 -- Pip correction log archive — rows older than 60 days are moved here
@@ -683,8 +683,8 @@ alter table pip_correction_log_archive enable row level security;
 drop policy if exists "Users manage own archived corrections" on pip_correction_log_archive;
 create policy "Users manage own archived corrections"
   on pip_correction_log_archive for all
-  using      (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using      ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
 -- ──────────────────────────────────────────────────────────────────────
 -- Pip glossary — durable user-taught terms injected into every summarize
@@ -714,8 +714,8 @@ alter table pip_glossary enable row level security;
 drop policy if exists "Users manage own glossary" on pip_glossary;
 create policy "Users manage own glossary"
   on pip_glossary for all
-  using      (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using      ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
 drop trigger if exists pip_glossary_updated_at on pip_glossary;
 create trigger pip_glossary_updated_at
@@ -775,7 +775,7 @@ alter table folio_user_profile add column if not exists pip_questions_paused boo
 alter table folio_user_profile enable row level security;
 drop policy if exists "User profile owner access" on folio_user_profile;
 create policy "User profile owner access" on folio_user_profile for all
-  using (user_id = auth.uid()) with check (user_id = auth.uid());
+  using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
 drop trigger if exists folio_user_profile_updated_at on folio_user_profile;
 create trigger folio_user_profile_updated_at before update on folio_user_profile
   for each row execute function update_updated_at();
@@ -799,7 +799,7 @@ create table if not exists folio_pip_questions (
 alter table folio_pip_questions enable row level security;
 drop policy if exists "Pip questions owner access" on folio_pip_questions;
 create policy "Pip questions owner access" on folio_pip_questions for all
-  using (user_id = auth.uid()) with check (user_id = auth.uid());
+  using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
 create index if not exists folio_user_profile_user_id_idx on folio_user_profile(user_id);
 create index if not exists folio_pip_questions_user_id_status_idx on folio_pip_questions(user_id, status);
 
@@ -824,18 +824,18 @@ drop policy if exists "aliases_insert" on folio_contact_aliases;
 drop policy if exists "aliases_delete" on folio_contact_aliases;
 -- Read/insert: an org member sees the org's aliases; a solo user sees their own.
 create policy "aliases_read" on folio_contact_aliases for select using (
-  (org_id is not null and org_id in (select org_id from folio_org_members where user_id = auth.uid() and accepted = true))
-  or (org_id is null and user_id = auth.uid())
+  (org_id is not null and org_id in (select org_id from folio_org_members where user_id = (select auth.uid()) and accepted = true))
+  or (org_id is null and user_id = (select auth.uid()))
 );
 create policy "aliases_insert" on folio_contact_aliases for insert with check (
-  (org_id is not null and org_id in (select org_id from folio_org_members where user_id = auth.uid() and accepted = true))
-  or (org_id is null and user_id = auth.uid())
+  (org_id is not null and org_id in (select org_id from folio_org_members where user_id = (select auth.uid()) and accepted = true))
+  or (org_id is null and user_id = (select auth.uid()))
 );
 -- Delete: the creator, or any org member for shared org aliases.
 create policy "aliases_delete" on folio_contact_aliases for delete using (
-  created_by = auth.uid()
-  or (org_id is null and user_id = auth.uid())
-  or (org_id is not null and org_id in (select org_id from folio_org_members where user_id = auth.uid() and accepted = true))
+  created_by = (select auth.uid())
+  or (org_id is null and user_id = (select auth.uid()))
+  or (org_id is not null and org_id in (select org_id from folio_org_members where user_id = (select auth.uid()) and accepted = true))
 );
 create index if not exists folio_contact_aliases_org_alias on folio_contact_aliases(org_id, lower(alias));
 create index if not exists folio_contact_aliases_user_idx  on folio_contact_aliases(user_id) where user_id is not null;
@@ -846,7 +846,7 @@ create or replace function folio_org_peer_user_ids()
 returns setof uuid language sql security definer stable set search_path = public as $$
   select distinct them.user_id from folio_org_members me
   join folio_org_members them on them.org_id = me.org_id
-  where me.user_id = auth.uid() and me.accepted = true and them.accepted = true and them.user_id is not null
+  where me.user_id = (select auth.uid()) and me.accepted = true and them.accepted = true and them.user_id is not null
 $$;
 grant execute on function folio_org_peer_user_ids() to authenticated;
 drop policy if exists "tasks_org_peer_read" on folio_tasks;
@@ -869,11 +869,11 @@ alter table folio_audit_log enable row level security;
 
 drop policy if exists "Users can read own audit log" on folio_audit_log;
 create policy "Users can read own audit log"
-  on folio_audit_log for select using (auth.uid() = user_id);
+  on folio_audit_log for select using ((select auth.uid()) = user_id);
 
 drop policy if exists "Users can insert own audit log" on folio_audit_log;
 create policy "Users can insert own audit log"
-  on folio_audit_log for insert with check (auth.uid() = user_id);
+  on folio_audit_log for insert with check ((select auth.uid()) = user_id);
 
 -- ──────────────────────────────────────────────────────────────────────
 -- Route builder
@@ -891,8 +891,8 @@ alter table folio_routes enable row level security;
 drop policy if exists "Users manage their own routes" on folio_routes;
 create policy "Users manage their own routes"
   on folio_routes for all
-  using      (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using      ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
 -- ──────────────────────────────────────────────────────────────────────
 -- Observability — client-side error capture (Phase 6)
@@ -916,15 +916,15 @@ alter table folio_errors enable row level security;
 
 drop policy if exists "errors_owner_select" on folio_errors;
 create policy "errors_owner_select" on folio_errors
-  for select using (auth.uid() = user_id);
+  for select using ((select auth.uid()) = user_id);
 
 drop policy if exists "errors_owner_insert" on folio_errors;
 create policy "errors_owner_insert" on folio_errors
-  for insert with check (auth.uid() = user_id);
+  for insert with check ((select auth.uid()) = user_id);
 
 drop policy if exists "errors_owner_update" on folio_errors;
 create policy "errors_owner_update" on folio_errors
-  for update using (auth.uid() = user_id);
+  for update using ((select auth.uid()) = user_id);
 
 -- ──────────────────────────────────────────────────────────────────────
 -- Indexes — hot paths (Phase 5)
@@ -1072,7 +1072,7 @@ create table if not exists pip_promise_log (
 alter table pip_promise_log enable row level security;
 create policy "Users manage own promise log"
   on pip_promise_log for all
-  using (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id);
 
 create index if not exists pip_promise_log_user_account_idx
   on pip_promise_log(user_id, account_id);
@@ -1103,10 +1103,10 @@ create table if not exists folio_operator_reports (
 alter table folio_operator_reports enable row level security;
 drop policy if exists "operator_reports_owner_select" on folio_operator_reports;
 create policy "operator_reports_owner_select" on folio_operator_reports
-  for select using (auth.uid() = user_id);
+  for select using ((select auth.uid()) = user_id);
 drop policy if exists "operator_reports_owner_write" on folio_operator_reports;
 create policy "operator_reports_owner_write" on folio_operator_reports
-  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  for all using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 create index if not exists folio_operator_reports_user_date
   on folio_operator_reports (user_id, report_date desc);
 
@@ -1131,8 +1131,8 @@ alter table folio_account_snapshots enable row level security;
 
 create policy "Users access own snapshots"
   on folio_account_snapshots for all
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
 create index if not exists folio_account_snapshots_user_date
   on folio_account_snapshots (user_id, snapshot_date desc);
@@ -1140,7 +1140,7 @@ create index if not exists folio_account_snapshots_user_date
 create index if not exists folio_account_snapshots_account_date
   on folio_account_snapshots (account_id, snapshot_date desc);
 -- Life module (Work/Life mode) — personal items: appointments, events, honey-do.
--- One table with a `kind` discriminator; RLS scoped to auth.uid().
+-- One table with a `kind` discriminator; RLS scoped to (select auth.uid()).
 -- Applied to prod via MCP migration `create_life_items` (June 2026).
 
 create table if not exists life_items (
@@ -1166,7 +1166,40 @@ alter table life_items enable row level security;
 
 drop policy if exists "life_items_owner_all" on life_items;
 create policy "life_items_owner_all" on life_items
-  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  for all using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 
 create index if not exists life_items_user_idx on life_items(user_id);
 create index if not exists life_items_user_kind_idx on life_items(user_id, kind);
+
+-- ──────────────────────────────────────────────────────────────────────
+-- Phase 0 perf indexes (June 10 2026) — FK coverage + drip-question path
+-- (see supabase/phase0_perf.sql; applied to prod via MCP)
+-- ──────────────────────────────────────────────────────────────────────
+create index if not exists idx_folio_meetings_account_id        on folio_meetings(account_id);
+create index if not exists idx_folio_account_notes_org_id       on folio_account_notes(org_id);
+create index if not exists idx_folio_account_notes_user_id      on folio_account_notes(user_id);
+create index if not exists idx_folio_account_updates_gauge_project_id on folio_account_updates(gauge_project_id);
+create index if not exists idx_folio_accounts_custom_workspace_id on folio_accounts(custom_workspace_id);
+create index if not exists idx_folio_accounts_merged_into        on folio_accounts(merged_into_account_id);
+create index if not exists idx_folio_accounts_owner_user_id      on folio_accounts(owner_user_id);
+create index if not exists idx_folio_accounts_parent_account_id  on folio_accounts(parent_account_id);
+create index if not exists idx_folio_activity_user_id            on folio_activity(user_id);
+create index if not exists idx_folio_contact_aliases_contact_id  on folio_contact_aliases(contact_id);
+create index if not exists idx_folio_contact_aliases_created_by  on folio_contact_aliases(created_by);
+create index if not exists idx_folio_custom_workspaces_org_id    on folio_custom_workspaces(org_id);
+create index if not exists idx_folio_custom_workspaces_user_id   on folio_custom_workspaces(user_id);
+create index if not exists idx_folio_email_threads_contact_id    on folio_email_threads(contact_id);
+create index if not exists idx_folio_orgs_owner_id               on folio_orgs(owner_id);
+create index if not exists idx_folio_quick_tasks_account_id      on folio_quick_tasks(account_id);
+create index if not exists idx_folio_revenue_history_account_id  on folio_revenue_history(account_id);
+create index if not exists idx_folio_shop_metrics_account_id     on folio_shop_metrics(account_id);
+create index if not exists idx_folio_tasks_source_meeting_id     on folio_tasks(source_meeting_id);
+create index if not exists idx_folio_thread_events_spawned_task  on folio_thread_events(spawned_task_id);
+create index if not exists idx_folio_thread_events_user_id       on folio_thread_events(user_id);
+create index if not exists idx_gauge_projects_meeting_id         on gauge_projects(meeting_id);
+create index if not exists idx_gauge_templates_user_id           on gauge_templates(user_id);
+create index if not exists idx_pip_assignment_hints_account_id   on pip_assignment_hints(account_id);
+create index if not exists idx_pip_correction_log_account_id     on pip_correction_log(account_id);
+create index if not exists idx_pip_promise_log_account_id        on pip_promise_log(account_id);
+create index if not exists idx_pip_promise_log_item_id           on pip_promise_log(item_id);
+create index if not exists idx_folio_pip_questions_user_source_status on folio_pip_questions(user_id, source, status);
