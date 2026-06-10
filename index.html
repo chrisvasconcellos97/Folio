@@ -428,30 +428,31 @@
          at equal specificity for the tokens it redefines. Works under both
          dark (this block) and light (the more-specific block below). */
       :root[data-mode="life"] {
-        /* "Dusk slate" — a medium dusty blue, sitting between dark and light:
-           softer/lighter than the near-black dark theme, but still calm and
-           cool (off the clock). Light text on a mid-slate ground. */
-        --accent:        #8fb8e0;
-        --accent-deep:   #6f9bc8;
-        --accent-dim:    #58769a;
-        --accent-glow:   rgba(143,184,224,0.16);
-        --accent-glow-2: rgba(143,184,224,0.24);
-        --accent-border: rgba(143,184,224,0.45);
-        --accent-shadow: rgba(143,184,224,0.50);
+        /* "Dusk" — dusty-blue surfaces (calm, off the clock) + a faded DUSTY
+           ORANGE accent. Orange is Pip and every highlight; the warm/cool
+           contrast makes Pip the focal point. Accent drives the Pip orb (glow
+           + the two dots), so recoloring it recolors Pip automatically. */
+        --accent:        #e0986b;
+        --accent-deep:   #c97a4e;
+        --accent-dim:    #9e6a4c;
+        --accent-glow:   rgba(224,152,107,0.16);
+        --accent-glow-2: rgba(224,152,107,0.24);
+        --accent-border: rgba(224,152,107,0.46);
+        --accent-shadow: rgba(224,152,107,0.55);
 
-        --c-accent:        #8fb8e0;
-        --c-accent-deep:   #6f9bc8;
-        --c-accent-dim:    #58769a;
-        --c-accent-glow:   rgba(143,184,224,0.16);
-        --c-accent-glow-2: rgba(143,184,224,0.24);
-        --c-accent-faint:  rgba(143,184,224,0.12);
-        --c-accent-mid:    rgba(143,184,224,0.20);
-        --c-accent-subtle: rgba(143,184,224,0.16);
-        --c-accent-line:   rgba(143,184,224,0.30);
-        --c-accent-ring:   rgba(143,184,224,0.38);
-        --c-accent-border: rgba(143,184,224,0.45);
-        --c-accent-shadow: rgba(143,184,224,0.45);
-        --c-folio-shadow:  rgba(143,184,224,0.22);
+        --c-accent:        #e0986b;
+        --c-accent-deep:   #c97a4e;
+        --c-accent-dim:    #9e6a4c;
+        --c-accent-glow:   rgba(224,152,107,0.16);
+        --c-accent-glow-2: rgba(224,152,107,0.24);
+        --c-accent-faint:  rgba(224,152,107,0.12);
+        --c-accent-mid:    rgba(224,152,107,0.20);
+        --c-accent-subtle: rgba(224,152,107,0.16);
+        --c-accent-line:   rgba(224,152,107,0.32);
+        --c-accent-ring:   rgba(224,152,107,0.40);
+        --c-accent-border: rgba(224,152,107,0.46);
+        --c-accent-shadow: rgba(224,152,107,0.55);
+        --c-folio-shadow:  rgba(224,152,107,0.22);
 
         /* Medium dusk-slate surfaces — the "between dark and light" ground. */
         --c-bg:          #3b4d60;
@@ -471,27 +472,28 @@
       }
 
       :root[data-theme="light"][data-mode="life"] {
-        --accent:        #4f73a0;
-        --accent-deep:   #3d5d86;
-        --accent-dim:    #6b86a8;
-        --accent-glow:   rgba(79,115,160,0.14);
-        --accent-glow-2: rgba(79,115,160,0.22);
-        --accent-border: rgba(79,115,160,0.42);
-        --accent-shadow: rgba(79,115,160,0.45);
+        /* Deeper dusty orange for contrast on the light blue-tinted ground. */
+        --accent:        #c06a3a;
+        --accent-deep:   #a4552b;
+        --accent-dim:    #c98a64;
+        --accent-glow:   rgba(192,106,58,0.14);
+        --accent-glow-2: rgba(192,106,58,0.22);
+        --accent-border: rgba(192,106,58,0.42);
+        --accent-shadow: rgba(192,106,58,0.42);
 
-        --c-accent:        #4f73a0;
-        --c-accent-deep:   #3d5d86;
-        --c-accent-dim:    #6b86a8;
-        --c-accent-glow:   rgba(79,115,160,0.14);
-        --c-accent-glow-2: rgba(79,115,160,0.22);
-        --c-accent-faint:  rgba(79,115,160,0.08);
-        --c-accent-mid:    rgba(79,115,160,0.16);
-        --c-accent-subtle: rgba(79,115,160,0.12);
-        --c-accent-line:   rgba(79,115,160,0.30);
-        --c-accent-ring:   rgba(79,115,160,0.34);
-        --c-accent-border: rgba(79,115,160,0.42);
-        --c-accent-shadow: rgba(79,115,160,0.45);
-        --c-folio-shadow:  rgba(79,115,160,0.18);
+        --c-accent:        #c06a3a;
+        --c-accent-deep:   #a4552b;
+        --c-accent-dim:    #c98a64;
+        --c-accent-glow:   rgba(192,106,58,0.14);
+        --c-accent-glow-2: rgba(192,106,58,0.22);
+        --c-accent-faint:  rgba(192,106,58,0.09);
+        --c-accent-mid:    rgba(192,106,58,0.16);
+        --c-accent-subtle: rgba(192,106,58,0.12);
+        --c-accent-line:   rgba(192,106,58,0.30);
+        --c-accent-ring:   rgba(192,106,58,0.34);
+        --c-accent-border: rgba(192,106,58,0.42);
+        --c-accent-shadow: rgba(192,106,58,0.42);
+        --c-folio-shadow:  rgba(192,106,58,0.18);
 
         --c-bg:         #eef1f6;
         --c-surface:    #ffffff;
