@@ -83,7 +83,7 @@ function buildItemsInsight(items, taskCadences, accountId) {
 
 var SEVEN_DAYS_MS = 7 * 86400 * 1000;
 
-export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAdd, onUpdate, onDelete, onGoToCadence, logCorrection, projects, accounts, members, onUpdateProject, onCreateProject }) {
+export function ItemsTab({ items, taskCadences, accountId, userId, userEmail, onClose, onAdd, onUpdate, onDelete, onGoToCadence, logCorrection, projects, accounts, members, onUpdateProject, onCreateProject }) {
   var [editingItem, setEditingItem] = useState(null);
   var [completingIds, setCompletingIds] = useState(function () { return new Set(); });
   var [confirmDelete, setConfirmDelete] = useState(null); // item id mid-confirm
@@ -371,6 +371,7 @@ export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAd
           existing={editingItem}
           accountId={accountId}
           userId={userId}
+          userEmail={userEmail}
           members={members}
           accounts={accounts}
           onSave={function (id, data) {
@@ -397,6 +398,7 @@ export function ItemsTab({ items, taskCadences, accountId, userId, onClose, onAd
               showToast(err.message || "Couldn't save — check your connection", "error");
             });
           }}
+          onDelete={onDelete}
           onClose={function () { setEditingItem(null); }}
         />
       )}

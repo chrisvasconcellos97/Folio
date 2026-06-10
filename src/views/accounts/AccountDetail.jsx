@@ -620,6 +620,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
           taskCadences={cadences.filter(function (c) { return c.type === 'task'; })}
           accountId={account.id}
           userId={userId}
+          userEmail={userEmail}
           onClose={closeItem}
           onAdd={function () { setItemModal(true); }}
           onUpdate={updateItem}

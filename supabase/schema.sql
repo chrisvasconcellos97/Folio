@@ -1213,6 +1213,9 @@ create index if not exists idx_folio_pip_questions_user_source_status on folio_p
 alter table folio_tasks
   add column if not exists waiting_on text,
   add column if not exists waiting_on_since date;
+-- Task status updates pulse log (June 2026) — same pattern as gauge_projects
+alter table folio_tasks
+  add column if not exists status_updates jsonb default '[]';
 alter table gauge_projects
   add column if not exists waiting_on text,
   add column if not exists waiting_on_since date;
