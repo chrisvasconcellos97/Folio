@@ -10,6 +10,7 @@ import { summarizeDraftPip, callCadenceBriefPip, callPortfolioBriefPip } from ".
 import { AddToTasksButton } from "../../components/AddToTasksButton";
 import { CadenceMeetingMode } from "./CadenceMeetingMode";
 import { PipSummarizePreview } from "./PipSummarizePreview";
+import { SummarizeStreamingOverlay } from "./SummarizeStreamingOverlay";
 import { ProjectStageEditor } from "../gauge/ProjectStageEditor";
 import { StandingBoardView } from "../gauge/StandingBoardView";
 import { ProjectNotesEditor } from "../gauge/ProjectNotesEditor";
@@ -1450,6 +1451,9 @@ export function CadenceHub({
     setLastDiscussedProjectIds(discussedProjectIds || []);
     setLastDiscussedItemIds(discussedItemIds || []);
     setSummarizeErrors(function (prev) { var next = Object.assign({}, prev); delete next[draftId]; return next; });
+    // Item 39: open the streaming overlay immediately; Pip's recap streams in
+    // live, then the resolve below swaps it for the full plan modal.
+    setPreviewPlan({ streaming: true, summary: "", draftId: draftId });
     summarizeDraftPip({
       draft:             draftPayload,
       accountName:       account ? account.name : (contact ? contact.name + " (1:1)" : "1:1 Meeting"),
@@ -1484,6 +1488,13 @@ export function CadenceHub({
       profileProse:      userProfile && userProfile.profile_prose ? userProfile.profile_prose : null,
       discussedProjectIds: discussedProjectIds || [],
       discussedItemIds:    discussedItemIds    || [],
+    }, {
+      onRecap: function (txt) {
+        setPreviewPlan(function (prev) {
+          return prev && prev.streaming && prev.draftId === draftId
+            ? Object.assign({}, prev, { summary: txt }) : prev;
+        });
+      },
     }).then(function (out) {
       var followUp = out.follow_up_date || null;
       return updateMeeting(draftId, {
@@ -1513,6 +1524,7 @@ export function CadenceHub({
       }
     }).catch(function (err) {
       setSummarizingId(null);
+      setPreviewPlan(function (prev) { return prev && prev.streaming ? null : prev; });
       setSummarizeErrors(function (prev) {
         var next = Object.assign({}, prev);
         next[draftId] = err && err.message ? err.message : "Pip couldn't summarize.";
@@ -1917,7 +1929,11 @@ export function CadenceHub({
     />
   ) : null;
 
-  var previewModal = previewPlan ? (
+  var streamingOverlay = previewPlan && previewPlan.streaming ? (
+    <SummarizeStreamingOverlay summary={previewPlan.summary} />
+  ) : null;
+
+  var previewModal = previewPlan && !previewPlan.streaming ? (
     <PipSummarizePreview
       plan={previewPlan.plan}
       existingItems={openItems}
@@ -2087,7 +2103,8 @@ export function CadenceHub({
           {tab === "followups" && followUpsSection}
         </div>
         {overlay}
-        {previewModal}
+        {streamingOverlay}
+      {previewModal}
         {readoutModal}
       </div>
     );
@@ -2107,6 +2124,7 @@ export function CadenceHub({
         {historySection}
       </div>
       {overlay}
+      {streamingOverlay}
       {previewModal}
       {readoutModal}
     </div>

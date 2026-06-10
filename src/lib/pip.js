@@ -715,7 +715,7 @@ function extractCheckboxTasks(notes) {
   return { pending: pending, done: done };
 }
 
-export function summarizeDraftPip(payload) {
+export function summarizeDraftPip(payload, opts) {
   var m              = payload.draft || {};
   var existingItems  = Array.isArray(payload.existingItems)  ? payload.existingItems  : [];
   var activeProjects = Array.isArray(payload.activeProjects) ? payload.activeProjects : [];
@@ -850,7 +850,12 @@ export function summarizeDraftPip(payload) {
     "You are planning post-meeting bookkeeping. Compare the meeting notes against the user's " +
     "existing open items and existing in-flight Gauge tasks. Return a structured plan that " +
     "AVOIDS duplicates and prefers updates/closes over new rows.\n\n" +
-    "Return ONLY valid JSON with this exact shape (no preamble, no markdown):\n" +
+    "OUTPUT FORMAT — two phases, in this exact order:\n" +
+    "1. FIRST write the meeting recap: 2-4 sentences of plain prose (no JSON, no markdown). " +
+    "This streams live to the user while you work, so lead with it and make it read well on its own.\n" +
+    "2. Then on its own line write exactly: ===PLAN===\n" +
+    "3. Then output ONLY the valid JSON object with this exact shape (no preamble, no markdown). " +
+    "The JSON \"summary\" field must repeat the same recap text from phase 1.\n" +
     "{\n" +
     "  \"short_title\": \"3-4 word email-subject-style label, Title Case (e.g. 'Q3 Forecast Prep', 'Dan Integration Request'). Never include date or account name.\",\n" +
     "  \"suggested_title\": \"Short 6-10 word meeting title based on what was actually discussed (email subject style, e.g. 'Parts Authority — invoice feed delay + integration update'). Format: [Account] — [key topic]. Keep under 60 chars. Omit (return null) if the meeting notes are too sparse to generate a meaningful title.\",\n" +
@@ -1029,12 +1034,34 @@ export function summarizeDraftPip(payload) {
     { type: "text", text: tailText },
   ];
 
+  // Two-phase streaming (item 39): when the caller passes opts.onRecap, the
+  // prose recap streams to it live as the model writes; the structured JSON
+  // plan follows after the ===PLAN=== delimiter and parses on completion.
+  var DELIM = "===PLAN===";
+  var callOpts = { mode: "summary", summarySystemBlocks: summarySystemBlocks, userContentBlocks: userContentBlocks };
+  if (opts && typeof opts.onRecap === "function") {
+    var streamedSoFar = "";
+    callOpts.onDelta = function (delta) {
+      streamedSoFar += delta;
+      var cut = streamedSoFar.indexOf(DELIM);
+      // Hold back a possible partial delimiter at the tail so "===PL" never
+      // flashes on screen mid-token.
+      var visible = cut >= 0 ? streamedSoFar.slice(0, cut) : streamedSoFar.replace(/=+[A-Z]*$/, "");
+      try { opts.onRecap(visible.trim()); } catch (e) { /* caller UI error must not kill the stream */ }
+    };
+  }
+
   return callPipApi(
     [{ role: "user", content: tailText }],
     null,
-    { mode: "summary", summarySystemBlocks: summarySystemBlocks, userContentBlocks: userContentBlocks }
+    callOpts
   ).then(function (resp) {
-    var text = resp.content || "";
+    var fullText = resp.content || "";
+    var delimIdx = fullText.indexOf(DELIM);
+    var proseRecap = delimIdx >= 0 ? fullText.slice(0, delimIdx).trim() : "";
+    // Parse the JSON from after the delimiter when present; fall back to the
+    // whole text so a model that skips the delimiter still parses fine.
+    var text = delimIdx >= 0 ? fullText.slice(delimIdx + DELIM.length) : fullText;
     var match = text.match(/\{[\s\S]*\}/);
 
     // Detect a truncated / unparseable response. If the model returned a
@@ -1058,13 +1085,13 @@ export function summarizeDraftPip(payload) {
       if (looksTruncated(text)) {
         throw new Error("Pip's response got cut off mid-way (likely too many tasks). Try again — token limit was bumped.");
       }
-      return { summary: text, short_title: "", plan: [], action_items: [], follow_up_date: null, tone: null, theme: null };
+      return { summary: proseRecap || text, short_title: "", plan: [], action_items: [], follow_up_date: null, tone: null, theme: null };
     }
     try {
       var parsed = JSON.parse(match[0]);
       var planRaw = Array.isArray(parsed.plan) ? parsed.plan : null;
       var follow  = parsed.follow_up_date || null;
-      var summary = parsed.summary || "";
+      var summary = parsed.summary || proseRecap || "";
       var shortTitle = (parsed.short_title && typeof parsed.short_title === "string")
         ? String(parsed.short_title).trim().slice(0, 60)
         : "";
@@ -1139,7 +1166,7 @@ export function summarizeDraftPip(payload) {
       if (typeof window !== "undefined" && window.console) {
         window.console.warn("[summarizeDraftPip] JSON parse failed:", e && e.message);
       }
-      return { summary: text, short_title: "", plan: [], action_items: [], follow_up_date: null, tone: null, theme: null };
+      return { summary: proseRecap || text, short_title: "", plan: [], action_items: [], follow_up_date: null, tone: null, theme: null };
     }
   });
 }

@@ -36,6 +36,7 @@ import { AddContactModal } from "./AddContactModal";
 import { PrintAccountSheet } from "../../components/PrintAccountSheet";
 import { CadenceHub } from "../cadence/CadenceHub";
 import { CadenceMeetingMode } from "../cadence/CadenceMeetingMode";
+import { SummarizeStreamingOverlay } from "../cadence/SummarizeStreamingOverlay";
 import { PipSummarizePreview } from "../cadence/PipSummarizePreview";
 import { summarizeDraftPip } from "../../lib/pip";
 import { applyPipPlan } from "../../lib/pipPlanApply";
@@ -273,6 +274,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
     if (adHocSummarizing || !draftPayload) return;
     setAdHocSummarizing(true);
     setAdHocSummarizeErr(null);
+    setAdHocPreviewPlan({ streaming: true, summary: "", draftId: draftPayload.id });
     var methodLabel = draftPayload.method
       ? ({ phone: "Phone", in_person: "In Person", video: "Video", email: "Email" }[draftPayload.method] || draftPayload.method)
       : "Ad-hoc conversation";
@@ -304,6 +306,12 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
       globalPeople:        globalPeople || [],
       discussedProjectIds: discussedProjectIds || [],
       discussedItemIds:    discussedItemIds    || [],
+    }, {
+      onRecap: function (txt) {
+        setAdHocPreviewPlan(function (prev) {
+          return prev && prev.streaming ? Object.assign({}, prev, { summary: txt }) : prev;
+        });
+      },
     }).then(function (out) {
       var followUp = out.follow_up_date || null;
       return updateMeeting(draftPayload.id, {
@@ -320,6 +328,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
       setAdHocPreviewPlan({ plan: out.plan || [], summary: out.summary || "", draftId: draftPayload.id, skippedByPip: !!out.skippedByPip, suggestedTitle: out.suggested_title || null, meetingTitle: draftPayload.title || null, unknownPeople: out.unknown_people || [], receipts: out.receipts || [], discussedProjectIds: discussedProjectIds || [], discussedItemIds: discussedItemIds || [] });
     }).catch(function (err) {
       setAdHocSummarizing(false);
+      setAdHocPreviewPlan(function (prev) { return prev && prev.streaming ? null : prev; });
       setAdHocSummarizeErr((err && err.message) || "Pip couldn't summarize.");
     });
   }
@@ -824,7 +833,10 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
         />
       )}
 
-      {adHocPreviewPlan && (
+      {adHocPreviewPlan && adHocPreviewPlan.streaming && (
+        <SummarizeStreamingOverlay summary={adHocPreviewPlan.summary} />
+      )}
+      {adHocPreviewPlan && !adHocPreviewPlan.streaming && (
         <PipSummarizePreview
           plan={adHocPreviewPlan.plan}
           existingItems={openItemsList}

@@ -25,6 +25,8 @@ those live in git history.
 
 **What you see today:** Summarize a meeting → fewer, more correct task rows; people you already know anywhere in your world are never suggested as new contacts; and a small ✦ note in the preview showing what taught knowledge contributed.
 
+**Also in this batch — the recap now streams live.** Hitting "End & Summarize" no longer means staring at a spinner for up to a minute: Pip's written recap appears word-by-word within a second or two while he structures the plan behind it, and the plan modal opens the moment it's ready. And inside the plan modal, new tasks are now grouped under the project they'll land on, so a mis-routed task is visible at a glance instead of discovered later.
+
 **Why it matters:** Wrong rows accepted in a rush poison everything downstream. Precision at the source is what makes the rest of the system trustworthy — and receipts are the proof that teaching Pip pays.
 
 ---

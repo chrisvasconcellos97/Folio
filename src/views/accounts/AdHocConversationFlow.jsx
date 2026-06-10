@@ -10,6 +10,7 @@ import { useUserProfile } from "../../hooks/useUserProfile";
 import { usePipFacts } from "../../hooks/usePipFacts";
 import { useAccountUpdates } from "../../hooks/useAccountUpdates";
 import { summarizeDraftPip } from "../../lib/pip";
+import { SummarizeStreamingOverlay } from "../cadence/SummarizeStreamingOverlay";
 import { applyPipPlan } from "../../lib/pipPlanApply";
 import { updateTask, insertTask } from "../../hooks/useTasks";
 import { CadenceMeetingMode } from "../cadence/CadenceMeetingMode";
@@ -109,6 +110,7 @@ export function AdHocConversationFlow({
     if (summarizing || !draftPayload) return;
     setSummarizing(true);
     setSummarizeErr(null);
+    setPreviewPlan({ streaming: true, summary: "", draftId: draftPayload.id });
     summarizeDraftPip({
       draft:            draftPayload,
       accountName:      account.name,
@@ -137,6 +139,12 @@ export function AdHocConversationFlow({
       globalPeople:        globalPeople || [],
       discussedProjectIds: discussedProjectIds || [],
       discussedItemIds:    discussedItemIds    || [],
+    }, {
+      onRecap: function (txt) {
+        setPreviewPlan(function (prev) {
+          return prev && prev.streaming ? Object.assign({}, prev, { summary: txt }) : prev;
+        });
+      },
     }).then(function (out) {
       var followUp = out.follow_up_date || null;
       return updateMeeting(draftPayload.id, {
@@ -161,6 +169,7 @@ export function AdHocConversationFlow({
       });
     }).catch(function (err) {
       setSummarizing(false);
+      setPreviewPlan(function (prev) { return prev && prev.streaming ? null : prev; });
       setSummarizeErr((err && err.message) || "Pip couldn't summarize.");
     });
   }
@@ -234,7 +243,10 @@ export function AdHocConversationFlow({
           } : undefined}
         />
       )}
-      {previewPlan && (
+      {previewPlan && previewPlan.streaming && (
+        <SummarizeStreamingOverlay summary={previewPlan.summary} />
+      )}
+      {previewPlan && !previewPlan.streaming && (
         <PipSummarizePreview
           plan={previewPlan.plan}
           existingItems={openItems}

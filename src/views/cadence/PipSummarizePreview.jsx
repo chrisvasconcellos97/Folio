@@ -1330,9 +1330,45 @@ export function PipSummarizePreview({
         {grouped.news.length > 0 && (
           <div>
             <GroupHeader first={grouped.changes.length === 0}>New ({grouped.news.length})</GroupHeader>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {grouped.news.map(renderRow)}
-            </div>
+            {(function () {
+              // Bucket new rows by their INITIAL project routing (stable — the
+              // per-row picker can still re-tie without rows jumping around).
+              // Headers render only when they inform: a labeled project bucket,
+              // or the "no project" bucket when labeled ones exist beside it.
+              var buckets = [];
+              var byKey = {};
+              grouped.news.forEach(function (entry) {
+                var pid = entry.row.kind === "new_task" ? (entry.row.project_id || null) : null;
+                var proj = pid ? (activeProjects || []).find(function (x) { return x.id === pid; }) : null;
+                var key = proj ? proj.id : "_none";
+                if (!byKey[key]) {
+                  byKey[key] = { label: proj ? (proj.title || "Untitled project") : null, entries: [] };
+                  buckets.push(byKey[key]);
+                }
+                byKey[key].entries.push(entry);
+              });
+              var hasLabeled = buckets.some(function (b) { return b.label; });
+              return buckets.map(function (b, i) {
+                var header = b.label || (hasLabeled ? "Not in a project" : null);
+                return (
+                  <div key={i} style={{ marginBottom: i < buckets.length - 1 ? 12 : 0 }}>
+                    {header && (
+                      <div style={{
+                        fontFamily: MONO, fontSize: 9.5,
+                        color: b.label ? C.accent : C.textMuted,
+                        letterSpacing: "0.07em", textTransform: "uppercase",
+                        margin: "2px 0 6px",
+                      }}>
+                        {b.label ? "⊞ " + header : header}
+                      </div>
+                    )}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      {b.entries.map(renderRow)}
+                    </div>
+                  </div>
+                );
+              });
+            })()}
           </div>
         )}
 
