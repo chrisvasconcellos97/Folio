@@ -26,6 +26,7 @@ export const C = {
 
   // ── Accent ───────────────────────────────────────────────────────────────
   accent:       "var(--c-accent)",
+  accentHi:     "var(--c-accent-hi)",
   accentDeep:   "var(--c-accent-deep)",
   accentDim:    "var(--c-accent-dim)",
   accentGlow:   "var(--c-accent-glow)",

@@ -1,6 +1,6 @@
 # Folios — Product Overview
 
-*Last updated: 2026-06-10 (Work/Life mode, mobile Home hub, Teach Pip, split-screen meeting mode)*
+*Last updated: 2026-06-10 (Pip 3D "Bold Hex" visual form; Work/Life mode, mobile Home hub, Teach Pip, split-screen meeting mode)*
 
 This is the substantive product read after the [one-pager](./one-pager.md).
 Covers what Folios does, how it's structured, and what makes the Pip
@@ -215,6 +215,18 @@ No hard deletes for accounts or users. Everything is reversible:
 
 Pip is the differentiator. Embedded in every meeting, every account
 view, every brief.
+
+### Pip's visual form
+Pip has a distinct physical presence across every screen: two glowing
+hex-lattice spheres — a head and a smaller tail — suspended inside a
+slowly turning hexagonal ring. The whole figure breathes together on a
+2.4-second cycle: the ring swells, the sphere hexes open and close, and
+the core glow pulses, all in sync. The 3D scene renders via an SVG
+animation loop and re-skins automatically when the accent token changes
+(Work mode teal → Life mode dusty orange). Smaller instances (≤32px)
+stay as the classic two-circle form since the hexes mush at small sizes.
+The design is locked and enforced by an automated CI test — parameters
+cannot drift without a visible failure.
 
 ### Pip's personality
 Loyal, slightly anxious field analyst. Same voice across all

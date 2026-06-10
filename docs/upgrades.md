@@ -1,6 +1,6 @@
 # Folios — Upgrade Log
 
-*Last updated: 2026-06-10 (Work/Life mode, mobile Home hub, split-screen meeting mode)*
+*Last updated: 2026-06-10 (Pip 3D "Bold Hex" visual form; Work/Life mode, mobile Home hub, split-screen meeting mode)*
 
 Plain-English log of major upgrades shipped to Folios. Date, time, and
 a short explanation written in terms anyone can read — not technical
@@ -14,6 +14,25 @@ For the technical changelog with full release detail, see
 architectural changes, anything that meaningfully changes what Folios
 *does* or *is*. Not bug fixes, styling tweaks, or doc-only updates —
 those live in git history.
+
+---
+
+## 2026-06-10 — Pip's new 3D form: "Bold Hex"
+
+**What I built:** Pip got a real body. His mascot form — the two glowing orb circles — is replaced (at medium and large sizes) by a 3D hex-lattice figure: two spheres covered in hexagonal tiles, suspended inside a slowly turning, organically twisted hexagonal ring. The whole figure breathes as one thing on a 2.4-second cycle.
+
+**Problem it solves:** The original Pip orb was two CSS circles with a glow — simple, recognizable, but not distinctive. The "Bold Hex" design gives Pip a proper visual identity that's alive and unmistakable. More practically: the design was being spec'd and tweaked across sessions, and there was no guarantee a future change wouldn't silently drift the parameters. Now the design is locked in code: one automated test compares a numeric hash of every computed coordinate against a frozen expected value. If any geometry changes — ring radius, breath rate, tilt angle, anything — the CI build fails loudly and names the parameter that changed. You'll never get an accidental redesign.
+
+**What changed:**
+- `src/lib/pip3dGeometry.js` — pure math module. All 20+ locked parameters live here in a frozen constant. Every coordinate for every animation frame is computed here, deterministically, from that constant.
+- `src/components/PipOrb3D.jsx` — SVG renderer. Takes what the geometry module computes and writes it to the DOM per-frame using a single shared animation loop. No React re-renders per frame; all instances share one `requestAnimationFrame`.
+- `src/components/PipMark.jsx` — the canonical Pip component. `lg`, `xl`, `xxl` sizes now render the 3D scene; `xs`, `sm`, `md` stay as the classic two-circle form (hexes mush at small sizes — intentional).
+- `index.html` — new `--accent-hi` CSS token (the brightest hex face color) added to all four palette blocks: work dark, work light, life dark, life light. The 3D scene reads only CSS vars so it re-skins automatically when the accent changes.
+- `src/lib/pip3dGeometry.test.js` — the drift lock. Asserts every locked parameter by name, checks the spec is immutable, and hashes the full per-frame output at two time values against expected constants.
+
+**What you see today:** Open Home and the large Pip orb at the center is the 3D hex-ring figure, turning and breathing. Any other `lg`/`xl`/`xxl` Pip instance (error screens, the cadence "Pip ready" indicator, the loading screen) shows the same figure. Small Pip dots — nav indicators, inline "ask Pip" buttons, meeting icons — are unchanged.
+
+**Why it matters:** Pip now looks like Pip. The visual identity is locked by an automated test so it's maintenance-free — future developers (or Patch) can't accidentally drift it. The whole scene is drawn with CSS color tokens so it re-themes for free: switch to Life mode and Pip's ring and spheres go from teal to dusty orange without touching the renderer.
 
 ---
 
