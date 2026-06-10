@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pip — hex ring final (v4)</title>
+<style>
+  :root{
+    --accent:#4db896;
+    --accent-deep:#2d8f70;
+    --accent-hi:#9ff0d2;
+    --accent-glow:rgba(77,184,150,0.14);
+    --accent-border:rgba(77,184,150,0.42);
+    --accent-shadow:rgba(77,184,150,0.55);
+    --bg:#0c1110;
+    --surface:#121917;
+    --rule:rgba(255,255,255,0.07);
+    --text:#e8efec;
+    --text-dim:#93a39d;
+    --text-mute:#5f6f69;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    padding:34px 28px 60px;
+  }
+  h1{font-family:Georgia,"Times New Roman",serif; font-weight:600; font-size:26px; margin:0 0 4px; letter-spacing:0.2px}
+  .sub{color:var(--text-dim); font-size:13.5px; max-width:780px; margin:0 0 26px}
+  .topbar{display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap}
+  button.ctl{
+    background:var(--surface); color:var(--text-dim); border:1px solid var(--rule);
+    border-radius:8px; padding:7px 14px; font-size:13px; cursor:pointer;
+  }
+  button.ctl:hover{color:var(--text); border-color:var(--accent-border)}
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(270px,1fr)); gap:18px; max-width:1300px}
+  .card{
+    background:var(--surface); border:1px solid var(--rule); border-radius:14px;
+    padding:18px 16px 16px; display:flex; flex-direction:column; align-items:center;
+  }
+  .stage{width:250px; height:250px; display:grid; place-items:center}
+  .stage svg{width:100%; height:100%; overflow:visible}
+  .card h2{font-family:Georgia,serif; font-weight:600; font-size:16.5px; margin:12px 0 2px; letter-spacing:0.2px}
+  .card .tag{font-size:10px; font-weight:700; letter-spacing:0.09em; text-transform:uppercase; color:var(--accent); margin-top:2px}
+  .card p{font-size:12.5px; color:var(--text-dim); text-align:center; margin:7px 0 14px; min-height:54px}
+  .minis{display:flex; align-items:center; gap:18px; padding:10px 16px; border-top:1px solid var(--rule); width:100%; justify-content:center}
+  .minis .m{display:flex; flex-direction:column; align-items:center; gap:5px}
+  .minis .m span{font-size:10px; color:var(--text-mute); letter-spacing:0.05em}
+  .minis svg{overflow:visible}
+
+  /* ── Current Pip, copied from index.html ── */
+  .pip{
+    position:relative; display:inline-grid; place-items:center; border-radius:50%;
+    background:var(--accent-glow); border:1px solid var(--accent-border);
+    box-shadow:0 0 24px var(--accent-shadow); flex-shrink:0;
+  }
+  .pip > svg{width:38%; height:38%; overflow:visible; transform-origin:50% 50%; animation:pip-breathe 2.4s ease-in-out infinite}
+  .pip .head{fill:var(--accent)}
+  .pip .tail{fill:var(--accent); opacity:0.42}
+  @keyframes pip-breathe{0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.08);opacity:0.88}}
+  .pip.big{width:160px;height:160px}
+  .pip.lg{width:52px;height:52px;box-shadow:0 0 14px var(--accent-shadow)}
+  .pip.sm{width:22px;height:22px;box-shadow:0 0 10px var(--accent-shadow)}
+  @media (prefers-reduced-motion: reduce){ .pip > svg{animation:none} }
+
+  .note{margin-top:26px; color:var(--text-mute); font-size:12.5px; max-width:840px}
+  .note b{color:var(--text-dim); font-weight:600}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <h1>Pip — hex ring, final pass (v4)</h1>
+    <p class="sub">The ring now carries a slow-drifting <b>twist</b> — the band undulates out of plane and its
+    radius wavers, so it reads as a living warped loop instead of a perfect tire. Pip's two spheres wear the
+    <b>same hex lattice</b> as the ring over a soft glowing core, and every hexagon in the whole figure —
+    ring and spheres — opens and closes on the <b>same breath</b>.</p>
+  </div>
+  <button class="ctl" id="pauseBtn">⏸ Pause</button>
+</div>
+
+<div class="grid" id="grid">
+  <div class="card">
+    <div class="stage"><div class="pip big"><svg viewBox="-10 -10 20 20" aria-hidden="true"><circle class="head" cx="0" cy="-4" r="4"/><circle class="tail" cx="0" cy="4.5" r="2.8"/></svg></div></div>
+    <h2>Current Pip</h2>
+    <div class="tag">As shipped</div>
+    <p>The reference. Two flat circles, faint disc + border + glow, gentle 8% breathe.</p>
+    <div class="minis">
+      <div class="m"><div class="pip lg"><svg viewBox="-10 -10 20 20"><circle class="head" cx="0" cy="-4" r="4"/><circle class="tail" cx="0" cy="4.5" r="2.8"/></svg></div><span>52px</span></div>
+      <div class="m"><div class="pip sm"><svg viewBox="-10 -10 20 20"><circle class="head" cx="0" cy="-4" r="4"/><circle class="tail" cx="0" cy="4.5" r="2.8"/></svg></div><span>22px</span></div>
+    </div>
+  </div>
+</div>
+
+<p class="note"><b>Notes:</b> sphere positions and the 0.42 tail opacity are still today's Pip. One breath clock
+(2.4s, matching current) drives the ring's hexes, the spheres' hexes, the core glow, and the swell — everything
+inhales together. Colors ride the accent tokens (Life-mode orange re-skins automatically). Rotation honors
+<b>prefers-reduced-motion</b>. The 52px / 22px row shows rail-mark sizes.</p>
+
+<script>
+(function(){
+"use strict";
+var TAU=Math.PI*2;
+var ACCENT='#4db896', ACCENT_HI='#9ff0d2', ACCENT_DEEP='#2d8f70';
+var BREATH_S=2.4;
+var FP=480;   // ring perspective focal (screen units)
+var FS=5;     // sphere perspective focal (unit-sphere units)
+
+var NS="http://www.w3.org/2000/svg";
+function el(name,attrs,parent){
+  var n=document.createElementNS(NS,name);
+  for(var a in attrs) n.setAttribute(a,attrs[a]);
+  if(parent) parent.appendChild(n);
+  return n;
+}
+var uid=0;
+
+function rotXY(p,ca,sa,cb,sb){
+  var x=p[0], y=p[1]*ca-p[2]*sa, z=p[1]*sa+p[2]*ca;
+  return [x*cb+z*sb, y, -x*sb+z*cb];
+}
+function rotYX(v,ay,ax){
+  var x=v[0],y=v[1],z=v[2];
+  var cy=Math.cos(ay), sy=Math.sin(ay);
+  var x1=x*cy+z*sy, z1=-x*sy+z*cy;
+  var cx=Math.cos(ax), sx=Math.sin(ax);
+  return [x1, y*cx-z1*sx, y*sx+z1*cx];
+}
+function cross(a,b){return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];}
+function vnorm(a){var l=Math.hypot(a[0],a[1],a[2]);return [a[0]/l,a[1]/l,a[2]/l];}
+
+/* evenly distributed points on a unit sphere (golden spiral) */
+function fibSphere(n){
+  var pts=[], ga=Math.PI*(3-Math.sqrt(5));
+  for(var i=0;i<n;i++){
+    var y=1-(i/(n-1))*2;
+    var rad=Math.sqrt(Math.max(0,1-y*y));
+    var th=ga*i;
+    pts.push([Math.cos(th)*rad, y, Math.sin(th)*rad]);
+  }
+  return pts;
+}
+
+function bucketPaths(gBack,gFront,sw,fill){
+  var fillB = fill ? "rgba(77,184,150,0.05)" : "none";
+  var fillF = fill ? "rgba(77,184,150,0.10)" : "none";
+  return [
+    el("path",{fill:fillB,stroke:ACCENT_DEEP,"stroke-width":sw*0.8, opacity:0.16,"stroke-linejoin":"round"},gBack),
+    el("path",{fill:fillB,stroke:ACCENT,     "stroke-width":sw*0.9, opacity:0.34,"stroke-linejoin":"round"},gBack),
+    el("path",{fill:fillF,stroke:ACCENT,     "stroke-width":sw*1.05,opacity:0.66,"stroke-linejoin":"round"},gFront),
+    el("path",{fill:fillF,stroke:ACCENT_HI,  "stroke-width":sw*1.25,opacity:0.95,"stroke-linejoin":"round"},gFront)
+  ];
+}
+
+/* ── hex-tiled sphere with glowing core (matches ring language) ── */
+function makeHexSphere(parent,svgDefs,o){
+  // o:{cx,cy,r,n,bright,spin,tilt,phase,sw,fill}
+  var gid="s"+(uid++);
+  var grad=el("radialGradient",{id:gid,cx:"42%",cy:"36%",r:"70%"},svgDefs);
+  el("stop",{offset:"0%","stop-color":ACCENT_HI,"stop-opacity":"0.85"},grad);
+  el("stop",{offset:"45%","stop-color":ACCENT,"stop-opacity":"0.38"},grad);
+  el("stop",{offset:"100%","stop-color":ACCENT,"stop-opacity":"0"},grad);
+  var g=el("g",{opacity:o.bright},parent);
+  var core=el("circle",{cx:o.cx,cy:o.cy,r:o.r*0.92,fill:"url(#"+gid+")"},g);
+  var gB=el("g",{},g), gF=el("g",{},g);
+  var buckets=bucketPaths(gB,gF,o.sw,o.fill);
+  var pts=fibSphere(o.n);
+  var hscale=1.9/Math.sqrt(o.n);  // hex angular size ~ point spacing
+  return function(t,breath,bs){
+    var ay=o.phase+t*o.spin, ax=o.tilt;
+    var r=o.r*(0.97+0.06*breath);
+    core.setAttribute("r",(r*0.92).toFixed(1));
+    core.setAttribute("opacity",(0.55+0.45*breath).toFixed(2));
+    var d=["","","",""];
+    for(var i=0;i<pts.length;i++){
+      var p=rotYX(pts[i],ay,ax);
+      var up=Math.abs(p[1])>0.95?[1,0,0]:[0,1,0];
+      var e1=vnorm(cross(up,p)), e2=cross(p,e1);
+      var b=p[2]<-0.4?0 : p[2]<0?1 : p[2]<0.4?2 : 3;
+      var seg="";
+      for(var k=0;k<6;k++){
+        var a=k*TAU/6, c=Math.cos(a)*hscale*bs, s=Math.sin(a)*hscale*bs;
+        var q=[p[0]+e1[0]*c+e2[0]*s, p[1]+e1[1]*c+e2[1]*s, p[2]+e1[2]*c+e2[2]*s];
+        var pf=FS/(FS-q[2]);
+        seg+=(k===0?"M":"L")+(o.cx+q[0]*pf*r).toFixed(1)+" "+(o.cy-q[1]*pf*r).toFixed(1);
+      }
+      d[b]+=seg+"Z";
+    }
+    for(var b2=0;b2<4;b2++) buckets[b2].setAttribute("d",d[b2]||"M0 0");
+  };
+}
+
+/* ── hex-tiled torus ring with organic twist ────────────────────── */
+function makeHexRing(gBack,gFront,cfg){
+  // cfg:{R,rt,nu,nv,tiltX,tiltY,spin,sw,fill,warp,wob}
+  var buckets=bucketPaths(gBack,gFront,cfg.sw,cfg.fill);
+  var ca=Math.cos(cfg.tiltX), sa=Math.sin(cfg.tiltX);
+  var cb=Math.cos(cfg.tiltY), sb=Math.sin(cfg.tiltY);
+  var du=TAU/cfg.nu, dv=TAU/cfg.nv;
+  var hru=du*0.5*0.95, hrv=dv*0.5*0.85;
+  function surf(u,v,R,rt,t){
+    // organic twist: out-of-plane saddle wave + radius waver, both drifting slowly
+    var Ru=R*(1+0.055*Math.sin(2*u - t*0.33));
+    var zw=cfg.warp*Math.sin(2*u + 0.9 - t*0.41) + cfg.wob*Math.sin(3*u + t*0.27);
+    var cw=Ru+rt*Math.cos(v);
+    return [cw*Math.cos(u), cw*Math.sin(u), rt*Math.sin(v)+zw];
+  }
+  return function(t,breath,bs){
+    var R =cfg.R *(0.97+0.05*breath);
+    var rt=cfg.rt*(0.92+0.12*breath);
+    var spin=t*cfg.spin;
+    var zn=R*0.72+rt+cfg.warp*0.6;
+    var d=["","","",""];
+    for(var j=0;j<cfg.nv;j++){
+      var vC=(j+0.5)*dv;
+      var uOff=(j%2)*0.5*du;
+      for(var i=0;i<cfg.nu;i++){
+        var uC=i*du+uOff+spin;
+        var pc=rotXY(surf(uC,vC,R,rt,t),ca,sa,cb,sb);
+        var z=pc[2]/zn;
+        var b=z<-0.4?0 : z<0?1 : z<0.4?2 : 3;
+        var seg="";
+        for(var k=0;k<6;k++){
+          var ang=k*TAU/6+TAU/12;
+          var u=uC+hru*Math.cos(ang)*bs;
+          var v=vC+hrv*Math.sin(ang)*bs;
+          var pt=rotXY(surf(u,v,R,rt,t),ca,sa,cb,sb);
+          var pf=FP/(FP-pt[2]);
+          seg+=(k===0?"M":"L")+(pt[0]*pf).toFixed(1)+" "+(-pt[1]*pf).toFixed(1);
+        }
+        d[b]+=seg+"Z";
+      }
+    }
+    for(var b2=0;b2<4;b2++) buckets[b2].setAttribute("d",d[b2]||"M0 0");
+  };
+}
+
+/* ── a full scene ───────────────────────────────────────────────── */
+function makeScene(svg,cfg){
+  svg.setAttribute("viewBox","-118 -118 236 236");
+  var defs=el("defs",{},svg);
+  var gid="g"+(uid++);
+  var grad=el("radialGradient",{id:gid},defs);
+  el("stop",{offset:"0%","stop-color":ACCENT,"stop-opacity":"0.26"},grad);
+  el("stop",{offset:"55%","stop-color":ACCENT,"stop-opacity":"0.09"},grad);
+  el("stop",{offset:"100%","stop-color":ACCENT,"stop-opacity":"0"},grad);
+  var glow=el("circle",{cx:0,cy:0,r:100,fill:"url(#"+gid+")"},svg);
+
+  var gRingBack=el("g",{},svg);
+  var gPip=el("g",{},svg);
+  var gRingFront=el("g",{},svg);
+
+  // Pip — current proportions ×4, hex-skinned like the ring
+  var tail=makeHexSphere(gPip,defs,{cx:0,cy:18, r:11.2,n:cfg.sphereTailN,bright:0.42,spin:-0.26,tilt:0.4,phase:1.7,sw:cfg.ring.sw,fill:cfg.ring.fill});
+  var head=makeHexSphere(gPip,defs,{cx:0,cy:-16,r:16,  n:cfg.sphereHeadN,bright:1,   spin:0.3,  tilt:0.35,phase:0.3,sw:cfg.ring.sw,fill:cfg.ring.fill});
+
+  var ring=makeHexRing(gRingBack,gRingFront,cfg.ring);
+
+  return function(t){
+    var breath=0.5-0.5*Math.cos(TAU*t/BREATH_S);
+    var bs=0.55+0.56*breath;   // ONE breath factor for every hexagon in the figure
+    glow.setAttribute("opacity",(0.5+0.45*breath).toFixed(2));
+    var s=1+0.08*breath;
+    gPip.setAttribute("transform","scale("+s.toFixed(3)+")");
+    tail(t,breath,bs);
+    head(t,breath,bs);
+    ring(t,breath,bs);
+  };
+}
+
+/* ── variants ───────────────────────────────────────────────────── */
+var VARIANTS=[
+  {
+    name:"Honeycomb", tag:"Variant 1 · dense",
+    desc:"Small hexagons, tightly packed, fine twist. The most detailed — closest to the reference ring's weave density.",
+    cfg:{ sphereHeadN:32, sphereTailN:18,
+      ring:{R:84, rt:17, nu:24, nv:6, tiltX:0.40, tiltY:-0.48, spin:0.55, sw:1.0, fill:false, warp:13, wob:5} }
+  },
+  {
+    name:"Bold Hex", tag:"Variant 2 · chunky",
+    desc:"Fewer, bigger hexagons, deeper twist. Each cell's breath is unmistakable; boldest silhouette.",
+    cfg:{ sphereHeadN:18, sphereTailN:10,
+      ring:{R:84, rt:18, nu:16, nv:4, tiltX:0.40, tiltY:-0.48, spin:0.45, sw:1.6, fill:false, warp:16, wob:6} }
+  },
+  {
+    name:"Glass Hex", tag:"Variant 3 · filled",
+    desc:"Bold cells with a faint glass fill — panes catching light as the warped band turns.",
+    cfg:{ sphereHeadN:18, sphereTailN:10,
+      ring:{R:84, rt:18, nu:16, nv:4, tiltX:0.40, tiltY:-0.48, spin:0.45, sw:1.3, fill:true, warp:16, wob:6} }
+  }
+];
+
+var grid=document.getElementById("grid");
+var updaters=[];
+VARIANTS.forEach(function(v){
+  var card=document.createElement("div"); card.className="card";
+  card.innerHTML='<div class="stage"></div><h2></h2><div class="tag"></div><p></p>'
+    +'<div class="minis"><div class="m"><svg width="52" height="52"></svg><span>52px</span></div>'
+    +'<div class="m"><svg width="22" height="22"></svg><span>22px</span></div></div>';
+  card.querySelector("h2").textContent=v.name;
+  card.querySelector(".tag").textContent=v.tag;
+  card.querySelector("p").textContent=v.desc;
+  var big=el("svg",{},card.querySelector(".stage"));
+  grid.appendChild(card);
+  updaters.push(makeScene(big,v.cfg));
+  card.querySelectorAll(".minis svg").forEach(function(s){ updaters.push(makeScene(s,v.cfg)); });
+});
+
+/* ── loop ───────────────────────────────────────────────────────── */
+var reduced=window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+var paused=false, sim=0, last=null;
+var btn=document.getElementById("pauseBtn");
+btn.addEventListener("click",function(){
+  paused=!paused;
+  btn.textContent=paused?"▶ Play":"⏸ Pause";
+});
+function frame(ts){
+  if(last==null) last=ts;
+  if(!paused) sim+=(ts-last)/1000;
+  last=ts;
+  if(!paused) for(var i=0;i<updaters.length;i++) updaters[i](sim);
+  requestAnimationFrame(frame);
+}
+if(reduced){
+  for(var i=0;i<updaters.length;i++) updaters[i](1.1);
+  btn.style.display="none";
+} else {
+  requestAnimationFrame(frame);
+}
+})();
+</script>
+</body>
+</html>
