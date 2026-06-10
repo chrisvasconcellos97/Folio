@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pip — hex ring concepts (v3)</title>
+<style>
+  :root{
+    --accent:#4db896;
+    --accent-deep:#2d8f70;
+    --accent-hi:#9ff0d2;
+    --accent-glow:rgba(77,184,150,0.14);
+    --accent-border:rgba(77,184,150,0.42);
+    --accent-shadow:rgba(77,184,150,0.55);
+    --bg:#0c1110;
+    --surface:#121917;
+    --rule:rgba(255,255,255,0.07);
+    --text:#e8efec;
+    --text-dim:#93a39d;
+    --text-mute:#5f6f69;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    padding:34px 28px 60px;
+  }
+  h1{font-family:Georgia,"Times New Roman",serif; font-weight:600; font-size:26px; margin:0 0 4px; letter-spacing:0.2px}
+  .sub{color:var(--text-dim); font-size:13.5px; max-width:780px; margin:0 0 26px}
+  .topbar{display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap}
+  button.ctl{
+    background:var(--surface); color:var(--text-dim); border:1px solid var(--rule);
+    border-radius:8px; padding:7px 14px; font-size:13px; cursor:pointer;
+  }
+  button.ctl:hover{color:var(--text); border-color:var(--accent-border)}
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(270px,1fr)); gap:18px; max-width:1300px}
+  .card{
+    background:var(--surface); border:1px solid var(--rule); border-radius:14px;
+    padding:18px 16px 16px; display:flex; flex-direction:column; align-items:center;
+  }
+  .stage{width:250px; height:250px; display:grid; place-items:center}
+  .stage svg{width:100%; height:100%; overflow:visible}
+  .card h2{font-family:Georgia,serif; font-weight:600; font-size:16.5px; margin:12px 0 2px; letter-spacing:0.2px}
+  .card .tag{font-size:10px; font-weight:700; letter-spacing:0.09em; text-transform:uppercase; color:var(--accent); margin-top:2px}
+  .card p{font-size:12.5px; color:var(--text-dim); text-align:center; margin:7px 0 14px; min-height:54px}
+  .minis{display:flex; align-items:center; gap:18px; padding:10px 16px; border-top:1px solid var(--rule); width:100%; justify-content:center}
+  .minis .m{display:flex; flex-direction:column; align-items:center; gap:5px}
+  .minis .m span{font-size:10px; color:var(--text-mute); letter-spacing:0.05em}
+  .minis svg{overflow:visible}
+
+  /* ── Current Pip, copied from index.html ── */
+  .pip{
+    position:relative; display:inline-grid; place-items:center; border-radius:50%;
+    background:var(--accent-glow); border:1px solid var(--accent-border);
+    box-shadow:0 0 24px var(--accent-shadow); flex-shrink:0;
+  }
+  .pip > svg{width:38%; height:38%; overflow:visible; transform-origin:50% 50%; animation:pip-breathe 2.4s ease-in-out infinite}
+  .pip .head{fill:var(--accent)}
+  .pip .tail{fill:var(--accent); opacity:0.42}
+  @keyframes pip-breathe{0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.08);opacity:0.88}}
+  .pip.big{width:160px;height:160px}
+  .pip.lg{width:52px;height:52px;box-shadow:0 0 14px var(--accent-shadow)}
+  .pip.sm{width:22px;height:22px;box-shadow:0 0 10px var(--accent-shadow)}
+  @media (prefers-reduced-motion: reduce){ .pip > svg{animation:none} }
+
+  .note{margin-top:26px; color:var(--text-mute); font-size:12.5px; max-width:840px}
+  .note b{color:var(--text-dim); font-weight:600}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <h1>Pip — hex ring (v3)</h1>
+    <p class="sub">The ring is now tiled with <b>individual hexagons</b> instead of a woven mesh — and each
+    hexagon expands toward its neighbors on the inhale and shrinks back on the exhale, so the lattice itself
+    visibly breathes while the whole ring gently swells. Spin is much faster and obvious now. Pip's two glossy
+    spheres are way smaller — a jewel floating in the ring's opening.</p>
+  </div>
+  <button class="ctl" id="pauseBtn">⏸ Pause</button>
+</div>
+
+<div class="grid" id="grid">
+  <div class="card">
+    <div class="stage"><div class="pip big"><svg viewBox="-10 -10 20 20" aria-hidden="true"><circle class="head" cx="0" cy="-4" r="4"/><circle class="tail" cx="0" cy="4.5" r="2.8"/></svg></div></div>
+    <h2>Current Pip</h2>
+    <div class="tag">As shipped</div>
+    <p>The reference. Two flat circles, faint disc + border + glow, gentle 8% breathe.</p>
+    <div class="minis">
+      <div class="m"><div class="pip lg"><svg viewBox="-10 -10 20 20"><circle class="head" cx="0" cy="-4" r="4"/><circle class="tail" cx="0" cy="4.5" r="2.8"/></svg></div><span>52px</span></div>
+      <div class="m"><div class="pip sm"><svg viewBox="-10 -10 20 20"><circle class="head" cx="0" cy="-4" r="4"/><circle class="tail" cx="0" cy="4.5" r="2.8"/></svg></div><span>22px</span></div>
+    </div>
+  </div>
+</div>
+
+<p class="note"><b>Notes:</b> sphere proportions and the 0.42 tail opacity are still exactly today's Pip, just
+small and glassy. Breath cycle matches the current 2.4s. Colors ride the accent tokens (Life-mode orange
+re-skins automatically). Rotation honors <b>prefers-reduced-motion</b>. The 52px / 22px row shows each
+ring at rail-mark sizes.</p>
+
+<script>
+(function(){
+"use strict";
+var TAU=Math.PI*2;
+var ACCENT='#4db896', ACCENT_HI='#9ff0d2', ACCENT_DEEP='#2d8f70';
+var BREATH_S=2.4;
+var FP=480;
+
+var NS="http://www.w3.org/2000/svg";
+function el(name,attrs,parent){
+  var n=document.createElementNS(NS,name);
+  for(var a in attrs) n.setAttribute(a,attrs[a]);
+  if(parent) parent.appendChild(n);
+  return n;
+}
+var uid=0;
+
+/* rotate about X by a then Y by b (precomputed cos/sin) */
+function rotXY(p,ca,sa,cb,sb){
+  var x=p[0], y=p[1]*ca-p[2]*sa, z=p[1]*sa+p[2]*ca;
+  return [x*cb+z*sb, y, -x*sb+z*cb];
+}
+
+/* ── glossy 3D sphere ───────────────────────────────────────────── */
+function makeSphere(parent,svgDefs,o){
+  var gid="s"+(uid++);
+  var grad=el("radialGradient",{id:gid,cx:"34%",cy:"28%",r:"78%"},svgDefs);
+  el("stop",{offset:"0%","stop-color":"#e6fff4"},grad);
+  el("stop",{offset:"22%","stop-color":ACCENT_HI},grad);
+  el("stop",{offset:"55%","stop-color":ACCENT},grad);
+  el("stop",{offset:"100%","stop-color":"#123c30"},grad);
+  var g=el("g",{opacity:o.bright},parent);
+  el("circle",{cx:o.cx,cy:o.cy,r:o.r,fill:"url(#"+gid+")"},g);
+  el("ellipse",{
+    cx:o.cx-o.r*0.34, cy:o.cy-o.r*0.40, rx:o.r*0.24, ry:o.r*0.15,
+    fill:"#ffffff", opacity:0.7,
+    transform:"rotate(-24 "+(o.cx-o.r*0.34)+" "+(o.cy-o.r*0.40)+")"
+  },g);
+  return g;
+}
+
+/* ── hex-tiled torus ring ───────────────────────────────────────── */
+function makeHexRing(gBack,gFront,cfg){
+  // cfg:{R,rt,nu,nv,tiltX,tiltY,spin,sw,fill}
+  var fillB = cfg.fill ? "rgba(77,184,150,0.05)" : "none";
+  var fillF = cfg.fill ? "rgba(77,184,150,0.10)" : "none";
+  var buckets=[
+    el("path",{fill:fillB,stroke:ACCENT_DEEP,"stroke-width":cfg.sw*0.8, opacity:0.16,"stroke-linejoin":"round"},gBack),
+    el("path",{fill:fillB,stroke:ACCENT,     "stroke-width":cfg.sw*0.9, opacity:0.34,"stroke-linejoin":"round"},gBack),
+    el("path",{fill:fillF,stroke:ACCENT,     "stroke-width":cfg.sw*1.05,opacity:0.66,"stroke-linejoin":"round"},gFront),
+    el("path",{fill:fillF,stroke:ACCENT_HI,  "stroke-width":cfg.sw*1.25,opacity:0.95,"stroke-linejoin":"round"},gFront)
+  ];
+  var ca=Math.cos(cfg.tiltX), sa=Math.sin(cfg.tiltX);
+  var cb=Math.cos(cfg.tiltY), sb=Math.sin(cfg.tiltY);
+  var du=TAU/cfg.nu, dv=TAU/cfg.nv;
+  var hru=du*0.5*0.95, hrv=dv*0.5*0.85; // hex "radius" in parameter space
+  return function(t,breath){
+    var R =cfg.R *(0.97+0.05*breath);       // whole-ring swell
+    var rt=cfg.rt*(0.92+0.12*breath);
+    var bs=0.55+0.56*breath;                // each hexagon's own expand/contract
+    var spin=t*cfg.spin;
+    var zn=R*0.72+rt;
+    var d=["","","",""];
+    for(var j=0;j<cfg.nv;j++){
+      var vC=(j+0.5)*dv;
+      var uOff=(j%2)*0.5*du;
+      for(var i=0;i<cfg.nu;i++){
+        var uC=i*du+uOff+spin;
+        // hex center depth → bucket
+        var cwC=R+rt*Math.cos(vC);
+        var pc=rotXY([cwC*Math.cos(uC), cwC*Math.sin(uC), rt*Math.sin(vC)],ca,sa,cb,sb);
+        var z=pc[2]/zn;
+        var b=z<-0.4?0 : z<0?1 : z<0.4?2 : 3;
+        // 6 corners mapped onto the torus surface
+        var seg="";
+        for(var k=0;k<6;k++){
+          var ang=k*TAU/6+TAU/12;
+          var u=uC+hru*Math.cos(ang)*bs;
+          var v=vC+hrv*Math.sin(ang)*bs;
+          var cw=R+rt*Math.cos(v);
+          var pt=rotXY([cw*Math.cos(u), cw*Math.sin(u), rt*Math.sin(v)],ca,sa,cb,sb);
+          var pf=FP/(FP-pt[2]);
+          seg+=(k===0?"M":"L")+(pt[0]*pf).toFixed(1)+" "+(-pt[1]*pf).toFixed(1);
+        }
+        d[b]+=seg+"Z";
+      }
+    }
+    for(var b2=0;b2<4;b2++) buckets[b2].setAttribute("d",d[b2]||"M0 0");
+  };
+}
+
+/* ── a full scene ───────────────────────────────────────────────── */
+function makeScene(svg,cfg){
+  svg.setAttribute("viewBox","-118 -118 236 236");
+  var defs=el("defs",{},svg);
+  var gid="g"+(uid++);
+  var grad=el("radialGradient",{id:gid},defs);
+  el("stop",{offset:"0%","stop-color":ACCENT,"stop-opacity":"0.26"},grad);
+  el("stop",{offset:"55%","stop-color":ACCENT,"stop-opacity":"0.09"},grad);
+  el("stop",{offset:"100%","stop-color":ACCENT,"stop-opacity":"0"},grad);
+  var glow=el("circle",{cx:0,cy:0,r:100,fill:"url(#"+gid+")"},svg);
+
+  var gRingBack=el("g",{},svg);
+  var gPip=el("g",{},svg);
+  var gRingFront=el("g",{},svg);
+
+  // Pip himself — current proportions ×4 (head r4@-4, tail r2.8@4.5), way smaller
+  makeSphere(gPip,defs,{cx:0,cy:18,  r:11.2,bright:0.42});
+  makeSphere(gPip,defs,{cx:0,cy:-16, r:16,  bright:1});
+
+  var ring=makeHexRing(gRingBack,gRingFront,cfg.ring);
+
+  return function(t){
+    var breath=0.5-0.5*Math.cos(TAU*t/BREATH_S);
+    glow.setAttribute("opacity",(0.5+0.45*breath).toFixed(2));
+    var s=1+0.08*breath;
+    gPip.setAttribute("transform","scale("+s.toFixed(3)+")");
+    gPip.setAttribute("opacity",(1-0.12*breath).toFixed(2));
+    ring(t,breath);
+  };
+}
+
+/* ── variants ───────────────────────────────────────────────────── */
+var VARIANTS=[
+  {
+    name:"Honeycomb", tag:"Variant 1 · dense",
+    desc:"Small hexagons, tightly packed — closest to a true honeycomb band. Reads detailed and fine as it spins.",
+    cfg:{ ring:{R:84, rt:17, nu:24, nv:6, tiltX:0.40, tiltY:-0.48, spin:0.55, sw:1.0, fill:false} }
+  },
+  {
+    name:"Bold Hex", tag:"Variant 2 · chunky",
+    desc:"Fewer, bigger hexagons with heavier strokes. The expand/contract of each cell is unmistakable.",
+    cfg:{ ring:{R:84, rt:18, nu:16, nv:4, tiltX:0.40, tiltY:-0.48, spin:0.45, sw:1.6, fill:false} }
+  },
+  {
+    name:"Glass Hex", tag:"Variant 3 · filled",
+    desc:"Bold hexagons with a faint glass fill — each cell catches a little light, like panes in the band.",
+    cfg:{ ring:{R:84, rt:18, nu:16, nv:4, tiltX:0.40, tiltY:-0.48, spin:0.45, sw:1.3, fill:true} }
+  }
+];
+
+var grid=document.getElementById("grid");
+var updaters=[];
+VARIANTS.forEach(function(v){
+  var card=document.createElement("div"); card.className="card";
+  card.innerHTML='<div class="stage"></div><h2></h2><div class="tag"></div><p></p>'
+    +'<div class="minis"><div class="m"><svg width="52" height="52"></svg><span>52px</span></div>'
+    +'<div class="m"><svg width="22" height="22"></svg><span>22px</span></div></div>';
+  card.querySelector("h2").textContent=v.name;
+  card.querySelector(".tag").textContent=v.tag;
+  card.querySelector("p").textContent=v.desc;
+  var big=el("svg",{},card.querySelector(".stage"));
+  grid.appendChild(card);
+  updaters.push(makeScene(big,v.cfg));
+  card.querySelectorAll(".minis svg").forEach(function(s){ updaters.push(makeScene(s,v.cfg)); });
+});
+
+/* ── loop ───────────────────────────────────────────────────────── */
+var reduced=window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+var paused=false, sim=0, last=null;
+var btn=document.getElementById("pauseBtn");
+btn.addEventListener("click",function(){
+  paused=!paused;
+  btn.textContent=paused?"▶ Play":"⏸ Pause";
+});
+function frame(ts){
+  if(last==null) last=ts;
+  if(!paused) sim+=(ts-last)/1000;
+  last=ts;
+  if(!paused) for(var i=0;i<updaters.length;i++) updaters[i](sim);
+  requestAnimationFrame(frame);
+}
+if(reduced){
+  for(var i=0;i<updaters.length;i++) updaters[i](1.1);
+  btn.style.display="none";
+} else {
+  requestAnimationFrame(frame);
+}
+})();
+</script>
+</body>
+</html>
