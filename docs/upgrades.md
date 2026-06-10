@@ -70,6 +70,10 @@ those live in git history.
 
 **Why it matters:** "Are the tasks actually going to tie to the correct project I was talking about?" was the biggest trust gap in the summarize flow. This removes the guesswork at the source — the notes arrive already sorted.
 
+---
+
+## 2026-06-08 — Pip Autonomous Operator: Pip works the book overnight (Phase 1)
+
 **What I built:** Pip now works your accounts overnight on a schedule, instead of only thinking when you open the app. Each morning there's an "operator report" waiting on your Home screen — a prioritized plan for the day with follow-up emails already drafted, ready for you to review and send.
 
 **Problem it solves:** Until now every smart thing Pip did happened the moment you opened a screen — Pip was reacting. The daily brief told you *what's happening*; you still had to go do all of it. This turns Pip from an advisor you consult into a chief of staff who's already started the work before you sit down.

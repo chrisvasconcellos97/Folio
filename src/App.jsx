@@ -15,16 +15,9 @@ import { usePipAccountState } from "./hooks/usePipAccountState";
 import { useUserProfile } from "./hooks/useUserProfile";
 import { useMode } from "./hooks/useMode";
 import { useLifeItems } from "./hooks/useLifeItems";
-import { AddLifeItemModal } from "./views/life/AddLifeItemModal";
 import { useCustomWorkspaces } from "./hooks/useCustomWorkspaces";
 import { AuthView } from "./views/auth/AuthView";
 import { AccountsView } from "./views/accounts/AccountsView";
-import { AccountDetail } from "./views/accounts/AccountDetail";
-import { AddAccountModal } from "./views/accounts/AddAccountModal";
-import { StartConversationModal } from "./views/accounts/StartConversationModal";
-import { AdHocConversationFlow } from "./views/accounts/AdHocConversationFlow";
-import { ScheduleMeetingModal } from "./views/cadence/ScheduleMeetingModal";
-import { OnboardingTour } from "./views/welcome/OnboardingTour";
 import { PipLoader } from "./components/PipLoader";
 
 // Code-split heavy views — only fetched when navigated to. Cuts initial
@@ -41,17 +34,25 @@ var LeadershipView = lazy(function () { return import("./views/leadership/Leader
 var ObservabilityView = lazy(function () { return import("./views/observability/ObservabilityView").then(function (m) { return { default: m.ObservabilityView }; }); });
 var CommitmentsView = lazy(function () { return import("./views/commitments/CommitmentsView").then(function (m) { return { default: m.CommitmentsView }; }); });
 var ShareTargetView = lazy(function () { return import("./views/share/ShareTargetView").then(function (m) { return { default: m.ShareTargetView }; }); });
+// Heavy account-flow cluster — lazy so AccountDetail→CadenceHub→CadenceMeetingMode/
+// PipSummarizePreview (and pip.js) stay out of the initial index chunk (~150-200 kB).
+var AccountDetail          = lazy(function () { return import("./views/accounts/AccountDetail").then(function (m) { return { default: m.AccountDetail }; }); });
+var AddAccountModal        = lazy(function () { return import("./views/accounts/AddAccountModal").then(function (m) { return { default: m.AddAccountModal }; }); });
+var StartConversationModal = lazy(function () { return import("./views/accounts/StartConversationModal").then(function (m) { return { default: m.StartConversationModal }; }); });
+var AdHocConversationFlow  = lazy(function () { return import("./views/accounts/AdHocConversationFlow").then(function (m) { return { default: m.AdHocConversationFlow }; }); });
+var ScheduleMeetingModal   = lazy(function () { return import("./views/cadence/ScheduleMeetingModal").then(function (m) { return { default: m.ScheduleMeetingModal }; }); });
+var AddLifeItemModal       = lazy(function () { return import("./views/life/AddLifeItemModal").then(function (m) { return { default: m.AddLifeItemModal }; }); });
+var OnboardingTour         = lazy(function () { return import("./views/welcome/OnboardingTour").then(function (m) { return { default: m.OnboardingTour }; }); });
+var PipCatchUp             = lazy(function () { return import("./views/pip/PipCatchUp").then(function (m) { return { default: m.PipCatchUp }; }); });
 import { DesktopLayout } from "./layout/DesktopLayout";
 import { MobileLayout } from "./layout/MobileLayout";
 import { PipOrb, PipMark } from "./components/PipMark";
 import { CommandPalette } from "./components/CommandPalette";
-import { PipCatchUp } from "./views/pip/PipCatchUp";
 import { MeetingReminderBanner } from "./components/MeetingReminderBanner";
 import { Toast, showToast } from "./components/Toast";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useErrors } from "./hooks/useErrors";
 import { usePipState } from "./lib/pipState";
-import { compressCorrectionsPip } from "./lib/pip";
 import { PipOnboardingView } from "./views/onboarding/PipOnboardingView";
 import { computeAndSaveSnapshots } from "./lib/accountSnapshots";
 import { detectKnowledgeGaps, purgeEvergreenQuestions } from "./lib/detectKnowledgeGaps.js";
@@ -359,7 +360,7 @@ export default function App() {
           var userName = userEmail || "";
           var accountName = acct.name || "";
 
-          compressCorrectionsPip({ corrections: unprocessed, accountName: accountName, userName: userName, existingLessons: existingLessons })
+          import("./lib/pip").then(function (m) { return m.compressCorrectionsPip({ corrections: unprocessed, accountName: accountName, userName: userName, existingLessons: existingLessons }); })
             .then(function (paragraph) {
               compressionInFlightRef.current.delete(acct.id);
               if (!paragraph) return;
@@ -1279,7 +1280,7 @@ export default function App() {
   /* ---------- Render ---------- */
 
   var addAccountModal = (showAddAccount || editingAccount) && (
-    <AddAccountModal
+    <Suspense fallback={null}><AddAccountModal
       userId={userId}
       existing={editingAccount || null}
       accounts={accounts}
@@ -1295,7 +1296,7 @@ export default function App() {
         }));
       }}
       onClose={function () { setShowAddAccount(false); setEditingAccount(null); setAddAccountDefaultType(null); }}
-    />
+    /></Suspense>
   );
 
   // Global Quick Task modal — fired from HomeView "Quick capture +" popover
@@ -1310,7 +1311,7 @@ export default function App() {
   // Schedule a one-off future meeting — fired by "+ Schedule Meeting" in CadenceView
   // or by clicking an empty calendar day.
   var scheduleMeetingModal = showScheduleModal && (
-    <ScheduleMeetingModal
+    <Suspense fallback={null}><ScheduleMeetingModal
       accounts={accounts}
       contacts={allContacts}
       defaultDate={schedulePrefillDate}
@@ -1322,7 +1323,7 @@ export default function App() {
         });
       }}
       onClose={function () { setShowScheduleModal(false); setSchedulePrefillDate(null); }}
-    />
+    /></Suspense>
   );
 
   // Global Log Conversation flow — fired by the "+ Conversation" pill in the
@@ -1331,7 +1332,7 @@ export default function App() {
   // notepad + Pip summarize-with-preview. Self-contained so it survives view
   // changes underneath.
   var startConvModal = showStartConv && (
-    <StartConversationModal
+    <Suspense fallback={null}><StartConversationModal
       accounts={accounts}
       userId={userId}
       orgId={orgId}
@@ -1372,14 +1373,14 @@ export default function App() {
         }));
       } : null}
       onClose={function () { setShowStartConv(false); setConvPrefillDate(null); }}
-    />
+    /></Suspense>
   );
 
   var adHocFlowOverlay = adHocFlow && (function () {
     var acct = (accounts || []).find(function (a) { return a.id === adHocFlow.accountId; });
     if (!acct) return null;
     return (
-      <AdHocConversationFlow
+      <Suspense fallback={null}><AdHocConversationFlow
         draftId={adHocFlow.draftId}
         account={acct}
         accounts={accounts}
@@ -1389,7 +1390,7 @@ export default function App() {
         orgId={orgId}
         onClose={function () { setAdHocFlow(null); }}
         pipAccountStateRow={pipAcctStateApp.getStateRow(acct.id) || null}
-      />
+      /></Suspense>
     );
   })();
 
@@ -1502,11 +1503,11 @@ export default function App() {
   }
 
   var lifeModal = showAddLife ? (
-    <AddLifeItemModal
+    <Suspense fallback={null}><AddLifeItemModal
       initialKind="todo"
       onSave={function (payload) { return lifeApi.addItem(payload); }}
       onClose={function () { setShowAddLife(false); }}
-    />
+    /></Suspense>
   ) : null;
 
   if (isDesktop) {
@@ -1564,10 +1565,10 @@ export default function App() {
           </div>
         )}
         {showOnboarding && (
-          <OnboardingTour onComplete={function () {
+          <Suspense fallback={null}><OnboardingTour onComplete={function () {
             localStorage.setItem("folio_onboarded_" + userId, "true");
             setShowOnboarding(false);
-          }} />
+          }} /></Suspense>
         )}
         {notifPrompt}
         {isDesktop && showPalette && (
@@ -1586,14 +1587,14 @@ export default function App() {
           />
         )}
         {catchUpOpen && (
-          <PipCatchUp
+          <Suspense fallback={null}><PipCatchUp
             questions={dripHook.queuedQuestions || []}
             onAnswer={dripHook.answerQuestion}
             onSkip={dripHook.skipQuestion}
             onApplySuggestion={applyPipSuggestion}
             onClose={function () { setCatchUpOpen(false); }}
             onAskMore={teachPipMore}
-          />
+          /></Suspense>
         )}
       </>
     );
@@ -1605,14 +1606,14 @@ export default function App() {
       {reminderBanner}
       {inviteBanner}
       {catchUpOpen && (
-        <PipCatchUp
+        <Suspense fallback={null}><PipCatchUp
           questions={dripHook.queuedQuestions || []}
           onAnswer={dripHook.answerQuestion}
           onSkip={dripHook.skipQuestion}
             onApplySuggestion={applyPipSuggestion}
           onClose={function () { setCatchUpOpen(false); }}
             onAskMore={teachPipMore}
-        />
+        /></Suspense>
       )}
       <MobileLayout
         mode={mode}
@@ -1664,10 +1665,10 @@ export default function App() {
         </div>
       )}
       {showOnboarding && (
-        <OnboardingTour onComplete={function () {
+        <Suspense fallback={null}><OnboardingTour onComplete={function () {
           localStorage.setItem("folio_onboarded_" + userId, "true");
           setShowOnboarding(false);
-        }} />
+        }} /></Suspense>
       )}
       {notifPrompt}
     </>
