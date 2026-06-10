@@ -291,6 +291,17 @@ export function PipOrb3D({ state, isStatic }) {
   // Intersection observer state
   var visibleRef = useRef(true);
 
+  // Live state — read by the rAF callback so state changes apply without
+  // re-running the effect (a closure over `state` would go stale).
+  var stateRef = useRef(state);
+  stateRef.current = state;
+
+  // Per-instance scaled sim time. Accumulating (dt × timeScale) instead of
+  // multiplying total time by the scale means a state change speeds the
+  // animation up/down smoothly with no positional jump.
+  var scaledTimeRef = useRef(0);
+  var lastSimRef = useRef(null);
+
   useEffect(function () {
     var svgEl2 = svgRef.current;
     if (!svgEl2) return;
@@ -317,12 +328,15 @@ export function PipOrb3D({ state, isStatic }) {
 
     // Register in the shared rAF loop
     function onFrame(simTime) {
+      if (lastSimRef.current === null) lastSimRef.current = simTime;
+      var dt = simTime - lastSimRef.current;
+      lastSimRef.current = simTime;
       if (!visibleRef.current || !refs.current) return;
-      var ts = state === "thinking" ? simTime * PIP_SPEC.stateTimeScale.thinking
-             : state === "alert"    ? simTime * PIP_SPEC.stateTimeScale.alert
-             : simTime * PIP_SPEC.stateTimeScale.idle;
-      var frame = buildPipFrame(ts);
-      applyFrame(refs.current, frame, state || "idle");
+      var liveState = stateRef.current || "idle";
+      var scale = PIP_SPEC.stateTimeScale[liveState] || 1;
+      scaledTimeRef.current += dt * scale;
+      var frame = buildPipFrame(scaledTimeRef.current);
+      applyFrame(refs.current, frame, liveState, simTime);
     }
 
     var unregister = registerCallback(onFrame);
@@ -331,11 +345,7 @@ export function PipOrb3D({ state, isStatic }) {
       unregister();
       if (observer) observer.disconnect();
     };
-  }, [isStatic, reducedMotion]); // intentionally omit state — handled imperatively below
-
-  // When state changes, no remount needed — applyFrame handles it on next tick
-  // But we do need to trigger a re-render if isStatic/reducedMotion changes
-  // (handled by the effect dep array above).
+  }, [isStatic, reducedMotion]); // state intentionally omitted — read via stateRef each frame
 
   return (
     <svg
@@ -347,16 +357,15 @@ export function PipOrb3D({ state, isStatic }) {
 }
 
 // ── Apply one frame to the live SVG elements (imperative, no React re-render) ─
-function applyFrame(r, frame, state) {
+// simTime (unscaled wall-clock sim seconds) drives the speaking glow pulse so
+// its 0.42s period stays exact regardless of the state timeScale.
+function applyFrame(r, frame, state, simTime) {
   // Outer glow
   var glowOpa = frame.outerGlowOpacity;
-  // Speaking: oscillate outer glow between 0.55 and 1.0 on the frame's breath cycle
-  // (The rAF loop provides simTime which already advances; here we modulate opacity)
-  // We use frame.breath for the oscillation since speaking timeScale=1 and the
-  // breath clock is the natural oscillator.
-  if (state === "speaking") {
-    // Remap breath (0..1) to the speaking range
-    glowOpa = PIP_SPEC.speakingGlowMin + (PIP_SPEC.speakingGlowMax - PIP_SPEC.speakingGlowMin) * frame.breath;
+  // Speaking: oscillate the outer glow on the spec's 0.42s cycle
+  if (state === "speaking" && simTime !== undefined) {
+    var ph = 0.5 - 0.5 * Math.cos((Math.PI * 2 * simTime) / PIP_SPEC.speakingGlowPeriod);
+    glowOpa = PIP_SPEC.speakingGlowMin + (PIP_SPEC.speakingGlowMax - PIP_SPEC.speakingGlowMin) * ph;
   }
   r.glowCircle.setAttribute("opacity", glowOpa.toFixed(2));
 
