@@ -1,6 +1,6 @@
 # Folios — Upgrade Log
 
-*Last updated: 2026-06-08 (Pip Autonomous Operator — Phase 1)*
+*Last updated: 2026-06-10 (split-screen meeting mode)*
 
 Plain-English log of major upgrades shipped to Folios. Date, time, and
 a short explanation written in terms anyone can read — not technical
@@ -17,7 +17,22 @@ those live in git history.
 
 ---
 
-## 2026-06-08 — Pip Autonomous Operator: Pip works the book overnight (Phase 1)
+## 2026-06-10 — Split-screen meeting mode: notes that know which project they belong to
+
+**What I built:** The full-screen meeting room is now split down the middle. Your projects live on the left — tap one "discussed" and it opens its own note field right on the card — and your general notes live on the right. On the phone, a Notes / Projects toggle gives each side the whole screen, one at a time. Adding a new contact mid-meeting stays one tap away in the People section.
+
+**Problem it solves:** All meeting notes used to land in one big blob, and Pip had to guess which scribble belonged to which project — so tasks sometimes got routed to the wrong place, or to no place. Now notes typed on a project's card carry certain provenance: Pip knows those words are about *that* project.
+
+**What changed:**
+- New `project_notes` storage on every meeting — one slot per project, kept separate from the general notes.
+- Pip's summarize call receives the per-project notes as their own labeled blocks and is instructed to route a project's action items to that project, not elsewhere.
+- A project with typed notes counts as "discussed" automatically — no separate flagging step.
+- Un-discussing a project that has typed notes asks before discarding them, so a stray tap can't destroy notes.
+- Open items and people moved into collapsible sections beneath the projects so the panel stays project-first without losing anything.
+
+**What you see today:** Open any meeting → the desktop screen is split projects-left / notes-right (phone: a toggle at the top). Mark a project discussed and type into its card. When you End & Summarize, that project's tasks land on that project.
+
+**Why it matters:** "Are the tasks actually going to tie to the correct project I was talking about?" was the biggest trust gap in the summarize flow. This removes the guesswork at the source — the notes arrive already sorted.
 
 **What I built:** Pip now works your accounts overnight on a schedule, instead of only thinking when you open the app. Each morning there's an "operator report" waiting on your Home screen — a prioritized plan for the day with follow-up emails already drafted, ready for you to review and send.
 

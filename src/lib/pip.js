@@ -712,13 +712,25 @@ export function summarizeDraftPip(payload) {
   var servicedStates   = Array.isArray(payload.servicedStates)  ? payload.servicedStates  : [];
   var promiseStats     = payload.promiseStats  || null;
   var openItems          = Array.isArray(payload.openItems)          ? payload.openItems          : existingItems;
-  var discussedProjectIds = Array.isArray(payload.discussedProjectIds) ? payload.discussedProjectIds : [];
+  var discussedProjectIds = Array.isArray(payload.discussedProjectIds) ? payload.discussedProjectIds.slice() : [];
   var discussedItemIds    = Array.isArray(payload.discussedItemIds)    ? payload.discussedItemIds    : [];
+
+  // Per-project notes captured in split-screen meeting mode (item 41) —
+  // { [projectId]: noteText } on the meeting row. A project with typed notes
+  // was definitionally discussed, so merge into the DISCUSSED signal too.
+  var projectNotes = (m.project_notes && typeof m.project_notes === "object") ? m.project_notes : {};
+  var notedProjectIds = Object.keys(projectNotes).filter(function (id) {
+    return projectNotes[id] && String(projectNotes[id]).trim();
+  });
+  notedProjectIds.forEach(function (id) {
+    if (discussedProjectIds.indexOf(id) === -1) discussedProjectIds.push(id);
+  });
 
   // #5 — skip Pip on trivial drafts (< 100 chars of notes + action_items).
   // Returns immediately with an empty plan so the caller still shows the
   // preview modal; the user can add rows manually via "+ Add an item".
-  var noteLen = ((m.notes || "") + (m.action_items || "")).trim().length;
+  var noteLen = ((m.notes || "") + (m.action_items || "") +
+    notedProjectIds.map(function (id) { return String(projectNotes[id]); }).join("")).trim().length;
   if (noteLen < 100) {
     return Promise.resolve({
       summary:        (m.notes || "").trim() || "(no notes)",
@@ -941,6 +953,20 @@ export function summarizeDraftPip(payload) {
     }
     checkboxBlock += "\n";
   }
+  var projectNotesBlock = "";
+  if (notedProjectIds.length) {
+    projectNotesBlock =
+      "── NOTES FILED UNDER SPECIFIC PROJECTS ──\n" +
+      "The user captured these on the project's own card during the meeting, so their provenance is certain. " +
+      "Action items arising from a project's notes belong to THAT project — use new_task with its project_id (or update_task on its existing tasks). " +
+      "Do not route them to other projects and do not leave them as standalone items. " +
+      "Fold the substance of these notes into the overall summary too.\n" +
+      notedProjectIds.map(function (id) {
+        var p = activeProjects.find(function (x) { return x.id === id; });
+        return "\nPROJECT " + id + (p ? " (" + (p.title || "Untitled") + ")" : "") + ":\n" +
+          String(projectNotes[id]).trim();
+      }).join("\n") + "\n\n";
+  }
   var tailText =
     "\n\n── CONTEXT ──\n" +
     "Account: " + (payload.accountName || "—") + "\n" +
@@ -950,6 +976,7 @@ export function summarizeDraftPip(payload) {
     "Title: "   + (m.title || "Conversation") + "\n" +
     "Attendees: " + (m.attendees && m.attendees.length ? m.attendees.join(", ") : "—") + "\n\n" +
     checkboxBlock +
+    projectNotesBlock +
     "── NOTES ──\n" +
     (m.notes        ? m.notes + "\n" : "(empty)\n") +
     (m.action_items ? "\nExtra action notes: " + m.action_items + "\n" : "") +

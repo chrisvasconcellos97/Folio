@@ -1,6 +1,6 @@
 # Folios — Product Overview
 
-*Last updated: 2026-06-08 (Pip Autonomous Operator — Phase 1)*
+*Last updated: 2026-06-10 (split-screen meeting mode with per-project notes)*
 
 This is the substantive product read after the [one-pager](./one-pager.md).
 Covers what Folios does, how it's structured, and what makes the Pip
@@ -115,10 +115,20 @@ Follow-ups) for compactness.
 Distraction-free conversation capture. Opens over the global chrome:
 
 - Top bar with End & Summarize
-- Collapsible sidebar with Pip brief, projects, open items, contacts
+- **Split-screen layout** (desktop): projects panel on the left — each
+  project card carries its **own meeting-note field** once marked
+  discussed — general notes on the right. Open items and people sit in
+  collapsible sections under the projects, including inline add-contact
+  so new people met mid-meeting are captured on the spot.
+- **Mobile:** a Notes / Projects toggle gives each side of the split the
+  full screen, one at a time.
+- Per-project notes are stored separately (`project_notes`) so Pip knows
+  exactly which notes belong to which project and routes that project's
+  action items to it precisely.
 - Viewport-filling notepad with bullet-paste preservation
-- Autosaves every 1.5s
-- ESC to close
+- Autosaves every 1.5s (general and per-project notes alike)
+- ESC to close; un-discussing a project with typed notes asks before
+  discarding them
 
 On End & Summarize, Pip generates a structured plan (action items,
 project updates, follow-ups) and the user reviews it in the

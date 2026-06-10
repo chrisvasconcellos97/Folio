@@ -161,6 +161,7 @@ create table if not exists folio_meetings (
   status         text default 'summarized' check (status in ('draft', 'summarized', 'scheduled')),
   agenda         text,                 -- optional agenda note for scheduled meetings
   notes          text,
+  project_notes  jsonb default '{}'::jsonb,  -- item 41: per-project meeting notes { [projectId]: noteText }
   talking_points text,
   action_items   text,
   commitments    text,

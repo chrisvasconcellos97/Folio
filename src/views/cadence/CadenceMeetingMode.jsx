@@ -103,6 +103,182 @@ var METHOD_LABEL = {
   in_person: "In Person",
 };
 
+/* Collapsible secondary section (Open Items / People) — keeps the projects
+   panel primary while everything stays one tap away. */
+function CollapsibleSection({ title, count, open, onToggle, action, children }) {
+  return (
+    <div style={{
+      marginBottom: 12,
+      border: "1px solid " + C.rule, borderRadius: 8,
+      background: C.surface, overflow: "hidden",
+    }}>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onToggle}
+        onKeyDown={function (e) {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); }
+        }}
+        aria-expanded={open}
+        style={{
+          display: "flex", alignItems: "center", gap: 8,
+          padding: "9px 12px", cursor: "pointer", userSelect: "none",
+        }}
+      >
+        <span style={{ fontFamily: MONO, fontSize: 11, color: C.textMuted, lineHeight: 1 }}>
+          {open ? "▾" : "▸"}
+        </span>
+        <span style={{
+          flex: 1,
+          fontFamily: MONO, fontSize: 9.5, color: C.textMuted,
+          fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase",
+        }}>
+          {title}{typeof count === "number" ? " (" + count + ")" : ""}
+        </span>
+        {action}
+      </div>
+      {open && <div style={{ padding: "2px 12px 12px" }}>{children}</div>}
+    </div>
+  );
+}
+
+/* Inline quick-add contact form — one implementation shared by the desktop
+   People section and the mobile Projects pane (coherence rule). */
+function AddContactInline({ isMobile, onSave, onCancel }) {
+  var [name,   setName]   = useState("");
+  var [role,   setRole]   = useState("");
+  var [email,  setEmail]  = useState("");
+  var [saving, setSaving] = useState(false);
+  var inputStyle = {
+    background: C.bg, border: "1px solid " + C.rule, borderRadius: 4,
+    padding: "5px 8px", fontSize: isMobile ? 16 : 12, color: C.text,
+    fontFamily: INTER, outline: "none",
+    width: "100%", boxSizing: "border-box",
+  };
+  function save() {
+    if (!name.trim() || saving) return;
+    setSaving(true);
+    Promise.resolve(onSave({
+      name:  name.trim(),
+      title: role.trim()  || null,
+      email: email.trim() || null,
+    })).catch(function () { /* parent shows the toast; keep the form open */ })
+      .finally(function () { setSaving(false); });
+  }
+  return (
+    <div style={{
+      background: C.surface3, border: "1px solid " + C.rule,
+      borderRadius: 6, padding: "8px 10px",
+      marginBottom: 8,
+      display: "flex", flexDirection: "column", gap: 6,
+    }}>
+      <input type="text" value={name} onChange={function (e) { setName(e.target.value); }} placeholder="Name *" autoFocus style={inputStyle} />
+      <input type="text" value={role} onChange={function (e) { setRole(e.target.value); }} placeholder="Role / Title" style={inputStyle} />
+      <input type="email" value={email} onChange={function (e) { setEmail(e.target.value); }} placeholder="Email" style={inputStyle} />
+      <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+        <button
+          type="button"
+          onClick={onCancel}
+          style={{
+            background: "none", border: "1px solid " + C.rule, borderRadius: 4,
+            padding: "4px 10px", fontSize: 11, color: C.textMuted,
+            fontFamily: INTER, cursor: "pointer",
+          }}
+        >Cancel</button>
+        <button
+          type="button"
+          disabled={!name.trim() || saving}
+          onClick={save}
+          style={{
+            background: !name.trim() || saving ? C.accentFaint : C.accentDeep,
+            border: "none", borderRadius: 4,
+            padding: "4px 10px", fontSize: 11, fontWeight: 700,
+            color: !name.trim() || saving ? C.textMuted : C.bg,
+            fontFamily: INTER,
+            cursor: !name.trim() || saving ? "default" : "pointer",
+          }}
+        >{saving ? "Saving…" : "Add"}</button>
+      </div>
+    </div>
+  );
+}
+
+/* Project card + its own meeting-note field (item 41). Marking a project
+   discussed reveals the note field; the note is optional. Un-discussing a
+   project with typed notes asks before discarding — a stray tap must never
+   nuke notes. */
+function MeetingProjectCard({
+  project, isMobile, discussed, mentioned, note, pendingUndiscuss,
+  onToggleDiscussed, onNoteChange, onDiscardNote, onKeepNote, hubProps,
+}) {
+  return (
+    <div>
+      <HubProjectCard
+        project={project}
+        accounts={hubProps.accounts}
+        members={hubProps.members}
+        contacts={hubProps.contacts}
+        userEmail={hubProps.userEmail}
+        onUpdateProject={hubProps.onUpdateProject}
+        userId={hubProps.userId}
+        onUpdateTask={hubProps.onUpdateTask}
+        onAddTask={hubProps.onAddTask}
+        discussed={discussed}
+        mentioned={mentioned}
+        onToggleDiscussed={onToggleDiscussed}
+      />
+      {discussed && (
+        <div style={{ marginTop: 6, marginLeft: 10, paddingLeft: 10, borderLeft: "2px solid " + C.accentLine }}>
+          {pendingUndiscuss && (
+            <div style={{
+              display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
+              background: C.yellowFaint || C.surface3,
+              border: "1px solid " + (C.yellow || C.rule),
+              borderRadius: 6, padding: "6px 10px", marginBottom: 6,
+            }}>
+              <span style={{ fontSize: 11.5, color: C.text, flex: 1, minWidth: 140 }}>
+                Un-discussing discards this project's typed notes.
+              </span>
+              <button
+                type="button"
+                onClick={onDiscardNote}
+                style={{
+                  background: "none", border: "1px solid " + C.redLine,
+                  borderRadius: 4, padding: "3px 9px", fontSize: 11,
+                  color: C.red, fontFamily: INTER, cursor: "pointer", fontWeight: 600,
+                }}
+              >Discard notes</button>
+              <button
+                type="button"
+                onClick={onKeepNote}
+                style={{
+                  background: "none", border: "1px solid " + C.rule,
+                  borderRadius: 4, padding: "3px 9px", fontSize: 11,
+                  color: C.textMuted, fontFamily: INTER, cursor: "pointer",
+                }}
+              >Keep</button>
+            </div>
+          )}
+          <textarea
+            value={note || ""}
+            onChange={function (e) { onNoteChange(e.target.value); }}
+            placeholder={'Notes for "' + (project.title || "this project") + '" — optional, Pip routes them here'}
+            rows={3}
+            style={{
+              width: "100%", boxSizing: "border-box",
+              background: C.surface, color: C.text,
+              border: "1px solid " + C.rule, borderRadius: 8,
+              padding: "8px 10px",
+              fontFamily: INTER, fontSize: isMobile ? 16 : 13.5, lineHeight: 1.55,
+              resize: "vertical", outline: "none", minHeight: 56,
+            }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function CadenceMeetingMode({
   draft,
   account,
@@ -154,17 +330,25 @@ export function CadenceMeetingMode({
   // whole viewport.
   var [sidebarCollapsed, setCollapsed]  = useState(isMobile);
   var [briefExpanded, setBriefExpanded] = useState(false);
-  var [mobileTab, setMobileTab]         = useState("projects");
+  // Mobile split-screen-in-time: "notes" = full-width general notepad,
+  // "projects" = full-width projects pane (item 41's locked mobile design).
+  var [mobileMode, setMobileMode]       = useState("notes");
   var [quickItem, setQuickItem]         = useState("");
   var [addContactOpen, setAddContactOpen]   = useState(false);
-  var [newContactName, setNewContactName]   = useState("");
-  var [newContactRole, setNewContactRole]   = useState("");
-  var [newContactEmail, setNewContactEmail] = useState("");
-  var [savingContact, setSavingContact]     = useState(false);
   var [focusMode, setFocusMode]         = useState(false);
   var [attendees, setAttendees]         = useState(Array.isArray(draft.attendees) ? draft.attendees.slice() : []);
+  // Per-project meeting notes — { [projectId]: noteText }, persisted to
+  // folio_meetings.project_notes (item 41).
+  var [projectNotes, setProjectNotes]   = useState(function () {
+    return draft.project_notes && typeof draft.project_notes === "object"
+      ? Object.assign({}, draft.project_notes) : {};
+  });
+  var [pendingUndiscussId, setPendingUndiscussId] = useState(null);
+  var [itemsOpen,  setItemsOpen]  = useState(false);
+  var [peopleOpen, setPeopleOpen] = useState(false);
   var saveTimer = useRef(null);
   var attendeesTimer = useRef(null);
+  var projectNotesTimer = useRef(null);
   var notesRef  = useRef(null);
 
   // Auto-collapse sidebar whenever crossing into mobile width.
@@ -207,12 +391,45 @@ export function CadenceMeetingMode({
     return function () { if (attendeesTimer.current) clearTimeout(attendeesTimer.current); };
   }, [attendees]);
 
+  // Debounced per-project notes sync — same cadence as the main notes autosave.
+  useEffect(function () {
+    if (projectNotesTimer.current) clearTimeout(projectNotesTimer.current);
+    var saved = draft.project_notes && typeof draft.project_notes === "object" ? draft.project_notes : {};
+    if (JSON.stringify(saved) === JSON.stringify(projectNotes)) return;
+    projectNotesTimer.current = setTimeout(function () {
+      onUpdate(draft.id, { project_notes: projectNotes }).catch(function (e) {
+        console.error("Meeting mode project notes save failed:", e);
+      });
+    }, 1500);
+    return function () { if (projectNotesTimer.current) clearTimeout(projectNotesTimer.current); };
+  }, [projectNotes]);
+
   function toggleAttendee(name) {
     setAttendees(function (prev) {
       return prev.indexOf(name) >= 0
         ? prev.filter(function (n) { return n !== name; })
         : prev.concat([name]);
     });
+  }
+
+  function toggleProjectDiscussed(pid) {
+    var isDiscussed = discussedProjectIds.indexOf(pid) !== -1;
+    var hasNote = projectNotes[pid] && String(projectNotes[pid]).trim();
+    if (isDiscussed && hasNote) { setPendingUndiscussId(pid); return; }
+    setPendingUndiscussId(null);
+    setDiscussedProjectIds(function (prev) {
+      return prev.indexOf(pid) !== -1
+        ? prev.filter(function (id) { return id !== pid; })
+        : prev.concat([pid]);
+    });
+  }
+  function discardProjectNote(pid) {
+    setProjectNotes(function (prev) { var next = Object.assign({}, prev); delete next[pid]; return next; });
+    setDiscussedProjectIds(function (prev) { return prev.filter(function (id) { return id !== pid; }); });
+    setPendingUndiscussId(null);
+  }
+  function setProjectNote(pid, text) {
+    setProjectNotes(function (prev) { var next = Object.assign({}, prev); next[pid] = text; return next; });
   }
 
   // Live fuzzy match — highlight sidebar cards whose title/text appears in notes.
@@ -253,7 +470,7 @@ export function CadenceMeetingMode({
     window.addEventListener("keydown", onKey);
     return function () { window.removeEventListener("keydown", onKey); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notes, attendees]);
+  }, [notes, attendees, projectNotes]);
 
   // Stop recognition on unmount so the mic doesn't stay open if the overlay closes.
   useEffect(function () {
@@ -312,12 +529,15 @@ export function CadenceMeetingMode({
   function flushPendingSave() {
     if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null; }
     if (attendeesTimer.current) { clearTimeout(attendeesTimer.current); attendeesTimer.current = null; }
+    if (projectNotesTimer.current) { clearTimeout(projectNotesTimer.current); projectNotesTimer.current = null; }
     var pending = {};
     if (notes !== (draft.notes || "")) pending.notes = notes;
     var draftAttendees = Array.isArray(draft.attendees) ? draft.attendees : [];
     var attendeesChanged = draftAttendees.length !== attendees.length ||
                            draftAttendees.some(function (n, i) { return n !== attendees[i]; });
     if (attendeesChanged) pending.attendees = attendees.length ? attendees : null;
+    var savedProjectNotes = draft.project_notes && typeof draft.project_notes === "object" ? draft.project_notes : {};
+    if (JSON.stringify(savedProjectNotes) !== JSON.stringify(projectNotes)) pending.project_notes = projectNotes;
     if (Object.keys(pending).length === 0) return Promise.resolve();
     return onUpdate(draft.id, pending);
   }
@@ -330,7 +550,7 @@ export function CadenceMeetingMode({
 
   function handleSummarize() {
     if (summarizing) return;
-    var draftPayload = Object.assign({}, draft, { notes: notes });
+    var draftPayload = Object.assign({}, draft, { notes: notes, project_notes: projectNotes });
     flushPendingSave().finally(function () {
       onSummarizeRequest(draftPayload, discussedProjectIds, discussedItemIds);
     });
@@ -349,9 +569,10 @@ export function CadenceMeetingMode({
       });
   }
 
-  // When expanded on mobile we still cap to a viewport-friendly width so
-  // the notepad column doesn't disappear entirely.
-  var sidebarWidth = sidebarCollapsed ? 44 : (isMobile ? Math.min(320, typeof window !== "undefined" ? window.innerWidth - 60 : 320) : 480);
+  // Desktop split (item 41): projects pane takes ~42% so per-project notes
+  // are comfortably typeable; general notes keep the rest. Collapsible to a
+  // 44px strip; focus mode hides it entirely.
+  var sidebarWidth = sidebarCollapsed ? 44 : "42%";
   var hasBrief     = Boolean(brief && brief.trim());
   var topLabel     = cadenceLabel
     ? cadenceLabel
@@ -376,6 +597,138 @@ export function CadenceMeetingMode({
       ? { label: atRisk + " at risk", tone: "warn" }
       : { label: list.length + " on track", tone: "ok" };
   })();
+
+  // Shared renderers — the desktop projects pane and the mobile Projects mode
+  // show the same content (coherence rule: one implementation each).
+  var hubProps = {
+    accounts: accounts, members: members, contacts: contacts, userEmail: userEmail,
+    onUpdateProject: onUpdateProject, userId: userId,
+    onUpdateTask: onUpdateTask, onAddTask: onAddTask,
+  };
+
+  function renderAgenda() {
+    if (!draft.agenda || !draft.agenda.trim()) return null;
+    return (
+      <SidebarSection title="Agenda">
+        <div style={{
+          fontSize: 13, color: C.textSoft, lineHeight: 1.55,
+          whiteSpace: "pre-wrap", fontFamily: INTER,
+          background: C.surface2, border: "1px solid " + C.rule,
+          borderLeft: "2px solid " + C.accent, borderRadius: 8, padding: "9px 11px",
+        }}>
+          {draft.agenda}
+        </div>
+      </SidebarSection>
+    );
+  }
+
+  function renderProjectCards() {
+    if ((projects || []).length === 0) {
+      return <div style={{ fontSize: 11, color: C.textMuted }}>No active projects.</div>;
+    }
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {(projects || []).map(function (p) {
+          return (
+            <MeetingProjectCard
+              key={p.id}
+              project={p}
+              isMobile={isMobile}
+              discussed={discussedProjectIds.indexOf(p.id) !== -1}
+              mentioned={mentionedProjectIds.indexOf(p.id) !== -1}
+              note={projectNotes[p.id] || ""}
+              pendingUndiscuss={pendingUndiscussId === p.id}
+              onToggleDiscussed={function () { toggleProjectDiscussed(p.id); }}
+              onNoteChange={function (text) { setProjectNote(p.id, text); }}
+              onDiscardNote={function () { discardProjectNote(p.id); }}
+              onKeepNote={function () { setPendingUndiscussId(null); }}
+              hubProps={hubProps}
+            />
+          );
+        })}
+      </div>
+    );
+  }
+
+  function renderItemRows() {
+    if ((openItems || []).length === 0) {
+      return <div style={{ fontSize: 11, color: C.green }}>All clear.</div>;
+    }
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {(openItems || []).map(function (i) {
+          return (
+            <OpenItemRow
+              key={i.id}
+              item={i}
+              onClose={onCloseItem}
+              discussed={discussedItemIds.indexOf(i.id) !== -1}
+              mentioned={mentionedItemIds.indexOf(i.id) !== -1}
+              onToggleDiscussed={function () {
+                setDiscussedItemIds(function (prev) {
+                  return prev.indexOf(i.id) !== -1
+                    ? prev.filter(function (id) { return id !== i.id; })
+                    : prev.concat([i.id]);
+                });
+              }}
+            />
+          );
+        })}
+      </div>
+    );
+  }
+
+  function renderPeople() {
+    return (
+      <>
+        {addContactOpen && (
+          <AddContactInline
+            isMobile={isMobile}
+            onCancel={function () { setAddContactOpen(false); }}
+            onSave={function (p) {
+              return Promise.resolve(onAddContact(p)).then(function () {
+                toggleAttendee(p.name);
+                setAddContactOpen(false);
+              });
+            }}
+          />
+        )}
+        {(contacts || []).length === 0 && !addContactOpen ? (
+          <div style={{ fontSize: 11, color: C.textMuted }}>No contacts.</div>
+        ) : (
+          (contacts || []).map(function (c) {
+            return (
+              <ContactCard
+                key={c.id}
+                contact={c}
+                selected={attendees.indexOf(c.name) >= 0}
+                onToggle={toggleAttendee}
+              />
+            );
+          })
+        )}
+      </>
+    );
+  }
+
+  var addContactAction = onAddContact ? (
+    <button
+      type="button"
+      onClick={function (e) {
+        e.stopPropagation();
+        setPeopleOpen(true);
+        setAddContactOpen(function (v) { return !v; });
+      }}
+      title="Add contact"
+      aria-label="Add contact"
+      style={{
+        background: "none", border: "1px solid " + C.rule,
+        borderRadius: 4, color: C.accent, cursor: "pointer",
+        fontFamily: MONO, fontSize: 11, lineHeight: 1,
+        padding: "2px 7px", flexShrink: 0, fontWeight: 700,
+      }}
+    >+ Add</button>
+  ) : null;
 
   var overlay = (
     <div
@@ -548,6 +901,8 @@ export function CadenceMeetingMode({
         {!isMobile && !focusMode && (
         <div style={{
           width: sidebarWidth,
+          minWidth: sidebarCollapsed ? 44 : 400,
+          maxWidth: sidebarCollapsed ? 44 : 600,
           background: C.surface2,
           borderRight: "1px solid " + C.rule,
           display: "flex", flexDirection: "column",
@@ -566,7 +921,7 @@ export function CadenceMeetingMode({
                 fontFamily: SERIF, fontSize: 15, color: C.text,
                 letterSpacing: "-0.01em",
               }}>
-                Context
+                Projects & notes
               </div>
             )}
             <button
@@ -584,193 +939,27 @@ export function CadenceMeetingMode({
           </div>
           {!sidebarCollapsed && (
             <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 28px 16px" }}>
-              {draft.agenda && draft.agenda.trim() && (
-                <SidebarSection title="Agenda">
-                  <div style={{
-                    fontSize: 13, color: C.textSoft, lineHeight: 1.55,
-                    whiteSpace: "pre-wrap", fontFamily: "'Inter', system-ui, sans-serif",
-                    background: C.surface2, border: "1px solid " + C.rule,
-                    borderLeft: "2px solid " + C.accent, borderRadius: 8, padding: "9px 11px",
-                  }}>
-                    {draft.agenda}
-                  </div>
-                </SidebarSection>
-              )}
-              <SidebarSection title="Gauge Projects" count={(projects || []).length}>
-                {(projects || []).length === 0 ? (
-                  <div style={{ fontSize: 11, color: C.textMuted }}>No active projects.</div>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {(projects || []).map(function (p) {
-                      return (
-                        <HubProjectCard
-                          key={p.id}
-                          project={p}
-                          accounts={accounts}
-                          members={members}
-                          contacts={contacts}
-                          userEmail={userEmail}
-                          onUpdateProject={onUpdateProject}
-                          userId={userId}
-                          onUpdateTask={onUpdateTask}
-                          onAddTask={onAddTask}
-                          discussed={discussedProjectIds.indexOf(p.id) !== -1}
-                          mentioned={mentionedProjectIds.indexOf(p.id) !== -1}
-                          onToggleDiscussed={function () {
-                            setDiscussedProjectIds(function (prev) {
-                              return prev.indexOf(p.id) !== -1
-                                ? prev.filter(function (id) { return id !== p.id; })
-                                : prev.concat([p.id]);
-                            });
-                          }}
-                        />
-                      );
-                    })}
-                  </div>
-                )}
+              {renderAgenda()}
+              <SidebarSection title="Projects — mark ✦ discussed to add notes" count={(projects || []).length}>
+                {renderProjectCards()}
               </SidebarSection>
-              <SidebarSection title="Open Items" count={(openItems || []).length}>
-                {(openItems || []).length === 0 ? (
-                  <div style={{ fontSize: 11, color: C.green }}>All clear.</div>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    {(openItems || []).map(function (i) {
-                      return (
-                        <OpenItemRow
-                          key={i.id}
-                          item={i}
-                          onClose={onCloseItem}
-                          discussed={discussedItemIds.indexOf(i.id) !== -1}
-                          mentioned={mentionedItemIds.indexOf(i.id) !== -1}
-                          onToggleDiscussed={function () {
-                            setDiscussedItemIds(function (prev) {
-                              return prev.indexOf(i.id) !== -1
-                                ? prev.filter(function (id) { return id !== i.id; })
-                                : prev.concat([i.id]);
-                            });
-                          }}
-                        />
-                      );
-                    })}
-                  </div>
-                )}
-              </SidebarSection>
-              <SidebarSection
-                title={"Contacts" + (attendees.length ? " · " + attendees.length + " attending" : "")}
-                count={(contacts || []).length}
-                action={onAddContact ? (
-                  <button
-                    type="button"
-                    onClick={function (e) { e.stopPropagation(); setAddContactOpen(function (v) { return !v; }); }}
-                    title="Add contact"
-                    aria-label="Add contact"
-                    style={{
-                      background: "none", border: "1px solid " + C.rule,
-                      borderRadius: 4, color: C.textMuted, cursor: "pointer",
-                      fontFamily: MONO, fontSize: 11, lineHeight: 1,
-                      padding: "1px 5px", flexShrink: 0,
-                    }}
-                  >+</button>
-                ) : null}
+              <CollapsibleSection
+                title="Open Items"
+                count={(openItems || []).length}
+                open={itemsOpen}
+                onToggle={function () { setItemsOpen(function (v) { return !v; }); }}
               >
-                {addContactOpen && (
-                  <div style={{
-                    background: C.surface3, border: "1px solid " + C.rule,
-                    borderRadius: 6, padding: "8px 10px",
-                    marginBottom: 8,
-                    display: "flex", flexDirection: "column", gap: 6,
-                  }}>
-                    <input
-                      type="text"
-                      value={newContactName}
-                      onChange={function (e) { setNewContactName(e.target.value); }}
-                      placeholder="Name *"
-                      autoFocus
-                      style={{
-                        background: C.bg, border: "1px solid " + C.rule, borderRadius: 4,
-                        padding: "5px 8px", fontSize: 12, color: C.text,
-                        fontFamily: "'Inter', system-ui, sans-serif", outline: "none",
-                        width: "100%", boxSizing: "border-box",
-                      }}
-                    />
-                    <input
-                      type="text"
-                      value={newContactRole}
-                      onChange={function (e) { setNewContactRole(e.target.value); }}
-                      placeholder="Role / Title"
-                      style={{
-                        background: C.bg, border: "1px solid " + C.rule, borderRadius: 4,
-                        padding: "5px 8px", fontSize: 12, color: C.text,
-                        fontFamily: "'Inter', system-ui, sans-serif", outline: "none",
-                        width: "100%", boxSizing: "border-box",
-                      }}
-                    />
-                    <input
-                      type="email"
-                      value={newContactEmail}
-                      onChange={function (e) { setNewContactEmail(e.target.value); }}
-                      placeholder="Email"
-                      style={{
-                        background: C.bg, border: "1px solid " + C.rule, borderRadius: 4,
-                        padding: "5px 8px", fontSize: 12, color: C.text,
-                        fontFamily: "'Inter', system-ui, sans-serif", outline: "none",
-                        width: "100%", boxSizing: "border-box",
-                      }}
-                    />
-                    <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
-                      <button
-                        type="button"
-                        onClick={function () { setAddContactOpen(false); setNewContactName(""); setNewContactRole(""); setNewContactEmail(""); }}
-                        style={{
-                          background: "none", border: "1px solid " + C.rule, borderRadius: 4,
-                          padding: "4px 10px", fontSize: 11, color: C.textMuted,
-                          fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer",
-                        }}
-                      >Cancel</button>
-                      <button
-                        type="button"
-                        disabled={!newContactName.trim() || savingContact}
-                        onClick={function () {
-                          if (!newContactName.trim() || savingContact) return;
-                          setSavingContact(true);
-                          Promise.resolve(onAddContact({
-                            name:  newContactName.trim(),
-                            title: newContactRole.trim() || null,
-                            email: newContactEmail.trim() || null,
-                          })).then(function () {
-                            toggleAttendee(newContactName.trim());
-                            setAddContactOpen(false);
-                            setNewContactName(""); setNewContactRole(""); setNewContactEmail("");
-                          }).catch(function () {
-                          }).finally(function () { setSavingContact(false); });
-                        }}
-                        style={{
-                          background: !newContactName.trim() || savingContact ? C.accentFaint : C.accentDeep,
-                          border: "none", borderRadius: 4,
-                          padding: "4px 10px", fontSize: 11, fontWeight: 700,
-                          color: !newContactName.trim() || savingContact ? C.textMuted : C.bg,
-                          fontFamily: "'Inter', system-ui, sans-serif",
-                          cursor: !newContactName.trim() || savingContact ? "default" : "pointer",
-                        }}
-                      >{savingContact ? "Saving…" : "Add"}</button>
-                    </div>
-                  </div>
-                )}
-                {(contacts || []).length === 0 && !addContactOpen ? (
-                  <div style={{ fontSize: 11, color: C.textMuted }}>No contacts.</div>
-                ) : (
-                  (contacts || []).map(function (c) {
-                    return (
-                      <ContactCard
-                        key={c.id}
-                        contact={c}
-                        selected={attendees.indexOf(c.name) >= 0}
-                        onToggle={toggleAttendee}
-                      />
-                    );
-                  })
-                )}
-              </SidebarSection>
+                {renderItemRows()}
+              </CollapsibleSection>
+              <CollapsibleSection
+                title={"People" + (attendees.length ? " · " + attendees.length + " attending" : "")}
+                count={(contacts || []).length}
+                open={peopleOpen}
+                onToggle={function () { setPeopleOpen(function (v) { return !v; }); }}
+                action={addContactAction}
+              >
+                {renderPeople()}
+              </CollapsibleSection>
             </div>
           )}
         </div>
@@ -782,8 +971,54 @@ export function CadenceMeetingMode({
           minWidth: 0, minHeight: 0,
           background: C.bg,
         }}>
+          {/* Mobile mode toggle — Notes | Projects, two full-width modes
+              (item 41's locked mobile design). Hidden in focus mode. */}
+          {isMobile && !focusMode && (
+            <div style={{
+              display: "flex", gap: 6,
+              padding: "8px 10px 0 10px",
+              background: C.bg, flexShrink: 0,
+            }}>
+              {[
+                { id: "notes",    label: "✎ Notes" },
+                { id: "projects", label: "Projects", count: (projects || []).length },
+              ].map(function (t) {
+                var active = mobileMode === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    onClick={function () { setMobileMode(t.id); }}
+                    aria-pressed={active}
+                    style={{
+                      flex: 1,
+                      background: active ? C.accentFaint : C.surface,
+                      border: "1px solid " + (active ? C.accentLine : C.rule),
+                      borderRadius: 8,
+                      padding: "9px 8px",
+                      fontSize: 12.5, fontWeight: active ? 700 : 400,
+                      color: active ? C.accent : C.textMuted,
+                      fontFamily: INTER, cursor: "pointer",
+                      display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
+                    }}
+                  >
+                    {t.label}
+                    {typeof t.count === "number" && (
+                      <span style={{
+                        fontFamily: MONO, fontSize: 10,
+                        color: active ? C.accent : C.textMuted,
+                        background: active ? "transparent" : C.surface2,
+                        border: "1px solid " + (active ? C.accentLine : C.rule),
+                        borderRadius: 999, padding: "0 6px",
+                      }}>{t.count}</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {(!isMobile || focusMode || mobileMode === "notes") && (
           <div style={{
-            flex: isMobile ? "0 0 auto" : 1,
+            flex: 1, minHeight: 0,
             overflowY: "auto",
             display: "flex", justifyContent: "center",
             padding: isMobile ? "10px 10px 6px 10px" : "32px 32px 8px 32px",
@@ -889,8 +1124,7 @@ export function CadenceMeetingMode({
                 placeholder="Start typing — Pip will summarize when you end the meeting…"
                 style={{
                   flex: 1, width: "100%",
-                  height: isMobile ? 220 : undefined,
-                  minHeight: isMobile ? 220 : 440,
+                  minHeight: isMobile ? 260 : 440,
                   background: C.surface,
                   color: C.text,
                   border: "1px solid " + C.rule,
@@ -905,234 +1139,40 @@ export function CadenceMeetingMode({
               />
             </div>
           </div>
+          )}
 
-          {/* Mobile context tabs + content. Stacks below the notes so all
-              three sections (projects / items / contacts) are reachable
-              without a sidebar drawer. Hidden in focus mode. */}
-          {isMobile && !focusMode && (
-            <>
-              <div style={{
-                display: "flex", gap: 4,
-                padding: "6px 10px 0 10px",
-                background: C.bg,
-                flexShrink: 0,
-              }}>
-                {[
-                  { id: "projects", label: "Projects", count: (projects || []).length },
-                  { id: "items",    label: "Items",    count: (openItems || []).length },
-                  { id: "contacts", label: "Contacts", count: (contacts || []).length },
-                ].map(function (t) {
-                  var active = mobileTab === t.id;
-                  return (
-                    <button
-                      key={t.id}
-                      onClick={function () { setMobileTab(t.id); }}
-                      style={{
-                        flex: 1,
-                        background: active ? C.surface : "transparent",
-                        border: "1px solid " + (active ? C.rule : "transparent"),
-                        borderBottom: "none",
-                        borderRadius: "8px 8px 0 0",
-                        padding: "8px 8px",
-                        fontSize: 11.5, fontWeight: active ? 600 : 400,
-                        color: active ? C.accent : C.textMuted,
-                        fontFamily: INTER, cursor: "pointer",
-                        display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
-                      }}
-                    >
-                      {t.label}
-                      <span style={{
-                        fontFamily: MONO, fontSize: 10, color: active ? C.accent : C.textMuted,
-                        background: active ? C.accentFaint : "transparent",
-                        border: "1px solid " + (active ? C.accentLine : C.rule),
-                        borderRadius: 999, padding: "0 6px",
-                      }}>{t.count}</span>
-                    </button>
-                  );
-                })}
-              </div>
-              <div style={{
-                flex: 1, overflowY: "auto",
-                padding: "12px 10px 10px",
-                background: C.surface,
-                borderTop: "1px solid " + C.rule,
-              }}>
-                {mobileTab === "projects" && ((projects || []).length === 0 ? (
-                  <div style={{ fontSize: 12, color: C.textMuted, padding: "4px 0" }}>No active projects.</div>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {(projects || []).map(function (p) {
-                      return (
-                        <HubProjectCard
-                          key={p.id}
-                          project={p}
-                          accounts={accounts}
-                          members={members}
-                          contacts={contacts}
-                          userEmail={userEmail}
-                          onUpdateProject={onUpdateProject}
-                          userId={userId}
-                          onUpdateTask={onUpdateTask}
-                          onAddTask={onAddTask}
-                          discussed={discussedProjectIds.indexOf(p.id) !== -1}
-                          mentioned={mentionedProjectIds.indexOf(p.id) !== -1}
-                          onToggleDiscussed={function () {
-                            setDiscussedProjectIds(function (prev) {
-                              return prev.indexOf(p.id) !== -1
-                                ? prev.filter(function (id) { return id !== p.id; })
-                                : prev.concat([p.id]);
-                            });
-                          }}
-                        />
-                      );
-                    })}
-                  </div>
-                ))}
-                {mobileTab === "items" && ((openItems || []).length === 0 ? (
-                  <div style={{ fontSize: 12, color: C.green, padding: "4px 0" }}>All clear.</div>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    {(openItems || []).map(function (i) {
-                      return (
-                        <OpenItemRow
-                          key={i.id}
-                          item={i}
-                          onClose={onCloseItem}
-                          discussed={discussedItemIds.indexOf(i.id) !== -1}
-                          mentioned={mentionedItemIds.indexOf(i.id) !== -1}
-                          onToggleDiscussed={function () {
-                            setDiscussedItemIds(function (prev) {
-                              return prev.indexOf(i.id) !== -1
-                                ? prev.filter(function (id) { return id !== i.id; })
-                                : prev.concat([i.id]);
-                            });
-                          }}
-                        />
-                      );
-                    })}
-                  </div>
-                ))}
-                {mobileTab === "contacts" && (
-                  <>
-                    {onAddContact && (
-                      <div style={{ marginBottom: 8, display: "flex", justifyContent: "flex-end" }}>
-                        <button
-                          type="button"
-                          onClick={function (e) { e.stopPropagation(); setAddContactOpen(function (v) { return !v; }); }}
-                          title="Add contact"
-                          aria-label="Add contact"
-                          style={{
-                            background: "none", border: "1px solid " + C.rule,
-                            borderRadius: 4, color: C.textMuted, cursor: "pointer",
-                            fontFamily: MONO, fontSize: 11, lineHeight: 1,
-                            padding: "3px 8px", flexShrink: 0,
-                          }}
-                        >+ Add contact</button>
-                      </div>
-                    )}
-                    {addContactOpen && (
-                      <div style={{
-                        background: C.surface3, border: "1px solid " + C.rule,
-                        borderRadius: 6, padding: "8px 10px",
-                        marginBottom: 8,
-                        display: "flex", flexDirection: "column", gap: 6,
-                      }}>
-                        <input
-                          type="text"
-                          value={newContactName}
-                          onChange={function (e) { setNewContactName(e.target.value); }}
-                          placeholder="Name *"
-                          autoFocus
-                          style={{
-                            background: C.bg, border: "1px solid " + C.rule, borderRadius: 4,
-                            padding: "5px 8px", fontSize: 16, color: C.text,
-                            fontFamily: "'Inter', system-ui, sans-serif", outline: "none",
-                            width: "100%", boxSizing: "border-box",
-                          }}
-                        />
-                        <input
-                          type="text"
-                          value={newContactRole}
-                          onChange={function (e) { setNewContactRole(e.target.value); }}
-                          placeholder="Role / Title"
-                          style={{
-                            background: C.bg, border: "1px solid " + C.rule, borderRadius: 4,
-                            padding: "5px 8px", fontSize: 16, color: C.text,
-                            fontFamily: "'Inter', system-ui, sans-serif", outline: "none",
-                            width: "100%", boxSizing: "border-box",
-                          }}
-                        />
-                        <input
-                          type="email"
-                          value={newContactEmail}
-                          onChange={function (e) { setNewContactEmail(e.target.value); }}
-                          placeholder="Email"
-                          style={{
-                            background: C.bg, border: "1px solid " + C.rule, borderRadius: 4,
-                            padding: "5px 8px", fontSize: 16, color: C.text,
-                            fontFamily: "'Inter', system-ui, sans-serif", outline: "none",
-                            width: "100%", boxSizing: "border-box",
-                          }}
-                        />
-                        <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
-                          <button
-                            type="button"
-                            onClick={function () { setAddContactOpen(false); setNewContactName(""); setNewContactRole(""); setNewContactEmail(""); }}
-                            style={{
-                              background: "none", border: "1px solid " + C.rule, borderRadius: 4,
-                              padding: "4px 10px", fontSize: 11, color: C.textMuted,
-                              fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer",
-                            }}
-                          >Cancel</button>
-                          <button
-                            type="button"
-                            disabled={!newContactName.trim() || savingContact}
-                            onClick={function () {
-                              if (!newContactName.trim() || savingContact) return;
-                              setSavingContact(true);
-                              Promise.resolve(onAddContact({
-                                name:  newContactName.trim(),
-                                title: newContactRole.trim() || null,
-                                email: newContactEmail.trim() || null,
-                              })).then(function () {
-                                toggleAttendee(newContactName.trim());
-                                setAddContactOpen(false);
-                                setNewContactName(""); setNewContactRole(""); setNewContactEmail("");
-                              }).catch(function () {
-                              }).finally(function () { setSavingContact(false); });
-                            }}
-                            style={{
-                              background: !newContactName.trim() || savingContact ? C.accentFaint : C.accentDeep,
-                              border: "none", borderRadius: 4,
-                              padding: "4px 10px", fontSize: 11, fontWeight: 700,
-                              color: !newContactName.trim() || savingContact ? C.textMuted : C.bg,
-                              fontFamily: "'Inter', system-ui, sans-serif",
-                              cursor: !newContactName.trim() || savingContact ? "default" : "pointer",
-                            }}
-                          >{savingContact ? "Saving…" : "Add"}</button>
-                        </div>
-                      </div>
-                    )}
-                    {(contacts || []).length === 0 && !addContactOpen ? (
-                      <div style={{ fontSize: 12, color: C.textMuted, padding: "4px 0" }}>No contacts.</div>
-                    ) : (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                        {(contacts || []).map(function (c) {
-                          return (
-                            <ContactCard
-                              key={c.id}
-                              contact={c}
-                              selected={attendees.indexOf(c.name) >= 0}
-                              onToggle={toggleAttendee}
-                            />
-                          );
-                        })}
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            </>
+          {/* Mobile Projects mode — full-width projects pane with per-project
+              note fields + collapsible Items / People beneath (item 41). */}
+          {isMobile && !focusMode && mobileMode === "projects" && (
+            <div style={{
+              flex: 1, minHeight: 0, overflowY: "auto",
+              padding: "12px 10px 16px",
+              background: C.surface,
+              borderTop: "1px solid " + C.rule,
+              marginTop: 8,
+            }}>
+              {renderAgenda()}
+              <SidebarSection title="Projects — mark ✦ discussed to add notes" count={(projects || []).length}>
+                {renderProjectCards()}
+              </SidebarSection>
+              <CollapsibleSection
+                title="Open Items"
+                count={(openItems || []).length}
+                open={itemsOpen}
+                onToggle={function () { setItemsOpen(function (v) { return !v; }); }}
+              >
+                {renderItemRows()}
+              </CollapsibleSection>
+              <CollapsibleSection
+                title={"People" + (attendees.length ? " · " + attendees.length + " attending" : "")}
+                count={(contacts || []).length}
+                open={peopleOpen}
+                onToggle={function () { setPeopleOpen(function (v) { return !v; }); }}
+                action={addContactAction}
+              >
+                {renderPeople()}
+              </CollapsibleSection>
+            </div>
           )}
           <div style={{
             display: "flex", gap: 8, alignItems: "center",
