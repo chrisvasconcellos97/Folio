@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pip — woven ring concepts (v2)</title>
+<style>
+  :root{
+    --accent:#4db896;
+    --accent-deep:#2d8f70;
+    --accent-hi:#9ff0d2;
+    --accent-glow:rgba(77,184,150,0.14);
+    --accent-border:rgba(77,184,150,0.42);
+    --accent-shadow:rgba(77,184,150,0.55);
+    --bg:#0c1110;
+    --surface:#121917;
+    --rule:rgba(255,255,255,0.07);
+    --text:#e8efec;
+    --text-dim:#93a39d;
+    --text-mute:#5f6f69;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    padding:34px 28px 60px;
+  }
+  h1{font-family:Georgia,"Times New Roman",serif; font-weight:600; font-size:26px; margin:0 0 4px; letter-spacing:0.2px}
+  .sub{color:var(--text-dim); font-size:13.5px; max-width:780px; margin:0 0 26px}
+  .topbar{display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap}
+  button.ctl{
+    background:var(--surface); color:var(--text-dim); border:1px solid var(--rule);
+    border-radius:8px; padding:7px 14px; font-size:13px; cursor:pointer;
+  }
+  button.ctl:hover{color:var(--text); border-color:var(--accent-border)}
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(270px,1fr)); gap:18px; max-width:1300px}
+  .card{
+    background:var(--surface); border:1px solid var(--rule); border-radius:14px;
+    padding:18px 16px 16px; display:flex; flex-direction:column; align-items:center;
+  }
+  .stage{width:250px; height:250px; display:grid; place-items:center}
+  .stage svg{width:100%; height:100%; overflow:visible}
+  .card h2{font-family:Georgia,serif; font-weight:600; font-size:16.5px; margin:12px 0 2px; letter-spacing:0.2px}
+  .card .tag{font-size:10px; font-weight:700; letter-spacing:0.09em; text-transform:uppercase; color:var(--accent); margin-top:2px}
+  .card p{font-size:12.5px; color:var(--text-dim); text-align:center; margin:7px 0 14px; min-height:54px}
+  .minis{display:flex; align-items:center; gap:18px; padding:10px 16px; border-top:1px solid var(--rule); width:100%; justify-content:center}
+  .minis .m{display:flex; flex-direction:column; align-items:center; gap:5px}
+  .minis .m span{font-size:10px; color:var(--text-mute); letter-spacing:0.05em}
+  .minis svg{overflow:visible}
+
+  /* ── Current Pip, copied from index.html ── */
+  .pip{
+    position:relative; display:inline-grid; place-items:center; border-radius:50%;
+    background:var(--accent-glow); border:1px solid var(--accent-border);
+    box-shadow:0 0 24px var(--accent-shadow); flex-shrink:0;
+  }
+  .pip > svg{width:38%; height:38%; overflow:visible; transform-origin:50% 50%; animation:pip-breathe 2.4s ease-in-out infinite}
+  .pip .head{fill:var(--accent)}
+  .pip .tail{fill:var(--accent); opacity:0.42}
+  @keyframes pip-breathe{0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.08);opacity:0.88}}
+  .pip.big{width:160px;height:160px}
+  .pip.lg{width:52px;height:52px;box-shadow:0 0 14px var(--accent-shadow)}
+  .pip.sm{width:22px;height:22px;box-shadow:0 0 10px var(--accent-shadow)}
+  @media (prefers-reduced-motion: reduce){ .pip > svg{animation:none} }
+
+  .note{margin-top:26px; color:var(--text-mute); font-size:12.5px; max-width:840px}
+  .note b{color:var(--text-dim); font-weight:600}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <h1>Pip — woven ring (v2)</h1>
+    <p class="sub">Pip stays Pip: two glowing spheres, top larger and brighter — now rendered as glossy
+    3D glass with a lit highlight. The focal piece is the <b>woven lattice ring</b> around him, held at a
+    diagonal tilt and slowly spinning. On every breath the weave opens and the whole ring swells, then
+    settles. Three weave densities below — same design, different tightness.</p>
+  </div>
+  <button class="ctl" id="pauseBtn">⏸ Pause</button>
+</div>
+
+<div class="grid" id="grid">
+  <div class="card">
+    <div class="stage"><div class="pip big"><svg viewBox="-10 -10 20 20" aria-hidden="true"><circle class="head" cx="0" cy="-4" r="4"/><circle class="tail" cx="0" cy="4.5" r="2.8"/></svg></div></div>
+    <h2>Current Pip</h2>
+    <div class="tag">As shipped</div>
+    <p>The reference. Two flat circles, faint disc + border + glow, gentle 8% breathe.</p>
+    <div class="minis">
+      <div class="m"><div class="pip lg"><svg viewBox="-10 -10 20 20"><circle class="head" cx="0" cy="-4" r="4"/><circle class="tail" cx="0" cy="4.5" r="2.8"/></svg></div><span>52px</span></div>
+      <div class="m"><div class="pip sm"><svg viewBox="-10 -10 20 20"><circle class="head" cx="0" cy="-4" r="4"/><circle class="tail" cx="0" cy="4.5" r="2.8"/></svg></div><span>22px</span></div>
+    </div>
+  </div>
+</div>
+
+<p class="note"><b>Notes:</b> sphere proportions, spacing, and the 0.42 tail opacity are exactly today's Pip —
+only the shading is new. Breath cycle matches the current 2.4s. Colors ride the accent tokens (Life-mode
+orange re-skins automatically). Rotation honors <b>prefers-reduced-motion</b>. The 52px / 22px row shows
+each weave at rail-mark sizes.</p>
+
+<script>
+(function(){
+"use strict";
+var TAU=Math.PI*2;
+var ACCENT='#4db896', ACCENT_HI='#9ff0d2', ACCENT_DEEP='#2d8f70';
+var BREATH_S=2.4;
+var FP=480; // ring perspective focal, screen units
+
+var NS="http://www.w3.org/2000/svg";
+function el(name,attrs,parent){
+  var n=document.createElementNS(NS,name);
+  for(var a in attrs) n.setAttribute(a,attrs[a]);
+  if(parent) parent.appendChild(n);
+  return n;
+}
+var uid=0;
+
+/* rotate about X by a, then about Y by b */
+function rotXY(p,ca,sa,cb,sb){
+  var x=p[0], y=p[1]*ca-p[2]*sa, z=p[1]*sa+p[2]*ca;
+  return [x*cb+z*sb, y, -x*sb+z*cb];
+}
+
+/* ── glossy 3D sphere ───────────────────────────────────────────── */
+function makeSphere(parent,svgDefs,o){
+  // o:{cx,cy,r,bright}
+  var gid="s"+(uid++);
+  var grad=el("radialGradient",{id:gid,cx:"34%",cy:"28%",r:"78%"},svgDefs);
+  el("stop",{offset:"0%","stop-color":"#e6fff4"},grad);
+  el("stop",{offset:"22%","stop-color":ACCENT_HI},grad);
+  el("stop",{offset:"55%","stop-color":ACCENT},grad);
+  el("stop",{offset:"100%","stop-color":"#123c30"},grad);
+  var g=el("g",{opacity:o.bright},parent);
+  el("circle",{cx:o.cx,cy:o.cy,r:o.r,fill:"url(#"+gid+")"},g);
+  // specular hot-spot
+  el("ellipse",{
+    cx:o.cx-o.r*0.34, cy:o.cy-o.r*0.40, rx:o.r*0.24, ry:o.r*0.15,
+    fill:"#ffffff", opacity:0.7,
+    transform:"rotate(-24 "+(o.cx-o.r*0.34)+" "+(o.cy-o.r*0.40)+")"
+  },g);
+  // faint rim light, lower right
+  el("path",{
+    d:describeArc(o.cx,o.cy,o.r*0.86,35,135),
+    fill:"none", stroke:ACCENT_HI, "stroke-width":o.r*0.07,
+    "stroke-linecap":"round", opacity:0.28
+  },g);
+  return g;
+}
+function describeArc(cx,cy,r,a1,a2){
+  var s=(a1-90)*Math.PI/180, e=(a2-90)*Math.PI/180;
+  return "M"+(cx+r*Math.cos(s)).toFixed(1)+" "+(cy+r*Math.sin(s)).toFixed(1)
+    +"A"+r+" "+r+" 0 0 1 "+(cx+r*Math.cos(e)).toFixed(1)+" "+(cy+r*Math.sin(e)).toFixed(1);
+}
+
+/* ── woven lattice torus ────────────────────────────────────────── */
+function makeWovenRing(gBack,gFront,cfg){
+  // cfg:{R,rt,p,m,tiltX,tiltY,spin,sw,samples}
+  // 4 depth buckets: 0 deep-back, 1 back, 2 front, 3 near-front
+  var buckets=[
+    el("path",{fill:"none",stroke:ACCENT_DEEP,"stroke-width":cfg.sw*0.8, opacity:0.14,"stroke-linecap":"round"},gBack),
+    el("path",{fill:"none",stroke:ACCENT,     "stroke-width":cfg.sw*0.9, opacity:0.30,"stroke-linecap":"round"},gBack),
+    el("path",{fill:"none",stroke:ACCENT,     "stroke-width":cfg.sw*1.05,opacity:0.62,"stroke-linecap":"round"},gFront),
+    el("path",{fill:"none",stroke:ACCENT_HI,  "stroke-width":cfg.sw*1.25,opacity:0.92,"stroke-linecap":"round"},gFront)
+  ];
+  var ca=Math.cos(cfg.tiltX), sa=Math.sin(cfg.tiltX);
+  var cb=Math.cos(cfg.tiltY), sb=Math.sin(cfg.tiltY);
+  var N=cfg.samples;
+  return function(t,breath){
+    var R =cfg.R *(0.96+0.07*breath);   // whole-ring swell
+    var rt=cfg.rt*(0.74+0.50*breath);   // weave opens: tube fattens, cells widen
+    var spin=t*cfg.spin;
+    var zn=R*0.72+rt;                   // depth normalizer
+    var d=["","","",""];
+    for(var fam=0; fam<2; fam++){
+      var dir=fam===0?1:-1;
+      for(var k=0;k<cfg.m;k++){
+        var phi=k*TAU/cfg.m + (fam===1?TAU/(2*cfg.m):0);
+        var px=null,py=null,pz=null;
+        for(var i=0;i<=N;i++){
+          var u=i/N*TAU + spin;
+          var v=dir*cfg.p*u + phi;
+          var cw=R+rt*Math.cos(v);
+          var pt=rotXY([cw*Math.cos(u), cw*Math.sin(u), rt*Math.sin(v)],ca,sa,cb,sb);
+          var pf=FP/(FP-pt[2]);
+          var sx=pt[0]*pf, sy=-pt[1]*pf;
+          if(px!==null){
+            var z=(pt[2]+pz)/2/zn;
+            var b=z<-0.4?0 : z<0?1 : z<0.4?2 : 3;
+            d[b]+="M"+px.toFixed(1)+" "+py.toFixed(1)+"L"+sx.toFixed(1)+" "+sy.toFixed(1);
+          }
+          px=sx;py=sy;pz=pt[2];
+        }
+      }
+    }
+    for(var b2=0;b2<4;b2++) buckets[b2].setAttribute("d",d[b2]||"M0 0");
+  };
+}
+
+/* ── a full scene ───────────────────────────────────────────────── */
+function makeScene(svg,cfg,quality){
+  svg.setAttribute("viewBox","-118 -118 236 236");
+  var defs=el("defs",{},svg);
+  var gid="g"+(uid++);
+  var grad=el("radialGradient",{id:gid},defs);
+  el("stop",{offset:"0%","stop-color":ACCENT,"stop-opacity":"0.26"},grad);
+  el("stop",{offset:"55%","stop-color":ACCENT,"stop-opacity":"0.09"},grad);
+  el("stop",{offset:"100%","stop-color":ACCENT,"stop-opacity":"0"},grad);
+  var glow=el("circle",{cx:0,cy:0,r:100,fill:"url(#"+gid+")"},svg);
+
+  var gRingBack=el("g",{},svg);
+  var gPip=el("g",{},svg);
+  var gRingFront=el("g",{},svg);
+
+  // Pip himself — exactly current proportions ×7.5 (head r4@-4, tail r2.8@4.5)
+  makeSphere(gPip,defs,{cx:0,cy:33.75,r:21,bright:0.42});
+  makeSphere(gPip,defs,{cx:0,cy:-30,  r:30,bright:1});
+
+  var ringCfg=Object.assign({samples:quality||88},cfg.ring);
+  var ring=makeWovenRing(gRingBack,gRingFront,ringCfg);
+
+  return function(t){
+    var breath=0.5-0.5*Math.cos(TAU*t/BREATH_S);
+    glow.setAttribute("opacity",(0.5+0.45*breath).toFixed(2));
+    // sphere breathe = current pip-breathe: scale to 1.08, opacity dip to 0.88
+    var s=1+0.08*breath;
+    gPip.setAttribute("transform","scale("+s.toFixed(3)+")");
+    gPip.setAttribute("opacity",(1-0.12*breath).toFixed(2));
+    ring(t,breath);
+  };
+}
+
+/* ── variants: same design, three weave densities ───────────────── */
+var VARIANTS=[
+  {
+    name:"Fine Weave", tag:"Variant 1 · like the reference",
+    desc:"Tight diamond lattice, closest to your reference ring. Densest detail streaming past as it spins.",
+    cfg:{ ring:{R:84, rt:15, p:6, m:9, tiltX:0.40, tiltY:-0.48, spin:0.18, sw:1.0} }
+  },
+  {
+    name:"Classic Weave", tag:"Variant 2 · balanced",
+    desc:"A step looser — the diamonds read individually and the open/close of the breath is more visible.",
+    cfg:{ ring:{R:84, rt:16, p:4, m:7, tiltX:0.40, tiltY:-0.48, spin:0.16, sw:1.35} }
+  },
+  {
+    name:"Open Weave", tag:"Variant 3 · bold",
+    desc:"Big open cells, heavier strands. The most legible at small sizes; the breath really moves it.",
+    cfg:{ ring:{R:84, rt:17, p:3, m:5, tiltX:0.40, tiltY:-0.48, spin:0.14, sw:1.8} }
+  }
+];
+
+var grid=document.getElementById("grid");
+var updaters=[];
+VARIANTS.forEach(function(v){
+  var card=document.createElement("div"); card.className="card";
+  card.innerHTML='<div class="stage"></div><h2></h2><div class="tag"></div><p></p>'
+    +'<div class="minis"><div class="m"><svg width="52" height="52"></svg><span>52px</span></div>'
+    +'<div class="m"><svg width="22" height="22"></svg><span>22px</span></div></div>';
+  card.querySelector("h2").textContent=v.name;
+  card.querySelector(".tag").textContent=v.tag;
+  card.querySelector("p").textContent=v.desc;
+  var big=el("svg",{},card.querySelector(".stage"));
+  grid.appendChild(card);
+  updaters.push(makeScene(big,v.cfg,88));
+  card.querySelectorAll(".minis svg").forEach(function(s){ updaters.push(makeScene(s,v.cfg,44)); });
+});
+
+/* ── loop ───────────────────────────────────────────────────────── */
+var reduced=window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+var paused=false, sim=0, last=null;
+var btn=document.getElementById("pauseBtn");
+btn.addEventListener("click",function(){
+  paused=!paused;
+  btn.textContent=paused?"▶ Play":"⏸ Pause";
+});
+function frame(ts){
+  if(last==null) last=ts;
+  if(!paused) sim+=(ts-last)/1000;
+  last=ts;
+  if(!paused) for(var i=0;i<updaters.length;i++) updaters[i](sim);
+  requestAnimationFrame(frame);
+}
+if(reduced){
+  for(var i=0;i<updaters.length;i++) updaters[i](1.1);
+  btn.style.display="none";
+} else {
+  requestAnimationFrame(frame);
+}
+})();
+</script>
+</body>
+</html>
