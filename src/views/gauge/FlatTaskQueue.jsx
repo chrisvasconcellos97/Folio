@@ -11,9 +11,10 @@
 //   - "all"    sub-filter shows everything the user has access to
 //   - "open"   hides completed tasks
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, lazy, Suspense } from "react";
 import { C } from "../../lib/colors";
 import { Modal } from "../../components/Modal";
+var AddItemModal = lazy(function () { return import("../accounts/AddItemModal").then(function (m) { return { default: m.AddItemModal }; }); });
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
@@ -54,10 +55,11 @@ function initial(email) {
   return (clean.charAt(0) || "?").toUpperCase();
 }
 
-export function FlatTaskQueue({ tasks, accounts, projects, members, userEmail, onOpenProject, showAssigneeChip, onToggleDone }) {
+export function FlatTaskQueue({ tasks, accounts, projects, members, userId, userEmail, onOpenProject, showAssigneeChip, onToggleDone, onUpdateTask, onDeleteTask }) {
   var [subFilter, setSubFilter] = useState("open");
   var [groupByProject, setGroupBy] = useState(false);
   var [detailTask, setDetailTask] = useState(null);
+  var [editTask, setEditTask] = useState(null);
 
   var accountsById = useMemo(function () {
     var m = {};
@@ -159,12 +161,27 @@ export function FlatTaskQueue({ tasks, accounts, projects, members, userEmail, o
           </button>
         )}
 
-        {/* Tappable body → opens detail modal */}
+        {/* Tappable body → opens edit form (if editable) or detail modal */}
         <div
-          onClick={function () { setDetailTask(t); }}
+          onClick={function () {
+            if (onUpdateTask) {
+              setEditTask(Object.assign({}, t, { text: t.title, owner: t.assignee_email }));
+            } else {
+              setDetailTask(t);
+            }
+          }}
           role="button"
           tabIndex={0}
-          onKeyDown={function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setDetailTask(t); } }}
+          onKeyDown={function (e) {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              if (onUpdateTask) {
+                setEditTask(Object.assign({}, t, { text: t.title, owner: t.assignee_email }));
+              } else {
+                setDetailTask(t);
+              }
+            }
+          }}
           style={{ flex: 1, minWidth: 0, cursor: "pointer" }}
         >
           <div style={{
@@ -319,7 +336,29 @@ export function FlatTaskQueue({ tasks, accounts, projects, members, userEmail, o
         </div>
       )}
 
-      {/* Task detail modal */}
+      {/* Edit modal — full AddItemModal when onUpdateTask is wired */}
+      {editTask && (
+        <Suspense fallback={null}>
+          <AddItemModal
+            existing={editTask}
+            userId={userId}
+            userEmail={userEmail}
+            accountId={editTask.account_id || null}
+            members={members}
+            accounts={accounts}
+            onSave={function (id, fields) {
+              return onUpdateTask ? onUpdateTask(id, fields) : Promise.resolve();
+            }}
+            onDelete={function (id) {
+              if (onDeleteTask) onDeleteTask(id);
+              setEditTask(null);
+            }}
+            onClose={function () { setEditTask(null); }}
+          />
+        </Suspense>
+      )}
+
+      {/* Task detail modal — read-only fallback when no onUpdateTask */}
       {detailTask && (
         <Modal title="Task" onClose={function () { setDetailTask(null); }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>

@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, lazy, Suspense } from "react";
+var AddItemModal = lazy(function () { return import("../accounts/AddItemModal").then(function (m) { return { default: m.AddItemModal }; }); });
 import { C } from "../../lib/colors";
 import { PipOrb } from "../../components/PipMark";
 import { LitPill } from "../../components/LitPill";
@@ -175,8 +176,9 @@ function makeAccountLinkify(accounts, onOpenAccount) {
   };
 }
 
-export function HomeView({ userName, userId, accounts, meetings, items, cadences, projects, contacts, themes, onOpenAccount, onOpenAccountTab, onOpenCadenceHub, onOpenConversation, onOpenQuickTask, showOnboardingCard, onStartInterview, onDismissOnboardingCard, dripQuestion, dripQueueCount, onOpenCatchUp, onApplySuggestion, onAnswerDrip, onSkipDrip, onDismissDrip, commitmentNudges, onSnoozeNudge, onMarkNudgeDone, onCloseItem, onUpdateProject, onOpenDigest, pipFacts, profileProse, scheduledMeetings, onOpenScheduled }) {
+export function HomeView({ userName, userId, userEmail, accounts, meetings, items, cadences, projects, contacts, themes, onOpenAccount, onOpenAccountTab, onOpenCadenceHub, onOpenConversation, onOpenQuickTask, showOnboardingCard, onStartInterview, onDismissOnboardingCard, dripQuestion, dripQueueCount, onOpenCatchUp, onApplySuggestion, onAnswerDrip, onSkipDrip, onDismissDrip, commitmentNudges, onSnoozeNudge, onMarkNudgeDone, onCloseItem, onUpdateItem, onDeleteItem, onUpdateProject, onOpenDigest, pipFacts, profileProse, scheduledMeetings, onOpenScheduled }) {
   commitmentNudges = commitmentNudges || [];
+  var [editingNudgeTask, setEditingNudgeTask] = useState(null);
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
   var [mounted, setMounted] = useState(false);
@@ -1234,6 +1236,15 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
                       >
                         Snooze
                       </button>
+                      <button
+                        onClick={function () {
+                          var task = (items || []).find(function (i) { return i.id === n.taskId; });
+                          if (task) setEditingNudgeTask(task);
+                        }}
+                        style={{ background: "none", border: "1px solid " + C.rule, borderRadius: 6, padding: "3px 10px", fontFamily: MONO, fontSize: 10.5, color: C.textMuted, cursor: "pointer" }}
+                      >
+                        Edit
+                      </button>
                     </div>
                   );
                 })}
@@ -1832,6 +1843,27 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
             );
           })}
         </div>
+      )}
+
+      {editingNudgeTask && (
+        <Suspense fallback={null}>
+          <AddItemModal
+            existing={editingNudgeTask}
+            userId={userId}
+            userEmail={userEmail}
+            accountId={editingNudgeTask.account_id || null}
+            members={[]}
+            accounts={accounts}
+            onSave={function (id, fields) {
+              return onUpdateItem ? onUpdateItem(id, fields) : Promise.resolve();
+            }}
+            onDelete={function (id) {
+              if (onDeleteItem) onDeleteItem(id);
+              setEditingNudgeTask(null);
+            }}
+            onClose={function () { setEditingNudgeTask(null); }}
+          />
+        </Suspense>
       )}
 
       {isMobile && (

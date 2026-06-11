@@ -19,7 +19,7 @@ import { Glow } from "../../components/Glow";
 import { Mark } from "../../components/Mark";
 import { pickV } from "../../lib/metricsUtils";
 import { useBreakpoint } from "../../hooks/useBreakpoint";
-import { useTasks, updateTask, insertTask } from "../../hooks/useTasks";
+import { useTasks, updateTask, deleteTask, insertTask } from "../../hooks/useTasks";
 import { usePipAccountState } from "../../hooks/usePipAccountState";
 import { supabase } from "../../lib/supabase";
 import { FlatTaskQueue } from "./FlatTaskQueue";
@@ -190,6 +190,16 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
       }
     }
   }
+  function handleUpdateTask(id, data) {
+    var payload = Object.assign({}, data);
+    if ("text"  in payload) { payload.title          = payload.text;  delete payload.text;  }
+    if ("owner" in payload) { payload.assignee_email = payload.owner; delete payload.owner; }
+    return updateTask(userId, id, payload).then(function () { refetchTasks(); });
+  }
+  function handleDeleteTask(id) {
+    return deleteTask(userId, id).then(function () { refetchTasks(); });
+  }
+
   // One-time heal: discrete projects whose tasks are all done but whose
   // status never flipped to "complete" (older data, or completing the last
   // task via a path that didn't update project status). Fix them in the DB
@@ -581,6 +591,7 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
               accounts={accounts}
               projects={projects}
               members={members}
+              userId={userId}
               userEmail={userEmail}
               onOpenProject={function (id) {
                 setPrimaryView("projects");
@@ -592,6 +603,8 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
               }}
               showAssigneeChip={lens !== "admin"}
               onToggleDone={handleToggleDone}
+              onUpdateTask={handleUpdateTask}
+              onDeleteTask={handleDeleteTask}
             />
           </div>
           {isDesktop && (flatTasks && flatTasks.length > 0) && (

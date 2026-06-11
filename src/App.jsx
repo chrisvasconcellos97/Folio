@@ -473,6 +473,41 @@ export default function App() {
       });
   }
 
+  function updateItem(id, data) {
+    var payload = Object.assign({}, data);
+    if ("text" in payload)  { payload.title = payload.text;  delete payload.text; }
+    if ("owner" in payload) { payload.assignee_email = payload.owner; delete payload.owner; }
+    return supabase
+      .from("folio_tasks")
+      .update(payload)
+      .eq("id", id)
+      .eq("user_id", userId)
+      .then(function (result) {
+        if (result.error) throw result.error;
+        setAllItems(function (prev) {
+          return prev.map(function (item) {
+            if (item.id !== id) return item;
+            var updated = Object.assign({}, item, payload);
+            if (payload.title) updated.text = payload.title;
+            if (payload.assignee_email) updated.owner = payload.assignee_email;
+            return updated;
+          });
+        });
+      });
+  }
+
+  function deleteItem(id) {
+    return supabase
+      .from("folio_tasks")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", userId)
+      .then(function (result) {
+        if (result.error) throw result.error;
+        setAllItems(function (prev) { return prev.filter(function (i) { return i.id !== id; }); });
+      });
+  }
+
   function pipSetFollowUp(accountId, followUpDate) {
     // Find the most-recent meeting on this account, then update its
     // follow_up_date column.
@@ -1117,6 +1152,9 @@ export default function App() {
         onSnoozeNudge={commitmentNudgesHook.snooze}
         onMarkNudgeDone={commitmentNudgesHook.markDone}
         onCloseItem={closeItem}
+        onUpdateItem={updateItem}
+        onDeleteItem={deleteItem}
+        userEmail={session && session.user ? session.user.email : null}
         onUpdateProject={updateProjectApp}
         onOpenDigest={function () { setShowDigestIngest(true); }}
         contacts={allContacts}

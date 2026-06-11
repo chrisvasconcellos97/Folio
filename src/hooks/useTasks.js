@@ -65,6 +65,18 @@ export function updateTask(userId, taskId, fields) {
     });
 }
 
+export function deleteTask(userId, taskId) {
+  if (!userId || !taskId) return Promise.reject(new Error("missing args"));
+  return supabase
+    .from("folio_tasks")
+    .delete()
+    .eq("id", taskId)
+    .eq("user_id", userId)
+    .then(function (r) {
+      if (r.error) throw r.error;
+    });
+}
+
 // Module-level write helpers. Phase 1 only needs the insert helper for the
 // dual-write path; updates and deletes will land in Phase 6 with the
 // TaskDetailPanel rewrite.
