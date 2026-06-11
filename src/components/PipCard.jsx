@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { C } from "../lib/colors";
+import { HexSignature } from "../lib/hexMotif";
 
 var INTER = "'Inter', system-ui, sans-serif";
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
@@ -33,6 +34,8 @@ export function PipCard({ label, headline, timestamp, metaChips, children, defau
     <div
       className={unread ? "pip-unread" : undefined}
       style={{
+        position: "relative",
+        overflow: "hidden",
         background: C.surface,
         border: "1px solid " + C.rule,
         borderLeft: "2px solid " + C.accent,
@@ -95,6 +98,7 @@ export function PipCard({ label, headline, timestamp, metaChips, children, defau
           {children}
         </div>
       )}
+      <HexSignature cells={5} peak={0.30} />
     </div>
   );
 }

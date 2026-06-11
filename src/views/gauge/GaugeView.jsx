@@ -26,6 +26,7 @@ import { FlatTaskQueue } from "./FlatTaskQueue";
 import { LeaderProjectsView } from "./LeaderProjectsView";
 import { TeammateDetailView } from "./TeammateDetailView";
 import { autoStatusPatch } from "../../lib/gaugeStatus";
+import { HexSignature } from "../../lib/hexMotif";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
@@ -1036,6 +1037,8 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
                  hover re-fires → lift toggles → visible flicker loop. */
               className={isOpen ? undefined : "hover-lift"}
               style={{
+                position: "relative",
+                overflow: "hidden",
                 background: C.surface,
                 border: "1px solid " + (p.status === "blocked" ? C.statusBlocked.border : isDraft ? C.statusDraft.border : C.rule),
                 borderLeft: leftEdge ? "3px solid " + leftEdge : "1px solid " + (isDraft ? C.statusDraft.border : C.rule),
@@ -1271,6 +1274,7 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
               >
                 {isMobile ? "✎" : "Edit →"}
               </button>
+              <HexSignature />
             </div>
 
             {/* Mobile-only full-width progress strip below the row */}

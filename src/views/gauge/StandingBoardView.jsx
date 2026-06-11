@@ -3,6 +3,7 @@ import { C } from "../../lib/colors";
 import { taskStatusLabel, formatFieldValue } from "../../lib/gaugeFields";
 import { TaskDetailPanel } from "./TaskDetailPanel";
 import { useBreakpoint } from "../../hooks/useBreakpoint";
+import { HexSignature } from "../../lib/hexMotif";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var INTER = "'Inter', system-ui, sans-serif";
@@ -157,6 +158,8 @@ function openNew(forStatus) {
                     tabIndex={0}
                     onKeyDown={function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openEdit(t, row.idx); } }}
                     style={{
+                      position: "relative",
+                      overflow: "hidden",
                       background: C.surface,
                       border: "1px solid " + C.rule,
                       borderRadius: 6,
@@ -219,6 +222,7 @@ function openNew(forStatus) {
                         for: {resolveAssignee(t.recipient, members)}
                       </div>
                     )}
+                    <HexSignature />
                   </div>
                 );
               })}

@@ -11,6 +11,7 @@ import { QuickTaskModal } from "../quicktasks/QuickTaskModal";
 import { Modal } from "../../components/Modal";
 import { AmberBtn, SecBtn } from "../../components/Buttons";
 import { computeAccountHealth, gatherSignals } from "../../lib/accountHealth";
+import { HexSignature, HexLattice } from "../../lib/hexMotif";
 
 var MONO = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
@@ -872,7 +873,8 @@ export function AccountsView({ accounts, allAccounts, loading, onSelect, onAddAc
         {loading && <PipLoader height={300} />}
 
         {!loading && accounts.length === 0 && (
-          <div style={{ textAlign: "center", padding: "60px 20px" }}>
+          <div style={{ textAlign: "center", padding: "60px 20px", position: "relative" }}>
+            <HexLattice opacity={0.045} />
             <div style={{ fontSize: 32, marginBottom: 16 }}>📋</div>
             <div style={{ fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 8 }}>
               {copy.emptyTitle}
@@ -930,6 +932,8 @@ export function AccountsView({ accounts, allAccounts, loading, onSelect, onAddAc
               onKeyDown={function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(a); } }}
               style={{
                 flex: isChild ? 1 : undefined,
+                position: "relative",
+                overflow: "hidden",
                 background: C.surface,
                 border: "1px solid " + C.rule,
                 borderLeft: a.is_my_department && !isInactive
@@ -1104,6 +1108,7 @@ export function AccountsView({ accounts, allAccounts, loading, onSelect, onAddAc
                   {a.address}
                 </div>
               )}
+              {!isCompact && <HexSignature />}
             </div>
           );
 

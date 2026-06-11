@@ -1,5 +1,6 @@
 import { C, glass } from "../../lib/colors";
 import { getFrequencyLabel, formatTime, daysUntil, formatDateFull } from "../../lib/cadenceUtils";
+import { HexSignature } from "../../lib/hexMotif";
 
 var INTER_SHARED = "'Inter', system-ui, sans-serif";
 
@@ -68,6 +69,8 @@ export function CadenceEventCard({ event, onSelectAccount, onCreateItem, onOpenH
     <div
       className="hover-lift"
       style={Object.assign({}, glass, {
+        position: 'relative',
+        overflow: 'hidden',
         borderLeft: '3px solid ' + col,
         boxShadow: '-2px 0 8px -3px ' + col,
         borderRadius: 8,
@@ -170,6 +173,7 @@ export function CadenceEventCard({ event, onSelectAccount, onCreateItem, onOpenH
           )}
         </div>
       )}
+      <HexSignature />
     </div>
   );
 }

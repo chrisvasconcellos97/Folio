@@ -18,6 +18,7 @@ import { routeToolCall, planToolCalls, describeToolCall, classifyTool, CONFIRM_T
 import { usePipFacts } from "../../hooks/usePipFacts";
 import { usePipAccountState, findStaleAccountIds } from "../../hooks/usePipAccountState";
 import { useGlossary } from "../../hooks/useGlossary";
+import { HexPulse } from "../../lib/hexMotif";
 import { usePipState } from "../../lib/pipState";
 import { useRecentThemes } from "../../hooks/useRecentThemes";
 import { useUserProfile } from "../../hooks/useUserProfile";
@@ -774,20 +775,7 @@ export function PipView(props) {
                 alignItems: "center",
               }}
             >
-              {[0, 1, 2].map(function (d) {
-                return (
-                  <div
-                    key={d}
-                    style={{
-                      width: 5,
-                      height: 5,
-                      borderRadius: "50%",
-                      background: C.accentDim,
-                      animation: "pip-breathe 1.2s ease-in-out " + d * 0.2 + "s infinite",
-                    }}
-                  />
-                );
-              })}
+              <HexPulse />
             </div>
           </div>
         )}

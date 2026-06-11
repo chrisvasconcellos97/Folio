@@ -15,6 +15,7 @@ import { callPortfolioBriefPip } from "../../lib/pip";
 import { isProjectComplete } from "../../lib/gaugeStatus";
 import { suggestionLabel } from "../pip/PipCatchUp";
 import { showToast } from "../../components/Toast";
+import { HexField } from "../../lib/hexMotif";
 
 var SERIF = "'Fraunces', Georgia, serif";
 var INTER = "'Inter', system-ui, sans-serif";
@@ -1081,10 +1082,12 @@ export function HomeView({ userName, userId, accounts, meetings, items, cadences
       )}
 
       <div style={{
+        position: "relative",
         display: "flex", flexDirection: "column", alignItems: "center",
         gap: isMobile ? 14 : 20,
         padding: isMobile ? (operatorActive ? "16px 16px 18px" : "22px 16px 26px") : "32px 32px 36px",
       }}>
+        <HexField />
         <PipOrb size="xxl" heartbeat />
         {!operatorActive && (
         <div style={{

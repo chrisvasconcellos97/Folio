@@ -1,6 +1,7 @@
 import { createPortal } from "react-dom";
 import { C } from "../../lib/colors";
 import { PipMark } from "../../components/PipMark";
+import { HexPulse } from "../../lib/hexMotif";
 
 var INTER = "'Inter', system-ui, sans-serif";
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
@@ -35,6 +36,7 @@ export function SummarizeStreamingOverlay({ summary }) {
           background: C.accentGlow, border: "1px solid " + C.accentLine, borderRadius: 8,
         }}>
           <PipMark size={8} color={C.accent} glow pulse />
+          <HexPulse style={{ marginLeft: 4 }} />
           <div style={{ fontSize: 12, color: C.textSub, fontFamily: INTER }}>
             {hasText ? "Recap first — the structured plan follows in a moment." : "Reading your notes…"}
           </div>
