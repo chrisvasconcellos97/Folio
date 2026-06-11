@@ -11,6 +11,9 @@ export default defineConfig({
         skipWaiting: true,
         clientsClaim: true,
         cleanupOutdatedCaches: true,
+        // SPA navigation fallback must NOT swallow real static pages
+        // (mockup review pages live at /mockups/*)
+        navigateFallbackDenylist: [/^\/mockups\//],
       },
       manifest: {
         name: "Folios",
