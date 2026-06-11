@@ -101,6 +101,33 @@
   .hero .greet{position:relative; font-family:Georgia,serif; font-size:19px; margin-top:10px}
   .hero .one{position:relative; font-size:12.5px; color:var(--text-dim)}
 
+  /* card grammar section */
+  .sect{max-width:1500px; margin-top:26px}
+  .sect h2{font-family:Georgia,serif; font-weight:600; font-size:20px; margin:0 0 3px}
+  .sect .lead{color:var(--text-dim); font-size:13px; max-width:800px; margin:0 0 16px}
+  .cardrow{display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:14px}
+  .mock{position:relative; overflow:hidden; background:var(--surface); border:1px solid var(--rule); border-radius:12px; padding:13px 14px 12px; min-height:108px}
+  .mock .sig{position:absolute; bottom:8px; right:10px; pointer-events:none}
+  .mock.edge-g{border-left:3px solid #4db896}
+  .mock.edge-y{border-left:3px solid #d9a44a}
+  .mock.edge-r{border-left:3px solid #cf6f5a}
+  .mock .t{font-weight:600; font-size:14.5px; margin-bottom:3px}
+  .mock .m{font-size:11.5px; color:var(--text-dim)}
+  .mock .micro{font-size:9.5px; font-weight:700; letter-spacing:0.08em; color:var(--text-mute); margin-top:9px}
+  .mock .bar{height:4px; border-radius:99px; background:rgba(255,255,255,0.08); margin:10px 0 7px; overflow:hidden}
+  .mock .bar i{display:block; height:100%; width:62%; background:linear-gradient(to right,#3b82f6,var(--accent))}
+  .mock .pill{display:inline-block; font-size:10px; border:1px solid var(--rule); border-radius:99px; padding:2px 8px; color:var(--text-dim); margin-right:5px}
+  .mock .pill.due{color:#d9a44a; border-color:rgba(217,164,74,0.4)}
+  .mock.pipmock{border-color:var(--accent-border)}
+  .mock .pchead{font-size:10px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:var(--accent); margin-bottom:6px}
+  .panel{position:relative; overflow:hidden; background:var(--surface); border:1px solid var(--rule); border-radius:12px; padding:6px 0; margin-top:14px}
+  .panel .sig{position:absolute; top:9px; right:11px}
+  .panel .ph{font-size:10px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-mute); padding:6px 14px 7px}
+  .prow{display:flex; align-items:center; gap:10px; padding:8px 14px; border-top:1px solid var(--rule); font-size:13px}
+  .prow .ck{width:15px; height:15px; border:1.5px solid var(--accent-border); border-radius:50%}
+  .prow .who{margin-left:auto; font-size:11px; color:var(--text-mute)}
+  .panelnote{font-size:12px; color:var(--text-dim); margin-top:9px}
+
   /* 6 · icons */
   .icons{display:flex; gap:26px; align-items:center}
   .icon{width:86px; height:86px; border-radius:20px; background:#0c1110; border:1px solid var(--rule); display:grid; place-items:center; box-shadow:0 6px 18px rgba(0,0,0,0.35)}
@@ -198,6 +225,50 @@
     <p class="cap">The most-viewed Pip in existence is your home-screen icon — still the old orb. One static frame fixes it.</p>
   </div>
 
+</div>
+
+<div class="sect">
+  <h2>One grammar, every card</h2>
+  <p class="lead">Accounts, projects, cadences, and tasks share the same card anatomy — so they share the same
+  signature: an identical 3-cell hex chain, bottom-right, ~10% peak. Pip-authored cards keep 5 cells at ~30% —
+  <b>cell count encodes authorship</b>. Status colors stay on the left edge; the hexes are always accent. And the
+  rule that keeps it quiet: <b>cards get the signature, rows never do</b> — a panel of rows gets one chain, total.</p>
+
+  <div class="cardrow">
+    <div class="mock edge-g">
+      <svg class="sig sig3"></svg>
+      <div class="t">Keystone Automotive</div>
+      <div class="m">Supplier · Major · last touch 3d ago</div>
+      <div class="micro">2 OPEN · HEALTHY</div>
+    </div>
+    <div class="mock edge-y">
+      <svg class="sig sig3"></svg>
+      <div class="t">All Star integration — Phase 2</div>
+      <div class="bar"><i></i></div>
+      <div><span class="pill due">Due Jun 20</span><span class="pill">⏳ them · 4d</span></div>
+    </div>
+    <div class="mock edge-g">
+      <svg class="sig sig3"></svg>
+      <div class="t">Keystone · Biweekly cadence</div>
+      <div class="m">Next: Thu Jun 12 · 10:00 · Teams</div>
+      <div class="micro">3 OPEN ITEMS CARRY FORWARD</div>
+    </div>
+    <div class="mock pipmock">
+      <svg class="sig sig5"></svg>
+      <div class="pchead">✦ Pip · prepped overnight</div>
+      <div class="t" style="font-family:Georgia,serif">Lead with the macro date —<br>they asked twice.</div>
+      <div class="m">Suggested agenda · 3 talking points</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <svg class="sig sig3"></svg>
+    <div class="ph">My queue · today</div>
+    <div class="prow"><div class="ck"></div>Send Keystone the shop-list status report<span class="who">you · Jun 11</span></div>
+    <div class="prow"><div class="ck"></div>Chase admin on the connection macro<span class="who">⏳ admin · 6d</span></div>
+    <div class="prow"><div class="ck"></div>Confirm All Star final step actually landed<span class="who">you · Jun 12</span></div>
+  </div>
+  <p class="panelnote">The anti-example that proves the rule: dense rows stay completely clean — the <b>panel</b> carries one signature for all of them. Fifty rows, one chain.</p>
 </div>
 
 <script>
@@ -387,7 +458,16 @@ function makeThinking(svg){
     }
   };
 }
-/* static fading hex chain — PipCard signature */
+/* static fading hex chain — THE signature. n cells, peak opacity, halving per cell */
+function makeChain(svg,n,r,peak){
+  var step=r*2.1, w=Math.ceil(step*n+r), h=Math.ceil(r*2+8);
+  svg.setAttribute("viewBox","0 0 "+w+" "+h);
+  svg.setAttribute("width",w); svg.setAttribute("height",h);
+  for(var i=0;i<n;i++){
+    var op=peak*Math.pow(0.58,i);
+    el("path",{d:hexD(w-r-4-i*step,h/2,r,TAU/12),fill:"none","stroke-width":1.2,opacity:op.toFixed(3),"stroke-linejoin":"round",style:"stroke:var(--accent)"},svg);
+  }
+}
 function makeCardHexes(svg){
   svg.setAttribute("viewBox","0 0 92 30");
   var ops=[0.30,0.19,0.11,0.06,0.03];
@@ -415,6 +495,8 @@ var updaters=[];
 updaters.push(makeRingScene(document.getElementById("loaderSvg")));
 updaters.push(makeThinking(document.getElementById("thinkSvg")));
 makeCardHexes(document.getElementById("cardHexSvg"));
+document.querySelectorAll(".sig3").forEach(function(s){ makeChain(s,3,6.5,0.13); });
+document.querySelectorAll(".sig5").forEach(function(s){ makeChain(s,5,6.5,0.30); });
 makeLattice(document.getElementById("emptyWm"),380,260,15,function(){return 0.045;});
 makeLattice(document.getElementById("heroWm"),380,290,15,function(cx,cy){
   var d=Math.hypot(cx-190,cy-128);
