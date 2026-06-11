@@ -1,32 +1,17 @@
 import { useState } from "react";
 import { C } from "../../lib/colors";
+import { fmtRelative, fmtShort } from "../../lib/dateUtils";
 
 var INTER = "'Inter', system-ui, sans-serif";
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 
-// Relative-time label: "2h ago", "3d ago", "just now".
+// Relative-time label: "2h ago", "3d ago", "just now". Shared date layer.
 export function relUpdateTime(iso) {
-  if (!iso) return "";
-  var then = new Date(iso).getTime();
-  if (isNaN(then)) return "";
-  var diff = Date.now() - then;
-  if (diff < 60000) return "just now";
-  var mins = Math.floor(diff / 60000);
-  if (mins < 60) return mins + "m ago";
-  var hrs = Math.floor(mins / 60);
-  if (hrs < 24) return hrs + "h ago";
-  var days = Math.floor(hrs / 24);
-  if (days < 7) return days + "d ago";
-  var wks = Math.floor(days / 7);
-  if (wks < 5) return wks + "w ago";
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return fmtRelative(iso);
 }
 
 function shortDate(iso) {
-  if (!iso) return "";
-  var d = new Date(iso);
-  if (isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return fmtShort(iso);
 }
 
 // Email-local-part fallback for the author chip when no member name is resolvable.

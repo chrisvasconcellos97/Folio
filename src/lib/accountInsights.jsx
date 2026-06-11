@@ -12,6 +12,7 @@
 
 import { Glow } from "../components/Glow";
 import { pickV } from "./metricsUtils";
+import { fmtShort } from "./dateUtils";
 
 export function buildInternalTeamInsight(account, openItems, projects, handlers) {
   var openCount    = (openItems || []).filter(function (i) { return !i.done; }).length;
@@ -129,7 +130,7 @@ export function buildCustomerInsight(account, openItems, projects, handlers) {
 
   var hasNextMeeting   = !!account.next_meeting;
   var nextMeetingLabel = account.next_meeting
-    ? new Date(account.next_meeting).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+    ? fmtShort(account.next_meeting)
     : null;
 
   var seed      = (account.id || account.name) + new Date().getDate().toString();

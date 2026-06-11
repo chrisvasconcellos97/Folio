@@ -1,6 +1,8 @@
 import { C } from "../../lib/colors";
 import { Mark } from "../../components/Mark";
 import { ownerLabel } from "../../lib/ownerLabel";
+import { fmtShort } from "../../lib/dateUtils";
+import { EmptyState } from "../../components/EmptyState";
 
 var SERIF = "'Fraunces', Georgia, serif";
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
@@ -12,7 +14,7 @@ function daysSinceCreated(createdAt) {
 
 function formatDueDate(dueDate) {
   if (!dueDate) return null;
-  return new Date(dueDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return fmtShort(dueDate);
 }
 
 export function CommitmentsView({ items, accounts, onOpenAccount, onMarkDone }) {
@@ -192,22 +194,11 @@ export function CommitmentsView({ items, accounts, onOpenAccount, onMarkDone }) 
 
       {/* Empty state */}
       {commitments.length === 0 && (
-        <div style={{
-          background: C.bgCard,
-          border: "1px solid " + C.border,
-          borderRadius: 12,
-          padding: "36px 24px",
-          textAlign: "center",
-        }}>
-          <div style={{ fontSize: 22, marginBottom: 10 }}>&#10022;</div>
-          <div style={{ fontSize: 15, color: C.text, fontWeight: 500, marginBottom: 6 }}>
-            No open commitments. You&apos;re clean.
-          </div>
-          <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.6 }}>
-            Commitments are flagged by Pip when you promise something in a meeting.
-            They show up here until you mark them done.
-          </div>
-        </div>
+        <EmptyState
+          icon="✦"
+          title="No open commitments. You're clean."
+          subtitle="Commitments are flagged by Pip when you promise something in a meeting. They show up here until you mark them done."
+        />
       )}
 
       {/* Sections */}

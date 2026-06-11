@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { C } from "../../lib/colors";
+import { fmtShort, fmtMedium } from "../../lib/dateUtils";
+import { EmptyState } from "../../components/EmptyState";
 import { PipMark } from "../../components/PipMark";
 import { PipInsightCard } from "../../components/PipInsightCard";
 import { PipLoader } from "../../components/PipLoader";
@@ -18,6 +20,7 @@ function groupByMonth(meetings) {
   var groups = {};
   meetings.forEach(function (m) {
     var key = m.meeting_date
+      // eslint-ok: one-off locale format (month + year group key)
       ? new Date(m.meeting_date).toLocaleDateString("en-US", { month: "long", year: "numeric" })
       : "Unknown";
     if (!groups[key]) groups[key] = [];
@@ -96,8 +99,7 @@ function buildMeetingsInsight(allMeetings, handlers, activeAccountIds) {
 
 function formatDetailDate(dateStr) {
   if (!dateStr) return "";
-  var d = new Date(dateStr + "T00:00:00");
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return fmtMedium(dateStr);
 }
 
 function MeetingDetailModal({ meeting, onClose, allItems, addItem }) {
@@ -418,13 +420,10 @@ export function MeetingsView({ meetings, loading, allItems, addItem, accounts })
                     </div>
                     <div style={{ textAlign: "right", flexShrink: 0 }}>
                       <div style={{ fontSize: 13, fontWeight: 600, color: C.text, fontVariantNumeric: "tabular-nums" }}>
-                        {new Date(m.meeting_date).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                        })}
+                        {fmtShort(m.meeting_date)}
                       </div>
                       <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2, fontVariantNumeric: "tabular-nums" }}>
-                        {new Date(m.meeting_date).getFullYear()}
+                        {new Date(m.meeting_date + "T00:00:00").getFullYear()}
                       </div>
                     </div>
                   </div>
@@ -487,10 +486,7 @@ export function MeetingsView({ meetings, loading, allItems, addItem, accounts })
                         </div>
                       </div>
                       <div style={{ fontFamily: MV_MONO, fontSize: 10, color: C.textMuted, flexShrink: 0, letterSpacing: "0.04em", fontFeatureSettings: '"tnum"' }}>
-                        {new Date(m.meeting_date).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                        })}
+                        {fmtShort(m.meeting_date)}
                       </div>
                     </div>
                     {m.action_items && (
@@ -517,16 +513,10 @@ export function MeetingsView({ meetings, loading, allItems, addItem, accounts })
       })}
 
       {meetings.length === 0 && (
-        <div
-          style={{
-            textAlign: "center",
-            padding: "60px 20px",
-            color: C.textMuted,
-            fontSize: 13,
-          }}
-        >
-          No meetings logged yet. Head to an account to record one.
-        </div>
+        <EmptyState
+          title="No meetings logged yet."
+          subtitle="Head to an account to record one — every meeting you log gives Pip more to work with."
+        />
       )}
 
       {selectedMeeting && (

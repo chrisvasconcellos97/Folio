@@ -6,6 +6,8 @@
 // Built-in "bones" fields are seeded into every new project's schema.
 // User can remove or add more. v1 field types listed below.
 
+import { fmtShort } from "./dateUtils";
+
 export var FIELD_TYPES = [
   { id: "text",      label: "Text"        },
   { id: "longtext",  label: "Long text"   },
@@ -59,9 +61,7 @@ export function formatFieldValue(field, val, members) {
   if (val === null || val === undefined || val === "") return null;
   if (field.type === "checkbox") return val ? "✓" : null;
   if (field.type === "date") {
-    try {
-      return new Date(val + (val.length === 10 ? "T12:00:00" : "")).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-    } catch (_) { return String(val); }
+    return fmtShort(val) || String(val);
   }
   if (field.type === "person") {
     if (members) {

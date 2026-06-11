@@ -18,6 +18,8 @@ import { isProjectComplete } from "../../lib/gaugeStatus";
 import { suggestionLabel } from "../pip/PipCatchUp";
 import { showToast } from "../../components/Toast";
 import { HexField } from "../../lib/hexMotif";
+import { fmtShort } from "../../lib/dateUtils";
+import { InfoCard } from "../../components/InfoCard";
 
 var SERIF = "'Fraunces', Georgia, serif";
 var INTER = "'Inter', system-ui, sans-serif";
@@ -34,6 +36,7 @@ function timeOfDayGreeting(name) {
 }
 
 function dateLabel() {
+  // eslint-ok: one-off locale format (full weekday + long month + day header)
   return new Date().toLocaleDateString("en-US", {
     weekday: "long", month: "long", day: "numeric",
   });
@@ -111,30 +114,13 @@ function pickHeroLine(c) {
   ]);
 }
 
+// Home's narrative panels are now the shared InfoCard grammar (App Coherence
+// Rule) — one card anatomy across Home. minHeight keeps the 2-up grid even.
 function Panel({ title, accent, children }) {
   return (
-    <div style={{
-      background: C.surface,
-      border: "1px solid " + C.rule,
-      borderLeft: "2px solid " + (accent || C.rule),
-      borderRadius: 12,
-      padding: "14px 16px 16px",
-      minHeight: 110,
-      display: "flex", flexDirection: "column", gap: 10,
-    }}>
-      <div style={{
-        fontFamily: MONO, fontSize: 10, color: accent || C.textMuted,
-        fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em",
-      }}>
-        {title}
-      </div>
-      <div style={{
-        fontFamily: INTER, fontSize: 14, color: C.textSoft,
-        lineHeight: 1.6,
-      }}>
-        {children}
-      </div>
-    </div>
+    <InfoCard label={title} accent={accent} style={{ minHeight: 110, height: "100%" }}>
+      {children}
+    </InfoCard>
   );
 }
 
@@ -177,7 +163,7 @@ function makeAccountLinkify(accounts, onOpenAccount) {
   };
 }
 
-export function HomeView({ userName, userId, userEmail, accounts, meetings, items, cadences, projects, contacts, themes, onOpenAccount, onOpenAccountTab, onOpenCadenceHub, onOpenConversation, onOpenQuickTask, showOnboardingCard, onStartInterview, onDismissOnboardingCard, dripQuestion, dripQueueCount, onOpenCatchUp, onApplySuggestion, onAnswerDrip, onSkipDrip, onDismissDrip, commitmentNudges, onSnoozeNudge, onMarkNudgeDone, onCloseItem, onUpdateItem, onDeleteItem, onUpdateProject, onOpenDigest, pipFacts, profileProse, scheduledMeetings, onOpenScheduled }) {
+export function HomeView({ userName, userId, userEmail, accounts, meetings, items, cadences, projects, contacts, themes, onOpenAccount, onOpenAccountTab, onOpenCadenceHub, onOpenConversation, onOpenQuickTask, showOnboardingCard, onStartInterview, onDismissOnboardingCard, dripQuestion, dripQueueCount, onOpenCatchUp, onApplySuggestion, onAnswerDrip, onSkipDrip, onDismissDrip, commitmentNudges, onSnoozeNudge, onMarkNudgeDone, onCloseItem, onUpdateItem, onDeleteItem, onUpdateProject, onOpenDigest, pipFacts, profileProse, scheduledMeetings, onOpenScheduled, onOpenCommitments }) {
   commitmentNudges = commitmentNudges || [];
   var [editingNudgeTask, setEditingNudgeTask] = useState(null);
   var isDesktop = useBreakpoint();
@@ -615,6 +601,39 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
       accounts: accounts || [], todayISO: todayISO, answered: suppressed,
     });
   }, [items, projects, meetings, accounts, todayISO, checkInAnswered, checkInDismissed]);
+
+  // ── Triple-echo suppression — CHECK-IN WINS (item 47 locked verdict) ──
+  // Any item/project that has a LIVE check-in question this morning is
+  // suppressed from the "Your word" card, so a given commitment/waiting-on
+  // appears in exactly ONE place at a time. The check-in is the conversation
+  // that matters first; once it's answered the question clears and the item
+  // reappears in "Your word" naturally. Keys are namespaced by kind so a task
+  // id can't collide with a project id. (checkIn targetKind "item" === the
+  // waiting-on row kind "task" / a commitment nudge's taskId.)
+  var checkInTargetKeys = useMemo(function () {
+    var s = {};
+    (checkInQuestions || []).forEach(function (q) {
+      if (!q.targetId) return;
+      if (q.targetKind === "item")    s["item:" + q.targetId] = true;
+      if (q.targetKind === "project") s["project:" + q.targetId] = true;
+    });
+    return s;
+  }, [checkInQuestions]);
+  function suppressedByCheckIn(kind, id) {
+    // map the waiting-on "task" kind onto the check-in "item" namespace
+    var k = kind === "task" ? "item" : kind;
+    return !!checkInTargetKeys[k + ":" + id];
+  }
+
+  // "Your word" lists with check-in winners removed (item 1 suppression).
+  var wordCommitments = useMemo(function () {
+    return (commitmentNudges || []).filter(function (n) { return !suppressedByCheckIn("item", n.taskId); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [commitmentNudges, checkInTargetKeys]);
+  var wordWaitingOn = useMemo(function () {
+    return (waitingOnRows || []).filter(function (r) { return !suppressedByCheckIn(r.kind, r.id); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [waitingOnRows, checkInTargetKeys]);
 
   function handleCheckInAnswer(q, optId) {
     var next = Object.assign({}, checkInAnswered);
@@ -1238,33 +1257,86 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
         isMobile={isMobile}
       />
 
+      {/* Scheduled Today — concrete one-off meetings on the calendar. Moved up
+          to lead the day's commitments (above the drip queue). Always relevant,
+          so NO operator guard — a scheduled meeting matters regardless. */}
+      {todaysScheduled.length > 0 && (
+        <InfoCard
+          label="Scheduled Today"
+          count={todaysScheduled.length}
+          sig={false}
+          style={{ maxWidth: 600, margin: isMobile ? "0 16px 12px" : "0 auto 12px" }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {todaysScheduled.map(function (m) {
+              var acct = accountById[m.account_id];
+              var time = m.meeting_time ? formatTime(m.meeting_time) : null;
+              var methodLabel = { phone: "Phone", in_person: "In Person", video: "Video", email: "Email" }[m.method] || (m.method || "Meeting");
+              return (
+                <div
+                  key={m.id}
+                  onClick={function () { if (onOpenScheduled) onOpenScheduled(m); }}
+                  role={onOpenScheduled ? "button" : undefined}
+                  tabIndex={onOpenScheduled ? 0 : undefined}
+                  onKeyDown={function (e) {
+                    if ((e.key === "Enter" || e.key === " ") && onOpenScheduled) { e.preventDefault(); onOpenScheduled(m); }
+                  }}
+                  style={{
+                    background: C.bg,
+                    border: "1px solid " + C.rule,
+                    borderLeft: "3px solid " + C.accent,
+                    borderRadius: 10,
+                    padding: "10px 14px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    cursor: onOpenScheduled ? "pointer" : "default",
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: INTER, fontSize: 14, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {acct ? acct.name : "Meeting"}
+                    </div>
+                    <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, marginTop: 2, letterSpacing: "0.04em" }}>
+                      {methodLabel}{time ? " · " + time : ""}
+                    </div>
+                    {m.agenda && (
+                      <div style={{ fontFamily: INTER, fontSize: 11, color: C.textMuted, marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {m.agenda}
+                      </div>
+                    )}
+                  </div>
+                  {onOpenScheduled && (
+                    <span style={{ fontFamily: MONO, fontSize: 10, color: C.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 }}>
+                      Open →
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </InfoCard>
+      )}
+
       {/* ── Your word (Phase 1.5) — what you owe people + what they owe you.
           The keeper-of-his-word surface; commitments lost their nav slot to
-          Pip (item 43) and live here instead. ── */}
-      {(commitmentNudges.length > 0 || waitingOnRows.length > 0) && (
-        <div style={{
-          maxWidth: 600,
-          margin: isMobile ? "0 16px 12px" : "0 auto 12px",
-          background: C.surface,
-          border: "1px solid " + C.rule,
-          borderLeft: "3px solid " + C.yellow,
-          borderRadius: 12,
-          padding: "14px 16px",
-        }}>
-          <div style={{
-            fontFamily: MONO, fontSize: 10, color: C.yellow, fontWeight: 700,
-            letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10,
-          }}>
-            ✦ Your word
-          </div>
-
-          {commitmentNudges.length > 0 && (
-            <div style={{ marginBottom: waitingOnRows.length ? 12 : 0 }}>
+          Pip (item 43) and live here instead. Items with a live check-in
+          question this morning are suppressed here (check-in wins, item 47). ── */}
+      {(wordCommitments.length > 0 || wordWaitingOn.length > 0) && (
+        <InfoCard
+          label="✦ Your word"
+          accent={C.yellow}
+          sig={false}
+          style={{ maxWidth: 600, margin: isMobile ? "0 16px 12px" : "0 auto 12px", borderLeftWidth: 3 }}
+        >
+          {wordCommitments.length > 0 && (
+            <div style={{ marginBottom: wordWaitingOn.length ? 12 : 0 }}>
               <div style={{ fontFamily: MONO, fontSize: 9, color: C.textMuted, letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 7 }}>
-                You owe ({commitmentNudges.length})
+                You owe ({wordCommitments.length})
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {commitmentNudges.slice(0, 3).map(function (n) {
+                {wordCommitments.slice(0, 3).map(function (n) {
                   var dueLabel = n.isOverdue
                     ? Math.abs(n.daysUntilDue) + "d overdue"
                     : n.daysUntilDue === 0 ? "due today"
@@ -1303,22 +1375,22 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
                     </div>
                   );
                 })}
-                {commitmentNudges.length > 3 && (
+                {wordCommitments.length > 3 && (
                   <span style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted }}>
-                    {"+" + (commitmentNudges.length - 3) + " more"}
+                    {"+" + (wordCommitments.length - 3) + " more"}
                   </span>
                 )}
               </div>
             </div>
           )}
 
-          {waitingOnRows.length > 0 && (
+          {wordWaitingOn.length > 0 && (
             <div>
               <div style={{ fontFamily: MONO, fontSize: 9, color: C.textMuted, letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 7 }}>
-                ⏳ They owe you ({waitingOnRows.length})
+                ⏳ They owe you ({wordWaitingOn.length})
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {waitingOnRows.map(function (r) {
+                {wordWaitingOn.map(function (r) {
                   var acct = r.accountId ? accountById[r.accountId] : null;
                   return (
                     <div key={r.kind + r.id} style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
@@ -1368,7 +1440,26 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
               </div>
             </div>
           )}
-        </div>
+
+          {/* See all → CommitmentsView (the full list is otherwise unreachable
+              on mobile — item 3). */}
+          {onOpenCommitments && (
+            <div style={{ marginTop: 12, textAlign: "right" }}>
+              <button
+                type="button"
+                onClick={onOpenCommitments}
+                style={{
+                  background: "none", border: "none", color: C.yellow,
+                  fontFamily: MONO, fontSize: 10, fontWeight: 700,
+                  textTransform: "uppercase", letterSpacing: "0.06em",
+                  cursor: "pointer", padding: 0,
+                }}
+              >
+                See all →
+              </button>
+            </div>
+          )}
+        </InfoCard>
       )}
 
       {/* Calls today — real scheduling (with times) the operator report doesn't
@@ -1712,8 +1803,9 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
       )}
 
       {/* Throttled-but-queued: daily drip is quiet, but let the user power
-          through the rest whenever they want. */}
-      {!dripQuestion && dripQueueCount > 0 && onOpenCatchUp && (
+          through the rest whenever they want. Suppressed when the operator
+          report runs the morning (the check-in is the conversation then). */}
+      {!operatorActive && !dripQuestion && dripQueueCount > 0 && onOpenCatchUp && (
         <div style={{
           maxWidth: 600,
           margin: isMobile ? "0 16px 12px" : "0 auto 12px",
@@ -1741,66 +1833,6 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
         </div>
       )}
 
-      {/* Today's scheduled one-off meetings */}
-      {todaysScheduled.length > 0 && (
-        <div style={{
-          maxWidth: 600,
-          margin: isMobile ? "0 16px 12px" : "0 auto 12px",
-        }}>
-          <div style={{ fontFamily: MONO, fontSize: 10, color: C.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
-            Scheduled Today
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {todaysScheduled.map(function (m) {
-              var acct = accountById[m.account_id];
-              var time = m.meeting_time ? formatTime(m.meeting_time) : null;
-              var methodLabel = { phone: "Phone", in_person: "In Person", video: "Video", email: "Email" }[m.method] || (m.method || "Meeting");
-              return (
-                <div
-                  key={m.id}
-                  onClick={function () { if (onOpenScheduled) onOpenScheduled(m); }}
-                  role={onOpenScheduled ? "button" : undefined}
-                  tabIndex={onOpenScheduled ? 0 : undefined}
-                  onKeyDown={function (e) {
-                    if ((e.key === "Enter" || e.key === " ") && onOpenScheduled) { e.preventDefault(); onOpenScheduled(m); }
-                  }}
-                  style={{
-                    background: C.surface,
-                    border: "1px solid " + C.rule,
-                    borderLeft: "3px solid " + C.accent,
-                    borderRadius: 10,
-                    padding: "10px 14px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 12,
-                    cursor: onOpenScheduled ? "pointer" : "default",
-                  }}
-                >
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: INTER, fontSize: 14, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {acct ? acct.name : "Meeting"}
-                    </div>
-                    <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, marginTop: 2, letterSpacing: "0.04em" }}>
-                      {methodLabel}{time ? " · " + time : ""}
-                    </div>
-                    {m.agenda && (
-                      <div style={{ fontFamily: INTER, fontSize: 11, color: C.textMuted, marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {m.agenda}
-                      </div>
-                    )}
-                  </div>
-                  {onOpenScheduled && (
-                    <span style={{ fontFamily: MONO, fontSize: 10, color: C.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 }}>
-                      Open →
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Draft-ahead — duplicate of OperatorHub's draft rows when the report
           is active, so it only renders on fallback mornings. */}
@@ -1835,7 +1867,7 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
                       {acct ? acct.name : "Account"}
                     </div>
                     <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, marginTop: 2, letterSpacing: "0.04em" }}>
-                      Follow-up ready · last met {m.meeting_date ? new Date(m.meeting_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""}
+                      Follow-up ready · last met {m.meeting_date ? fmtShort(m.meeting_date) : ""}
                     </div>
                   </div>
                   <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>

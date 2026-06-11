@@ -10,6 +10,7 @@ import { supabase } from "../../../lib/supabase";
 import { buildPipInsight } from "../../../lib/accountInsights.jsx";
 import { UPDATE_TYPE_LABELS, UPDATE_TYPE_COLORS } from "../../../lib/accountUpdateTypes";
 import { useAccountHealthHistory } from "../../../hooks/useAccountHealthHistory";
+import { fmtShort, fmtMedium } from "../../../lib/dateUtils";
 import { computeContactEngagement } from "../../../lib/contactEngagement";
 import { InfoTip } from "../../../components/InfoTip";
 
@@ -173,7 +174,7 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
   }
 
   var summaryDateLabel = account.pip_account_summary_at
-    ? "Updated " + new Date(account.pip_account_summary_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+    ? "Updated " + fmtShort(account.pip_account_summary_at)
     : null;
 
   var btnLabel = generating
@@ -233,7 +234,7 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
               style={{ fontSize: 12, color: C.textMuted, cursor: "pointer" }}
             >
               Last conversation: <span style={{ color: C.textSoft }}>{lastMeeting.meeting_date
-                ? new Date(lastMeeting.meeting_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                ? fmtShort(lastMeeting.meeting_date)
                 : "—"}{lastMeeting.pip_short_title ? " · " + lastMeeting.pip_short_title : ""}</span>
             </span>
           )}
@@ -518,7 +519,7 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
                       minWidth: 52, flexShrink: 0,
                     }}>
                       {u.update_date
-                        ? new Date(u.update_date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                        ? fmtShort(u.update_date)
                         : "—"}
                     </span>
                     <span style={{ fontSize: 12, color: C.text, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -547,7 +548,7 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
           <FL>Last Meeting</FL>
           <div style={{ fontSize: 14, color: C.text, fontVariantNumeric: "tabular-nums" }}>
             {account.last_meeting
-              ? new Date(account.last_meeting + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+              ? fmtMedium(account.last_meeting)
               : "—"}
           </div>
         </Card>
@@ -555,7 +556,7 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
           <FL>Next Meeting</FL>
           <div style={{ fontSize: 14, color: account.next_meeting ? C.accent : C.textMuted, fontVariantNumeric: "tabular-nums" }}>
             {account.next_meeting
-              ? new Date(account.next_meeting + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+              ? fmtMedium(account.next_meeting)
               : "Not scheduled"}
           </div>
         </Card>
@@ -563,7 +564,7 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
           <Card onClick={onSwitchTab ? function () { onSwitchTab("meetings"); } : undefined}>
             <FL>Follow-up Due</FL>
             <div style={{ fontSize: 14, color: followUpOverdue ? C.red : C.accent, fontVariantNumeric: "tabular-nums" }}>
-              {new Date(followUp + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+              {fmtMedium(followUp)}
               {followUpOverdue && <span style={{ fontSize: 10, color: C.red, marginLeft: 6, fontWeight: 700 }}>OVERDUE</span>}
             </div>
           </Card>
@@ -586,7 +587,7 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
           <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 2 }}>
             <div style={{ width: 10, height: 10, borderRadius: "50%", background: healthScore === "green" ? C.green : healthScore === "yellow" ? C.yellow : healthScore === "new" ? C.textMuted : C.red }} />
             <span style={{ fontSize: 14, color: healthScore === "green" ? C.green : healthScore === "yellow" ? C.yellow : healthScore === "new" ? C.textMuted : C.red, fontWeight: 500, textTransform: "capitalize" }}>
-              {healthScore === "green" ? "Healthy" : healthScore === "yellow" ? "Watch" : healthScore === "new" ? "New" : "At Risk"}
+              {healthScore === "green" ? "Healthy" : healthScore === "yellow" ? "Watching" : healthScore === "new" ? "New" : "At Risk"}
             </span>
             <InfoTip text="Auto-computed from meeting recency, overdue items, and project health. Updates daily. Click the health pill at the top of the account to pin it manually if Pip has it wrong." />
           </div>
@@ -656,7 +657,7 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
                   <div>
                     <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 3 }}>Agreement End</div>
                     <div style={{ fontSize: 13, color: C.text, fontVariantNumeric: "tabular-nums" }}>
-                      {new Date(account.agreement_end_date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      {fmtMedium(account.agreement_end_date)}
                     </div>
                   </div>
                 )}
@@ -689,7 +690,7 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
               {deliveries.map(function(item) {
                 var title = item.text.replace("✓ Delivered: ", "");
                 var dateStr = item.closed_at
-                  ? new Date(item.closed_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                  ? fmtShort(item.closed_at)
                   : null;
                 return (
                   <div key={item.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -708,18 +709,18 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
         );
       })()}
 
-      {/* Actions */}
+      {/* Actions — the meeting capture CTA lives in the launcher up top
+          ("Start / log a meeting"); down here we keep only Add Item plus a
+          link into the full history. (App Coherence: one primary meeting CTA
+          per surface — the redundant "Quick Conversation" button was pruned.) */}
       <div style={{ display: "flex", gap: 8 }}>
-        <AmberBtn style={{ flex: 1 }} onClick={onQuickMeeting}>
-          Quick Conversation
-        </AmberBtn>
         <SecBtn style={{ flex: 1 }} onClick={onAddItem}>
           Add Item
         </SecBtn>
       </div>
       <div style={{ textAlign: "center" }}>
         <button
-          onClick={onLogMeeting}
+          onClick={function () { onSwitchTab && onSwitchTab("meetings"); }}
           style={{
             background: "none",
             border: "none",

@@ -22,7 +22,7 @@ var MONO = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
 
 var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red, new: C.textMuted };
-var STATUS_LABELS = { green: "Healthy", yellow: "Watch", red: "At Risk", new: "New" };
+var STATUS_LABELS = { green: "Healthy", yellow: "Watching", red: "At Risk", new: "New" };
 var TIER_COLORS   = { Major: C.blue, Mid: C.purple, Growth: C.green };
 
 export function AccountDetailHeader({

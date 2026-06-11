@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { C } from "../../lib/colors";
+import { fmtMedium } from "../../lib/dateUtils";
 import { Modal } from "../../components/Modal";
 import { AmberBtn, SecBtn } from "../../components/Buttons";
 import { InputField, TextArea } from "../../components/InputField";
@@ -20,8 +21,7 @@ function todayISO() {
 }
 
 function formatDateLong(iso) {
-  if (!iso) return "";
-  return new Date(iso + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return fmtMedium(iso);
 }
 
 function autoTitle(method, dateISO) {

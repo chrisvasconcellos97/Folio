@@ -25,28 +25,16 @@ import { supabase } from "../../lib/supabase";
 import { FlatTaskQueue } from "./FlatTaskQueue";
 import { LeaderProjectsView } from "./LeaderProjectsView";
 import { TeammateDetailView } from "./TeammateDetailView";
-import { autoStatusPatch } from "../../lib/gaugeStatus";
+import { autoStatusPatch, gaugeStatusLabel } from "../../lib/gaugeStatus";
+import { fmtShort } from "../../lib/dateUtils";
 import { HexSignature } from "../../lib/hexMotif";
+import { EmptyState } from "../../components/EmptyState";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
 
-var STATUS_COLORS = {
-  planned:     C.statusPlanned.text,
-  in_progress: C.accent,
-  blocked:     C.statusBlocked.text,
-  complete:    C.statusComplete.text,
-  on_hold:     C.statusOnHold.text,
-};
-
-var STATUS_LABELS = {
-  draft:       "Draft",
-  planned:     "Planned",
-  in_progress: "In Progress",
-  blocked:     "Blocked",
-  complete:    "Complete",
-  on_hold:     "On Hold",
-};
+// Status labels/colors come from the shared GAUGE_STATUS_CONFIG (one source
+// of truth across Gauge / Projects tab / Leader / modal — App Coherence Rule).
 
 var PRIORITY_COLORS = {
   high:   C.red,
@@ -63,10 +51,11 @@ var SCOPE_FILTERS = [
   { id: "personal", label: "Personal" },
 ];
 
+// Delegates to the shared date layer; preserves the null-on-empty contract
+// this file's call sites rely on (fmtShort returns "" instead).
 function fmt(dateStr) {
   if (!dateStr) return null;
-  var d = new Date(dateStr + "T00:00:00");
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return fmtShort(dateStr);
 }
 
 function isOverdue(dateStr) {
@@ -935,7 +924,7 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
                     color: statusStyle ? statusStyle.text : C.textMuted,
                     whiteSpace: "nowrap",
                   }}>
-                    {STATUS_LABELS[p.status] || p.status}
+                    {gaugeStatusLabel(p.status)}
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
                     <div style={{ flex: 1, height: 3, background: C.surface3, borderRadius: 2, overflow: "hidden" }}>
@@ -980,24 +969,16 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
       {loading && <PipLoader />}
 
       {!loading && scopeFilter !== "my_queue" && sortedFiltered.length === 0 && (
-        <div
-          style={{
-            textAlign: "center",
-            padding: "60px 20px",
-            color: C.textMuted,
-            fontSize: 13,
-          }}
-        >
-          {scopeFilter === "all" && statusFilter === "all"
+        <EmptyState
+          lattice={scopeFilter === "all" && statusFilter === "all"}
+          title={scopeFilter === "all" && statusFilter === "all"
             ? "No projects yet. Hit + New Project to get started."
-            : scopeFilter === "my_queue"
-            ? "Nothing assigned to you right now."
             : scopeFilter === "team"
             ? "No team projects yet."
             : scopeFilter === "personal"
             ? "No personal projects yet."
-            : "No " + (STATUS_LABELS[statusFilter] || statusFilter) + " projects."}
-        </div>
+            : "No " + gaugeStatusLabel(statusFilter) + " projects."}
+        />
       )}
 
       {/* Desktop: two-column layout — narrow scannable project list on the
@@ -1112,7 +1093,7 @@ export function GaugeView({ userId, userEmail, accounts, members, contacts, orgI
                     color: statusStyle ? statusStyle.text : C.textMuted,
                     flexShrink: 0, whiteSpace: "nowrap",
                   }}>
-                    {STATUS_LABELS[p.status] || p.status}
+                    {gaugeStatusLabel(p.status)}
                   </div>
                   {/* Team scope badge */}
                   {p.scope === "team" && (

@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { C, glass } from "../../../lib/colors";
+import { fmtShort, fmtMedium } from "../../../lib/dateUtils";
+import { EmptyState } from "../../../components/EmptyState";
 
 var IT_SERIF = "'Fraunces', Georgia, serif";
 var IT_MONO  = "'JetBrains Mono', ui-monospace, monospace";
@@ -243,7 +245,7 @@ export function ItemsTab({ items, taskCadences, accountId, userId, userEmail, on
                   <div style={{ display: "flex", gap: 12, marginTop: 4, flexWrap: "wrap" }}>
                     {item.due_date && (
                       <div style={{ fontFamily: IT_MONO, fontSize: 10, color: C.yellow, letterSpacing: "0.04em", fontFeatureSettings: '"tnum"' }}>
-                        {"Due: " + new Date(item.due_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        {"Due: " + fmtShort(item.due_date)}
                       </div>
                     )}
                     {item.owner && (
@@ -322,9 +324,11 @@ export function ItemsTab({ items, taskCadences, accountId, userId, userEmail, on
       )}
 
       {tasks.length === 0 && open.length === 0 && (
-        <div style={{ textAlign: "center", padding: "24px 0 8px" }}>
-          <div style={{ color: C.green, fontSize: 13, marginBottom: 10 }}>No open items. You're caught up.</div>
-          {onAdd && (
+        <EmptyState
+          lattice={false}
+          compact
+          title="No open items. You're caught up."
+          cta={onAdd && (
             <button
               onClick={onAdd}
               style={{
@@ -336,7 +340,7 @@ export function ItemsTab({ items, taskCadences, accountId, userId, userEmail, on
               + Add Action Item
             </button>
           )}
-        </div>
+        />
       )}
 
       {closed.length > 0 && (
@@ -352,7 +356,7 @@ export function ItemsTab({ items, taskCadences, accountId, userId, userEmail, on
                   <div style={{ fontSize: 14, color: C.textMuted, textDecoration: "line-through", lineHeight: 1.4 }}>{item.text}</div>
                   {item.closed_at && (
                     <div style={{ fontSize: 10, color: C.textMuted, marginTop: 3 }}>
-                      {"Closed: " + new Date(item.closed_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      {"Closed: " + fmtMedium(item.closed_at)}
                     </div>
                   )}
                 </div>

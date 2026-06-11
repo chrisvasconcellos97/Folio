@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useDeferredValue } from "react";
 import { C } from "../../lib/colors";
 import { ownerInitials, findOwner } from "../../lib/ownerLabel";
+import { fmtShort } from "../../lib/dateUtils";
 import { Mark } from "../../components/Mark";
 import { useBreakpoint } from "../../hooks/useBreakpoint";
 import { Pill } from "../../components/Pill";
@@ -11,7 +12,8 @@ import { QuickTaskModal } from "../quicktasks/QuickTaskModal";
 import { Modal } from "../../components/Modal";
 import { AmberBtn, SecBtn } from "../../components/Buttons";
 import { computeAccountHealth, gatherSignals } from "../../lib/accountHealth";
-import { HexSignature, HexLattice } from "../../lib/hexMotif";
+import { HexSignature } from "../../lib/hexMotif";
+import { EmptyState } from "../../components/EmptyState";
 
 var MONO = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
@@ -30,7 +32,7 @@ function saveSearchHistory(query) {
 }
 
 var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red, new: C.textMuted };
-var STATUS_LABELS = { green: "Healthy", yellow: "Watch",  red: "At Risk", new: "New" };
+var STATUS_LABELS = { green: "Healthy", yellow: "Watching", red: "At Risk", new: "New" };
 // Tier accent colors — route through CSS vars so light theme can ship deeper
 // hues per the light-theme spec (warm ochre, deep rose, indigo).
 var TIER_COLORS   = { Major: "var(--c-tier-major)", Mid: "var(--c-tier-mid)", Growth: "var(--c-tier-growth)" };
@@ -650,6 +652,7 @@ export function AccountsView({ accounts, allAccounts, loading, onSelect, onAddAc
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontFamily: SERIF, fontSize: 14, color: C.text, marginBottom: 2 }}>{a.name}</div>
                     <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, fontFeatureSettings: '"tnum"' }}>
+                      {/* eslint-ok: one-off locale format (weekday + month/day) */}
                       {meetDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
                     </div>
                   </div>
@@ -874,27 +877,20 @@ export function AccountsView({ accounts, allAccounts, loading, onSelect, onAddAc
         {loading && <PipLoader height={300} />}
 
         {!loading && accounts.length === 0 && (
-          <div style={{ textAlign: "center", padding: "60px 20px", position: "relative" }}>
-            <HexLattice opacity={0.045} />
-            <div style={{ fontSize: 32, marginBottom: 16 }}>📋</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 8 }}>
-              {copy.emptyTitle}
-            </div>
-            <div style={{ fontSize: 14, color: C.textMuted, lineHeight: 1.6, marginBottom: 24, maxWidth: 280, margin: "0 auto 24px" }}>
-              {copy.emptyBody}
-            </div>
-            {onAddAccount && (
+          <EmptyState
+            icon="📋"
+            title={copy.emptyTitle}
+            subtitle={copy.emptyBody}
+            cta={onAddAccount && (
               <AmberBtn onClick={onAddAccount} style={{ fontSize: 14, padding: "10px 24px" }}>
                 {copy.emptyCTA}
               </AmberBtn>
             )}
-          </div>
+          />
         )}
 
         {!loading && accounts.length > 0 && displayList.length === 0 && (
-          <div style={{ textAlign: "center", padding: "40px 20px", color: C.textMuted, fontSize: 13 }}>
-            {copy.noMatch}
-          </div>
+          <EmptyState title={copy.noMatch} lattice={false} compact />
         )}
 
         {!loading && displayList.map(function (item, index) {
@@ -1059,7 +1055,7 @@ export function AccountsView({ accounts, allAccounts, loading, onSelect, onAddAc
                       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 0, fontFamily: MONO, fontSize: 10, letterSpacing: "0.04em", fontFeatureSettings: '"tnum"' }}>
                         {a.next_meeting && (
                           <span style={{ color: a.next_meeting < todayStr ? C.red : C.textMuted }}>
-                            {(a.next_meeting < todayStr ? "Overdue · " : "Next · ") + new Date(a.next_meeting + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                            {(a.next_meeting < todayStr ? "Overdue · " : "Next · ") + fmtShort(a.next_meeting)}
                           </span>
                         )}
                         {openCount > 0 && (

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { C } from "../../../lib/colors";
+import { EmptyState } from "../../../components/EmptyState";
 import { computeContactEngagement } from "../../../lib/contactEngagement";
 
 var CT_SERIF = "'Fraunces', Georgia, serif";
@@ -276,10 +277,13 @@ export function ContactsTab({ contacts, meetings, accountId, accountName, onAdd,
       <PipInsightCard text={buildContactsInsight(contacts, accountId)} />
 
       {contacts.length === 0 && (
-        <div style={{ textAlign: "center", padding: "40px 20px", color: C.textMuted, fontSize: 13 }}>
-          <div style={{ marginBottom: 12 }}>No contacts added yet. Who do you usually talk to here?</div>
-          <AmberBtn onClick={onAdd} style={{ fontSize: 12 }}>+ Add Contact</AmberBtn>
-        </div>
+        <EmptyState
+          lattice={false}
+          compact
+          title="No contacts added yet."
+          subtitle="Who do you usually talk to here?"
+          cta={<AmberBtn onClick={onAdd} style={{ fontSize: 12 }}>+ Add Contact</AmberBtn>}
+        />
       )}
 
       {contacts.map(function (c, index) {

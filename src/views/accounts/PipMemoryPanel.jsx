@@ -11,6 +11,7 @@ import { useState, useEffect } from "react";
 import { Modal } from "../../components/Modal";
 import { FL } from "../../components/FieldLabel";
 import { C } from "../../lib/colors";
+import { fmtMedium } from "../../lib/dateUtils";
 import { supabase } from "../../lib/supabase";
 
 var MONO = "'JetBrains Mono', ui-monospace, monospace";
@@ -62,7 +63,7 @@ function typeBadge(correctionType) {
 function fmtDate(iso) {
   if (!iso) return "";
   try {
-    return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    return fmtMedium(iso);
   } catch(e) {
     return "";
   }

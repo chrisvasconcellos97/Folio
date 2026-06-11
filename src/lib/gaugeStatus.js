@@ -8,6 +8,38 @@
 // status === "complete" then disagreed with reality — a project showed as
 // overdue/"burning" forever despite all its tasks being done.
 
+import { C } from "./colors";
+
+// ── ONE canonical Gauge project-status config ────────────────────────────
+// Home, Gauge, the account Projects tab, the Leader rollup, and the project
+// modal all render the same five statuses — they used to each keep a private
+// label/color map and drifted (in_progress was C.accent in one place and the
+// C.statusInProgress token in another; "Watch"/"Watching" diverged). This is
+// the single source of truth (App Coherence Rule). Colors are C tokens only
+// (Theme Rule) so both themes + Life-mode re-skin for free.
+//
+//   token — the {text,bg,border} status pill token (use for badges)
+//   color — the text color alone (use for a left-edge bar / status dot)
+export var GAUGE_STATUS_CONFIG = {
+  draft:       { label: "Draft",       token: C.statusDraft,      color: C.statusDraft.text },
+  planned:     { label: "Planned",     token: C.statusPlanned,    color: C.statusPlanned.text },
+  in_progress: { label: "In Progress", token: C.statusInProgress, color: C.statusInProgress.text },
+  blocked:     { label: "Blocked",     token: C.statusBlocked,    color: C.statusBlocked.text },
+  complete:    { label: "Complete",    token: C.statusComplete,   color: C.statusComplete.text },
+  on_hold:     { label: "On Hold",     token: C.statusOnHold,     color: C.statusOnHold.text },
+};
+
+// Convenience: label / token / color for an arbitrary status string, with a
+// neutral fallback so an unexpected value never throws.
+export function gaugeStatusLabel(status) {
+  var c = GAUGE_STATUS_CONFIG[status];
+  return c ? c.label : (status || "");
+}
+export function gaugeStatusToken(status) {
+  var c = GAUGE_STATUS_CONFIG[status];
+  return c ? c.token : C.statusPlanned;
+}
+
 // A project belongs to an account if it's the primary account_id OR the
 // account appears in the multi-account account_ids array. Used everywhere a
 // project is filtered to a single account so multi-account projects surface

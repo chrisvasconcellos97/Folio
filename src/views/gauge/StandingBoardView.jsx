@@ -3,6 +3,7 @@ import { C } from "../../lib/colors";
 import { taskStatusLabel, formatFieldValue } from "../../lib/gaugeFields";
 import { TaskDetailPanel } from "./TaskDetailPanel";
 import { useBreakpoint } from "../../hooks/useBreakpoint";
+import { resolveAssignee } from "../../lib/ownerLabel";
 import { HexSignature } from "../../lib/hexMotif";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
@@ -12,15 +13,6 @@ var INTER = "'Inter', system-ui, sans-serif";
 // display-friendly string. If a member record matches the email, show
 // their full_name or email-local-part. Otherwise the stored value is
 // already a display-ready contact name — return it as-is.
-function resolveAssignee(emailOrName, members) {
-  if (!emailOrName) return null;
-  var m = (members || []).find(function (x) {
-    return (x.invited_email || x.email || "") === emailOrName;
-  });
-  if (m) return m.full_name || m.display_name || emailOrName;
-  return emailOrName;
-}
-
 // Standing project board — columns from project.task_status_columns,
 // cards from project.stages. Uses the same TaskDetailPanel for create
 // and edit. Tasks group into a "done" lane (or whichever the last column

@@ -253,6 +253,7 @@ function fmtDate(s) {
   var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
   if (!m) return s;
   var d = new Date(Date.UTC(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10)));
+  // eslint-ok: one-off locale format (explicit UTC so Pip's prompt date is stable)
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 }
 

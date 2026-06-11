@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { C, glass } from "../../lib/colors";
+import { fmtShort, fmtMedium } from "../../lib/dateUtils";
 import { PipMark } from "../../components/PipMark";
 import { showToast } from "../../components/Toast";
 import { PipBriefPanel, HubProjectCard, OpenItemRow } from "./CadenceHub";
@@ -784,8 +785,8 @@ export function CadenceMeetingMode({
             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
           }}>
             {isMobile
-              ? topLabel + " · " + new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })
-              : topLabel + " · " + new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+              ? topLabel + " · " + fmtShort(new Date())
+              : topLabel + " · " + fmtMedium(new Date())}
           </div>
         </div>
         <button
@@ -1045,6 +1046,7 @@ export function CadenceMeetingMode({
                     fontFamily: MONO, fontSize: 9.5, color: C.textMuted,
                     textTransform: "uppercase", letterSpacing: "0.1em",
                   }}>
+                    {/* eslint-ok: one-off locale format (full weekday + long date) */}
                     {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
                   </div>
                 ) : <span />}

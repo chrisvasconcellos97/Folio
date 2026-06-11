@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { C } from "../../lib/colors";
+import { fmtShort } from "../../lib/dateUtils";
 import { PipOrb } from "../../components/PipMark";
 import { useSportsFeed } from "../../hooks/useSportsFeed";
 import { SportsCard } from "../home/SportsCard";
@@ -19,13 +20,12 @@ function greeting(name) {
   return "Late" + n + ".";
 }
 function dateLabel() {
+  // eslint-ok: one-off locale format (full weekday + long month + day header)
   return new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 }
 function fmtDate(d) {
   if (!d) return "";
-  var p = String(d).slice(0, 10).split("-");
-  if (p.length !== 3) return "";
-  return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2])).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return fmtShort(String(d).slice(0, 10));
 }
 function fmtTime(t) {
   if (!t) return "";

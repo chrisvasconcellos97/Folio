@@ -669,15 +669,15 @@ If any criterion stays false, that's where we dig next — design failure, not u
    - [x] summarize: deleted-project guard already present (discussed/noted blocks skip stale ids); receipts incentive + follow_up_date few-shot examples already in SUMMARIZE_SCHEMA_RULES
 
    **BATCH 5 — Home & coherence (the Frankenstein batch):**
-   - [ ] commitments triple-echo: one commitments engine; same item never in CheckInCard + "Your word" + OperatorHub simultaneously (suppression/cross-linking per Chris's verdict below)
-   - [ ] "Scheduled Today" placement (currently buried below drip items, no operator guard); drip-queue nudge gets `!operatorActive` guard
-   - [ ] CommitmentsView "See all →" link from "Your word" (view is unreachable on mobile today)
-   - [ ] `src/lib/dateUtils.js`: fmtShort/fmtLong/fmtRelative/isOverdue/isToday — replace 14 fmtDate + 7 isOverdue + 5 relative-time reimplementations
-   - [ ] shared `GAUGE_STATUS_CONFIG` in gaugeStatus.js (ProjectsTab + GaugeView render same status differently); fix "Watch"/"Watching" label drift; shared `resolveAssignee`
-   - [ ] shared `EmptyState` component (15+ bespoke ones)
-   - [ ] one card anatomy on Home (local Panel / OperatorHub section / Your word / Scheduled Today → one InfoCard grammar)
-   - [ ] meeting-CTA unification: "Log conversation" (ad-hoc) vs "Start meeting" (cadence) everywhere; prune OverviewTab's 3 duplicate CTAs (keep primary; "Full conversation log →" routes to MeetingsTab)
-   - [ ] CadenceHub: history header label for person cadences; suppress/de-duplicate manual cadence brief when overnight operator block present
+   - [x] commitments triple-echo: CHECK-IN WINS — HomeView computes `checkInTargetKeys` (namespaced item:/project: ids of this morning's live check-in questions) + `suppressedByCheckIn()`; "Your word" renders filtered `wordCommitments`/`wordWaitingOn`, so an item with a pending check-in question shows only in CheckInCard until answered, then reappears
+   - [x] "Scheduled Today" moved up (now an InfoCard right after CheckInCard, above the drip queue; no operator guard — always relevant); drip-queue "Throttled-but-queued" nudge now gated `!operatorActive`
+   - [x] CommitmentsView "See all →" link added to "Your word" → `onOpenCommitments` prop → App.jsx `handleSetView("commitments")`
+   - [x] `src/lib/dateUtils.js` (existed from Batch 2): added `fmtMedium`; +17-test `dateUtils.test.js`. Migrated ~30 call sites across 24 files to fmtShort/fmtMedium/fmtLong/fmtRelative; genuine one-offs (weekday/month-year/time/UTC composites) tagged `// eslint-ok: one-off locale format`
+   - [x] shared `GAUGE_STATUS_CONFIG` + `gaugeStatusLabel`/`gaugeStatusToken` in gaugeStatus.js — GaugeView + ProjectsTab + (modal/leader inherit labels) now render from it; health "Watch"→"Watching" canonicalized everywhere (AccountsView/ShopsTab/AccountDetailHeader/OverviewTab); shared `resolveAssignee` moved to ownerLabel.js (de-duped from FlatTaskQueue + StandingBoardView)
+   - [x] shared `EmptyState` component — converted Accounts (empty + no-match), Commitments, Gauge, Meetings, Contacts, Items, MeetingsTab; (Cadence left as PipInsightCard-led narrative — noted)
+   - [x] one card anatomy on Home — new `InfoCard` (neutral content card, 3-cell hex sig); Home's `Panel` delegates to it; "Your word" + "Scheduled Today" migrated. PipCard stays Pip-authored (5-cell); OperatorHub section cards left as-is (their own self-contained grammar — noted)
+   - [x] meeting-CTA: pruned OverviewTab — removed redundant bottom "Quick Conversation" (launcher's "Start / log a meeting" is primary); "Full conversation log →" now routes to MeetingsTab (was mis-wired to onLogMeeting)
+   - [x] CadenceHub: person-cadence history header now "1:1 History" (was "Meeting History · Account"); manual cadence brief suppressed when the overnight operator "✦ Pip prepped this overnight" block is present
 
    **BATCH 6 — Performance:**
    - [ ] dedupe fetches: fetchAllContacts/fetchAllItems consume hook data (contacts + tasks each fetched 2× per cold open); single useProjects instance (App→GaugeView prop — kills double WS channel)

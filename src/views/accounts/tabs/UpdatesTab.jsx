@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { C } from "../../../lib/colors";
+import { fmtMedium } from "../../../lib/dateUtils";
 import { Card } from "../../../components/Card";
 import { AmberBtn, SecBtn, DangerBtn } from "../../../components/Buttons";
 import { Mark } from "../../../components/Mark";
@@ -14,13 +15,13 @@ var UT_SERIF = "'Fraunces', Georgia, serif";
 var UT_MONO  = "'JetBrains Mono', ui-monospace, monospace";
 
 function fmtMonth(d) {
+  // eslint-ok: one-off locale format (month + year section header)
   return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 }
 
 function fmtDayShort(iso) {
   if (!iso) return "—";
-  var d = new Date(iso + "T12:00:00");
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return fmtMedium(iso);
 }
 
 // Group updates by Year-Month for the section headers, descending.

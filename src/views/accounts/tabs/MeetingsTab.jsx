@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { C } from "../../../lib/colors";
+import { fmtMedium } from "../../../lib/dateUtils";
+import { EmptyState } from "../../../components/EmptyState";
 
 var MT_SERIF = "'Fraunces', Georgia, serif";
 var MT_MONO  = "'JetBrains Mono', ui-monospace, monospace";
@@ -223,10 +225,13 @@ export function MeetingsTab({ meetings, accountName, accountId, userId, openItem
       <PipInsightCard text={buildMeetingsInsight(meetings, accountName)} />
 
       {meetings.length === 0 && (
-        <div style={{ textAlign: "center", padding: "40px 20px", color: C.textMuted, fontSize: 13 }}>
-          <div style={{ marginBottom: 12 }}>No meetings on record. Log one after your next call.</div>
-          <AmberBtn onClick={onLogMeeting} style={{ fontSize: 12 }}>+ Log a Conversation</AmberBtn>
-        </div>
+        <EmptyState
+          lattice={false}
+          compact
+          title="No meetings on record."
+          subtitle="Log one after your next call."
+          cta={<AmberBtn onClick={onLogMeeting} style={{ fontSize: 12 }}>+ Log a Conversation</AmberBtn>}
+        />
       )}
 
       {meetings.map(function (m, index) {
@@ -259,7 +264,7 @@ export function MeetingsTab({ meetings, accountName, accountId, userId, openItem
                 </div>
                 <div style={{ fontFamily: MT_MONO, fontSize: 10, color: C.textMuted, marginTop: 4, letterSpacing: "0.04em", fontFeatureSettings: '"tnum"' }}>
                   {m.meeting_date
-                    ? new Date(m.meeting_date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                    ? fmtMedium(m.meeting_date)
                     : ""}
                 </div>
                 {m.attendees && m.attendees.length > 0 && (
@@ -351,7 +356,7 @@ export function MeetingsTab({ meetings, accountName, accountId, userId, openItem
               <div style={{ marginBottom: 10 }}>
                 <FL>Follow-up</FL>
                 <div style={{ fontSize: 14, color: C.accent, fontVariantNumeric: "tabular-nums" }}>
-                  {new Date(m.follow_up_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                  {fmtMedium(m.follow_up_date)}
                 </div>
               </div>
             )}

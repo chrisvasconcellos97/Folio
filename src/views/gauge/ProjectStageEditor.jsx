@@ -3,6 +3,7 @@ import { C } from "../../lib/colors";
 import { TaskDetailPanel } from "./TaskDetailPanel";
 import { TaskEntityDetector } from "../../components/TaskEntityDetector";
 import { autoStatusPatch } from "../../lib/gaugeStatus";
+import { fmtShort, fmtMedium } from "../../lib/dateUtils";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
@@ -10,7 +11,7 @@ var INTER = "'Inter', system-ui, sans-serif";
 
 function fmt(d) {
   if (!d) return "";
-  return new Date(d + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return fmtMedium(d);
 }
 
 function StageIcon({ stage, onClick }) {
@@ -177,7 +178,7 @@ export function ProjectStageEditor({ project, onUpdate, accounts, members, conta
         var subs       = s.sub_stages || [];
         var subsDone   = subs.filter(function (x) { return x.completed_at; }).length;
         var isExpanded = !!expanded[idx];
-        var statusText = blocked ? "blocked" : done ? "done · " + new Date(s.completed_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+        var statusText = blocked ? "blocked" : done ? "done · " + fmtShort(s.completed_at)
                        : subs.length > 0 && subsDone > 0 ? "in progress · " + Math.round((subsDone / subs.length) * 100) + "%"
                        : "planned";
 

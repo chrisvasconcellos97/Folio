@@ -17,6 +17,7 @@ function kickoffLabel(iso) {
   if (!iso) return "";
   var d = new Date(iso);
   if (isNaN(d.getTime())) return "";
+  // eslint-ok: one-off locale format (kickoff weekday + time)
   return d.toLocaleDateString([], { weekday: "short" }) + " " + d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 

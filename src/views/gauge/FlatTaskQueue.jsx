@@ -13,23 +13,14 @@
 
 import { useState, useMemo, lazy, Suspense } from "react";
 import { C } from "../../lib/colors";
+import { fmtShort } from "../../lib/dateUtils";
+import { resolveAssignee } from "../../lib/ownerLabel";
 import { Modal } from "../../components/Modal";
 var AddItemModal = lazy(function () { return import("../accounts/AddItemModal").then(function (m) { return { default: m.AddItemModal }; }); });
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
 var INTER = "'Inter', system-ui, sans-serif";
-
-// Resolve assignee_email to a display name using org member records.
-// If no member matches (contact name stored directly), return as-is.
-function resolveAssignee(emailOrName, members) {
-  if (!emailOrName) return null;
-  var m = (members || []).find(function (x) {
-    return (x.invited_email || x.email || "") === emailOrName;
-  });
-  if (m) return m.full_name || m.display_name || emailOrName;
-  return emailOrName;
-}
 
 var SUBFILTERS = [
   { id: "open",  label: "Open" },
@@ -39,9 +30,7 @@ var SUBFILTERS = [
 
 function fmtDue(d) {
   if (!d) return null;
-  var dt = new Date(d + "T00:00:00");
-  if (isNaN(dt.getTime())) return null;
-  return dt.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return fmtShort(d) || null;
 }
 
 function isOverdue(d) {

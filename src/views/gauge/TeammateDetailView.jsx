@@ -13,6 +13,7 @@
 import { useMemo } from "react";
 import { useTasks } from "../../hooks/useTasks";
 import { C } from "../../lib/colors";
+import { fmtShort } from "../../lib/dateUtils";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
@@ -20,9 +21,7 @@ var INTER = "'Inter', system-ui, sans-serif";
 
 function fmt(d) {
   if (!d) return null;
-  var dt = new Date(d + "T00:00:00");
-  if (isNaN(dt.getTime())) return null;
-  return dt.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return fmtShort(d) || null;
 }
 
 function isOverdue(d) {

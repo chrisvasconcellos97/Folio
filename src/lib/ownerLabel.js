@@ -27,3 +27,16 @@ export function findOwner(members, ownerUserId) {
   if (!members || !ownerUserId) return null;
   return members.find(function (m) { return m.user_id === ownerUserId; }) || null;
 }
+
+// Resolve an assignee stored as an email-or-name string to a display name by
+// matching it against org members. One shared copy (was duplicated verbatim in
+// FlatTaskQueue + StandingBoardView — App Coherence Rule). Returns the raw
+// string unchanged when no member matches (handles free-text + contact names).
+export function resolveAssignee(emailOrName, members) {
+  if (!emailOrName) return null;
+  var m = (members || []).find(function (x) {
+    return (x.invited_email || x.email || "") === emailOrName;
+  });
+  if (m) return m.full_name || m.display_name || emailOrName;
+  return emailOrName;
+}

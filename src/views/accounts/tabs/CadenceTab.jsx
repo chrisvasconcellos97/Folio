@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { C, glass } from "../../../lib/colors";
+import { fmtShort } from "../../../lib/dateUtils";
 import { showToast } from "../../../components/Toast";
 import { AmberBtn, SecBtn, DangerBtn } from "../../../components/Buttons";
 import { PipInsightCard } from "../../../components/PipInsightCard";
@@ -250,7 +251,7 @@ export function CadenceTab({ account, cadences, items, meetings, contacts, onAdd
                   <div style={{ fontSize: 12, color: C.text }}>{item.text}</div>
                   {item.due_date && (
                     <div style={{ fontSize: 10, color: C.yellow, marginTop: 3 }}>
-                      Due: {new Date(item.due_date + "T00:00:00").toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      Due: {fmtShort(item.due_date)}
                     </div>
                   )}
                 </div>
@@ -277,6 +278,7 @@ export function CadenceTab({ account, cadences, items, meetings, contacts, onAdd
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 11, color: C.textMuted }}>
+                      {/* eslint-ok: one-off locale format (weekday + full date) */}
                       {new Date(m.meeting_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
                     </div>
                     {m.attendees && m.attendees.length > 0 && (

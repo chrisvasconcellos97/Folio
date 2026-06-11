@@ -2,7 +2,7 @@ import { C, glass } from "../../../lib/colors";
 import { AmberBtn } from "../../../components/Buttons";
 
 var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red };
-var STATUS_LABELS = { green: "Healthy", yellow: "Watch", red: "At Risk" };
+var STATUS_LABELS = { green: "Healthy", yellow: "Watching", red: "At Risk" };
 
 export function ShopsTab({ shops, onAddShop, onSelectShop }) {
   var today = new Date().toISOString().split("T")[0];

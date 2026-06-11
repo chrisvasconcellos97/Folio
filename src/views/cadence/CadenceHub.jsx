@@ -27,6 +27,7 @@ import { applyPipPlan } from "../../lib/pipPlanApply";
 import { updateTask, insertTask } from "../../hooks/useTasks";
 import { ownerLabel } from "../../lib/ownerLabel";
 import { autoStatusPatch } from "../../lib/gaugeStatus";
+import { fmtShort, fmtMedium } from "../../lib/dateUtils";
 
 var INTER = "'Inter', system-ui, sans-serif";
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
@@ -54,8 +55,7 @@ function todayISO() {
 }
 
 function formatTodayLong() {
-  var d = new Date();
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return fmtMedium(new Date());
 }
 
 /* ---- Draft scratchpad card (kept for drafts that already exist) ---- */
@@ -137,7 +137,7 @@ function DraftCard({ draft, onUpdate, onDelete, onSummarizeRequest, onResume, su
       </div>
 
       <div style={{ display: "flex", gap: 10, fontSize: 11, color: C.textMuted, fontVariantNumeric: "tabular-nums" }}>
-        {draft.meeting_date && <span>{new Date(draft.meeting_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>}
+        {draft.meeting_date && <span>{fmtShort(draft.meeting_date)}</span>}
         {draft.method && <span>{METHOD_LABEL[draft.method] || draft.method}</span>}
       </div>
 
@@ -282,7 +282,7 @@ export function PipBriefPanel({ brief, briefAt, loading, error, onRefresh, mobil
           <MarkdownText text={brief} style={{ fontSize: 14, color: C.textSub, lineHeight: 1.65 }} />
           {briefAt && (
             <div style={{ fontSize: 10, color: C.textMuted, marginTop: 8, fontFamily: MONO }}>
-              Updated {new Date(briefAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+              Updated {fmtShort(briefAt)}
             </div>
           )}
         </>
@@ -403,7 +403,7 @@ function HistoryRow({ meeting, onEdit, onDelete, accountId, openItems, addItem, 
             </span>
           </div>
           <div style={{ fontSize: 11, color: C.textMuted, fontVariantNumeric: "tabular-nums" }}>
-            {meeting.meeting_date && new Date(meeting.meeting_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+            {meeting.meeting_date && fmtMedium(meeting.meeting_date)}
           </div>
           {meeting.pip_summary && (
             <MarkdownText text={meeting.pip_summary} style={{ fontSize: 13, color: C.textSub, lineHeight: 1.6, marginTop: 6 }} />
@@ -415,7 +415,7 @@ function HistoryRow({ meeting, onEdit, onDelete, accountId, openItems, addItem, 
           )}
           {meeting.follow_up_date && (
             <div style={{ fontSize: 11, color: C.accent, marginTop: 6, fontVariantNumeric: "tabular-nums" }}>
-              Follow-up: {new Date(meeting.follow_up_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+              Follow-up: {fmtShort(meeting.follow_up_date)}
             </div>
           )}
 
@@ -477,7 +477,7 @@ function HistoryRow({ meeting, onEdit, onDelete, accountId, openItems, addItem, 
                             {(t.assignee_email || t.due_date) && (
                               <span style={{ fontSize: 11, color: C.textMuted, marginLeft: 6, fontVariantNumeric: "tabular-nums" }}>
                                 {t.assignee_email ? "· " + ownerLabel(t.assignee_email) + " " : ""}
-                                {t.due_date ? "· due " + new Date(t.due_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""}
+                                {t.due_date ? "· due " + fmtShort(t.due_date) : ""}
                               </span>
                             )}
                           </span>
@@ -580,7 +580,7 @@ export function OpenItemRow({ item, onClose, discussed, mentioned, onToggleDiscu
         </div>
         {item.due_date && (
           <div style={{ fontSize: 10, color: C.yellow, marginTop: 3, fontVariantNumeric: "tabular-nums" }}>
-            Due {new Date(item.due_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+            Due {fmtShort(item.due_date)}
           </div>
         )}
       </div>
@@ -780,7 +780,7 @@ function MeetingTaskRow({ task, userId, members, contacts, onUpdate }) {
               }}
             >
               {currentDue
-                ? new Date(currentDue + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                ? fmtShort(currentDue)
                 : "Due date"}
             </button>
           )}
@@ -1022,7 +1022,7 @@ export function HubProjectCard({ project, accounts, members, userEmail, onUpdate
             fontFamily: MONO, fontSize: 10, color: C.textMuted,
             fontVariantNumeric: "tabular-nums",
           }}>
-            {project.due_date && <span>Due {new Date(project.due_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>}
+            {project.due_date && <span>Due {fmtShort(project.due_date)}</span>}
             {tasks.length > 0 && <span>{doneCount}/{tasks.length} tasks</span>}
             {project.assignee && <span>{project.assignee}</span>}
           </div>
@@ -1775,42 +1775,50 @@ export function CadenceHub({
       error={portfolioBriefError}
       onRefresh={handleRefreshPortfolioBrief}
     />
-  ) : (
-    <>
-      {pipAccountStateRow && pipAccountStateRow.operator_generated_at &&
-        (pipAccountStateRow.operator_agenda || pipAccountStateRow.operator_situation) && (
-        <div style={{
-          background: C.surface, border: "1px solid " + C.rule, borderLeft: "2px solid " + C.accent,
-          borderRadius: 12, padding: "12px 14px 14px", marginBottom: 10,
-        }}>
-          <div style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 10, color: C.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 7 }}>
-            ✦ Pip prepped this overnight
-          </div>
-          {pipAccountStateRow.operator_situation && (
-            <MarkdownText text={pipAccountStateRow.operator_situation} style={{ fontSize: 13.5, color: C.textSub, lineHeight: 1.6 }} />
-          )}
-          {pipAccountStateRow.operator_agenda && (
-            <div style={{ marginTop: 9, paddingTop: 9, borderTop: "1px solid " + C.rule }}>
-              <div style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 9, color: C.textMuted, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 5 }}>
-                Suggested agenda
-              </div>
-              <div style={{ fontSize: 13, color: C.textSub, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{pipAccountStateRow.operator_agenda}</div>
+  ) : (() => {
+    // When the nightly operator left a prepped block for this account, show
+    // THAT (it's fresher + deeper) and suppress the manual cadence brief so the
+    // user doesn't read two competing briefs (App Coherence Rule, item 9b).
+    var hasOperatorPrep = !!(pipAccountStateRow && pipAccountStateRow.operator_generated_at &&
+      (pipAccountStateRow.operator_agenda || pipAccountStateRow.operator_situation));
+    return (
+      <>
+        {hasOperatorPrep && (
+          <div style={{
+            background: C.surface, border: "1px solid " + C.rule, borderLeft: "2px solid " + C.accent,
+            borderRadius: 12, padding: "12px 14px 14px", marginBottom: 10,
+          }}>
+            <div style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 10, color: C.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 7 }}>
+              ✦ Pip prepped this overnight
             </div>
-          )}
-        </div>
-      )}
-      <PipBriefPanel
-        brief={cadence.pip_brief}
-        briefAt={cadence.pip_brief_at}
-        loading={briefLoading}
-        error={briefError}
-        onRefresh={handleRefreshBrief}
-        mobileCollapsed={isMobile && !briefExpanded}
-        onExpand={function () { setBriefExpanded(true); }}
-        lessonsLearned={pipLessonsLearned || null}
-      />
-    </>
-  );
+            {pipAccountStateRow.operator_situation && (
+              <MarkdownText text={pipAccountStateRow.operator_situation} style={{ fontSize: 13.5, color: C.textSub, lineHeight: 1.6 }} />
+            )}
+            {pipAccountStateRow.operator_agenda && (
+              <div style={{ marginTop: 9, paddingTop: 9, borderTop: "1px solid " + C.rule }}>
+                <div style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 9, color: C.textMuted, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 5 }}>
+                  Suggested agenda
+                </div>
+                <div style={{ fontSize: 13, color: C.textSub, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{pipAccountStateRow.operator_agenda}</div>
+              </div>
+            )}
+          </div>
+        )}
+        {!hasOperatorPrep && (
+          <PipBriefPanel
+            brief={cadence.pip_brief}
+            briefAt={cadence.pip_brief_at}
+            loading={briefLoading}
+            error={briefError}
+            onRefresh={handleRefreshBrief}
+            mobileCollapsed={isMobile && !briefExpanded}
+            onExpand={function () { setBriefExpanded(true); }}
+            lessonsLearned={pipLessonsLearned || null}
+          />
+        )}
+      </>
+    );
+  })();
 
   var startMeetingSection = (
     <button
@@ -1934,11 +1942,11 @@ export function CadenceHub({
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 12, color: C.text, fontWeight: 600 }}>{m.title || "Follow-up"}</div>
                   <div style={{ fontSize: 11, color: C.textMuted, fontVariantNumeric: "tabular-nums" }}>
-                    From conversation on {m.meeting_date && new Date(m.meeting_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    From conversation on {m.meeting_date && fmtShort(m.meeting_date)}
                   </div>
                 </div>
                 <div style={{ fontSize: 12, color: C.accent, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
-                  {new Date(m.follow_up_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  {fmtShort(m.follow_up_date)}
                 </div>
               </div>
             );
@@ -1950,10 +1958,12 @@ export function CadenceHub({
 
   var historySection = (
     <div>
-      <SectionHeader count={history.length}>Meeting History · Account</SectionHeader>
+      {/* Person 1:1 history is scoped to this cadence, not the whole account —
+          label it accordingly (item 9a). */}
+      <SectionHeader count={history.length}>{isPersonCadence ? "1:1 History" : "Meeting History · Account"}</SectionHeader>
       {history.length === 0 ? (
         <div style={{ fontSize: 12, color: C.textMuted, padding: "6px 0" }}>
-          No summarized conversations yet on this account.
+          {isPersonCadence ? "No 1:1s logged yet." : "No summarized conversations yet on this account."}
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>

@@ -6,6 +6,7 @@ import { FL } from "../../components/FieldLabel";
 import { AccountPicker } from "../../components/AccountPicker";
 import { PersonPicker } from "../../components/PersonPicker";
 import { relUpdateTime, updateAuthorLabel } from "./ProjectStatusUpdate";
+import { fmtMedium } from "../../lib/dateUtils";
 import { DangerBtn } from "../../components/Buttons";
 import { supabase } from "../../lib/supabase";
 import { showToast } from "../../components/Toast";
@@ -600,7 +601,7 @@ export function ProjectModal({
                   }}>
                     <div style={{ fontSize: 13, color: C.text, lineHeight: 1.5 }}>{u.body}</div>
                     <div style={{ fontFamily: MONO, fontSize: 9, color: C.textMuted, marginTop: 3, letterSpacing: "0.04em" }}>
-                      {relUpdateTime(u.at)} · {new Date(u.at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      {relUpdateTime(u.at)} · {fmtMedium(u.at)}
                       {u.by ? " · " + updateAuthorLabel(u.by) : ""}
                     </div>
                   </div>

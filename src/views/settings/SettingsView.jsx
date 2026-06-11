@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { C } from "../../lib/colors";
+import { fmtMedium } from "../../lib/dateUtils";
 import { Card } from "../../components/Card";
 import { FL } from "../../components/FieldLabel";
 import { InputField } from "../../components/InputField";
@@ -303,7 +304,7 @@ export function TeamSection({ org, role, members, pendingInvites, onInvite, onRe
                   <div>
                     <div style={{ fontSize: 12, color: C.textSub }}>{m.invited_email || "Team member"}</div>
                     <div style={{ fontSize: 10, color: C.textMuted }}>
-                      Archived{m.inactivated_at ? " · " + new Date(m.inactivated_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : ""} · {ROLE_LABELS[m.role] || m.role}
+                      Archived{m.inactivated_at ? " · " + fmtMedium(m.inactivated_at) : ""} · {ROLE_LABELS[m.role] || m.role}
                     </div>
                   </div>
                   {canManage && (
@@ -686,6 +687,7 @@ function PipUsageSection({ userId }) {
   var usage = usePipUsage(userId);
   var [showDetails, setShowDetails] = useState(false);
   var now = new Date();
+  // eslint-ok: one-off locale format (month + year spend label)
   var monthLabel = now.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
   // Format dollar amount with sensible precision: < $1 → 3 decimals,
@@ -1207,6 +1209,7 @@ function ActivitySection({ userId, orgId, role, members, accounts }) {
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {rows.map(function (r) {
           var when = new Date(r.created_at);
+          // eslint-ok: one-off locale format (date + time composite)
           var dateLabel = when.toLocaleDateString("en-US", { month: "short", day: "numeric" }) +
                           " · " + when.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
           var who = memberById[r.user_id];

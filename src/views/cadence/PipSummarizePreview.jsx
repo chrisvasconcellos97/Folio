@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { Modal } from "../../components/Modal";
 import { C } from "../../lib/colors";
+import { fmtShort } from "../../lib/dateUtils";
 import { PipMark } from "../../components/PipMark";
 import { showToast } from "../../components/Toast";
 import { InfoTip } from "../../components/InfoTip";
@@ -35,9 +36,7 @@ var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 
 function fmtDate(d) {
   if (!d) return null;
-  try {
-    return new Date(d + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  } catch (e) { return d; }
+  return fmtShort(d) || d;
 }
 
 function findItem(items, id)        { return (items || []).find(function (i) { return i.id === id; }); }

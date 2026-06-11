@@ -5,25 +5,14 @@ import { PipInsightCard } from "../../../components/PipInsightCard";
 import { ProjectModal } from "../../gauge/ProjectModal";
 import { pickV } from "../../../lib/metricsUtils";
 import { supabase } from "../../../lib/supabase";
+import { fmtShort } from "../../../lib/dateUtils";
+import { gaugeStatusLabel, gaugeStatusToken } from "../../../lib/gaugeStatus";
 
 var MONO = "'JetBrains Mono', ui-monospace, monospace";
 
-// Use design-system tokens; each entry provides bg, text, and border for the status badge.
-var STATUS_COLORS = {
-  planned:     C.statusPlanned,
-  in_progress: C.statusInProgress,
-  blocked:     C.statusBlocked,
-  complete:    C.statusComplete,
-  on_hold:     C.statusOnHold,
-};
-
-var STATUS_LABELS = {
-  planned:     "Planned",
-  in_progress: "In Progress",
-  blocked:     "Blocked",
-  complete:    "Complete",
-  on_hold:     "On Hold",
-};
+// Status label + pill colors come from the shared GAUGE_STATUS_CONFIG so the
+// account Projects tab, Gauge, and the Leader rollup never drift (App
+// Coherence Rule). gaugeStatusToken returns the {bg,text,border} token.
 
 var PRIORITY_COLORS = {
   high:   C.red,
@@ -36,7 +25,7 @@ var GB_BDR = C.statusPlanned.border;  // blue border
 
 function fmt(dateStr) {
   if (!dateStr) return null;
-  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return fmtShort(dateStr);
 }
 
 function countExternal(stages) {
@@ -201,8 +190,8 @@ export function ProjectsTab({ projects, accounts, accountId, userId, addProject,
                       TEAM
                     </div>
                   )}
-                  <div style={{ background: (STATUS_COLORS[p.status] || C.statusPlanned).bg, border: "1px solid " + (STATUS_COLORS[p.status] || C.statusPlanned).border, borderRadius: 16, padding: "2px 9px", fontSize: 9, fontWeight: 600, color: (STATUS_COLORS[p.status] || C.statusPlanned).text, whiteSpace: "nowrap" }}>
-                    {STATUS_LABELS[p.status] || p.status}
+                  <div style={{ background: gaugeStatusToken(p.status).bg, border: "1px solid " + gaugeStatusToken(p.status).border, borderRadius: 16, padding: "2px 9px", fontSize: 9, fontWeight: 600, color: gaugeStatusToken(p.status).text, whiteSpace: "nowrap" }}>
+                    {gaugeStatusLabel(p.status)}
                   </div>
                 </div>
               </div>

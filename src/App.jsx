@@ -1161,6 +1161,7 @@ export default function App() {
         themes={recentThemes}
         scheduledMeetings={scheduledMeetings}
         onOpenScheduled={handleOpenScheduled}
+        onOpenCommitments={function () { handleSetView("commitments"); }}
       />
     );
   }

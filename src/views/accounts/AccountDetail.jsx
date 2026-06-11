@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { C } from "../../lib/colors";
+import { fmtMedium } from "../../lib/dateUtils";
 import { showToast } from "../../components/Toast";
 import { MarkdownText } from "../../components/MarkdownText";
 import { Modal } from "../../components/Modal";
@@ -383,7 +384,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
         .filter(function(i) { return i.done && i.text && i.text.indexOf("✓ Delivered:") === 0; })
         .sort(function(a, b) { return (b.closed_at || "") > (a.closed_at || "") ? 1 : -1; })
         .slice(0, 5)
-        .map(function(i) { return { title: i.text.replace("✓ Delivered: ", ""), date: i.closed_at ? new Date(i.closed_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null }; }),
+        .map(function(i) { return { title: i.text.replace("✓ Delivered: ", ""), date: i.closed_at ? fmtMedium(i.closed_at) : null }; }),
       activeProjects: (projects || [])
         .filter(function(p) { return p.status === "in_progress" || p.status === "blocked"; })
         .map(function(p) { return { title: p.title, status: p.status, due_date: p.due_date }; }),
