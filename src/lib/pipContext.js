@@ -284,6 +284,11 @@ function renderAccountFull(a, userId) {
       // Include raw notes for full searchability. Summary added as a compact
       // digest when available so Pip has both the verbatim record and its own read.
       if (m.notes) lines.push("  Notes: " + trunc(m.notes, 600));
+      if (Array.isArray(m.project_notes) && m.project_notes.length) {
+        m.project_notes.forEach(function (pn) {
+          lines.push("  Project note" + (pn.title ? " (" + pn.title + ")" : "") + ": " + trunc(pn.note, 300));
+        });
+      }
       if (m.summary && m.summary.length > 0) lines.push("  Summary: " + trunc(m.summary, 180));
       if (m.action_items) lines.push("  Action items: " + trunc(m.action_items, 200));
       if (m.follow_up) lines.push("  Follow-up: " + m.follow_up);

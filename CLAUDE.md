@@ -610,7 +610,7 @@ If any criterion stays false, that's where we dig next — design failure, not u
      4. **`hexPulse`** — breathing cells on the 4.8s clock; ONLY where Pip actively works: loader (ring) + thinking indicators (3 staggered cells).
      **Placement rules:** cards get the signature, **rows NEVER do** — a panel of dense rows gets ONE chain on the panel (50 rows, one chain); where a Mark glyph already provides identity (view headers, nav), no hex motif (one identity per surface); opacities are dark-theme values — re-tune for light theme at build and verify both (Theme Rule).
 
-**46. Pip anti-sycophancy line (trivial, rides along with any batch)** — *(queued June 11 2026 — the one keeper from a generic "advisor prompt" ChatGPT suggested to Chris; the rest was rejected as duplicating Pip's architecture or diluting the persona)* Add one line to `PIP_PERSONA` in `api/pip.js`: when Chris's stated read on a situation contradicts the data Pip can see, say so plainly — being agreeable is not the job. Keep it in Pip's voice (anxious-but-honest), one line, no behavioral sprawl. Note: persona is in the cached static block — any edit resets the prompt cache (fine, just ship it with other work).
+**46. Pip anti-sycophancy line (trivial, rides along with any batch)** — *(✅ SHIPPED with item 47 Batch 4 — one line added to `PIP_PERSONA` in `api/pip.js`: when the user's read contradicts the data Pip can see, say so plainly, in Pip's anxious-but-honest voice.)* Add one line to `PIP_PERSONA` in `api/pip.js`: when Chris's stated read on a situation contradicts the data Pip can see, say so plainly — being agreeable is not the job. Keep it in Pip's voice (anxious-but-honest), one line, no behavioral sprawl. Note: persona is in the cached static block — any edit resets the prompt cache (fine, just ship it with other work).
 
 **47. 🔧 AUDIT 2026-06-11 — FULL FIX PLAN (Chris: "I want absolutely everything fixed. Every issue you found.")** — *(GREENLIT by Chris June 11 2026 — this checklist is the contract. EVERY box gets ticked, in the same commit as its fix. No batch is "done" until its boxes are ticked here AND a re-audit sweep confirms. This item exists because audit findings have historically died in chat when sessions ended.)*
 
@@ -657,16 +657,16 @@ If any criterion stays false, that's where we dig next — design failure, not u
    - [x] two-device `project_notes` fork (CadenceMeetingMode:342-406 full-map overwrite) + JSONB read-modify-write races on `status_updates`/`stages`/`operator_proposed_moves` → server-side append RPC for status_updates at minimum
 
    **BATCH 4 — Pip brain (the interview gaps):**
-   - [ ] `operating_context` → chat + summarize (THE highest-leverage Pip fix: the interview distillation feeds operator/questions but never the two surfaces Chris actually uses — concatenate ahead of profile_prose in the client callers)
-   - [ ] kill "Be GENEROUS, not strict" in legacy `callAskPip` (~pip.js:631) — apply precision-over-volume doctrine
-   - [ ] `waiting_on`/`waiting_on_since` into operator-run's `renderAccountContext` (who-has-ball is invisible to the overnight loop)
-   - [ ] staleness humility: uncertainty language in ACCOUNT_SYSTEM + REPORT_SYSTEM ("deadline just passed ≠ overdue fire — flag for check-in instead"); fix check-in receipt copy that falsely claims the report is corrected
-   - [ ] `project_notes` → chat context (pipContext renderAccountFull); account updates → portfolio-brief payload; glossary → portfolio-brief/operator/leadership-readout
-   - [ ] profile-synthesis: data-line generalization instruction (numbers in answers currently flow verbatim into profile_prose) + silent-`{}` failure → real error (currently writes onboarding done with empty profile)
-   - [ ] item 46 anti-sycophancy line (rides along)
-   - [ ] check-in polish: sort stale drafts oldest-first; "Let it go" → persistent dismissal (or rename "Not today"); clipboard `.catch` fallback; null-account draft receipt; re-read answered state on checkInKey change (midnight)
-   - [ ] digest hardening: smart-quote/Unicode-bracket normalize before tag regex (Teams/Outlook paste silently fails today); QUIET rows stop writing account name into `waiting_on`; OWE join " — "→" | "
-   - [ ] summarize: deleted-project guard (no "PROJECT <id> (undefined)" in prompt); receipts incentive + follow_up_date few-shot examples
+   - [x] `operating_context` → chat + summarize (verified already wired: `useUserProfile` composes operating_context ahead of profile_prose, and PipView/CadenceHub/AccountDetail/AdHocConversationFlow all pass `userProfile.profile_prose` → api/pip.js buildSystem WHO-YOU-ARE block (chat) + summarizeDraftPip bp2Text in summarySystemBlocks (summarize). Both paths confirmed.)
+   - [x] kill "Be GENEROUS, not strict" in legacy `callAskPip` (no "GENEROUS" string remained; the residual "extract action items aggressively" reworded to "with PRECISION" — precision-over-volume doctrine already present below it)
+   - [x] `waiting_on`/`waiting_on_since` into operator-run's `renderAccountContext` (added to OPEN TASKS + ACTIVE GAUGE PROJECTS lines + added cols to the folio_tasks/gauge_projects selects)
+   - [x] staleness humility: uncertainty language added to ACCOUNT_SYSTEM + REPORT_SYSTEM; check-in receipt copy fixed (no longer claims the report is corrected — says the item/state is updated)
+   - [x] `project_notes` → chat context (pipContext renderAccountFull, resolved to project titles in PipView map); account updates → portfolio-brief payload + prompt (HomeView bounded fetch inside the once/day brief effect); glossary → operator-run (portfolio-brief + leadership-readout already received facts/profileProse)
+   - [x] profile-synthesis: data-line generalization instruction added (numbers → directional); silent-`{}` failure → real error was already done in Batch 1
+   - [x] item 46 anti-sycophancy line (added to PIP_PERSONA in api/pip.js)
+   - [x] check-in polish: stale drafts sorted oldest-first; "Let it go" now a persistent dismissal (folio_checkin_dismissed_<user>); clipboard `.catch` fallback; null-account draft receipt; re-read answered state on checkInKey change (midnight)
+   - [x] digest hardening: smart-quote/Unicode-bracket normalize before tag regex; QUIET rows no longer write account name into `waiting_on` (DigestIngestModal); OWE join " — "→" | "
+   - [x] summarize: deleted-project guard already present (discussed/noted blocks skip stale ids); receipts incentive + follow_up_date few-shot examples already in SUMMARIZE_SCHEMA_RULES
 
    **BATCH 5 — Home & coherence (the Frankenstein batch):**
    - [ ] commitments triple-echo: one commitments engine; same item never in CheckInCard + "Your word" + OperatorHub simultaneously (suppression/cross-linking per Chris's verdict below)

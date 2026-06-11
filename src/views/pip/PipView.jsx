@@ -186,6 +186,17 @@ export function PipView(props) {
         var acctMeetings = allMeetings.filter(function (m) { return m.account_id === a.id && m.status !== "scheduled"; })
           .slice(0, 8)
           .map(function (m) {
+            // Per-project notes captured in-meeting (jsonb { projectId: text }).
+            // Resolve project titles so Pip sees which notes belong to which project.
+            var projNotes = [];
+            if (m.project_notes && typeof m.project_notes === "object") {
+              Object.keys(m.project_notes).forEach(function (pid) {
+                var note = m.project_notes[pid];
+                if (!note || !String(note).trim()) return;
+                var proj = (projects || []).find(function (p) { return p.id === pid; });
+                projNotes.push({ title: proj ? (proj.title || "Untitled project") : null, note: String(note).trim() });
+              });
+            }
             return {
               date:         m.meeting_date,
               title:        m.title,
@@ -197,6 +208,7 @@ export function PipView(props) {
               attendees:    m.attendees,
               tone:         m.pip_tone  || null,
               theme:        m.theme     || null,
+              project_notes: projNotes.length ? projNotes : null,
             };
           });
         // Upcoming scheduled (future, one-off) meetings — kept separate from

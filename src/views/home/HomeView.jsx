@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, lazy, Suspense } from "react";
 var AddItemModal = lazy(function () { return import("../accounts/AddItemModal").then(function (m) { return { default: m.AddItemModal }; }); });
 import { C } from "../../lib/colors";
+import { supabase } from "../../lib/supabase";
 import { PipOrb } from "../../components/PipMark";
 import { LitPill } from "../../components/LitPill";
 import { Glow } from "../../components/Glow";
@@ -273,8 +274,33 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
     if (!accounts || accounts.length === 0) return;
     briefFiredRef.current = true;
     setBriefLoading(true);
-    (function () {
+    (async function () {
       var sevenDaysOut = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+
+      // Recent account changes (catalog/pricing/integration/etc) — context for
+      // why an account might be moving. This runs only inside the once-per-day,
+      // cached brief generation (not on cold open), so the extra query is cheap.
+      var recentUpdates = [];
+      try {
+        var thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+        var updRes = await supabase
+          .from("folio_account_updates")
+          .select("account_id,update_type,title,description,update_date")
+          .eq("user_id", userId)
+          .gte("update_date", thirtyDaysAgo)
+          .order("update_date", { ascending: false })
+          .limit(12);
+        recentUpdates = (updRes.data || []).map(function (u) {
+          var acc = (accounts || []).find(function (a) { return a.id === u.account_id; });
+          return {
+            account_name: acc ? acc.name : null,
+            update_type: u.update_type || null,
+            title: u.title || null,
+            description: u.description || null,
+            update_date: u.update_date || null,
+          };
+        });
+      } catch (_) { /* updates are supporting context — never block the brief */ }
 
       // Build overdue item text per account so Pip can name them specifically
       var overdueByAccount = {};
@@ -501,6 +527,7 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
         toneSignals: toneSignals,
         anomalySignals: anomalySignals,
         portfolioThemes: portfolioThemes,
+        recentUpdates: recentUpdates,
         facts: pipFacts || [],
         profileProse: profileProse || null,
       }).then(function (result) {
@@ -562,16 +589,32 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
 
   // ── Morning check-in (Phase 1.2) — Pip asks before he declares ────────
   var checkInKey = "folio_checkin_" + userId + "_" + todayISO;
+  // Persistent "don't ask again" set — keyed by question id, NOT per-day, so a
+  // dismissed draft never re-surfaces tomorrow. (The per-day key below only
+  // remembers what was answered *today* and resets at midnight.)
+  var checkInDismissKey = "folio_checkin_dismissed_" + userId;
   var [checkInAnswered, setCheckInAnswered] = useState(function () {
     try { return JSON.parse(localStorage.getItem(checkInKey) || "{}"); } catch (e) { return {}; }
   });
+  var [checkInDismissed, setCheckInDismissed] = useState(function () {
+    try { return JSON.parse(localStorage.getItem(checkInDismissKey) || "{}"); } catch (e) { return {}; }
+  });
   var [checkInReceipts, setCheckInReceipts] = useState([]);
+  // Re-read today's answered-state when the day key flips (midnight rollover
+  // without a reload). Receipts clear with the new day too.
+  useEffect(function () {
+    try { setCheckInAnswered(JSON.parse(localStorage.getItem(checkInKey) || "{}")); }
+    catch (e) { setCheckInAnswered({}); }
+    setCheckInReceipts([]);
+  }, [checkInKey]);
   var checkInQuestions = useMemo(function () {
+    // Merge per-day answered + persistent dismissed so both suppress questions.
+    var suppressed = Object.assign({}, checkInDismissed, checkInAnswered);
     return generateCheckInQuestions({
       items: items || [], projects: projects || [], meetings: meetings || [],
-      accounts: accounts || [], todayISO: todayISO, answered: checkInAnswered,
+      accounts: accounts || [], todayISO: todayISO, answered: suppressed,
     });
-  }, [items, projects, meetings, accounts, todayISO, checkInAnswered]);
+  }, [items, projects, meetings, accounts, todayISO, checkInAnswered, checkInDismissed]);
 
   function handleCheckInAnswer(q, optId) {
     var next = Object.assign({}, checkInAnswered);
@@ -583,10 +626,10 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
     if (q.kind === "deadline_passed" && optId === "done") {
       if (q.targetKind === "item" && onCloseItem) {
         onCloseItem(q.targetId);
-        receipt = "Marked it done — the report won't cry wolf about it.";
+        receipt = "Marked it done — Pip won't flag it again.";
       } else if (q.targetKind === "project" && onUpdateProject) {
         onUpdateProject(q.targetId, { status: "complete" });
-        receipt = "Project marked complete — corrected before the day starts.";
+        receipt = "Project marked complete — Pip's read is up to date now.";
       }
     } else if (q.kind === "deadline_passed" && optId === "still_open") {
       receipt = "Noted — it stays on your list.";
@@ -597,13 +640,25 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
       var proj = (projects || []).find(function (p) { return p.id === q.targetId; });
       var msg = "Hi " + (q.who || "").split(" ")[0] + " — checking in on \"" +
         ((proj && proj.title) || "the project") + "\". Where do things stand? Anything you need from me to move it? Thanks!";
-      if (navigator.clipboard) navigator.clipboard.writeText(msg);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(msg).catch(function () { /* clipboard blocked — receipt still shows */ });
+      }
       receipt = "Chase note for " + q.who + " copied — paste into email or Teams.";
     } else if (q.kind === "stale_draft" && optId === "open_it") {
-      receipt = "Taking you to the draft.";
-      if (q.accountId && onOpenAccountTab) onOpenAccountTab(q.accountId, "meetings");
+      if (q.accountId && onOpenAccountTab) {
+        onOpenAccountTab(q.accountId, "meetings");
+        receipt = "Taking you to the draft.";
+      } else {
+        // Account-less draft (a global ad-hoc) — nowhere to deep-link.
+        receipt = "Open it from the meeting list when you're ready.";
+      }
     } else if (q.kind === "stale_draft" && optId === "ignore") {
-      receipt = "Letting that one go.";
+      // Persist this dismissal so the draft never re-asks tomorrow.
+      var nextDismiss = Object.assign({}, checkInDismissed);
+      nextDismiss[q.id] = true;
+      setCheckInDismissed(nextDismiss);
+      try { localStorage.setItem(checkInDismissKey, JSON.stringify(nextDismiss)); } catch (e) { /* quota */ }
+      receipt = "Letting that one go — I won't ask again.";
     }
     if (receipt) {
       setCheckInReceipts(function (prev) { return prev.concat([receipt]); });

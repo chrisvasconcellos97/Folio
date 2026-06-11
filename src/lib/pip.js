@@ -627,7 +627,7 @@ export function callAskPip(payload) {
     renderGlossaryBlock(glossary) +
     renderAccountObjectiveBlock(accountObjective) +
     renderAccountSystemsBlock(accountSystems) +
-    "Summarize this meeting, extract action items aggressively, and draft a follow-up email. " +
+    "Summarize this meeting, extract action items with PRECISION (not volume — see the rule below), and draft a follow-up email. " +
     "Return ONLY valid JSON: {\"short_title\":\"...\",\"summary\":\"...\",\"action_items\":[\"...\"],\"email\":\"...\"}.\n\n" +
     "Account: " + (payload.accountName || "—") + "\n" +
     "Meeting: " + (m.title || "Untitled") + " (" + (m.meeting_date || "") + ")\n" +
@@ -639,15 +639,17 @@ export function callAskPip(payload) {
     "email-subject style (e.g. 'Invoice feed delay + integration timeline'). No date, " +
     "no 'Email'/'Call' prefix. This replaces a placeholder title, so make it specific to the content.\n" +
     "Summary: 2-3 sentences capturing what was discussed.\n" +
-    "action_items: Be GENEROUS, not strict. Include ANY of the following you can find or reasonably infer from the notes:\n" +
-    "  - tasks Chris committed to (send, follow up, draft, prepare, call, schedule, etc.)\n" +
-    "  - commitments the other party made (they will send X, get back on Y)\n" +
-    "  - open questions or unresolved items mentioned\n" +
-    "  - 'next time' / 'next meeting' references\n" +
-    "  - things to verify, confirm, or check on\n" +
+    "action_items: PRECISION OVER VOLUME. The notes are a JOURNAL, not a to-do list — most lines are " +
+    "observations, context, or status the user is just recording. Extract an action item ONLY for: " +
+    "(1) explicit first-person commitments ('I'll send...', 'we'll get them...'), " +
+    "(2) direct asks — someone requested something of the user, or " +
+    "(3) a clear deliverable the other party owes that the user must track. " +
+    "Do NOT manufacture tasks from FYI facts, opinions, decisions already made, things other teams are doing " +
+    "on their own, or vague 'maybe next time' references. TWO right items beat NINE the user has to delete — " +
+    "over-extraction is the failure mode the user complains about most. " +
+    "An empty array is a respectable, valid answer for an informational meeting.\n" +
     "Each item is one short plain string (no bullets, no numbering, no 'TODO:' prefix). " +
-    "If existing action items are listed above, include all of them in your output plus anything new — don't lose them. " +
-    "If after a careful read you truly find zero, return an empty array — but try hard first.\n" +
+    "If existing action items are listed above, include all of them in your output plus anything genuinely new — don't lose them.\n" +
     "email: Body only (no subject, plain prose, friendly professional tone).";
 
   // mode:"brief_lg" → Haiku 2048 tokens (was "summary" → Sonnet 3072).
@@ -923,7 +925,9 @@ export function summarizeDraftPip(payload, opts) {
     "- new_task: ONLY use this kind when the project_id is a UUID that appears in the Active Gauge projects list. If no project matches, use new_item instead — never invent a project_id.\n" +
     "- update_task / update_item: ONLY use these when you can point at a SPECIFIC existing task or item by its real id (task_id from the project's task list, or target_id from the open items list) AND you have a concrete change to make (a new due_date, status, or rewritten text). Never emit an update_* row for a project you can't tie to a specific existing task, and never with an empty fields object — create a new_task / new_item instead. A discussed project is NOT itself a task.\n" +
     "- unknown_people: Scan the meeting notes for proper names (people, not companies or products). BEFORE adding anyone, check IN ORDER: (1) this account's CONTACTS list, (2) the attendees list, (3) the PEOPLE DIRECTORY block — every contact across ALL the user's accounts and partners plus internal teammates, (4) the glossary — some capitalized words are systems/products, never people, (5) the current user themself. If the name matches ANY of those (exact or unambiguous first-name match), DO NOT include them — being MENTIONED in this meeting does not make someone a new contact on this account. For INTERNAL or DEPARTMENT meetings (account_type 'internal_team'), return an empty array always. unknown_people is ONLY for genuinely new external people the user met or clearly needs to track. When you exclude a recognized name, you may say so in receipts (e.g. \"Recognized Dana — Keystone contact, not new\").\n" +
-    "- DISCUSSED signal: when a project or item appears in the DISCUSSED block above, you have explicit confirmation it was talked about. Prefer update_task / update_item / close_item over a new row ONLY when there's a specific existing task/item to change (per the rule above). If the discussion produced new work, create a new_task on that project instead — do not invent an update to a task that doesn't exist. Set confidence 'high' on rows related to discussed items.\n";
+    "- DISCUSSED signal: when a project or item appears in the DISCUSSED block above, you have explicit confirmation it was talked about. Prefer update_task / update_item / close_item over a new row ONLY when there's a specific existing task/item to change (per the rule above). If the discussion produced new work, create a new_task on that project instead — do not invent an update to a task that doesn't exist. Set confidence 'high' on rows related to discussed items.\n" +
+    "- follow_up_date: set it whenever the notes name or imply a next touchpoint — set the date, don't leave it null out of caution. Examples: \"circle back next week\" → next Monday's date; \"check in after the holiday\" → the first business day after; \"they'll have an answer by Friday\" → that Friday; a scheduled next call → that date. Only return null when there is genuinely no future contact implied.\n" +
+    "- receipts EARN TRUST: when you applied a glossary term, recognized a person from the directory (and therefore did NOT flag them as new), connected an update-calendar event, or honored a past correction — SAY SO in receipts. The user reviews these to confirm Pip is actually using what they taught it. Examples: \"Applied glossary: 'Fuse5' = their DMS\", \"Recognized Dana — Keystone contact, not new\", \"Honored prior correction: route invoice work to Gauge, not standalone\". Never invent a receipt for knowledge you didn't actually use.\n";
 
   // BP1 — system: static schema + rules, cached globally
   var summarySystemBlocks = [
@@ -975,10 +979,20 @@ export function summarizeDraftPip(payload, opts) {
       ? "── DISCUSSED THIS MEETING (high-confidence signal) ──\n" +
         "These were explicitly flagged as discussed by the user — STRONGLY prefer update/close over new rows for them:\n" +
         (discussedProjectIds.length
-          ? "Projects: " + discussedProjectIds.map(function (id) {
-              var p = activeProjects.find(function (x) { return x.id === id; });
-              return id + (p ? " (" + (p.title || "Untitled") + ")" : "");
-            }).join(", ") + "\n"
+          ? (function () {
+              // Skip discussed ids that no longer resolve to an active project
+              // (project deleted since the meeting) so the prompt never carries
+              // a bare/undefined project reference.
+              var resolved = discussedProjectIds
+                .map(function (id) { return activeProjects.find(function (x) { return x.id === id; }) ? id : null; })
+                .filter(Boolean);
+              return resolved.length
+                ? "Projects: " + resolved.map(function (id) {
+                    var p = activeProjects.find(function (x) { return x.id === id; });
+                    return id + " (" + (p.title || "Untitled") + ")";
+                  }).join(", ") + "\n"
+                : "";
+            })()
           : "") +
         (discussedItemIds.length
           ? "Items/Tasks: " + discussedItemIds.join(", ") + "\n"
@@ -1003,16 +1017,22 @@ export function summarizeDraftPip(payload, opts) {
     checkboxBlock += "\n";
   }
   var projectNotesBlock = "";
-  if (notedProjectIds.length) {
+  // Only emit notes whose project still resolves to an active project — a
+  // project deleted since the meeting has no id to route to, so emitting
+  // "PROJECT <id> (undefined)" just confuses the model.
+  var resolvedNotedIds = notedProjectIds.filter(function (id) {
+    return activeProjects.find(function (x) { return x.id === id; });
+  });
+  if (resolvedNotedIds.length) {
     projectNotesBlock =
       "── NOTES FILED UNDER SPECIFIC PROJECTS ──\n" +
       "The user captured these on the project's own card during the meeting, so their provenance is certain. " +
       "Action items arising from a project's notes belong to THAT project — use new_task with its project_id (or update_task on its existing tasks). " +
       "Do not route them to other projects and do not leave them as standalone items. " +
       "Fold the substance of these notes into the overall summary too.\n" +
-      notedProjectIds.map(function (id) {
+      resolvedNotedIds.map(function (id) {
         var p = activeProjects.find(function (x) { return x.id === id; });
-        return "\nPROJECT " + id + (p ? " (" + (p.title || "Untitled") + ")" : "") + ":\n" +
+        return "\nPROJECT " + id + " (" + (p.title || "Untitled") + "):\n" +
           String(projectNotes[id]).trim();
       }).join("\n") + "\n\n";
   }

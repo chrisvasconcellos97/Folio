@@ -126,6 +126,12 @@ export function generateCheckInQuestions(input) {
       var d = daysBetween(ref, todayISO);
       return d >= DRAFT_AGE_DAYS && d <= 14;
     })
+    // Oldest draft first — the one going coldest deserves the prompt.
+    .sort(function (a, b) {
+      var ar = a.meeting_date || (a.created_at ? String(a.created_at).slice(0, 10) : "");
+      var br = b.meeting_date || (b.created_at ? String(b.created_at).slice(0, 10) : "");
+      return ar.localeCompare(br);
+    })
     .slice(0, 1)
     .forEach(function (m) {
       questions.push({

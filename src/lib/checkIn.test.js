@@ -79,13 +79,16 @@ describe("generateCheckInQuestions — stale_draft + caps + answered", function 
     var qs = generateCheckInQuestions({
       todayISO: TODAY,
       meetings: [
-        { id: "m1", status: "draft", meeting_date: "2026-06-07", account_id: "a1" },
-        { id: "m2", status: "draft", meeting_date: "2026-06-06" },
+        // m1 is newer; m2 is older — the oldest (coldest) draft wins, and it
+        // carries the account so the question names it.
+        { id: "m1", status: "draft", meeting_date: "2026-06-07" },
+        { id: "m2", status: "draft", meeting_date: "2026-06-06", account_id: "a1" },
       ],
       accounts: [{ id: "a1", name: "Parts Authority" }],
     });
     expect(qs.length).toBe(1);
     expect(qs[0].kind).toBe("stale_draft");
+    expect(qs[0].targetId).toBe("m2"); // oldest draft chosen
     expect(qs[0].text).toContain("Parts Authority");
   });
 

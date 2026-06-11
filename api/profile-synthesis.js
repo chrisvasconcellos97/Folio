@@ -62,6 +62,7 @@ export default async function handler(req, res) {
     var systemPrompt = "You are a profile synthesizer for Pip, an AI field analyst. " +
       "Given a user's answers to onboarding questions, extract structured slot values AND write a concise profile narrative. " +
       "The narrative is injected into every Pip response going forward — make it accurate and useful, not generic fluff. " +
+      "DATA LINE (hard rule): NEVER retain quantitative business data verbatim. If an answer mentions revenue figures, transaction volumes, customer/shop counts, pricing, or contract terms, GENERALIZE it to directional language before writing anything — store 'high-volume distributor, volume healthy', never '$2M/month'; store 'large book' or '~several dozen accounts', never an exact dollar or count tied to the business. Qualitative and directional conclusions are fine; raw numbers about the business are not. " +
       "Respond with valid JSON only, no markdown fences.";
 
     var userPrompt = "Here are the user's onboarding answers:\n\n" + qaText + "\n\n" +

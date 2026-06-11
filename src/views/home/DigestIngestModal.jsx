@@ -94,9 +94,12 @@ export function DigestIngestModal({ accounts, userId, addMeeting, onClose }) {
         }).then(function () { counts.owe++; });
       }
       if (r.kind === "waiting" || r.kind === "quiet") {
+        // waiting_on names the PERSON who has the ball — never the account.
+        // A QUIET thread with no named person stays a waiting-on task without a
+        // who, rather than stamping the account name into the person field.
         return insertTask(userId, {
           title: r.text, account_id: r.accountId,
-          waiting_on: r.who || r.accountName, waiting_on_since: r.since || todayISO,
+          waiting_on: r.who || null, waiting_on_since: r.since || todayISO,
           user_added: true,
         }).then(function () { counts[r.kind]++; });
       }

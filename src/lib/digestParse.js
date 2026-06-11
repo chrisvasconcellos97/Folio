@@ -18,6 +18,18 @@
 
 var KINDS = ["OWE", "WAITING", "QUIET", "TOUCH"];
 
+// Teams/Outlook paste mangles ASCII punctuation into Unicode lookalikes —
+// curly quotes, fancy brackets, en/em dashes around the pipe — which silently
+// broke the [TAG] regex and the | segment splitter. Normalize to ASCII first.
+function normalizeDigestText(text) {
+  return (text || "")
+    .replace(/[‘’‚‛]/g, "'")   // ‘ ’ ‚ ‛ → '
+    .replace(/[“”„‟]/g, '"')   // “ ” „ ‟ → "
+    .replace(/[［【⟦❲]/g, "[")    // ［ 【 ⟦ ❲ → [
+    .replace(/[］】⟧❳]/g, "]")    // ］ 】 ⟧ ❳ → ]
+    .replace(/[｜│]/g, "|");               // ｜ │ → |
+}
+
 function matchAccount(name, accounts) {
   if (!name) return null;
   var n = name.trim().toLowerCase();
@@ -47,7 +59,7 @@ export function parseDigest(text, accounts) {
   var unparsed = [];
   var digestDate = null;
 
-  (text || "").split("\n").forEach(function (rawLine) {
+  normalizeDigestText(text).split("\n").forEach(function (rawLine) {
     var line = rawLine.trim();
     if (!line) return;
 
@@ -72,7 +84,7 @@ export function parseDigest(text, accounts) {
     var full = rest.join(" | ");
 
     if (kind === "OWE") {
-      var what = stripDateTag(rest.join(" — "));
+      var what = stripDateTag(rest.join(" | "));
       if (!what) { unparsed.push(line); return; }
       rows.push({
         kind: "owe",

@@ -49,7 +49,7 @@ export default async function handler(req, res) {
   if (isRateLimited(user.id)) return res.status(429).json({ error: "rate_limited" });
 
   var MAX_ARRAY = 200; // payload size cap — guard against unbounded client arrays
-  var { snapshots, projects, overdueTasks, commitmentsDue, commitmentsOverdue, todayCadences, coldAccounts, looseEnds, healthDeltas, relationshipSignals, toneSignals, anomalySignals, leadershipTasks, portfolioThemes, facts, profileProse } = req.body || {};
+  var { snapshots, projects, overdueTasks, commitmentsDue, commitmentsOverdue, todayCadences, coldAccounts, looseEnds, healthDeltas, relationshipSignals, toneSignals, anomalySignals, leadershipTasks, portfolioThemes, recentUpdates, facts, profileProse } = req.body || {};
   snapshots = (snapshots || []).slice(0, MAX_ARRAY);
   projects  = (projects  || []).slice(0, MAX_ARRAY);
 
@@ -167,6 +167,18 @@ export default async function handler(req, res) {
       if (r.blockers.length > 0) parts.push("BLOCKER: " + r.blockers.join(", "));
       workloadLines.push("RELATIONSHIP: " + parts.join(" — "));
     });
+  }
+
+  // Recent account updates (catalog/pricing/integration/etc changes) — context
+  // for why an account might be moving. Cap tight; this is supporting signal.
+  if ((recentUpdates || []).length > 0) {
+    workloadLines.push("RECENT ACCOUNT CHANGES (what changed lately): " +
+      recentUpdates.slice(0, 8).map(function (u) {
+        return (u.account_name ? u.account_name + " — " : "") +
+          (u.update_type ? u.update_type + ": " : "") +
+          (u.title || u.description || "").slice(0, 80) +
+          (u.update_date ? " (" + u.update_date + ")" : "");
+      }).join("; "));
   }
 
   var themesText = (portfolioThemes || []).length > 0

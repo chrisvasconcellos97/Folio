@@ -106,6 +106,7 @@ function renderAccountContext(acc, meetings, tasks, contacts, projects, updates,
       if (t.due_date) bits.push("due " + t.due_date);
       if (t.is_commitment) bits.push("✦ COMMITMENT");
       if (t.assignee_email) bits.push("→ " + t.assignee_email);
+      if (t.waiting_on) bits.push("⏳ WAITING ON " + t.waiting_on + (t.waiting_on_since ? " (since " + t.waiting_on_since + ")" : ""));
       lines.push("- " + bits.join(" · "));
     });
   }
@@ -115,7 +116,8 @@ function renderAccountContext(acc, meetings, tasks, contacts, projects, updates,
     projects.slice(0, 8).forEach(function (p) {
       var latest = Array.isArray(p.status_updates) && p.status_updates.length ? p.status_updates[0] : null;
       lines.push("- " + (p.title || "(untitled)") + " · " + (p.status || "?") +
-        (latest ? " · latest: \"" + excerpt(latest.body, 120) + "\"" : ""));
+        (latest ? " · latest: \"" + excerpt(latest.body, 120) + "\"" : "") +
+        (p.waiting_on ? " · ⏳ WAITING ON " + p.waiting_on + (p.waiting_on_since ? " (since " + p.waiting_on_since + ")" : "") : ""));
     });
   }
 
@@ -153,6 +155,7 @@ Rules:
 - PROPOSE, don't act. Everything you return is a draft the human approves. Never assume it's done.
 - Be concrete and honest. If the account is quiet and fine, say so briefly and return an empty draft_email and few/no moves. Don't invent urgency.
 - A "commitment" (✦) that's overdue is the most important thing — lead your situation with it and draft the email to close it.
+- STALENESS HUMILITY: a deadline that just passed is NOT automatically an "overdue fire." Your data can be stale — the work may already be done and just unmarked (the final step finished over the weekend, nobody ticked the box). When something is freshly past-due (a day or two), frame it as a question to verify in the morning check-in ("All Star's final step was due Friday — did it land?"), not a full-confidence alarm. Reserve real urgency for things genuinely sitting open for a while with no movement. Better to ask than to scream and be wrong.
 - Keep it tight. This feeds a morning report; the human skims it fast.`;
 
 // admin is the service-role Supabase client, used for folio_errors inserts.
@@ -232,6 +235,7 @@ Rules:
 - "fire" = needs them today (overdue commitments, active fires, Major-tier issues). "watch" = this week. "win" = good news, acknowledge briefly. "signal" = a cross-account pattern worth raising.
 - Order sections fire → watch → win → signal. Omit any section with no items. Wins never lead.
 - Major-tier accounts outrank Mid/Growth. A broken promise to a named person is the worst outcome — lead with it.
+- STALENESS HUMILITY: your read can be stale. A deadline that JUST passed is not automatically a "fire" — the work may already be done and just unmarked. Don't scream "overdue" at full confidence about something freshly due; phrase it as a verify-this ("worth confirming All Star landed Friday") and let the morning check-in settle it. Save real fire-tone for things genuinely sitting untouched. Confident-and-wrong is the failure that erodes trust fastest.
 - set has_draft true on the item whose account you drafted a follow-up for.
 - The headline and opening carry your personality. The section lines stay tight and useful (light voice, but they're a scannable list, not paragraphs).
 - Don't manufacture content. A genuinely calm day is a warm headline + a one-line opening + maybe one short section. Don't pad.`;
@@ -354,6 +358,27 @@ async function processUser(admin, client, userId, tz) {
       .filter(Boolean).join("\n\n").slice(0, 3500);
   }
 
+  // Glossary — the user's own vocabulary (brands, systems, codenames). Feeding
+  // it overnight keeps the report speaking the user's language instead of
+  // generic phrasing. Cheap: cap at the most recent terms.
+  var glossRes = await admin.from("pip_glossary")
+    .select("term,definition,aliases").eq("user_id", userId).is("deleted_at", null)
+    .order("updated_at", { ascending: false }).limit(40);
+  if (glossRes.data && glossRes.data.length) {
+    var glossLines = glossRes.data
+      .filter(function (g) { return g && g.term && g.definition; })
+      .map(function (g) {
+        var line = "- " + g.term + " = " + g.definition;
+        var al = Array.isArray(g.aliases) ? g.aliases.filter(Boolean) : [];
+        if (al.length) line += " (also: " + al.join(", ") + ")";
+        return line;
+      });
+    if (glossLines.length) {
+      userContext = (userContext ? userContext + "\n\n" : "") +
+        "── THEIR VOCABULARY (use these terms) ──\n" + glossLines.join("\n");
+    }
+  }
+
   // Activity since last run → which accounts moved. Pull from folio_activity
   // AND folio_tasks (task adds/edits don't log to folio_activity).
   var activitySinceIds = {};
@@ -471,13 +496,13 @@ async function gatherAndRun(admin, client, userId, acc, snapshot, userContext) {
     .select("title,meeting_date,created_at,pip_summary,pip_tone")
     .eq("account_id", acc.id).order("meeting_date", { ascending: false }).limit(5);
   var tRes = await admin.from("folio_tasks")
-    .select("title,due_date,is_commitment,assignee_email,done,status")
+    .select("title,due_date,is_commitment,assignee_email,done,status,waiting_on,waiting_on_since")
     .eq("account_id", acc.id).limit(40);
   var cRes = await admin.from("folio_contacts")
     .select("name,title,is_primary,relationship_role")
     .eq("account_id", acc.id).limit(20);
   var pRes = await admin.from("gauge_projects")
-    .select("title,status,status_updates,account_id,account_ids")
+    .select("title,status,status_updates,account_id,account_ids,waiting_on,waiting_on_since")
     .or("account_id.eq." + acc.id + ",account_ids.cs.{" + acc.id + "}").limit(20);
   var uRes = await admin.from("folio_account_updates")
     .select("update_date,update_type,title,description")
