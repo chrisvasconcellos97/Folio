@@ -612,6 +612,97 @@ If any criterion stays false, that's where we dig next — design failure, not u
 
 **46. Pip anti-sycophancy line (trivial, rides along with any batch)** — *(queued June 11 2026 — the one keeper from a generic "advisor prompt" ChatGPT suggested to Chris; the rest was rejected as duplicating Pip's architecture or diluting the persona)* Add one line to `PIP_PERSONA` in `api/pip.js`: when Chris's stated read on a situation contradicts the data Pip can see, say so plainly — being agreeable is not the job. Keep it in Pip's voice (anxious-but-honest), one line, no behavioral sprawl. Note: persona is in the cached static block — any edit resets the prompt cache (fine, just ship it with other work).
 
+**47. 🔧 AUDIT 2026-06-11 — FULL FIX PLAN (Chris: "I want absolutely everything fixed. Every issue you found.")** — *(GREENLIT by Chris June 11 2026 — this checklist is the contract. EVERY box gets ticked, in the same commit as its fix. No batch is "done" until its boxes are ticked here AND a re-audit sweep confirms. This item exists because audit findings have historically died in chat when sessions ended.)*
+
+   **EXECUTION PROTOCOL (read before building any batch):**
+   1. One batch = one Sonnet Patch run in a worktree, phrased per the Patch gotchas ("YOU are Patch — EXECUTE NOW; don't end turn until git commit succeeds"). Main session reviews line-by-line, ticks boxes in the SAME commit, ships on Chris's "push."
+   2. DB changes apply to prod via MCP migration + fold into `schema.sql` in the same batch.
+   3. After ALL batches: run a final verification sweep — one agent re-checks every ticked box against the code (the "audit-the-fix" pass). Untickable boxes get re-opened, never deleted.
+   4. Sanity-Pass Rule applies to every fix (esp. the silent-failure surfaces: RLS, prompts, cron, localStorage).
+
+   **BATCH 1 — Cost & trust (the "almost out of funds" batch):**
+   - [ ] `logPipUsage` in ALL 12 endpoints (today only pip/ask-pip/pip-state-refresh log; operator-run, portfolio-brief, generate-questions, detect-terminology, profile-synthesis, business-review, leadership-readout are invisible to the Settings spend tile)
+   - [ ] operator-run: report-pass + account-pass failures → `folio_errors` (June 10+11 burned deep passes, wrote NO report, surfaced nothing); add stop_reason/truncation check per account pass — skip writing partial state
+   - [ ] operator-run: gate at-risk/watching re-passes on actual movement (today they re-pass daily even untouched) — cap unchanged troubled accounts to every 3 days
+   - [ ] Sonnet→Haiku reroutes in `src/lib/pip.js`: `callAskPip` (~653), `extractTouchpointActionsPip` (~1364), `compressCorrectionsPip` (~1456) — all use mode:"summary" (Sonnet 3072) for Haiku-grade jobs
+   - [ ] server rate limits on `generate-questions` + `profile-synthesis` (unguarded Sonnet); daily DB-backed spend cap checked before any Sonnet call (degrade to Haiku past threshold)
+   - [ ] `maxDuration: 60` on pip-state-refresh, generate-questions, detect-terminology, profile-synthesis
+   - [ ] CRON_SECRET: header-only (the `?secret=` query param sits in Vercel access logs in plaintext); `?user=` removed or validated against the caller's own JWT
+   - [ ] signout wipe additions (`useAuth.js` SENSITIVE_LOCALSTORAGE_PREFIXES): daily brief, `folio_op_read_`, check-in keys, sports cache
+   - [ ] detect-terminology max_tokens 600→1024 + stop_reason check; portfolio-brief callouts validation (salvage currently drops them silently)
+   - [ ] payload size caps on business-review / portfolio-brief / leadership-readout (unbounded client arrays)
+
+   **BATCH 2 — Correctness one-liners (wrong data on screen today):**
+   - [ ] `pip_promise_log.item_id` FK `folio_items`→`folio_tasks` (schema.sql:1066) — EVERY closeItem promise-log insert has silently failed since unification; table is empty
+   - [ ] TONE TREND RESURRECTION: `accountSnapshots.js:125` reads `account.pip_tone` which doesn't exist on `folio_accounts` — add column + write it when summarize writes meeting pip_tone; Cooling/Warming pills have NEVER fired
+   - [ ] `pipTools.js:473` complete_task: `{done:true}` → `{done:true, status:"complete"}` (Pip-completed tasks linger as commitment nudges)
+   - [ ] OverviewTab.jsx:145 — delete the `var lastMeeting = meetings[0]` redeclaration shadowing the line-137 useMemo (last-conversation strip can show a draft)
+   - [ ] OverviewTab healthScore IIFE (~150-175) → use the `computedHealth` already computed in AccountDetail (two health scores on one screen can disagree)
+   - [ ] timezone parses: `pipIntent.js:36`, `CadenceTab.jsx:253`, `ItemsTab.jsx:246` — bare `new Date("YYYY-MM-DD")` renders dates a day early in ET; use `+"T00:00:00"`
+   - [ ] `accountSnapshots.js:14` + `useAccountSnapshots.js:16` — UTC "today" guard fires a day early after ~8pm ET; use ET-anchored date like operator-run
+   - [ ] `api/invite.js:10` — `getUser()` outside try-catch (FUNCTION_INVOCATION_FAILED class)
+   - [ ] `folio_activity` solo-user SELECT RLS policy (Settings→Activity permanently empty for Chris)
+   - [ ] HomeView.jsx:1373 — add `!operatorActive` to daily-brief render guard (cached brief can stack on OperatorHub)
+   - [ ] `useCommitmentNudges.markDone` missing `closed_at`
+   - [ ] raw email leaks: CadenceHub.jsx:479 (verbatim assignee_email), :750 (split("@")[0]), CommitmentsView.jsx:52 — route through ownerLabel/resolveAssignee
+
+   **BATCH 3 — Schema & merge integrity (next merge loses data without this):**
+   - [ ] merge fn: re-parent `pip_correction_log`, `folio_account_snapshots`, `pip_assignment_hints`, `pip_promise_log`; `array_replace` on `folio_meetings.account_ids` + `folio_cadences.account_ids`
+   - [ ] schema.sql: delete 8 dead indexes (lines ~1184-1200: email_threads, thread_events, revenue_history, shop_metrics, custom_workspace_id); fold `custom_workspaces.sql` in — schema.sql currently CANNOT rebuild a fresh DB
+   - [ ] leadership-task orphan: deleting a 1:1 cadence sets cadence_id null + account_id already null → task invisible forever; block delete or re-home tasks
+   - [ ] CHECK constraints: person cadence requires contact_id; folio_tasks needs account_id OR cadence_id OR project_id
+   - [ ] unique partial index on queued `folio_pip_questions(user_id, question_text)`
+   - [ ] `life_items` RLS → `(select auth.uid())` initplan wrap
+   - [ ] CadenceHub guard for person cadence with deleted contact ("(contact deleted)" label)
+   - [ ] two-device `project_notes` fork (CadenceMeetingMode:342-406 full-map overwrite) + JSONB read-modify-write races on `status_updates`/`stages`/`operator_proposed_moves` → server-side append RPC for status_updates at minimum
+
+   **BATCH 4 — Pip brain (the interview gaps):**
+   - [ ] `operating_context` → chat + summarize (THE highest-leverage Pip fix: the interview distillation feeds operator/questions but never the two surfaces Chris actually uses — concatenate ahead of profile_prose in the client callers)
+   - [ ] kill "Be GENEROUS, not strict" in legacy `callAskPip` (~pip.js:631) — apply precision-over-volume doctrine
+   - [ ] `waiting_on`/`waiting_on_since` into operator-run's `renderAccountContext` (who-has-ball is invisible to the overnight loop)
+   - [ ] staleness humility: uncertainty language in ACCOUNT_SYSTEM + REPORT_SYSTEM ("deadline just passed ≠ overdue fire — flag for check-in instead"); fix check-in receipt copy that falsely claims the report is corrected
+   - [ ] `project_notes` → chat context (pipContext renderAccountFull); account updates → portfolio-brief payload; glossary → portfolio-brief/operator/leadership-readout
+   - [ ] profile-synthesis: data-line generalization instruction (numbers in answers currently flow verbatim into profile_prose) + silent-`{}` failure → real error (currently writes onboarding done with empty profile)
+   - [ ] item 46 anti-sycophancy line (rides along)
+   - [ ] check-in polish: sort stale drafts oldest-first; "Let it go" → persistent dismissal (or rename "Not today"); clipboard `.catch` fallback; null-account draft receipt; re-read answered state on checkInKey change (midnight)
+   - [ ] digest hardening: smart-quote/Unicode-bracket normalize before tag regex (Teams/Outlook paste silently fails today); QUIET rows stop writing account name into `waiting_on`; OWE join " — "→" | "
+   - [ ] summarize: deleted-project guard (no "PROJECT <id> (undefined)" in prompt); receipts incentive + follow_up_date few-shot examples
+
+   **BATCH 5 — Home & coherence (the Frankenstein batch):**
+   - [ ] commitments triple-echo: one commitments engine; same item never in CheckInCard + "Your word" + OperatorHub simultaneously (suppression/cross-linking per Chris's verdict below)
+   - [ ] "Scheduled Today" placement (currently buried below drip items, no operator guard); drip-queue nudge gets `!operatorActive` guard
+   - [ ] CommitmentsView "See all →" link from "Your word" (view is unreachable on mobile today)
+   - [ ] `src/lib/dateUtils.js`: fmtShort/fmtLong/fmtRelative/isOverdue/isToday — replace 14 fmtDate + 7 isOverdue + 5 relative-time reimplementations
+   - [ ] shared `GAUGE_STATUS_CONFIG` in gaugeStatus.js (ProjectsTab + GaugeView render same status differently); fix "Watch"/"Watching" label drift; shared `resolveAssignee`
+   - [ ] shared `EmptyState` component (15+ bespoke ones)
+   - [ ] one card anatomy on Home (local Panel / OperatorHub section / Your word / Scheduled Today → one InfoCard grammar)
+   - [ ] meeting-CTA unification: "Log conversation" (ad-hoc) vs "Start meeting" (cadence) everywhere; prune OverviewTab's 3 duplicate CTAs (keep primary; "Full conversation log →" routes to MeetingsTab)
+   - [ ] CadenceHub: history header label for person cadences; suppress/de-duplicate manual cadence brief when overnight operator block present
+
+   **BATCH 6 — Performance:**
+   - [ ] dedupe fetches: fetchAllContacts/fetchAllItems consume hook data (contacts + tasks each fetched 2× per cold open); single useProjects instance (App→GaugeView prop — kills double WS channel)
+   - [ ] gate `useLifeItems` on mode==="life"
+   - [ ] try-catch every localStorage JSON.parse (useAccounts/useMeetings/HomeView — corrupt storage = silent empty app); remove corrupt key on throw
+   - [ ] prune daily-brief/check-in/reminder localStorage keys (one per day forever today); per-user keys for cadence-reminder state
+   - [ ] `.limit()` on unbounded queries (worst: org-scope useTasks, global useProjects, accountSnapshots meetings query, useRecentThemes)
+   - [ ] lazy-load PipView; useOrg waterfall → Promise.all + getSession(); usePipDripQuestions deps cleanup; useCadenceReminders array-identity deps
+   - [ ] `useAccountSnapshots` realtime subscription (device B stale all session today)
+
+   **BATCH 7 — Mobile / a11y / theme:**
+   - [ ] light-mode invisible `#fff` check glyphs (AddAccountModal:761, AddContactModal:146, EditContactModal:142, ItemsTab:349) → C.bg; tokenize `#3b82f6` progress gradient + rgba(248,113,113) error tints; AccountsView skeleton shimmer light-mode
+   - [ ] sub-16px inputs: CadenceMeetingMode inline add-contact (11px!), PipSummarizePreview select (10px), SetCadenceModal + ContactsTab textareas (13px), Gauge panels, Settings selects
+   - [ ] aria-labels: mobile nav Pip button, Gauge search clear ×, CadenceHub readout close ×, 3 Settings switches; onKeyDown on role="button" divs (9 files); Leadership Readout overlay → Modal.jsx
+   - [ ] summarize-failure recovery: meeting mode currently closes with no re-entry path on error — keep mode open or offer "Resume meeting"
+   - [ ] Life mode: header subtitle ("Account Management" in Life); Mark.jsx reduced-motion live listener; Settings grouping/anchors (4 ungrouped Pip sections, subtitle mismatch)
+
+   **BATCH 8 — Structural (when touched, not urgent):**
+   - [ ] split PipSummarizePreview (1,553 lines: display vs orchestration); prop-bag AccountDetail (27 props) / HomeView (30+)
+   - [ ] React.memo + useCallback hygiene in App.jsx render path; memoize buildWorkspacePane
+
+   **DECISIONS:** (a) triple-echo — **RESOLVED June 11 2026, Chris chose "check-in wins":** an item with a pending check-in question that morning is suppressed from "Your word"; OperatorHub rows link to (not duplicate) it — answer once, everywhere updates. (b) Life-mode Pip access — parked to Life Phase 2. **Build timing locked by Chris: capture now, build at funds reset — next session opens on this item and executes batch by batch, Batches 2+3 first.**
+
+   **PARKED ON PURPOSE (evaluated, not fixing — don't resurrect without reason):** in-memory rate limits not cross-instance (single user; DB cap covers it); double SW visibilitychange listeners (locked rule, intentional); hex compact-mode absence + light opacity (awaiting Chris's phone tune); PipOrb3D module listener; HexField ~200 static paths; folio_routes dead table; Gauge assignee email-equality policy; GaugeView PipGaugeCard desktop-only + Leader-tab visibility + stat-tile affordance (design verdicts, not defects).
+
 **36. Pip follow-up questions (conversational Teach Pip)** — *(queued June 2026)* When the user answers one of Pip's questions (drip / "Teach Pip" / Catch Up), Pip should **sometimes** fire a follow-up that digs into *that specific answer* — instead of always jumping to the next pre-generated question. Makes Teach Pip feel like a real conversation, not a form.
    - **Trigger:** not every answer (Chris said "sometimes") — gate on substance (answer length / has a concrete noun) + a probability, and don't follow up on a follow-up more than ~1 level deep (avoid rabbit-holing).
    - **Mechanism:** on answer, one cheap AI call takes the Q + the user's answer and returns a single sharper follow-up; insert it as the next queued `folio_pip_questions` row (new `source='followup'` or `trigger_context` linking the parent) so it surfaces immediately in the same Catch Up session.
