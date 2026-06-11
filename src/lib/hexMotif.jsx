@@ -39,10 +39,13 @@ export function hexPathD(cx, cy, r, rot) {
 //
 // Opacity ladder: rightmost cell = peak, each step left × 0.58
 // ---------------------------------------------------------------------------
-export function HexSignature({ cells, peak, cell, style }) {
+export function HexSignature({ cells, peak, cell, color, style }) {
   var n = cells || 3;
   var pk = peak != null ? peak : 0.13;
   var r = cell != null ? cell : 6.5;
+  // color override: PipCard passes the amber token while unread so the
+  // signature participates in the notification glow.
+  var stroke = color || "var(--c-accent)";
   // Derived from makeChain: step = r*2.1, w = ceil(step*n+r), h = ceil(r*2+8)
   var step = r * 2.1;
   var w = Math.ceil(step * n + r);
@@ -62,7 +65,7 @@ export function HexSignature({ cells, peak, cell, style }) {
         strokeWidth={1.2}
         opacity={op.toFixed(3)}
         strokeLinejoin="round"
-        style={{ stroke: "var(--c-accent)" }}
+        style={{ stroke: stroke }}
       />
     );
   }

@@ -4,6 +4,7 @@ import { FolioIcon } from "../../components/FolioIcon";
 import { PipMark } from "../../components/PipMark";
 import { AmberBtn } from "../../components/Buttons";
 import { InputField } from "../../components/InputField";
+import { HexField } from "../../lib/hexMotif";
 
 function passwordStrength(pw) {
   if (!pw) return null;
@@ -89,9 +90,12 @@ export function AuthView({ onSignIn, onSignUp }) {
         alignItems: "center",
         justifyContent: "center",
         padding: 20,
+        position: "relative",
+        overflow: "hidden",
       }}
     >
-      <div style={{ width: "100%", maxWidth: 400 }}>
+      <HexField peak={0.1} />
+      <div style={{ width: "100%", maxWidth: 400, position: "relative" }}>
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 40 }}>
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>

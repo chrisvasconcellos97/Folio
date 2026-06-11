@@ -98,7 +98,7 @@ export function PipCard({ label, headline, timestamp, metaChips, children, defau
           {children}
         </div>
       )}
-      <HexSignature cells={5} peak={0.30} />
+      <HexSignature cells={5} peak={unread ? 0.5 : 0.30} color={unread ? "var(--c-yellow)" : undefined} />
     </div>
   );
 }
