@@ -19,6 +19,23 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
+import { logPipUsage, overDailySpendCap } from "./_pipUsage.js";
+
+export const config = { maxDuration: 60 };
+
+// In-memory per-user rate limit: 5 requests per 60-second window.
+var rateLimitMap = new Map();
+var WINDOW_MS    = 60 * 1000;
+var MAX_REQUESTS = 5;
+
+function isRateLimited(userId) {
+  var now = Date.now();
+  var timestamps = (rateLimitMap.get(userId) || []).filter(function (t) { return now - t < WINDOW_MS; });
+  if (timestamps.length >= MAX_REQUESTS) return true;
+  timestamps.push(now);
+  rateLimitMap.set(userId, timestamps);
+  return false;
+}
 
 var QUEUE_SOFT_CAP = 5;   // don't generate if this many are already queued
 var MAX_NEW        = 5;   // most questions to write per run
@@ -51,6 +68,8 @@ export default async function handler(req, res) {
     var user = authRes.data && authRes.data.user ? authRes.data.user : null;
     if (authRes.error || !user) return res.status(401).json({ error: "Unauthorized" });
     var userId = user.id;
+
+    if (isRateLimited(userId)) return res.status(429).json({ error: "rate_limited" });
 
     // Manual "Teach Pip" sessions bypass the backlog cap + ask for a bigger
     // batch — the user explicitly wants more questions right now.
@@ -176,7 +195,12 @@ export default async function handler(req, res) {
         ].filter(Boolean).join("\n")
       : "(nothing recorded yet)";
 
-    // ── Haiku pass ──
+    // ── Model selection — degrade to Haiku if over daily spend cap ──
+    var MODEL_HAIKU  = "claude-haiku-4-5-20251001";
+    var MODEL_SONNET = process.env.PIP_QUESTIONS_MODEL || "claude-sonnet-4-6";
+    var overCap = await overDailySpendCap(supabase, userId);
+    var questionsModel = overCap ? MODEL_HAIKU : MODEL_SONNET;
+
     var client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
     var system = [
@@ -217,11 +241,12 @@ export default async function handler(req, res) {
     var modelError = null;
     try {
       var msg = await client.messages.create({
-        model:      process.env.PIP_QUESTIONS_MODEL || "claude-sonnet-4-6",
+        model:      questionsModel,
         max_tokens: 1200, // Sonnet's question JSON is fuller; lower risked truncating the array
         system:     system,
         messages:   [{ role: "user", content: userMsg.slice(0, 9000) }],
       });
+      logPipUsage(supabase, userId, "generate-questions", "questions", questionsModel, msg.usage);
       var raw = (msg.content && msg.content[0] && msg.content[0].text) || "{}";
       var parsed = {};
       try { parsed = JSON.parse(raw.replace(/^```json\n?/, "").replace(/\n?```$/, "")); } catch (e) { parsed = {}; }

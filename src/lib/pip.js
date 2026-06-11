@@ -650,10 +650,14 @@ export function callAskPip(payload) {
     "If after a careful read you truly find zero, return an empty array — but try hard first.\n" +
     "email: Body only (no subject, plain prose, friendly professional tone).";
 
+  // mode:"brief_lg" → Haiku 2048 tokens (was "summary" → Sonnet 3072).
+  // callAskPip returns summary + email body + action-items in one JSON object,
+  // so it needs more headroom than plain "brief" (1024) to avoid truncation —
+  // still Haiku, ~3× cheaper than Sonnet.
   return callPipApi(
     [{ role: "user", content: prompt }],
     null,
-    { mode: "summary" }
+    { mode: "brief_lg" }
   ).then(function (resp) {
     var text = resp.content || "";
     var match = text.match(/\{[\s\S]*\}/);
@@ -1361,10 +1365,13 @@ export function extractTouchpointActionsPip(payload) {
     "── NOTE ──\n" + note + "\n\n" +
     "Return ONLY valid JSON: { \"short_title\": \"...\", \"items\": [...] }";
 
+  // mode:"brief" → Haiku 1024 tokens (was "summary" → Sonnet 3072).
+  // extractTouchpointActionsPip is conservative action-item extraction — Haiku
+  // handles it and costs ~3× less than Sonnet.
   return callPipApi(
     [{ role: "user", content: prompt }],
     null,
-    { mode: "summary" }
+    { mode: "brief" }
   ).then(function (resp) {
     var text = resp.content || "";
     var match = text.match(/\{[\s\S]*\}/);
@@ -1453,10 +1460,13 @@ export function compressCorrectionsPip(payload) {
     (existingLessons ? "Existing lessons:\n" + existingLessons + "\n\n" : "") +
     "Recent corrections:\n" + correctionLines;
 
+  // mode:"brief" → Haiku 1024 tokens (was "summary" → Sonnet 3072).
+  // compressCorrectionsPip distills short correction rows into a paragraph —
+  // a mechanical summarization task well within Haiku's capability.
   return callPipApi(
     [{ role: "user", content: prompt }],
     null,
-    { mode: "summary" }
+    { mode: "brief" }
   ).then(function (resp) {
     return (resp.content || "").trim();
   }).catch(function () {

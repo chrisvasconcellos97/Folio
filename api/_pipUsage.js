@@ -1,6 +1,6 @@
-// Shared Pip usage logging — used by /api/pip, /api/ask-pip,
-// /api/pip-state-refresh. Best-effort: a failed insert NEVER blocks the
-// user-facing request, it just gets swallowed (console.error only).
+// Shared Pip usage logging — used by all Pip API endpoints. Best-effort: a
+// failed insert NEVER blocks the user-facing request, it just gets swallowed
+// (console.error only).
 //
 // Two channels per call:
 //   1. console.log("[pip-usage]", {...})   — structured stdout for Vercel logs
@@ -87,5 +87,54 @@ export function logPipUsage(supabaseClient, userId, endpoint, mode, model, usage
       });
   } catch (err) {
     console.error("[pip-usage] insert outer threw:", err && err.message);
+  }
+}
+
+// Daily spend cap helper.
+//
+// Returns true when the user has already spent >= PIP_DAILY_SPEND_CAP_CENTS
+// today (ET day boundary, same convention as operator-run). Callers should
+// degrade Sonnet → Haiku when this returns true, never outright block.
+//
+// Uses a simple DB SUM query on folio_pip_usage. If the query fails (network,
+// RLS, table missing) we return false (fail open) — better to overspend
+// slightly than to break Pip for the user.
+//
+// Default cap: 200 cents = $2.00 / day. Override via PIP_DAILY_SPEND_CAP_CENTS
+// env var (integer cents).
+var DEFAULT_DAILY_CAP_CENTS = 200;
+
+export async function overDailySpendCap(supabaseClient, userId) {
+  if (!supabaseClient || !userId) return false;
+  try {
+    var cap = parseInt(process.env.PIP_DAILY_SPEND_CAP_CENTS || String(DEFAULT_DAILY_CAP_CENTS), 10);
+    if (isNaN(cap) || cap <= 0) return false;
+    // ET date (mirrors operator-run's local-date logic).
+    var etDate = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/New_York",
+      year: "numeric", month: "2-digit", day: "2-digit",
+    }).format(new Date());
+    // folio_pip_usage has a created_at timestamptz column. We filter to rows
+    // where created_at falls within the current ET day.
+    var dayStart = etDate + "T00:00:00-05:00";
+    var dayEnd   = etDate + "T23:59:59-05:00";
+    var r = await supabaseClient
+      .from("folio_pip_usage")
+      .select("cost_micro_cents")
+      .eq("user_id", userId)
+      .gte("created_at", dayStart)
+      .lte("created_at", dayEnd);
+    if (r.error) return false;
+    var rows = r.data || [];
+    var totalMicroCents = rows.reduce(function (s, row) { return s + (row.cost_micro_cents || 0); }, 0);
+    var totalCents = totalMicroCents / 10000;
+    if (totalCents >= cap) {
+      console.log("[pip-spend-cap] user", userId.slice(0, 8), "at", totalCents.toFixed(4), "cents — cap", cap, "cents — degrading to Haiku");
+      return true;
+    }
+    return false;
+  } catch (err) {
+    console.error("[pip-spend-cap] check failed:", err && err.message);
+    return false; // fail open
   }
 }

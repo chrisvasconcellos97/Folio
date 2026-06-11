@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
+import { logPipUsage } from "./_pipUsage.js";
 
 var RATE_MAP = new Map();
 
@@ -28,19 +29,25 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
+  var MAX_ARRAY = 200; // payload size cap — guard against unbounded client arrays
   var { meetingSummary, actionItems, contactName, portfolioState, facts, profileProse } = req.body || {};
   if (!meetingSummary) return res.status(400).json({ error: "meetingSummary required" });
 
   var bossName = contactName || "your manager";
 
+  // Cap unbounded client-supplied arrays to prevent oversized payloads.
+  var portfolioStateCapped = Array.isArray(portfolioState) ? portfolioState.slice(0, MAX_ARRAY) : [];
+  var actionItemsCapped    = Array.isArray(actionItems)    ? actionItems.slice(0, MAX_ARRAY)    : [];
+  var factsCapped          = Array.isArray(facts)          ? facts.slice(0, MAX_ARRAY)          : [];
+
   var portfolioSection = "";
-  if (portfolioState && portfolioState.length > 0) {
-    var healthy  = portfolioState.filter(function (s) { return s.health_status === "healthy" || s.health_status === "green"; }).length;
-    var watching = portfolioState.filter(function (s) { return s.health_status === "watching" || s.health_status === "yellow"; }).length;
-    var atRisk   = portfolioState.filter(function (s) { return s.health_status === "at_risk" || s.health_status === "red"; }).length;
-    portfolioSection = "Portfolio: " + portfolioState.length + " accounts — " +
+  if (portfolioStateCapped.length > 0) {
+    var healthy  = portfolioStateCapped.filter(function (s) { return s.health_status === "healthy" || s.health_status === "green"; }).length;
+    var watching = portfolioStateCapped.filter(function (s) { return s.health_status === "watching" || s.health_status === "yellow"; }).length;
+    var atRisk   = portfolioStateCapped.filter(function (s) { return s.health_status === "at_risk" || s.health_status === "red"; }).length;
+    portfolioSection = "Portfolio: " + portfolioStateCapped.length + " accounts — " +
       healthy + " healthy, " + watching + " watching, " + atRisk + " at risk.\n" +
-      portfolioState.slice(0, 8).map(function (s) {
+      portfolioStateCapped.slice(0, 8).map(function (s) {
         return "- " + s.account_name + ": " + (s.health_status || "?") +
           (s.overdue_item_count > 0 ? " · " + s.overdue_item_count + " overdue" : "") +
           (s.stuck_project_count > 0 ? " · " + s.stuck_project_count + " stuck" : "");
@@ -60,24 +67,31 @@ export default async function handler(req, res) {
   if (typeof profileProse === "string" && profileProse.trim()) {
     knownBlock += "About the AM writing this:\n" + profileProse.trim() + "\n\n";
   }
-  if (Array.isArray(facts) && facts.length) {
+  if (factsCapped.length) {
     knownBlock += "Their vocabulary / things they've taught you (use the right terms, don't explain them):\n" +
-      facts.slice(0, 20).map(function (f) { return "- " + f; }).join("\n") + "\n\n";
+      factsCapped.slice(0, 20).map(function (f) { return "- " + f; }).join("\n") + "\n\n";
   }
 
   var userPrompt = knownBlock + "1:1 meeting summary:\n" + meetingSummary + "\n\n" +
-    (actionItems && actionItems.length ? "Action items from the call:\n" + actionItems.map(function(a) { return "- " + a; }).join("\n") + "\n\n" : "") +
+    (actionItemsCapped.length ? "Action items from the call:\n" + actionItemsCapped.map(function(a) { return "- " + a; }).join("\n") + "\n\n" : "") +
     (portfolioSection ? "Portfolio state:\n" + portfolioSection + "\n\n" : "") +
     "Write the email to " + bossName + ".";
 
+  var READOUT_MODEL = "claude-haiku-4-5-20251001";
   try {
+    // User-scoped client for usage logging (RLS requires auth.uid()).
+    var userClient = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: "Bearer " + token } },
+      auth:   { persistSession: false, autoRefreshToken: false },
+    });
     var client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     var resp = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
+      model: READOUT_MODEL,
       max_tokens: 900,
       system: systemPrompt,
       messages: [{ role: "user", content: userPrompt }],
     });
+    logPipUsage(userClient, user.id, "leadership-readout", "readout", READOUT_MODEL, resp.usage);
     if (resp.stop_reason === "max_tokens") {
       return res.status(502).json({ error: "Readout was cut off — please retry." });
     }

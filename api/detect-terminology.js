@@ -7,6 +7,9 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
+import { logPipUsage } from "./_pipUsage.js";
+
+export const config = { maxDuration: 60 };
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
@@ -144,12 +147,20 @@ export default async function handler(req, res) {
       "Be conservative — only flag things that are clearly a specific named entity, not generic words.\n\n" +
       "Meeting notes:\n" + combinedNotes.slice(0, 8000);
 
+    var DETECT_MODEL = "claude-haiku-4-5-20251001";
     var msg = await client.messages.create({
-      model:      "claude-haiku-4-5-20251001",
-      max_tokens: 600,
+      model:      DETECT_MODEL,
+      max_tokens: 1024, // bumped from 600 — 600 risked truncating the JSON terms array
       system:     systemPrompt,
       messages:   [{ role: "user", content: userPrompt }],
     });
+    logPipUsage(supabase, userId, "detect-terminology", "terminology", DETECT_MODEL, msg.usage);
+
+    // Truncation guard — a cut-off JSON payload is unusable; bail gracefully.
+    if (msg.stop_reason === "max_tokens") {
+      console.error("[detect-terminology] response truncated (stop_reason=max_tokens)");
+      return res.status(200).json({ inserted: 0, truncated: true });
+    }
 
     var raw = (msg.content && msg.content[0] && msg.content[0].text) || "{}";
     var parsed = {};

@@ -621,16 +621,16 @@ If any criterion stays false, that's where we dig next — design failure, not u
    4. Sanity-Pass Rule applies to every fix (esp. the silent-failure surfaces: RLS, prompts, cron, localStorage).
 
    **BATCH 1 — Cost & trust (the "almost out of funds" batch):**
-   - [ ] `logPipUsage` in ALL 12 endpoints (today only pip/ask-pip/pip-state-refresh log; operator-run, portfolio-brief, generate-questions, detect-terminology, profile-synthesis, business-review, leadership-readout are invisible to the Settings spend tile)
-   - [ ] operator-run: report-pass + account-pass failures → `folio_errors` (June 10+11 burned deep passes, wrote NO report, surfaced nothing); add stop_reason/truncation check per account pass — skip writing partial state
-   - [ ] operator-run: gate at-risk/watching re-passes on actual movement (today they re-pass daily even untouched) — cap unchanged troubled accounts to every 3 days
-   - [ ] Sonnet→Haiku reroutes in `src/lib/pip.js`: `callAskPip` (~653), `extractTouchpointActionsPip` (~1364), `compressCorrectionsPip` (~1456) — all use mode:"summary" (Sonnet 3072) for Haiku-grade jobs
-   - [ ] server rate limits on `generate-questions` + `profile-synthesis` (unguarded Sonnet); daily DB-backed spend cap checked before any Sonnet call (degrade to Haiku past threshold)
-   - [ ] `maxDuration: 60` on pip-state-refresh, generate-questions, detect-terminology, profile-synthesis
-   - [ ] CRON_SECRET: header-only (the `?secret=` query param sits in Vercel access logs in plaintext); `?user=` removed or validated against the caller's own JWT
-   - [ ] signout wipe additions (`useAuth.js` SENSITIVE_LOCALSTORAGE_PREFIXES): daily brief, `folio_op_read_`, check-in keys, sports cache
-   - [ ] detect-terminology max_tokens 600→1024 + stop_reason check; portfolio-brief callouts validation (salvage currently drops them silently)
-   - [ ] payload size caps on business-review / portfolio-brief / leadership-readout (unbounded client arrays)
+   - [x] `logPipUsage` in ALL 12 endpoints (today only pip/ask-pip/pip-state-refresh log; operator-run, portfolio-brief, generate-questions, detect-terminology, profile-synthesis, business-review, leadership-readout are invisible to the Settings spend tile)
+   - [x] operator-run: report-pass + account-pass failures → `folio_errors` (June 10+11 burned deep passes, wrote NO report, surfaced nothing); add stop_reason/truncation check per account pass — skip writing partial state
+   - [x] operator-run: gate at-risk/watching re-passes on actual movement (today they re-pass daily even untouched) — cap unchanged troubled accounts to every 3 days
+   - [x] Sonnet→Haiku reroutes in `src/lib/pip.js`: `callAskPip` (~653), `extractTouchpointActionsPip` (~1364), `compressCorrectionsPip` (~1456) — all use mode:"summary" (Sonnet 3072) for Haiku-grade jobs
+   - [x] server rate limits on `generate-questions` + `profile-synthesis` (unguarded Sonnet); daily DB-backed spend cap checked before any Sonnet call (degrade to Haiku past threshold)
+   - [x] `maxDuration: 60` on pip-state-refresh, generate-questions, detect-terminology, profile-synthesis
+   - [x] CRON_SECRET: header-only (the `?secret=` query param sits in Vercel access logs in plaintext); `?user=` removed or validated against the caller's own JWT
+   - [x] signout wipe additions (`useAuth.js` SENSITIVE_LOCALSTORAGE_PREFIXES): daily brief, `folio_op_read_`, check-in keys, sports cache
+   - [x] detect-terminology max_tokens 600→1024 + stop_reason check; portfolio-brief callouts validation (salvage currently drops them silently)
+   - [x] payload size caps on business-review / portfolio-brief / leadership-readout (unbounded client arrays)
 
    **BATCH 2 — Correctness one-liners (wrong data on screen today):**
    - [x] `pip_promise_log.item_id` FK `folio_items`→`folio_tasks` (schema.sql:1066) — EVERY closeItem promise-log insert has silently failed since unification; table is empty

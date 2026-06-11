@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
+import { logPipUsage } from "./_pipUsage.js";
 
 export const config = { maxDuration: 60 };
 
@@ -24,23 +25,33 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "ANTHROPIC_API_KEY is not configured on this deployment." });
   }
 
+  var user = null;
+  var userClient = null;
+  var token = null;
   try {
     var authHeader = req.headers.authorization || "";
-    var token      = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    token      = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
     if (!token) return res.status(401).json({ error: "Unauthorized" });
 
     var supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
     var { data: authData, error: authError } = await supabase.auth.getUser(token);
-    var user = authData && authData.user ? authData.user : null;
+    user = authData && authData.user ? authData.user : null;
     if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
+    // User-scoped client for usage logging (RLS requires auth.uid()).
+    userClient = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: "Bearer " + token } },
+      auth:   { persistSession: false, autoRefreshToken: false },
+    });
   } catch (authErr) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
   if (isRateLimited(user.id)) return res.status(429).json({ error: "rate_limited" });
 
+  var MAX_ARRAY = 200; // payload size cap — guard against unbounded client arrays
   var { snapshots, projects, overdueTasks, commitmentsDue, commitmentsOverdue, todayCadences, coldAccounts, looseEnds, healthDeltas, relationshipSignals, toneSignals, anomalySignals, leadershipTasks, portfolioThemes, facts, profileProse } = req.body || {};
-  snapshots = snapshots || [];
+  snapshots = (snapshots || []).slice(0, MAX_ARRAY);
+  projects  = (projects  || []).slice(0, MAX_ARRAY);
 
   var atRisk   = snapshots.filter(function (s) { return s.health_status === "at_risk"; });
   var watching = snapshots.filter(function (s) { return s.health_status === "watching"; });
@@ -264,9 +275,11 @@ Return ONLY valid JSON: { "brief": "...", "callouts": [...] }`;
       messages: [{ role: "user", content: portfolioText }],
     });
 
+    logPipUsage(userClient, user.id, "portfolio-brief", "daily-brief", process.env.PIP_DAILY_BRIEF_MODEL || "claude-sonnet-4-6", msg.usage);
+
     var raw = msg.content[0].type === "text" ? msg.content[0].text.trim() : "";
 
-    // Strip markdown code fences if Haiku wraps in ```json
+    // Strip markdown code fences if the model wraps in ```json
     raw = raw.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/, "").trim();
 
     var parsed;
@@ -274,16 +287,23 @@ Return ONLY valid JSON: { "brief": "...", "callouts": [...] }`;
       parsed = JSON.parse(raw);
     } catch (_) {
       // Output was truncated or wrapped in stray prose. NEVER dump raw JSON
-      // into the UI — salvage the "brief" string via regex and drop callouts
-      // (the array is the part most likely cut off mid-element).
-      var m = raw.match(/"brief"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-      var salvaged = m ? m[1].replace(/\\n/g, " ").replace(/\\"/g, '"').replace(/\\\\/g, "\\").trim() : "";
-      parsed = { brief: salvaged, callouts: [] };
+      // into the UI. Salvage both the "brief" string AND "callouts" array via
+      // regex — brief is usually complete even when the array is truncated.
+      var briefMatch    = raw.match(/"brief"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+      var calloutsMatch = raw.match(/"callouts"\s*:\s*(\[[\s\S]*?\](?=\s*\}))/);
+      var salvBrief     = briefMatch
+        ? briefMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/\\\\/g, "\\").trim()
+        : "";
+      var salvCallouts  = [];
+      if (calloutsMatch) {
+        try { salvCallouts = JSON.parse(calloutsMatch[1]); } catch (e2) { salvCallouts = []; }
+      }
+      parsed = { brief: salvBrief, callouts: salvCallouts };
     }
 
     return res.status(200).json({
       brief:    parsed.brief    || "",
-      callouts: parsed.callouts || [],
+      callouts: Array.isArray(parsed.callouts) ? parsed.callouts : [],
     });
   } catch (e) {
     console.error("[portfolio-brief]", e);

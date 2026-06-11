@@ -10,10 +10,14 @@ var ACTIVITY_EVENTS = ["mousedown", "keydown", "touchstart", "scroll"];
 // Onboarding flags / search history / UI prefs are NOT wiped — those are
 // keyed by user id (or per-tab UI state) and harmless to leave.
 var SENSITIVE_LOCALSTORAGE_PREFIXES = [
-  "folio_accts_",         // useAccounts cache
-  "folio_meetings_",      // useMeetings cache
-  "folio_pip_messages_",  // PipView chat transcript (per-user)
-  "folio_search_history", // Account-name fragments from prior searches
+  "folio_accts_",           // useAccounts cache
+  "folio_meetings_",        // useMeetings cache
+  "folio_pip_messages_",    // PipView chat transcript (per-user)
+  "folio_search_history",   // Account-name fragments from prior searches
+  "folio_daily_brief_",     // Cached daily portfolio brief (per-user per-day)
+  "folio_op_read_",         // Per-account "last read" timestamps for operator panel unread glow
+  "folio_checkin_",         // Morning check-in answered state (per-user per-day)
+  "folio_sports_cache_v1",  // Sports feed cache (may include followed-team preferences)
 ];
 
 function wipeSensitiveLocalStorage() {

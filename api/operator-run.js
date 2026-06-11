@@ -18,9 +18,10 @@
 // in the UI.
 //
 // Auth: a Vercel cron sends `Authorization: Bearer <CRON_SECRET>` when
-// CRON_SECRET is set in the project env. We also accept `?secret=<CRON_SECRET>`
-// so the run can be triggered manually for testing. Reads/writes use the
-// service-role key (RLS bypassed) because there is no user session.
+// CRON_SECRET is set in the project env. Reads/writes use the service-role key
+// (RLS bypassed) because there is no user session.
+// Manual runs: GET /api/operator-run with `Authorization: Bearer <CRON_SECRET>`
+// and optional `?user=<uuid>` to scope to a single user.
 //
 // This handler is intentionally self-contained (no src/lib imports) so it can
 // never trip the ESM .js-extension bundling rule. It is registered in
@@ -28,6 +29,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
+import { logPipUsage } from "./_pipUsage.js";
 
 // Give the function a real time budget — it does several model calls. 60s is
 // valid on every Vercel plan; with the per-account passes parallelized below
@@ -153,17 +155,41 @@ Rules:
 - A "commitment" (✦) that's overdue is the most important thing — lead your situation with it and draft the email to close it.
 - Keep it tight. This feeds a morning report; the human skims it fast.`;
 
-async function runAccountPass(client, ctxText, accountName) {
+// admin is the service-role Supabase client, used for folio_errors inserts.
+// userId is the owner of the run — included in error rows for triage.
+async function runAccountPass(client, admin, userId, ctxText, accountName) {
   var msg = await client.messages.create({
     model: OPERATOR_MODEL,
     max_tokens: 1100,
     system: [{ type: "text", text: ACCOUNT_SYSTEM, cache_control: { type: "ephemeral" } }],
     messages: [{ role: "user", content: ctxText }],
   });
+  logPipUsage(admin, userId, "operator-run/account-pass", "account-pass", OPERATOR_MODEL, msg.usage);
+  // Truncation guard — a cut-off JSON payload is useless; skip writing partial state.
+  if (msg.stop_reason === "max_tokens") {
+    console.error("[operator-run] account pass TRUNCATED for:", accountName);
+    try {
+      admin.from("folio_errors").insert([{
+        user_id: userId,
+        error_type: "operator_pass_truncated",
+        message: "operator-run account pass hit max_tokens for " + accountName,
+        context: { account: accountName, stop_reason: "max_tokens" },
+      }]).then(function () {}, function (e) { console.error("[operator-run] folio_errors insert failed:", e && e.message); });
+    } catch (e) { /* swallow */ }
+    return null;
+  }
   var raw = msg.content && msg.content[0] && msg.content[0].type === "text" ? msg.content[0].text : "";
   var parsed = safeJsonParse(raw);
   if (!parsed) {
     console.error("[operator-run] JSON parse failed for account:", accountName, "| raw (first 500):", String(raw).slice(0, 500));
+    try {
+      admin.from("folio_errors").insert([{
+        user_id: userId,
+        error_type: "operator_pass_parse_failed",
+        message: "operator-run JSON parse failed for " + accountName,
+        context: { account: accountName, raw_excerpt: String(raw).slice(0, 500) },
+      }]).then(function () {}, function (e) { console.error("[operator-run] folio_errors insert failed:", e && e.message); });
+    } catch (e) { /* swallow */ }
     return null;
   }
   return {
@@ -210,7 +236,7 @@ Rules:
 - The headline and opening carry your personality. The section lines stay tight and useful (light voice, but they're a scannable list, not paragraphs).
 - Don't manufacture content. A genuinely calm day is a warm headline + a one-line opening + maybe one short section. Don't pad.`;
 
-async function runReportPass(client, workedSummaries, totalAccounts, userContext) {
+async function runReportPass(client, admin, userId, workedSummaries, totalAccounts, userContext) {
   var body = (userContext ? "── WHO THE USER IS ──\n" + userContext + "\n\n" : "") +
     "Accounts you worked (" + workedSummaries.length + " of " + totalAccounts + " in the book):\n\n" +
     workedSummaries.map(function (w) {
@@ -230,8 +256,21 @@ async function runReportPass(client, workedSummaries, totalAccounts, userContext
     system: [{ type: "text", text: REPORT_SYSTEM, cache_control: { type: "ephemeral" } }],
     messages: [{ role: "user", content: body }],
   });
+  logPipUsage(admin, userId, "operator-run/report-pass", "report-pass", OPERATOR_MODEL, msg.usage);
   var raw = msg.content && msg.content[0] && msg.content[0].type === "text" ? msg.content[0].text : "";
-  var parsed = safeJsonParse(raw) || {};
+  var parsed = safeJsonParse(raw);
+  if (!parsed) {
+    console.error("[operator-run] report pass JSON parse failed | raw (first 500):", String(raw).slice(0, 500));
+    try {
+      admin.from("folio_errors").insert([{
+        user_id: userId,
+        error_type: "operator_report_parse_failed",
+        message: "operator-run report pass JSON parse failed",
+        context: { raw_excerpt: String(raw).slice(0, 500) },
+      }]).then(function () {}, function (e) { console.error("[operator-run] folio_errors insert failed:", e && e.message); });
+    } catch (e) { /* swallow */ }
+    parsed = {};
+  }
   return {
     headline: typeof parsed.headline === "string" ? parsed.headline : "",
     opening: typeof parsed.opening === "string" ? parsed.opening : "",
@@ -239,19 +278,34 @@ async function runReportPass(client, workedSummaries, totalAccounts, userContext
   };
 }
 
+// Three-day cooldown for unchanged at_risk/watching accounts (item 47 Batch 1).
+// An account qualifies for the cooldown if it had a deep pass in the last 3 days
+// AND has shown no activity since that pass.
+var UNCHANGED_COOLDOWN_MS = 3 * 24 * 60 * 60 * 1000; // 3 days
+
 // Decide which accounts "moved" since the last run.
-function pickMovedAccounts(accounts, activitySinceIds, snapshotsById, lastRunIso) {
+// opGenByAcct: { [accountId]: operator_generated_at ISO string }
+function pickMovedAccounts(accounts, activitySinceIds, snapshotsById, opGenByAcct, lastRunIso) {
   var moved = [];
   var seen = {};
   function add(a) { if (a && !seen[a.id]) { seen[a.id] = true; moved.push(a); } }
 
-  // 1. Accounts with logged activity since the last run.
+  // 1. Accounts with logged activity since the last run — always included.
   accounts.forEach(function (a) { if (activitySinceIds[a.id]) add(a); });
 
-  // 2. Accounts whose latest snapshot is at_risk / watching — always worth a look.
+  // 2. Accounts whose latest snapshot is at_risk / watching — include unless
+  //    they had a deep pass within the 3-day cooldown AND have no new activity
+  //    (activity check already handled above, so just check the recency gate).
   accounts.forEach(function (a) {
     var s = snapshotsById[a.id];
-    if (s && (s.health_status === "at_risk" || s.health_status === "watching")) add(a);
+    if (!s || (s.health_status !== "at_risk" && s.health_status !== "watching")) return;
+    // Skip if we already have a fresh pass (cooldown not yet elapsed).
+    var lastGenAt = opGenByAcct && opGenByAcct[a.id];
+    if (lastGenAt && !activitySinceIds[a.id]) {
+      var age = Date.now() - new Date(lastGenAt).getTime();
+      if (!isNaN(age) && age < UNCHANGED_COOLDOWN_MS) return; // cooldown still active
+    }
+    add(a);
   });
 
   // 3. First-ever run (no lastRunIso): seed with the whole book so the first
@@ -319,7 +373,16 @@ async function processUser(admin, client, userId, tz) {
     .eq("user_id", userId).eq("snapshot_date", local.date);
   (snapRes.data || []).forEach(function (s) { snapById[s.account_id] = s; });
 
-  var moved = pickMovedAccounts(accounts, activitySinceIds, snapById, lastRunIso);
+  // operator_generated_at per account — used by pickMovedAccounts to cap
+  // re-passes on unchanged at_risk/watching accounts (3-day cooldown).
+  var opGenByAcct = {};
+  var opGenRes = await admin.from("folio_pip_account_state")
+    .select("account_id, operator_generated_at")
+    .eq("user_id", userId)
+    .not("operator_generated_at", "is", null);
+  (opGenRes.data || []).forEach(function (r) { if (r.account_id) opGenByAcct[r.account_id] = r.operator_generated_at; });
+
+  var moved = pickMovedAccounts(accounts, activitySinceIds, snapById, opGenByAcct, lastRunIso);
 
   // Deep pass per moved account — run in bounded-concurrency waves so the whole
   // sweep finishes well inside the function's time budget. Sequential here meant
@@ -381,7 +444,7 @@ async function processUser(admin, client, userId, tz) {
 
   if (shouldBuild) {
     var report = { headline: "", opening: "", sections: [] };
-    try { report = await runReportPass(client, reportInput, accounts.length, userContext); }
+    try { report = await runReportPass(client, admin, userId, reportInput, accounts.length, userContext); }
     catch (e) { console.error("[operator-run] report pass failed", userId, e && e.message); }
     // opening → report_prose (the paragraph), sections → plan_items (the rows).
     if (report.opening || (report.sections && report.sections.length)) {
@@ -430,7 +493,7 @@ async function gatherAndRun(admin, client, userId, acc, snapshot, userContext) {
   if (userContext) {
     ctxText = "── WHO THE USER IS ──\n" + userContext + "\n\n" + ctxText;
   }
-  var out = await runAccountPass(client, ctxText, acc.name);
+  var out = await runAccountPass(client, admin, userId, ctxText, acc.name);
   if (!out) return { headline: "", situation: "", risks: [], draft_email: "", proposed_moves: [], agenda: "", delta: "" };
 
   // Persist operator state. Insert a fresh row if none exists (state_prose is
@@ -464,13 +527,15 @@ async function gatherAndRun(admin, client, userId, acc, snapshot, userContext) {
 // ── handler ────────────────────────────────────────────────────────────
 
 export default async function handler(req, res) {
-  // Auth: Vercel cron Bearer OR ?secret= for manual triggering.
+  // Auth: require `Authorization: Bearer <CRON_SECRET>` header ONLY.
+  // The ?secret= query-param form has been removed — query params appear in
+  // Vercel access logs in plaintext, leaking the secret to log storage.
+  // Manual runs: use the Authorization header (e.g. curl -H "Authorization: Bearer …").
   var secret = process.env.CRON_SECRET;
   if (!secret) return res.status(500).json({ error: "CRON_SECRET not configured." });
   var authHeader = req.headers.authorization || "";
   var bearer = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  var qSecret = (req.query && req.query.secret) || null;
-  if (bearer !== secret && qSecret !== secret) return res.status(401).json({ error: "Unauthorized" });
+  if (bearer !== secret) return res.status(401).json({ error: "Unauthorized" });
 
   if (!process.env.ANTHROPIC_API_KEY) return res.status(500).json({ error: "ANTHROPIC_API_KEY not configured." });
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return res.status(500).json({ error: "SUPABASE_SERVICE_ROLE_KEY not configured." });

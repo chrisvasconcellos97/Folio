@@ -1,5 +1,24 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
+import { logPipUsage, overDailySpendCap } from "./_pipUsage.js";
+
+export const config = { maxDuration: 60 };
+
+// In-memory per-user rate limit: 5 requests per 60-second window.
+var rateLimitMap = new Map();
+var WINDOW_MS    = 60 * 1000;
+var MAX_REQUESTS = 5;
+
+function isRateLimited(userId) {
+  var now = Date.now();
+  var timestamps = (rateLimitMap.get(userId) || []).filter(function (t) { return now - t < WINDOW_MS; });
+  if (timestamps.length >= MAX_REQUESTS) return true;
+  timestamps.push(now);
+  rateLimitMap.set(userId, timestamps);
+  return false;
+}
+
+var MODEL_HAIKU  = "claude-haiku-4-5-20251001";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
@@ -19,6 +38,10 @@ export default async function handler(req, res) {
     var user = authData && authData.user ? authData.user : null;
     if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
 
+    if (isRateLimited(user.id)) return res.status(429).json({ error: "rate_limited" });
+
+    // new Anthropic(...) INSIDE the try-catch as the first statement after auth
+    // (Vercel Serverless Function Rule — never at module level or outside try).
     var client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     var body   = req.body || {};
     var pairs  = Array.isArray(body.pairs) ? body.pairs : [];
@@ -26,6 +49,11 @@ export default async function handler(req, res) {
     if (pairs.length === 0) {
       return res.status(400).json({ error: "No Q&A pairs provided." });
     }
+
+    // Degrade to Haiku if daily spend cap exceeded.
+    var overCap       = await overDailySpendCap(supabase, user.id);
+    var MODEL_SONNET  = process.env.PIP_PROFILE_MODEL || "claude-sonnet-4-6";
+    var profileModel  = overCap ? MODEL_HAIKU : MODEL_SONNET;
 
     var qaText = pairs.map(function (p, i) {
       return "Q" + (i + 1) + ": " + p.question + "\nA: " + (p.answer || "(skipped)");
@@ -52,16 +80,28 @@ export default async function handler(req, res) {
     var msg = await client.messages.create({
       // Sonnet: this defines how Pip understands WHO YOU ARE — it shapes every
       // downstream output. Runs rarely (onboarding + occasional re-synthesis).
-      model:      process.env.PIP_PROFILE_MODEL || "claude-sonnet-4-6",
+      // Degrades to Haiku when the daily spend cap is exceeded.
+      model:      profileModel,
       max_tokens: 1000, // 1000 (was 600): headroom so Sonnet's prose + slots JSON never truncates
 
       system:     systemPrompt,
       messages:   [{ role: "user", content: userPrompt }],
     });
+    logPipUsage(supabase, user.id, "profile-synthesis", "synthesis", profileModel, msg.usage);
 
     var raw = (msg.content && msg.content[0] && msg.content[0].text) || "{}";
     var parsed = {};
     try { parsed = JSON.parse(raw.replace(/^```json\n?/, "").replace(/\n?```$/, "")); } catch (e) { /* use empty */ }
+
+    // Detect silent empty-profile failure — if the model returned {} or a
+    // near-empty object, surface a real error rather than writing onboarding_done
+    // with no actual profile data (which would make detectKnowledgeGaps think the
+    // user is set up while Pip actually knows nothing).
+    var hasContent = parsed.profile_prose || parsed.role_title || parsed.company_name;
+    if (!hasContent) {
+      console.error("[profile-synthesis] model returned empty or unparseable profile; raw:", String(raw).slice(0, 300));
+      return res.status(502).json({ error: "Profile synthesis produced no content — please retry." });
+    }
 
     // Always include onboarding_status: "done" so clients can apply it in one
     // upsert without needing a separate fallback. detectKnowledgeGaps gates on

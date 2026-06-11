@@ -170,6 +170,11 @@ var MODE_CONFIG = {
   chat:    { model: CHAT_MODEL, max_tokens: 900 }, // 900 (was 512): keep Sonnet chat replies from cutting off mid-answer
   action:  { model: MODEL_HAIKU, max_tokens: 384 },
   brief:   { model: MODEL_HAIKU, max_tokens: 1024 },
+  // brief_lg: same Haiku path as brief, but a larger budget for the legacy
+  // callAskPip job (summary + email body + action-items JSON in one response),
+  // which 1024 could truncate on a substantial meeting. Still ~3× cheaper than
+  // the Sonnet "summary" tier it replaced (item 47 Batch 1, review-tuned).
+  brief_lg: { model: MODEL_HAIKU, max_tokens: 2048 },
   // summary returns a JSON plan with one source_excerpt (~50-100 tokens)
   // per row + summary + short_title + tone. Long meetings with 10+ action
   // items can easily exceed 1024 and get truncated mid-JSON, producing an

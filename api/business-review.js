@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
+import { logPipUsage } from "./_pipUsage.js";
 
 export const config = { maxDuration: 60 };
 
@@ -40,13 +41,15 @@ var SYSTEM_PROMPT = [
   '{ "connections": "- **Name**: detail\\n- bullet2\\n...", "oec_opportunities": "- bullet1\\n- bullet2\\n...", "client_opportunities": "- bullet1\\n- bullet2\\n..." }',
 ].join("\n");
 
+var MAX_ARRAY = 200; // payload size cap — guard against unbounded client arrays
+
 function buildContext(body) {
   var account  = body.account  || {};
-  var meetings = Array.isArray(body.meetings) ? body.meetings : [];
-  var contacts = Array.isArray(body.contacts) ? body.contacts : [];
-  var items    = Array.isArray(body.items)    ? body.items    : [];
-  var projects = Array.isArray(body.projects) ? body.projects : [];
-  var updates  = Array.isArray(body.updates)  ? body.updates  : [];
+  var meetings = (Array.isArray(body.meetings) ? body.meetings : []).slice(0, MAX_ARRAY);
+  var contacts = (Array.isArray(body.contacts) ? body.contacts : []).slice(0, MAX_ARRAY);
+  var items    = (Array.isArray(body.items)    ? body.items    : []).slice(0, MAX_ARRAY);
+  var projects = (Array.isArray(body.projects) ? body.projects : []).slice(0, MAX_ARRAY);
+  var updates  = (Array.isArray(body.updates)  ? body.updates  : []).slice(0, MAX_ARRAY);
   var start    = body.startDate || "";
   var end      = body.endDate   || "";
 
@@ -150,6 +153,12 @@ export default async function handler(req, res) {
 
     if (isRateLimited(user.id)) return res.status(429).json({ error: "rate_limited" });
 
+    // User-scoped client for usage logging (RLS requires auth.uid()).
+    var userClient = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: "Bearer " + token } },
+      auth:   { persistSession: false, autoRefreshToken: false },
+    });
+
     var body = req.body || {};
     var contextStr = buildContext(body);
 
@@ -160,6 +169,7 @@ export default async function handler(req, res) {
       system:     SYSTEM_PROMPT,
       messages:   [{ role: "user", content: contextStr }],
     });
+    logPipUsage(userClient, user.id, "business-review", "qbr", MODEL, response.usage);
 
     var text = "";
     if (Array.isArray(response.content)) {

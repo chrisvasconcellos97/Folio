@@ -13,6 +13,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
 import { logPipUsage } from "./_pipUsage.js";
 
+export const config = { maxDuration: 60 };
+
 var MODEL_HAIKU = "claude-haiku-4-5-20251001";
 var MAX_TOKENS  = 300;
 var MAX_BATCH   = 50;
