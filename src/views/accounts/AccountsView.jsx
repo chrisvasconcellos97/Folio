@@ -515,9 +515,10 @@ export function AccountsView({ accounts, allAccounts, loading, onSelect, onAddAc
         </div>
       )}
 
-      {/* Quick Tasks tray */}
+      {/* Quick Tasks tray — rows stay clean; the tray carries ONE signature */}
       {openTasks.length > 0 && (
-        <div style={{ marginBottom: 16 }}>
+        <div style={{ marginBottom: 16, position: "relative" }}>
+          <HexSignature style={{ top: 0, right: 2, bottom: "auto" }} />
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
             <div style={{ fontFamily: MONO, fontSize: 9.5, color: C.textSoft, fontWeight: 400, textTransform: "uppercase", letterSpacing: "0.08em" }}>
               Quick Tasks
