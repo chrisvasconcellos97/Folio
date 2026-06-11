@@ -243,7 +243,7 @@ export function ItemsTab({ items, taskCadences, accountId, userId, userEmail, on
                   <div style={{ display: "flex", gap: 12, marginTop: 4, flexWrap: "wrap" }}>
                     {item.due_date && (
                       <div style={{ fontFamily: IT_MONO, fontSize: 10, color: C.yellow, letterSpacing: "0.04em", fontFeatureSettings: '"tnum"' }}>
-                        {"Due: " + new Date(item.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        {"Due: " + new Date(item.due_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                       </div>
                     )}
                     {item.owner && (

@@ -7,10 +7,6 @@ export default async function handler(req, res) {
   var token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
   if (!token) return res.status(401).json({ error: "Unauthorized" });
 
-  var anonClient = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
-  var { data: { user }, error: authError } = await anonClient.auth.getUser(token);
-  if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
-
   var { email, role, orgId, appUrl } = req.body || {};
   if (!email) return res.status(400).json({ error: "email required" });
   if (!orgId) return res.status(400).json({ error: "orgId required" });
@@ -19,9 +15,12 @@ export default async function handler(req, res) {
   if (!resendKey) return res.status(500).json({ error: "RESEND_API_KEY not configured" });
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return res.status(500).json({ error: "SUPABASE_SERVICE_ROLE_KEY not configured" });
 
-  var adminClient = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-
   try {
+    var anonClient = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
+    var { data: { user }, error: authError } = await anonClient.auth.getUser(token);
+    if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
+
+    var adminClient = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
     var { data: org, error: orgError } = await adminClient
       .from("folio_orgs")
       .select("name, owner_id")

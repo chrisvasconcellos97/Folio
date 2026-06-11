@@ -1455,6 +1455,7 @@ export default function App() {
         userEmail={userEmail}
         orgId={orgId}
         onClose={function () { setAdHocFlow(null); }}
+        onUpdateAccount={function (data) { return updateAccount(acct.id, data); }}
         pipAccountStateRow={pipAcctStateApp.getStateRow(acct.id) || null}
       /></Suspense>
     );

@@ -62,6 +62,7 @@ create table if not exists folio_accounts (
   inactivated_at          timestamptz,
   merged_into_account_id  uuid,                                -- self-FK added below
   is_my_department        boolean not null default false,
+  pip_tone                text,                                -- most recent tone tag from pip summarize (positive/neutral/cautious/negative)
   -- Health override fields (Pip-computed health is the default; these let users pin).
   status_override         text check (status_override is null or status_override in ('green','yellow','red')),
   status_override_reason  text,
@@ -385,6 +386,15 @@ create table if not exists folio_activity (
   created_at timestamptz default now()
 );
 alter table folio_activity enable row level security;
+
+-- Solo-user SELECT: see your own activity rows even when no org exists.
+-- Org-wide SELECT (for org owners) lives in team_org_layer.sql which adds
+-- a broader policy once folio_orgs/folio_org_members exist.
+drop policy if exists "folio_activity_solo_user_select" on folio_activity;
+create policy "folio_activity_solo_user_select" on folio_activity
+  for select using ((select auth.uid()) = user_id);
+-- (INSERT is already covered by the existing activity_insert policy; no solo
+--  insert policy here, to avoid duplicate permissive policies.)
 
 -- Wire folio_accounts.org_id once folio_orgs exists. ALTER is idempotent
 -- (constraint name guarded).
@@ -1043,6 +1053,26 @@ begin
    where source_id = any (account_ids);
   get diagnostics bumped = row_count; moved := moved + bumped;
 
+  -- Re-parent pip tables introduced after the original merge function
+  update pip_correction_log       set account_id = target_id where account_id = source_id;
+  get diagnostics bumped = row_count; moved := moved + bumped;
+  update folio_account_snapshots  set account_id = target_id where account_id = source_id;
+  get diagnostics bumped = row_count; moved := moved + bumped;
+  update pip_assignment_hints     set account_id = target_id where account_id = source_id;
+  get diagnostics bumped = row_count; moved := moved + bumped;
+  update pip_promise_log          set account_id = target_id where account_id = source_id;
+  get diagnostics bumped = row_count; moved := moved + bumped;
+
+  -- Fix multi-account array columns on meetings and cadences
+  update folio_meetings
+     set account_ids = array_replace(account_ids, source_id, target_id)
+   where source_id = any (account_ids);
+  get diagnostics bumped = row_count; moved := moved + bumped;
+  update folio_cadences
+     set account_ids = array_replace(account_ids, source_id, target_id)
+   where source_id = any (account_ids);
+  get diagnostics bumped = row_count; moved := moved + bumped;
+
   update folio_accounts
      set is_inactive            = true,
          inactivated_at         = now(),
@@ -1063,7 +1093,7 @@ create table if not exists pip_promise_log (
   id                uuid primary key default gen_random_uuid(),
   user_id           uuid references auth.users not null,
   account_id        uuid references folio_accounts on delete cascade,
-  item_id           uuid references folio_items   on delete set null,
+  item_id           uuid references folio_tasks   on delete set null,
   item_text         text not null,
   due_date          date,
   days_to_complete  integer,
@@ -1174,6 +1204,30 @@ create index if not exists life_items_user_idx on life_items(user_id);
 create index if not exists life_items_user_kind_idx on life_items(user_id, kind);
 
 -- ──────────────────────────────────────────────────────────────────────
+-- Custom workspaces (folded in from supabase/custom_workspaces.sql)
+-- User-defined account groupings beyond the built-in types.
+-- ──────────────────────────────────────────────────────────────────────
+create table if not exists folio_custom_workspaces (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references auth.users(id) on delete cascade,
+  org_id     uuid references folio_orgs(id) on delete set null,
+  name       text not null,
+  include_in_portfolio boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+alter table folio_custom_workspaces enable row level security;
+
+drop policy if exists "users manage own custom workspaces" on folio_custom_workspaces;
+create policy "users manage own custom workspaces"
+  on folio_custom_workspaces for all
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+alter table folio_accounts
+  add column if not exists custom_workspace_id uuid references folio_custom_workspaces(id) on delete set null;
+
+-- ──────────────────────────────────────────────────────────────────────
 -- Phase 0 perf indexes (June 10 2026) — FK coverage + drip-question path
 -- (see supabase/phase0_perf.sql; applied to prod via MCP)
 -- ──────────────────────────────────────────────────────────────────────
@@ -1190,14 +1244,11 @@ create index if not exists idx_folio_contact_aliases_contact_id  on folio_contac
 create index if not exists idx_folio_contact_aliases_created_by  on folio_contact_aliases(created_by);
 create index if not exists idx_folio_custom_workspaces_org_id    on folio_custom_workspaces(org_id);
 create index if not exists idx_folio_custom_workspaces_user_id   on folio_custom_workspaces(user_id);
-create index if not exists idx_folio_email_threads_contact_id    on folio_email_threads(contact_id);
+-- Removed dead indexes for dropped tables (folio_email_threads, folio_thread_events,
+-- folio_revenue_history, folio_shop_metrics) — those tables no longer exist (ripped).
 create index if not exists idx_folio_orgs_owner_id               on folio_orgs(owner_id);
 create index if not exists idx_folio_quick_tasks_account_id      on folio_quick_tasks(account_id);
-create index if not exists idx_folio_revenue_history_account_id  on folio_revenue_history(account_id);
-create index if not exists idx_folio_shop_metrics_account_id     on folio_shop_metrics(account_id);
 create index if not exists idx_folio_tasks_source_meeting_id     on folio_tasks(source_meeting_id);
-create index if not exists idx_folio_thread_events_spawned_task  on folio_thread_events(spawned_task_id);
-create index if not exists idx_folio_thread_events_user_id       on folio_thread_events(user_id);
 create index if not exists idx_gauge_projects_meeting_id         on gauge_projects(meeting_id);
 create index if not exists idx_gauge_templates_user_id           on gauge_templates(user_id);
 create index if not exists idx_pip_assignment_hints_account_id   on pip_assignment_hints(account_id);
@@ -1219,3 +1270,68 @@ alter table folio_tasks
 alter table gauge_projects
   add column if not exists waiting_on text,
   add column if not exists waiting_on_since date;
+
+-- Tone resurrection (Batch 2, June 2026) — pip_tone on folio_accounts so
+-- Cooling/Warming trend pills can fire. Written at summarize time.
+alter table folio_accounts
+  add column if not exists pip_tone text;
+
+-- ──────────────────────────────────────────────────────────────────────
+-- Batch 2+3 integrity guards (June 2026)
+-- ──────────────────────────────────────────────────────────────────────
+
+-- Unique partial index: no two queued questions with the same text for a user.
+-- Prevents duplicate drip questions piling up if the generator is called twice.
+create unique index if not exists pip_questions_unique_queued
+  on folio_pip_questions (user_id, question_text)
+  where status = 'queued';
+
+-- CHECK constraint: a person-scope cadence must have a contact_id.
+-- Uses DO/EXCEPTION so the constraint is idempotent (IF NOT EXISTS not available
+-- for CHECK constraints in Postgres, but adding a duplicate throws — catch it).
+do $$
+begin
+  alter table folio_cadences
+    add constraint chk_person_cadence_requires_contact
+    check (cadence_scope = 'account' or contact_id is not null);
+exception when duplicate_object then null;
+end $$;
+
+-- CHECK constraint: folio_tasks must have at least one anchor
+--   (account_id OR cadence_id OR project_id). Prevents completely orphaned tasks.
+do $$
+begin
+  alter table folio_tasks
+    add constraint chk_task_has_anchor
+    check (account_id is not null or cadence_id is not null or project_id is not null);
+exception when duplicate_object then null;
+end $$;
+
+-- Gauge append-status-update RPC — server-side prepend avoids full-object
+-- overwrites from concurrent clients (CadenceMeetingMode two-device race).
+create or replace function gauge_append_status_update(
+  p_project_id uuid,
+  p_body       text,
+  p_by         text
+)
+returns void
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  new_entry jsonb;
+begin
+  new_entry := jsonb_build_object(
+    'body', p_body,
+    'at',   to_char(now() at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+    'by',   p_by
+  );
+  update gauge_projects
+     set status_updates = new_entry || coalesce(status_updates, '[]'::jsonb)
+   where id = p_project_id
+     and user_id = (select auth.uid());
+end;
+$$;
+
+grant execute on function gauge_append_status_update(uuid, text, text) to authenticated;

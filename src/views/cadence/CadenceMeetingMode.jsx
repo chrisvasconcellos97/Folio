@@ -393,12 +393,18 @@ export function CadenceMeetingMode({
   }, [attendees]);
 
   // Debounced per-project notes sync — same cadence as the main notes autosave.
+  // Read-modify-write: merge our local changes on top of the DB's current state
+  // (draft.project_notes is kept fresh by the realtime hook) so two devices
+  // editing different project note fields never clobber each other.
   useEffect(function () {
     if (projectNotesTimer.current) clearTimeout(projectNotesTimer.current);
     var saved = draft.project_notes && typeof draft.project_notes === "object" ? draft.project_notes : {};
     if (JSON.stringify(saved) === JSON.stringify(projectNotes)) return;
     projectNotesTimer.current = setTimeout(function () {
-      onUpdate(draft.id, { project_notes: projectNotes }).catch(function (e) {
+      // Merge: start from the latest DB state, overlay our local keys.
+      var latest = draft.project_notes && typeof draft.project_notes === "object" ? draft.project_notes : {};
+      var merged = Object.assign({}, latest, projectNotes);
+      onUpdate(draft.id, { project_notes: merged }).catch(function (e) {
         console.error("Meeting mode project notes save failed:", e);
       });
     }, 1500);

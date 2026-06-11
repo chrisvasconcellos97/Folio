@@ -33,7 +33,7 @@ function trim(s) { return (s == null ? "" : String(s)).trim(); }
 
 function isOverdue(item, today) {
   if (!item || !item.due_date) return false;
-  return new Date(item.due_date) < today;
+  return new Date(item.due_date + "T00:00:00") < today;
 }
 
 function countOpenItems(context) {

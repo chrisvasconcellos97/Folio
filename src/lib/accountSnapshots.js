@@ -10,8 +10,12 @@ import { projectMatchesAccount } from "./gaugeStatus";
 
 var STORAGE_KEY_PREFIX = "folio_snapshots_computed_";
 
+function etToday() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+}
+
 function todayKey(userId) {
-  return STORAGE_KEY_PREFIX + (userId ? userId + "_" : "") + new Date().toISOString().slice(0, 10);
+  return STORAGE_KEY_PREFIX + (userId ? userId + "_" : "") + etToday();
 }
 
 export function snapshotsComputedToday(userId) {
@@ -74,7 +78,7 @@ export async function computeAndSaveSnapshots(userId) {
     var projects  = projR.data || [];
     var cadences  = cadR.data  || [];
     var meetings  = meetR.data || [];
-    var today     = new Date().toISOString().slice(0, 10);
+    var today     = etToday();
     var now       = Date.now();
     var sevenDaysAgo = new Date(now - 7 * 86400000).toISOString();
 

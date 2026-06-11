@@ -41,6 +41,7 @@ export function AdHocConversationFlow({
   userEmail,
   orgId,
   onClose,
+  onUpdateAccount,
   pipAccountStateRow,
 }) {
   var { meetings, addMeeting, updateMeeting } = useMeetings(userId, account.id, orgId);
@@ -154,7 +155,10 @@ export function AdHocConversationFlow({
         follow_up_date:  followUp,
         status:          "summarized",
         theme:           out.theme || null,
-      }).then(function () { return out; });
+      }).then(function () {
+        if (out.tone && onUpdateAccount) onUpdateAccount({ pip_tone: out.tone });
+        return out;
+      });
     }).then(function (out) {
       setSummarizing(false);
       setPreviewPlan({

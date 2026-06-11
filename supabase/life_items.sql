@@ -25,7 +25,7 @@ alter table life_items enable row level security;
 
 drop policy if exists "life_items_owner_all" on life_items;
 create policy "life_items_owner_all" on life_items
-  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  for all using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 
 create index if not exists life_items_user_idx on life_items(user_id);
 create index if not exists life_items_user_kind_idx on life_items(user_id, kind);

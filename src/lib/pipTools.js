@@ -470,7 +470,7 @@ export function routeToolCall(tool, ctx) {
     // ---- Quick tasks ----
     case "complete_task":
       if (!input.task_id || !ctx.updateTask) return Promise.resolve(err(new Error("missing task_id or hook")));
-      return ctx.updateTask(input.task_id, { done: true })
+      return ctx.updateTask(input.task_id, { done: true, status: "complete" })
         .then(function () { return { kind: "executed", label: label }; })
         .catch(err);
 

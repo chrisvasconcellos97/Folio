@@ -321,7 +321,10 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
         follow_up_date:  followUp,
         status:          "summarized",
         theme:           out.theme || null,
-      }).then(function () { return out; });
+      }).then(function () {
+        if (out.tone && onUpdate) onUpdate({ pip_tone: out.tone });
+        return out;
+      });
     }).then(function (out) {
       setAdHocSummarizing(false);
       setAdHocTitleDraft(out.suggested_title || null);
@@ -431,6 +434,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
             setHubCadence(function (prev) { return prev && prev.id === id ? Object.assign({}, prev, data) : prev; });
           });
         }}
+        onUpdateAccount={onUpdate}
         onBack={function () { setHubCadence(null); }}
         onOpenAccount={function () { setHubCadence(null); setTab("overview"); }}
         isMobile={!isDesktop}
@@ -579,6 +583,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
           updates={updates}
           onSwitchTab={setTab}
           contacts={contacts}
+          health={computedHealth}
         />
       )}
 

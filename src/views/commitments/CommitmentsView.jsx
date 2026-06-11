@@ -1,5 +1,6 @@
 import { C } from "../../lib/colors";
 import { Mark } from "../../components/Mark";
+import { ownerLabel } from "../../lib/ownerLabel";
 
 var SERIF = "'Fraunces', Georgia, serif";
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
@@ -49,7 +50,7 @@ export function CommitmentsView({ items, accounts, onOpenAccount, onMarkDone }) 
     var isSoon    = item.due_date && item.due_date >= today && item.due_date <= sevenDaysOut;
     var dueDateColor = isOverdue ? C.red : isSoon ? C.yellow : C.textMuted;
     var dayOpen = daysSinceCreated(item.created_at);
-    var owner = item.owner || item.assignee_email;
+    var owner = ownerLabel(item.owner || item.assignee_email);
 
     return (
       <div

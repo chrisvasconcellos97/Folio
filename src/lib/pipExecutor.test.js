@@ -76,7 +76,7 @@ describe("executeTool", function () {
       tool: { name: "complete_task", input: { task_id: "abc" } },
       hooks: { updateTask: updateTask },
     });
-    expect(updateTask).toHaveBeenCalledWith("abc", { done: true });
+    expect(updateTask).toHaveBeenCalledWith("abc", { done: true, status: "complete" });
     expect(r.ok).toBe(true);
     expect(r.message).toBe("Task completed");
   });

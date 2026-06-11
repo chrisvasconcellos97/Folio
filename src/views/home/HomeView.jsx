@@ -1370,7 +1370,7 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
         </div>
       )}
 
-      {(dailyBrief || briefLoading) && (
+      {!operatorActive && (dailyBrief || briefLoading) && (
         <div style={{
           padding: isMobile ? "0 12px 12px" : "0 32px 12px",
           maxWidth: 980, margin: "0 auto",

@@ -13,8 +13,8 @@ export function useAccountSnapshots(userId) {
   var fetch = useCallback(function () {
     if (!userId) return;
     setLoading(true);
-    var today        = new Date().toISOString().slice(0, 10);
-    var eightDaysAgo = new Date(Date.now() - 8 * 86400000).toISOString().slice(0, 10);
+    var today        = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+    var eightDaysAgo = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(Date.now() - 8 * 86400000));
     supabase
       .from("folio_account_snapshots")
       .select("*")

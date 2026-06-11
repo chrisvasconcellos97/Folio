@@ -633,28 +633,28 @@ If any criterion stays false, that's where we dig next — design failure, not u
    - [ ] payload size caps on business-review / portfolio-brief / leadership-readout (unbounded client arrays)
 
    **BATCH 2 — Correctness one-liners (wrong data on screen today):**
-   - [ ] `pip_promise_log.item_id` FK `folio_items`→`folio_tasks` (schema.sql:1066) — EVERY closeItem promise-log insert has silently failed since unification; table is empty
-   - [ ] TONE TREND RESURRECTION: `accountSnapshots.js:125` reads `account.pip_tone` which doesn't exist on `folio_accounts` — add column + write it when summarize writes meeting pip_tone; Cooling/Warming pills have NEVER fired
-   - [ ] `pipTools.js:473` complete_task: `{done:true}` → `{done:true, status:"complete"}` (Pip-completed tasks linger as commitment nudges)
-   - [ ] OverviewTab.jsx:145 — delete the `var lastMeeting = meetings[0]` redeclaration shadowing the line-137 useMemo (last-conversation strip can show a draft)
-   - [ ] OverviewTab healthScore IIFE (~150-175) → use the `computedHealth` already computed in AccountDetail (two health scores on one screen can disagree)
-   - [ ] timezone parses: `pipIntent.js:36`, `CadenceTab.jsx:253`, `ItemsTab.jsx:246` — bare `new Date("YYYY-MM-DD")` renders dates a day early in ET; use `+"T00:00:00"`
-   - [ ] `accountSnapshots.js:14` + `useAccountSnapshots.js:16` — UTC "today" guard fires a day early after ~8pm ET; use ET-anchored date like operator-run
-   - [ ] `api/invite.js:10` — `getUser()` outside try-catch (FUNCTION_INVOCATION_FAILED class)
-   - [ ] `folio_activity` solo-user SELECT RLS policy (Settings→Activity permanently empty for Chris)
-   - [ ] HomeView.jsx:1373 — add `!operatorActive` to daily-brief render guard (cached brief can stack on OperatorHub)
-   - [ ] `useCommitmentNudges.markDone` missing `closed_at`
-   - [ ] raw email leaks: CadenceHub.jsx:479 (verbatim assignee_email), :750 (split("@")[0]), CommitmentsView.jsx:52 — route through ownerLabel/resolveAssignee
+   - [x] `pip_promise_log.item_id` FK `folio_items`→`folio_tasks` (schema.sql:1066) — EVERY closeItem promise-log insert has silently failed since unification; table is empty
+   - [x] TONE TREND RESURRECTION: `accountSnapshots.js:125` reads `account.pip_tone` which doesn't exist on `folio_accounts` — add column + write it when summarize writes meeting pip_tone; Cooling/Warming pills have NEVER fired
+   - [x] `pipTools.js:473` complete_task: `{done:true}` → `{done:true, status:"complete"}` (Pip-completed tasks linger as commitment nudges)
+   - [x] OverviewTab.jsx:145 — delete the `var lastMeeting = meetings[0]` redeclaration shadowing the line-137 useMemo (last-conversation strip can show a draft)
+   - [x] OverviewTab healthScore IIFE (~150-175) → use the `computedHealth` already computed in AccountDetail (two health scores on one screen can disagree)
+   - [x] timezone parses: `pipIntent.js:36`, `CadenceTab.jsx:253`, `ItemsTab.jsx:246` — bare `new Date("YYYY-MM-DD")` renders dates a day early in ET; use `+"T00:00:00"`
+   - [x] `accountSnapshots.js:14` + `useAccountSnapshots.js:16` — UTC "today" guard fires a day early after ~8pm ET; use ET-anchored date like operator-run
+   - [x] `api/invite.js:10` — `getUser()` outside try-catch (FUNCTION_INVOCATION_FAILED class)
+   - [x] `folio_activity` solo-user SELECT RLS policy (Settings→Activity permanently empty for Chris)
+   - [x] HomeView.jsx:1373 — add `!operatorActive` to daily-brief render guard (cached brief can stack on OperatorHub)
+   - [x] `useCommitmentNudges.markDone` missing `closed_at`
+   - [x] raw email leaks: CadenceHub.jsx:479 (verbatim assignee_email), :750 (split("@")[0]), CommitmentsView.jsx:52 — route through ownerLabel/resolveAssignee
 
    **BATCH 3 — Schema & merge integrity (next merge loses data without this):**
-   - [ ] merge fn: re-parent `pip_correction_log`, `folio_account_snapshots`, `pip_assignment_hints`, `pip_promise_log`; `array_replace` on `folio_meetings.account_ids` + `folio_cadences.account_ids`
-   - [ ] schema.sql: delete 8 dead indexes (lines ~1184-1200: email_threads, thread_events, revenue_history, shop_metrics, custom_workspace_id); fold `custom_workspaces.sql` in — schema.sql currently CANNOT rebuild a fresh DB
-   - [ ] leadership-task orphan: deleting a 1:1 cadence sets cadence_id null + account_id already null → task invisible forever; block delete or re-home tasks
-   - [ ] CHECK constraints: person cadence requires contact_id; folio_tasks needs account_id OR cadence_id OR project_id
-   - [ ] unique partial index on queued `folio_pip_questions(user_id, question_text)`
-   - [ ] `life_items` RLS → `(select auth.uid())` initplan wrap
-   - [ ] CadenceHub guard for person cadence with deleted contact ("(contact deleted)" label)
-   - [ ] two-device `project_notes` fork (CadenceMeetingMode:342-406 full-map overwrite) + JSONB read-modify-write races on `status_updates`/`stages`/`operator_proposed_moves` → server-side append RPC for status_updates at minimum
+   - [x] merge fn: re-parent `pip_correction_log`, `folio_account_snapshots`, `pip_assignment_hints`, `pip_promise_log`; `array_replace` on `folio_meetings.account_ids` + `folio_cadences.account_ids`
+   - [x] schema.sql: delete 8 dead indexes (lines ~1184-1200: email_threads, thread_events, revenue_history, shop_metrics, custom_workspace_id); fold `custom_workspaces.sql` in — schema.sql currently CANNOT rebuild a fresh DB
+   - [x] leadership-task orphan: deleting a 1:1 cadence sets cadence_id null + account_id already null → task invisible forever; block delete or re-home tasks
+   - [x] CHECK constraints: person cadence requires contact_id; folio_tasks needs account_id OR cadence_id OR project_id
+   - [x] unique partial index on queued `folio_pip_questions(user_id, question_text)`
+   - [x] `life_items` RLS → `(select auth.uid())` initplan wrap
+   - [x] CadenceHub guard for person cadence with deleted contact ("(contact deleted)" label)
+   - [x] two-device `project_notes` fork (CadenceMeetingMode:342-406 full-map overwrite) + JSONB read-modify-write races on `status_updates`/`stages`/`operator_proposed_moves` → server-side append RPC for status_updates at minimum
 
    **BATCH 4 — Pip brain (the interview gaps):**
    - [ ] `operating_context` → chat + summarize (THE highest-leverage Pip fix: the interview distillation feeds operator/questions but never the two surfaces Chris actually uses — concatenate ahead of profile_prose in the client callers)

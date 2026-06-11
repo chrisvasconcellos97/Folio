@@ -53,7 +53,7 @@ var RANGES = [
   { label: "All Time", days: null },
 ];
 
-export function OverviewTab({ account, userId, orgId, openItems, meetings, onQuickMeeting, onLogMeeting, onAddItem, onSaveSummary, subAccounts, onSelectAccount, onUpdateAccount, projects, updates, onSwitchTab, contacts, suppressPipInsight }) {
+export function OverviewTab({ account, userId, orgId, openItems, meetings, onQuickMeeting, onLogMeeting, onAddItem, onSaveSummary, subAccounts, onSelectAccount, onUpdateAccount, projects, updates, onSwitchTab, contacts, suppressPipInsight, health }) {
   var isPartner = account.account_type === "partner";
   var pipInsight = buildPipInsight(account, openItems, projects, {
     onClickOverdue: function () { onSwitchTab && onSwitchTab("tasks"); },
@@ -142,37 +142,10 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
     return (openItems || []).filter(function (i) { return i.is_commitment && !i.done; });
   }, [openItems]);
 
-  var lastMeeting = meetings && meetings.length > 0 ? meetings[0] : null;
-  var followUp = lastMeeting && lastMeeting.follow_up_date ? lastMeeting.follow_up_date : null;
   var today = new Date().toISOString().slice(0, 10);
+  var healthScore = (health && health.status) || "green";
+  var followUp = lastMeeting && lastMeeting.follow_up_date ? lastMeeting.follow_up_date : null;
   var followUpOverdue = followUp && followUp < today;
-
-  var healthScore = (function () {
-    var flags = [];
-
-    // Days since last interaction
-    if (account.last_interaction_at) {
-      var days = Math.floor((Date.now() - new Date(account.last_interaction_at)) / 86400000);
-      if (days > 60) flags.push("red");
-      else if (days > 30) flags.push("yellow");
-    } else {
-      flags.push("yellow");
-    }
-
-    // Overdue open items
-    var overdueItems = openItems.filter(function (i) {
-      return !i.done && i.due_date && i.due_date < today;
-    });
-    if (overdueItems.length > 3) flags.push("red");
-    else if (overdueItems.length > 0) flags.push("yellow");
-
-    // Follow-up overdue
-    if (followUpOverdue) flags.push("yellow");
-
-    if (flags.indexOf("red") !== -1) return "red";
-    if (flags.indexOf("yellow") !== -1) return "yellow";
-    return "green";
-  })();
 
   var cutoffDate = range.days
     ? new Date(Date.now() - range.days * 86400000).toISOString().split("T")[0]
@@ -611,9 +584,9 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
         <Card>
           <FL>Health</FL>
           <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 2 }}>
-            <div style={{ width: 10, height: 10, borderRadius: "50%", background: healthScore === "green" ? C.green : healthScore === "yellow" ? C.yellow : C.red }} />
-            <span style={{ fontSize: 14, color: healthScore === "green" ? C.green : healthScore === "yellow" ? C.yellow : C.red, fontWeight: 500, textTransform: "capitalize" }}>
-              {healthScore === "green" ? "Healthy" : healthScore === "yellow" ? "Watch" : "At Risk"}
+            <div style={{ width: 10, height: 10, borderRadius: "50%", background: healthScore === "green" ? C.green : healthScore === "yellow" ? C.yellow : healthScore === "new" ? C.textMuted : C.red }} />
+            <span style={{ fontSize: 14, color: healthScore === "green" ? C.green : healthScore === "yellow" ? C.yellow : healthScore === "new" ? C.textMuted : C.red, fontWeight: 500, textTransform: "capitalize" }}>
+              {healthScore === "green" ? "Healthy" : healthScore === "yellow" ? "Watch" : healthScore === "new" ? "New" : "At Risk"}
             </span>
             <InfoTip text="Auto-computed from meeting recency, overdue items, and project health. Updates daily. Click the health pill at the top of the account to pin it manually if Pip has it wrong." />
           </div>

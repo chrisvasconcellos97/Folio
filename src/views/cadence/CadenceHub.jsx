@@ -476,7 +476,7 @@ function HistoryRow({ meeting, onEdit, onDelete, accountId, openItems, addItem, 
                             {t.is_commitment ? "✦ " : ""}{t.title}
                             {(t.assignee_email || t.due_date) && (
                               <span style={{ fontSize: 11, color: C.textMuted, marginLeft: 6, fontVariantNumeric: "tabular-nums" }}>
-                                {t.assignee_email ? "· " + t.assignee_email + " " : ""}
+                                {t.assignee_email ? "· " + ownerLabel(t.assignee_email) + " " : ""}
                                 {t.due_date ? "· due " + new Date(t.due_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""}
                               </span>
                             )}
@@ -747,7 +747,7 @@ function MeetingTaskRow({ task, userId, members, contacts, onUpdate }) {
               }}
             >
               {currentAssignee
-                ? (currentAssignee.split("@")[0].slice(0, 12))
+                ? ownerLabel(currentAssignee).slice(0, 14)
                 : "Assign"}
             </button>
           )}
@@ -1284,6 +1284,7 @@ export function CadenceHub({
   updateItem,
   closeItem,
   onUpdateCadence,
+  onUpdateAccount,
   onEditMeeting,
   onBack,
   onOpenAccount,
@@ -1655,7 +1656,10 @@ export function CadenceHub({
         theme:           out.theme || null,
         follow_up_date:  followUp,
         status:          "summarized",
-      }).then(function () { return out; });
+      }).then(function () {
+        if (out.tone && onUpdateAccount && account) onUpdateAccount({ pip_tone: out.tone });
+        return out;
+      });
     }).then(function (out) {
       setSummarizingId(null);
       setPreviewTitleDraft(null);
@@ -1989,7 +1993,7 @@ export function CadenceHub({
 
   /* ---- Header ---- */
   var displayName = isPersonCadence
-    ? ("1:1 with " + (contact ? contact.name : "Unknown"))
+    ? ("1:1 with " + (contact ? contact.name : "(contact deleted)"))
     : (account ? account.name : "Meeting");
   var displaySubtitle = isPersonCadence
     ? (contact && contact.title ? contact.title : "Person 1:1")

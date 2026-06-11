@@ -250,7 +250,7 @@ export function CadenceTab({ account, cadences, items, meetings, contacts, onAdd
                   <div style={{ fontSize: 12, color: C.text }}>{item.text}</div>
                   {item.due_date && (
                     <div style={{ fontSize: 10, color: C.yellow, marginTop: 3 }}>
-                      Due: {new Date(item.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      Due: {new Date(item.due_date + "T00:00:00").toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </div>
                   )}
                 </div>

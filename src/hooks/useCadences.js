@@ -56,13 +56,32 @@ export function useCadences(userId, accountId) {
   }
 
   function deleteCadence(id) {
+    // Guard: check for account-less leadership tasks tied to this cadence.
+    // Deleting the cadence would orphan them (account_id null + cadence_id null
+    // = invisible forever). Block the delete and tell the caller why.
     return supabase
-      .from("folio_cadences")
-      .delete()
-      .eq("id", id)
-      .then(function (result) {
-        if (result.error) throw result.error;
-        fetch();
+      .from("folio_tasks")
+      .select("id", { count: "exact", head: true })
+      .is("account_id", null)
+      .eq("cadence_id", id)
+      .eq("done", false)
+      .then(function (r) {
+        if (r.error) throw r.error;
+        if ((r.count || 0) > 0) {
+          throw new Error(
+            "This cadence has " + r.count + " open leadership task" +
+            (r.count === 1 ? "" : "s") +
+            ". Complete or reassign them before deleting."
+          );
+        }
+        return supabase
+          .from("folio_cadences")
+          .delete()
+          .eq("id", id)
+          .then(function (result) {
+            if (result.error) throw result.error;
+            fetch();
+          });
       });
   }
 
