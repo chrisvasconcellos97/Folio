@@ -34,6 +34,6 @@ export function logActivity(orgId, userId, accountId, eventType, payload) {
       event_type: eventType,
       payload:    sanitizePayload(payload),
     }])
-    .then(function () {})
-    .catch(function () {});
+    .then(function () { /* guard-ok: activity log fire-and-forget; result is never used */ })
+    .catch(function () { /* guard-ok: activity log fire-and-forget; failure is intentionally silent */ });
 }

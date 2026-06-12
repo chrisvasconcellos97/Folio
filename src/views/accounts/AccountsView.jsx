@@ -488,7 +488,7 @@ export function AccountsView({ accounts, allAccounts, loading, onSelect, onAddAc
                 style={{
                   flex: 1, background: C.surface, border: "1px solid " + C.rule,
                   borderRadius: 6, padding: "6px 10px",
-                  fontFamily: MONO, fontSize: 12, color: C.text, outline: "none",
+                  fontFamily: MONO, fontSize: 16, color: C.text, outline: "none",
                 }}
               />
               <button

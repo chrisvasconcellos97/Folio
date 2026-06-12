@@ -1203,7 +1203,7 @@ export function CadenceMeetingMode({
               style={{
                 flex: 1, background: C.surface, border: "1px solid " + C.rule,
                 borderRadius: 8, padding: "8px 12px",
-                color: C.text, fontSize: 13, fontFamily: INTER, outline: "none",
+                color: C.text, fontSize: 16, fontFamily: INTER, outline: "none",
                 boxSizing: "border-box",
               }}
             />

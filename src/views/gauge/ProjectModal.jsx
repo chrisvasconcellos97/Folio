@@ -809,7 +809,7 @@ export function ProjectModal({
                       onChange={function (e) { updateStageField(i, "title", e.target.value); }}
                       style={{
                         flex: 1, background: "transparent", border: "none", outline: "none",
-                        fontSize: 13, color: done ? C.textMuted : C.text,
+                        fontSize: 16, color: done ? C.textMuted : C.text,
                         textDecoration: done ? "line-through" : "none",
                         fontFamily: "'Inter', system-ui, sans-serif",
                       }}
@@ -914,7 +914,7 @@ export function ProjectModal({
                           width: "100%", background: C.redFaint,
                           border: "1px solid " + C.redLine,
                           borderRadius: 6, padding: "4px 8px",
-                          fontSize: 12, color: C.text,
+                          fontSize: 16, color: C.text,
                           fontFamily: "'Inter', system-ui, sans-serif",
                           outline: "none", boxSizing: "border-box",
                         }}
@@ -945,7 +945,7 @@ export function ProjectModal({
                               onChange={function (e) { updateSubStageTitle(i, j, e.target.value); }}
                               style={{
                                 flex: 1, background: "transparent", border: "none", outline: "none",
-                                fontSize: 12, color: subDone ? C.textMuted : C.textSoft,
+                                fontSize: 16, color: subDone ? C.textMuted : C.textSoft,
                                 textDecoration: subDone ? "line-through" : "none",
                                 fontFamily: "'Inter', system-ui, sans-serif",
                               }}
@@ -990,7 +990,7 @@ export function ProjectModal({
                 border: "1px solid " + C.border,
                 borderRadius: 8,
                 padding: "7px 10px",
-                fontSize: 14,
+                fontSize: 16,
                 color: C.text,
                 fontFamily: "'Inter', system-ui, sans-serif",
                 outline: "none",

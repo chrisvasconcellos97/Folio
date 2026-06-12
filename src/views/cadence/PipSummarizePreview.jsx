@@ -182,7 +182,7 @@ function DueInput({ value, onChange }) {
       style={{
         background: C.surface, color: C.text,
         border: "1px solid " + C.rule, borderRadius: 6,
-        padding: "4px 8px", fontSize: 11, fontFamily: INTER,
+        padding: "4px 8px", fontSize: 16, fontFamily: INTER,
       }}
     />
   );
@@ -289,7 +289,7 @@ function TitleInput({ value, onChange, edited }) {
         borderRadius: 6,
         padding: "6px 8px",
         color: C.text,
-        fontSize: 13,
+        fontSize: 16,
         fontFamily: INTER,
         lineHeight: 1.45,
         resize: "none",
@@ -352,7 +352,7 @@ function SourceExpander({ excerpt, onExcerptChange, edited }) {
               borderRadius: 6,
               padding: "8px 10px",
               color: C.textSoft,
-              fontSize: 12,
+              fontSize: 16,
               fontFamily: INTER,
               lineHeight: 1.5,
               fontStyle: "italic",
@@ -439,7 +439,7 @@ function UnknownPersonRow({ person, onAdd, onDismiss }) {
                 flex: 1, minWidth: 120,
                 background: C.surface, border: "1px solid " + C.rule,
                 borderRadius: 6, padding: "6px 10px",
-                fontSize: 13, color: C.text, fontFamily: INTER,
+                fontSize: 16, color: C.text, fontFamily: INTER,
                 boxSizing: "border-box",
               }}
             />
@@ -451,7 +451,7 @@ function UnknownPersonRow({ person, onAdd, onDismiss }) {
                 flex: 1, minWidth: 120,
                 background: C.surface, border: "1px solid " + C.rule,
                 borderRadius: 6, padding: "6px 10px",
-                fontSize: 13, color: C.text, fontFamily: INTER,
+                fontSize: 16, color: C.text, fontFamily: INTER,
                 boxSizing: "border-box",
               }}
             />
@@ -464,7 +464,7 @@ function UnknownPersonRow({ person, onAdd, onDismiss }) {
                 flex: 1, minWidth: 140,
                 background: C.surface, border: "1px solid " + C.rule,
                 borderRadius: 6, padding: "6px 10px",
-                fontSize: 13, color: C.text, fontFamily: INTER,
+                fontSize: 16, color: C.text, fontFamily: INTER,
                 boxSizing: "border-box",
               }}
             />
@@ -1302,7 +1302,7 @@ export function PipSummarizePreview({
                 background: C.surface,
                 border: "1px solid " + C.rule,
                 borderRadius: 8, padding: "8px 12px",
-                fontSize: 14, color: C.text,
+                fontSize: 16, color: C.text,
                 fontFamily: INTER, boxSizing: "border-box",
               }}
             />

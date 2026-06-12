@@ -70,7 +70,7 @@ function checkVersion() {
       if (!m) return;
       if (m[1] !== LOADED_HASH) triggerReload();
     })
-    .catch(function () {});
+    .catch(function () { /* guard-ok: version-check fetch; network errors are expected/normal */ });
 }
 
 checkVersion();

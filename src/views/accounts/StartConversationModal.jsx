@@ -577,7 +577,7 @@ export function StartConversationModal({ accountId, accounts, userId, orgId, mem
                         style={{
                           flex: 1, background: "transparent",
                           border: "none", outline: "none",
-                          color: C.text, fontSize: 13.5, fontFamily: INTER,
+                          color: C.text, fontSize: 16.5, fontFamily: INTER,
                           padding: 0, lineHeight: 1.45,
                           resize: "none",
                           boxSizing: "border-box",
@@ -594,7 +594,7 @@ export function StartConversationModal({ accountId, accounts, userId, orgId, mem
                           background: C.bgDark, border: "1px solid " + C.rule,
                           borderRadius: 6, padding: "4px 8px",
                           color: it.due_date ? C.text : C.textMuted,
-                          fontSize: 12, fontFamily: INTER, outline: "none",
+                          fontSize: 16, fontFamily: INTER, outline: "none",
                           colorScheme: "dark",
                         }}
                       />
@@ -605,7 +605,7 @@ export function StartConversationModal({ accountId, accounts, userId, orgId, mem
                           background: C.bgDark, border: "1px solid " + C.rule,
                           borderRadius: 6, padding: "4px 8px",
                           color: it.assignee ? C.text : C.textMuted,
-                          fontSize: 12, fontFamily: INTER, outline: "none",
+                          fontSize: 16, fontFamily: INTER, outline: "none",
                           cursor: "pointer",
                         }}
                       >
@@ -626,7 +626,7 @@ export function StartConversationModal({ accountId, accounts, userId, orgId, mem
                             border: "1px solid " + (it.gauge ? C.accentBorder : C.rule),
                             borderRadius: 6, padding: "4px 8px",
                             color: it.gauge ? C.accent : C.textMuted,
-                            fontSize: 11, fontFamily: INTER, outline: "none",
+                            fontSize: 16, fontFamily: INTER, outline: "none",
                             cursor: "pointer", maxWidth: 170,
                           }}
                         >

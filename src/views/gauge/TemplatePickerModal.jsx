@@ -48,7 +48,7 @@ export function TemplatePickerModal({ templates, onUse, onUpdate, onDelete, onCl
   }
 
   function handleDelete(id) {
-    onDelete(id).catch(function () {});
+    onDelete(id).catch(function () { /* guard-ok: template delete callback, optimistic UI proceeds */ });
     setConfirm(null);
   }
 

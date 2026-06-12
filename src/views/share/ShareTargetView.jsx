@@ -40,7 +40,7 @@ export function ShareTargetView({ userId, onOpenConversation, onBack }) {
         style={{
           width: "100%", boxSizing: "border-box",
           background: C.surface, border: "1px solid " + C.rule, borderRadius: 8,
-          padding: "12px 14px", fontFamily: MONO, fontSize: 13, color: C.text,
+          padding: "12px 14px", fontFamily: MONO, fontSize: 16, color: C.text,
           resize: "vertical", lineHeight: 1.6, marginBottom: 14, outline: "none",
         }}
         placeholder="Paste or edit notes here…"

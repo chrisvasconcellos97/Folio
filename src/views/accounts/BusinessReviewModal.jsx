@@ -82,7 +82,7 @@ export function BusinessReviewModal({ account, meetings, contacts, items, projec
   }
 
   function copySection(key, text) {
-    navigator.clipboard.writeText(text).catch(function () {});
+    navigator.clipboard.writeText(text).catch(function () { /* guard-ok: clipboard API; copy button stays visible if denied */ });
     setCopiedKey(key);
     setTimeout(function () { setCopiedKey(null); }, 1500);
   }
@@ -104,7 +104,7 @@ export function BusinessReviewModal({ account, meetings, contacts, items, projec
       "[ CLIENT OPPORTUNITIES ]",
       sections.client_opportunities,
     ].join("\n");
-    navigator.clipboard.writeText(text).catch(function () {});
+    navigator.clipboard.writeText(text).catch(function () { /* guard-ok: clipboard API; copy button stays visible if denied */ });
     setCopiedAll(true);
     setTimeout(function () { setCopiedAll(false); }, 1500);
   }
@@ -189,7 +189,7 @@ export function BusinessReviewModal({ account, meetings, contacts, items, projec
             borderRadius: 6,
             padding: "6px 10px",
             fontFamily: MONO,
-            fontSize: 12,
+            fontSize: 16,
             outline: "none",
           }}
         />
@@ -205,7 +205,7 @@ export function BusinessReviewModal({ account, meetings, contacts, items, projec
             borderRadius: 6,
             padding: "6px 10px",
             fontFamily: MONO,
-            fontSize: 12,
+            fontSize: 16,
             outline: "none",
           }}
         />

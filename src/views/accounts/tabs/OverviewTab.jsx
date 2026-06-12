@@ -437,7 +437,7 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
           placeholder="Quick thoughts, reminders, anything that doesn't belong to a specific meeting…"
           style={{
             width: "100%", background: "transparent", border: "none", resize: "none",
-            color: C.text, fontSize: 14, fontFamily: "'Inter', system-ui, sans-serif",
+            color: C.text, fontSize: 16, fontFamily: "'Inter', system-ui, sans-serif",
             lineHeight: 1.6, outline: "none", minHeight: 72, padding: 0,
           }}
         />

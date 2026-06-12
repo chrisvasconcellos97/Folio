@@ -518,7 +518,7 @@ function FilterSelect({ label, value, onChange, options }) {
           background: C.bg, color: C.text,
           border: "1px solid " + C.rule, borderRadius: 6,
           padding: "4px 8px",
-          fontFamily: INTER, fontSize: 12,
+          fontFamily: INTER, fontSize: 16,
           cursor: "pointer",
         }}
       >

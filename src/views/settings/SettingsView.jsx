@@ -403,7 +403,7 @@ export function TeamSection({ org, role, members, pendingInvites, onInvite, onRe
                 onChange={function (e) { handleRoleChange(e.target.value); }}
                 style={{
                   width: "100%", background: C.bgDropdown, border: "1px solid " + C.border,
-                  borderRadius: 8, padding: "9px 12px", fontSize: 13, color: C.text,
+                  borderRadius: 8, padding: "9px 12px", fontSize: 16, color: C.text,
                   fontFamily: "'Inter', system-ui, sans-serif", outline: "none", cursor: "pointer",
                 }}
               >
@@ -418,7 +418,7 @@ export function TeamSection({ org, role, members, pendingInvites, onInvite, onRe
                 onChange={function (e) { handleLensChange(e.target.value); }}
                 style={{
                   width: "100%", background: C.bgDropdown, border: "1px solid " + C.border,
-                  borderRadius: 8, padding: "9px 12px", fontSize: 13, color: C.text,
+                  borderRadius: 8, padding: "9px 12px", fontSize: 16, color: C.text,
                   fontFamily: "'Inter', system-ui, sans-serif", outline: "none", cursor: "pointer",
                 }}
               >

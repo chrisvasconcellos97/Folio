@@ -278,7 +278,7 @@ export function AccountDetailHeader({
                   style={{
                     background: C.surface, border: "1px solid " + C.rule,
                     borderRadius: 999, padding: "3px 10px",
-                    fontFamily: MONO, fontSize: 10, color: C.textSoft,
+                    fontFamily: MONO, fontSize: 16, color: C.textSoft,
                     cursor: "pointer", appearance: "none",
                   }}
                 >

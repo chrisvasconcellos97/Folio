@@ -340,7 +340,7 @@ export default function App() {
       .sort(function (a, b) { return new Date(b.last_interaction_at) - new Date(a.last_interaction_at); })
       .slice(0, 10);
     recent.forEach(function (a, i) {
-      setTimeout(function () { pipAcctStateApp.refreshState(a.id).catch(function () {}); }, i * 1200);
+      setTimeout(function () { pipAcctStateApp.refreshState(a.id).catch(function () { /* guard-ok: background state refresh, failure is acceptable */ }); }, i * 1200);
     });
     try { localStorage.setItem(key, String(Date.now())); } catch (e) {}
   }, [userId, accounts]);
@@ -685,7 +685,7 @@ export default function App() {
     userProfile,
     function onTermLearned(term, definition) {
       if (!term || !definition) return;
-      pipFactsAppApi.addFact({ fact: term + " — " + definition, source: "pip_inferred" }).catch(function () {});
+      pipFactsAppApi.addFact({ fact: term + " — " + definition, source: "pip_inferred" }).catch(function () { /* guard-ok: inferred fact insert, fire-and-forget best-effort */ });
     }
   );
   // "Catch up with Pip" modal — answer the whole queue in one sitting.
@@ -723,7 +723,7 @@ export default function App() {
   // generator self-skipped forever. Cheap idempotent delete.
   useEffect(function () {
     if (!userId) return;
-    purgeEvergreenQuestions({ userId: userId, supabase: supabase }).catch(function () {});
+    purgeEvergreenQuestions({ userId: userId, supabase: supabase }).catch(function () { /* guard-ok: question purge cleanup, fire-and-forget */ });
   }, [userId]);
 
   // Daily detectKnowledgeGaps — once per calendar day, pure JS, zero LLM cost.
@@ -850,7 +850,7 @@ export default function App() {
       }).then(function (r) { return r.json(); }).then(function (parsed) {
         if (!parsed || parsed.error) return;
         var update = Object.assign({}, parsed, { prose_generated_at: new Date().toISOString() });
-        userProfileApi.upsertProfile(update).catch(function () {});
+        userProfileApi.upsertProfile(update).catch(function () { /* guard-ok: profile update after re-synth; toast already shown */ });
         showToast("Pip updated what he knows about you ✦");
       });
     }).catch(function (err) { console.warn("[resynth] failed:", err && err.message); });
@@ -978,7 +978,7 @@ export default function App() {
                   if (m && m.id) {
                     setAdHocFlow({ accountId: opts.accountId, draftId: m.id });
                   }
-                }).catch(function () {});
+                }).catch(function () { /* guard-ok: createMeeting for share-target flow; navigation proceeds either way */ });
                 // Navigate to accounts view so the overlay has the right backdrop.
                 var acct = (accounts || []).find(function (a) { return a.id === opts.accountId; });
                 if (acct) {

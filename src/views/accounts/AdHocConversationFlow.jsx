@@ -267,7 +267,7 @@ export function AdHocConversationFlow({
           meetingTitle={previewPlan.meetingTitle || null}
           onTitleSave={function (title) {
             if (previewPlan && previewPlan.draftId) {
-              updateMeeting(previewPlan.draftId, { title: title }).catch(function () {});
+              updateMeeting(previewPlan.draftId, { title: title }).catch(function () { /* guard-ok: title save is nice-to-have, meeting data intact */ });
             }
           }}
           unknownPeople={previewPlan.unknownPeople || []}

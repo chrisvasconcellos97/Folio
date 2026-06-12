@@ -93,7 +93,7 @@ export class ErrorBoundary extends React.Component {
       .then(function (row) {
         if (row && row.id) self.setState({ errorId: row.id });
       })
-      .catch(function () {});
+      .catch(function () { /* guard-ok: logError failure; meta-logging must never throw */ });
   }
 
   onReload() {
@@ -193,7 +193,7 @@ export class ErrorBoundary extends React.Component {
               placeholder="What were you doing when this happened?"
               rows={4}
               style={{
-                width: "100%", padding: 12, fontSize: 13.5, lineHeight: 1.5,
+                width: "100%", padding: 12, fontSize: 16.5, lineHeight: 1.5,
                 fontFamily: SANS, color: C.text, background: C.surface2,
                 border: "1px solid " + C.rule, borderRadius: 10, resize: "vertical",
                 outline: "none", boxSizing: "border-box",

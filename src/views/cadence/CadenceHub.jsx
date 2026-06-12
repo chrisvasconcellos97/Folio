@@ -115,7 +115,7 @@ function DraftCard({ draft, onUpdate, onDelete, onSummarizeRequest, onResume, su
           placeholder="Conversation title…"
           style={{
             flex: 1, background: "transparent", border: "none", outline: "none",
-            color: C.text, fontSize: 14, fontWeight: 600, fontFamily: INTER, padding: 0,
+            color: C.text, fontSize: 16, fontWeight: 600, fontFamily: INTER, padding: 0,
           }}
         />
         <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
@@ -148,7 +148,7 @@ function DraftCard({ draft, onUpdate, onDelete, onSummarizeRequest, onResume, su
         style={{
           width: "100%", background: C.surface,
           border: "1px solid " + C.rule, borderRadius: 8,
-          padding: "10px 12px", color: C.text, fontSize: 14, lineHeight: 1.55,
+          padding: "10px 12px", color: C.text, fontSize: 16, lineHeight: 1.55,
           fontFamily: INTER, resize: "vertical", minHeight: 90, outline: "none",
           boxSizing: "border-box",
         }}
@@ -691,7 +691,7 @@ function MeetingTaskRow({ task, userId, members, contacts, onUpdate }) {
             style={{
               width: "100%", background: C.bg,
               border: "1px solid " + C.accentLine, borderRadius: 4,
-              padding: "3px 6px", fontSize: 13, color: C.text,
+              padding: "3px 6px", fontSize: 16, color: C.text,
               fontFamily: INTER, outline: "none",
               boxSizing: "border-box",
             }}
@@ -722,7 +722,7 @@ function MeetingTaskRow({ task, userId, members, contacts, onUpdate }) {
               onChange={handleReassign}
               onBlur={function () { setShowAssign(false); }}
               style={{
-                fontSize: 11, padding: "2px 5px",
+                fontSize: 16, padding: "2px 5px",
                 background: C.surface, border: "1px solid " + C.rule,
                 borderRadius: 4, color: C.text,
                 fontFamily: INTER, outline: "none",
@@ -760,7 +760,7 @@ function MeetingTaskRow({ task, userId, members, contacts, onUpdate }) {
               onChange={handleDateChange}
               onBlur={function () { setShowDate(false); }}
               style={{
-                fontSize: 11, padding: "2px 5px",
+                fontSize: 16, padding: "2px 5px",
                 background: C.surface, border: "1px solid " + C.rule,
                 borderRadius: 4, color: C.text, fontFamily: INTER, outline: "none",
               }}
@@ -846,7 +846,7 @@ function AddTaskInlineForm({ projectId, accountId, userId, members, contacts, on
         autoFocus
         style={{
           background: C.bg, border: "1px solid " + C.rule, borderRadius: 6,
-          padding: "6px 10px", fontSize: 13, color: C.text,
+          padding: "6px 10px", fontSize: 16, color: C.text,
           fontFamily: INTER, outline: "none",
           width: "100%", boxSizing: "border-box",
         }}
@@ -857,7 +857,7 @@ function AddTaskInlineForm({ projectId, accountId, userId, members, contacts, on
             value={assignee}
             onChange={function (e) { setAssignee(e.target.value); }}
             style={{
-              fontSize: 12, padding: "4px 8px",
+              fontSize: 16, padding: "4px 8px",
               background: C.surface, border: "1px solid " + C.rule,
               borderRadius: 6, color: C.text,
               fontFamily: INTER, outline: "none", flex: 1, minWidth: 100,
@@ -874,7 +874,7 @@ function AddTaskInlineForm({ projectId, accountId, userId, members, contacts, on
           value={dueDate}
           onChange={function (e) { setDueDate(e.target.value); }}
           style={{
-            fontSize: 12, padding: "4px 8px",
+            fontSize: 16, padding: "4px 8px",
             background: C.surface, border: "1px solid " + C.rule,
             borderRadius: 6, color: C.text,
             fontFamily: INTER, outline: "none",
@@ -2195,7 +2195,7 @@ export function CadenceHub({
                 width: "100%", minHeight: 200, resize: "vertical",
                 background: C.bg, border: "1px solid " + C.rule,
                 borderRadius: 8, padding: "10px 12px",
-                fontFamily: INTER, fontSize: 13,
+                fontFamily: INTER, fontSize: 16,
                 color: C.text, lineHeight: 1.6,
                 boxSizing: "border-box",
               }}

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "../lib/supabase";
 import { showToast } from "../components/Toast";
+import { logSilentFailure } from "../lib/logSilentFailure.js";
 
 // Local backup key — survives a reload even if the autosave to Supabase fails,
 // so the user's unsaved scratchpad text isn't lost.
@@ -50,7 +51,7 @@ export function useAccountNotes(userId, accountId, orgId, legacyObjective, onCle
             .then(function () {
               if (onClearLegacy) onClearLegacy({ objective: null });
             })
-            .catch(function () {});
+            .catch(function (err) { logSilentFailure("useAccountNotes/legacy-migrate", err); });
         } else {
           // No server row + no legacy — check for unsynced backup.
           try {

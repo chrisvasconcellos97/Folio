@@ -27,6 +27,7 @@ import { LeaderProjectsView } from "./LeaderProjectsView";
 import { TeammateDetailView } from "./TeammateDetailView";
 import { autoStatusPatch, gaugeStatusLabel } from "../../lib/gaugeStatus";
 import { fmtShort } from "../../lib/dateUtils";
+import { logSilentFailure } from "../../lib/logSilentFailure.js";
 import { HexSignature } from "../../lib/hexMotif";
 import { EmptyState } from "../../components/EmptyState";
 
@@ -184,7 +185,7 @@ export function GaugeView({
     // silently fail the un-complete.
     updateTask(userId, task.id, { done: newDone, status: newDone ? "complete" : "planned" })
       .then(function () { refetchTasks(); })
-      .catch(function () {});
+      .catch(function (err) { logSilentFailure("GaugeView/updateTask-done", err); });
     // Dual-store bridge: if this task mirrors a project stage, keep the stage's
     // completed_at in sync so the board/progress bar reflects the same state.
     if (task.project_id && typeof task.parent_step_index === "number") {
@@ -201,7 +202,7 @@ export function GaugeView({
         var projPatch = { stages: nextStages };
         var sp = autoStatusPatch(nextStages, proj.status, proj.is_standing);
         if (sp) Object.assign(projPatch, sp);
-        updateProject(proj.id, projPatch).catch(function () {});
+        updateProject(proj.id, projPatch).catch(function (err) { logSilentFailure("GaugeView/updateProject-stages-sync", err); });
       }
     }
   }
@@ -228,7 +229,7 @@ export function GaugeView({
       if (p.is_standing || p.status === "complete" || p.status === "draft") return;
       var st = p.stages || [];
       if (st.length > 0 && st.every(function (s) { return !!s.completed_at; })) {
-        updateProject(p.id, { status: "complete" }).catch(function () {});
+        updateProject(p.id, { status: "complete" }).catch(function (err) { logSilentFailure("GaugeView/heal-project-complete", err); });
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps

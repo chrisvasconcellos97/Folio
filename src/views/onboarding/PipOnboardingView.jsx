@@ -40,7 +40,7 @@ export function PipOnboardingView({ userId, profileApi, accessToken, onDone, onS
     // would re-trap a completed user in the interview permanently.
     var existingStatus = profileApi.profile && profileApi.profile.onboarding_status;
     if (existingStatus !== "done" && existingStatus !== "skipped") {
-      profileApi.upsertProfile({ onboarding_status: "in_progress" }).catch(function () {});
+      profileApi.upsertProfile({ onboarding_status: "in_progress" }).catch(function () { /* guard-ok: onboarding status mark, UI not blocked */ });
     }
   }, [userId]);
 
@@ -50,7 +50,7 @@ export function PipOnboardingView({ userId, profileApi, accessToken, onDone, onS
   function handleNext() {
     if (!current || !(answer || "").trim()) return;
     var trimmed = answer.trim();
-    profileApi.saveAnswer(current.id, trimmed).catch(function () {});
+    profileApi.saveAnswer(current.id, trimmed).catch(function () { /* guard-ok: answer save, state tracks locally */ });
     var nextAnswers = Object.assign({}, answers, { [current.id]: trimmed });
     setAnswers(nextAnswers);
     setAnswer("");
@@ -65,12 +65,12 @@ export function PipOnboardingView({ userId, profileApi, accessToken, onDone, onS
 
   function handleSkipQuestion() {
     if (!current) return;
-    profileApi.saveAnswer(current.id, "").catch(function () {});
+    profileApi.saveAnswer(current.id, "").catch(function () { /* guard-ok: skip-answer save, flow proceeds locally */ });
     setAnswer("");
     if (currentIdx < questions.length - 1) {
       setCurrentIdx(currentIdx + 1);
     } else {
-      profileApi.upsertProfile({ onboarding_status: "skipped" }).catch(function () {});
+      profileApi.upsertProfile({ onboarding_status: "skipped" }).catch(function () { /* guard-ok: onboarding skip mark */ });
       if (onSkip) onSkip();
     }
   }
@@ -94,7 +94,7 @@ export function PipOnboardingView({ userId, profileApi, accessToken, onDone, onS
         setSynthesizing(false);
         if (data.error) {
           showToast("Couldn't synthesize profile — your answers are saved.", "warn");
-          profileApi.upsertProfile({ onboarding_status: "done" }).catch(function () {});
+          profileApi.upsertProfile({ onboarding_status: "done" }).catch(function () { /* guard-ok: onboarding done mark on synthesis error */ });
         } else {
           profileApi.upsertProfile({
             onboarding_status: "done",
@@ -107,19 +107,19 @@ export function PipOnboardingView({ userId, profileApi, accessToken, onDone, onS
             portfolio_shape:   data.portfolio_shape   || null,
             primary_goal:      data.primary_goal      || null,
             working_style:     data.working_style     || null,
-          }).catch(function () {});
+          }).catch(function () { /* guard-ok: profile save after synthesis; prose already in data */ });
         }
         if (onDone) onDone();
       })
       .catch(function () {
         setSynthesizing(false);
-        profileApi.upsertProfile({ onboarding_status: "done" }).catch(function () {});
+        profileApi.upsertProfile({ onboarding_status: "done" }).catch(function () { /* guard-ok: onboarding done fallback mark */ });
         if (onDone) onDone();
       });
   }
 
   function handleFinishLater() {
-    profileApi.upsertProfile({ onboarding_status: "skipped" }).catch(function () {});
+    profileApi.upsertProfile({ onboarding_status: "skipped" }).catch(function () { /* guard-ok: onboarding finish-later mark */ });
     if (onSkip) onSkip();
   }
 

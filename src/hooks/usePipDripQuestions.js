@@ -200,7 +200,7 @@ export function usePipDripQuestions(userId, profile, onTermLearned) {
   function answerAndCount(id, text) {
     return answerQuestion(id, text).then(function (result) {
       // Trigger a fresh throttle+count check so answeredSince updates.
-      loadThrottleAndCount().then(function (t) { setAnsweredSince(t.answeredSince); }).catch(function () {});
+      loadThrottleAndCount().then(function (t) { setAnsweredSince(t.answeredSince); }).catch(function () { /* guard-ok: throttle refresh, state stays at prior value */ });
       return result;
     });
   }

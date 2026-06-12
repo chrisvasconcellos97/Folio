@@ -171,7 +171,7 @@ export function TaskDetailPanel({
 
   function handleDelete() {
     if (!onDelete || taskIndex == null) return;
-    Promise.resolve(onDelete(taskIndex)).then(onClose).catch(function () {});
+    Promise.resolve(onDelete(taskIndex)).then(onClose).catch(function () { /* guard-ok: delete callback, panel closes either way */ });
   }
 
   function renderField(f) {

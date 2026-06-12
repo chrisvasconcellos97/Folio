@@ -212,7 +212,7 @@ export function AddItemModal({ accountId, userId, userEmail, existing, onSave, o
                   rows={1}
                   style={{
                     flex: 1, background: C.surface2, border: "1px solid " + C.rule,
-                    borderRadius: 8, padding: "8px 11px", color: C.text, fontSize: 13,
+                    borderRadius: 8, padding: "8px 11px", color: C.text, fontSize: 16,
                     lineHeight: 1.5, fontFamily: INTER, resize: "vertical", outline: "none",
                     boxSizing: "border-box", minHeight: 38,
                   }}

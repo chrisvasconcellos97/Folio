@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
+import { logSilentFailure } from "../lib/logSilentFailure.js";
 
 export function taskPattern(text) {
   return String(text || "")
@@ -86,11 +87,11 @@ export function usePipAssignmentHints(userId, accountId) {
                       assignee_email: assigneeEmail,
                     }])
                     .then(function () { fetch(); })
-                    .catch(function () {});
+                    .catch(function (err) { logSilentFailure("usePipAssignmentHints/cross-account-insert", err); });
                 })
-                .catch(function () {});
+                .catch(function (err) { logSilentFailure("usePipAssignmentHints/cross-account-lookup", err); });
             })
-            .catch(function () {});
+            .catch(function (err) { logSilentFailure("usePipAssignmentHints/per-account-lookup", err); });
         }
         fetch();
         return inserted;

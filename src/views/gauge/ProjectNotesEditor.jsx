@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { C } from "../../lib/colors";
+import { logSilentFailure } from "../../lib/logSilentFailure.js";
 
 var INTER = "'Inter', system-ui, sans-serif";
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
@@ -20,7 +21,7 @@ export function ProjectNotesEditor({ project, onUpdate, compact }) {
     saveTimer.current = setTimeout(function () {
       onUpdate(project.id, { notes: notes })
         .then(function () { setSavedAt(Date.now()); })
-        .catch(function () {});
+        .catch(function (err) { logSilentFailure("ProjectNotesEditor/autosave", err); });
     }, 1500);
     return function () { if (saveTimer.current) clearTimeout(saveTimer.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -85,7 +86,7 @@ export function ProjectNotesEditor({ project, onUpdate, compact }) {
           borderRadius: 8,
           padding: "10px 12px",
           color: C.text,
-          fontSize: 13,
+          fontSize: 16,
           lineHeight: 1.55,
           fontFamily: INTER,
           resize: "vertical",
