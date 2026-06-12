@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { C } from "../../lib/colors";
+import { supabase } from "../../lib/supabase";
 import { fmtRelative, fmtShort } from "../../lib/dateUtils";
 
 var INTER = "'Inter', system-ui, sans-serif";
@@ -45,11 +46,23 @@ export function ProjectStatusUpdate({ project, onUpdate, userEmail, compact }) {
     var body = draft.trim();
     if (!body || saving) return;
     setSaving(true);
-    var entry = { body: body, at: new Date().toISOString(), by: userEmail || null };
-    var next = [entry].concat(updates);
-    onUpdate(project.id, { status_updates: next })
-      .then(function () { setDraft(""); setSaving(false); })
-      .catch(function () { setSaving(false); });
+    // Atomic server-side prepend (item 47 B3.8) — avoids the read-modify-write
+    // race where two devices posting at once clobber each other's entry. The
+    // useProjects realtime subscription refreshes the card after the write.
+    supabase.rpc("gauge_append_status_update", {
+      p_project_id: project.id, p_body: body, p_by: userEmail || null,
+    }).then(function (res) {
+      if (res && res.error) throw res.error;
+      setDraft(""); setSaving(false);
+    }).catch(function () {
+      // Fallback: RPC unavailable (e.g. migration not yet applied) — fall back
+      // to the client-side merge so posting never silently fails.
+      var entry = { body: body, at: new Date().toISOString(), by: userEmail || null };
+      var next = [entry].concat(updates);
+      onUpdate(project.id, { status_updates: next })
+        .then(function () { setDraft(""); setSaving(false); })
+        .catch(function () { setSaving(false); });
+    });
   }
 
   function onKeyDown(e) {

@@ -654,7 +654,7 @@ If any criterion stays false, that's where we dig next — design failure, not u
    - [x] unique partial index on queued `folio_pip_questions(user_id, question_text)`
    - [x] `life_items` RLS → `(select auth.uid())` initplan wrap
    - [x] CadenceHub guard for person cadence with deleted contact ("(contact deleted)" label)
-   - [x] two-device `project_notes` fork (CadenceMeetingMode:342-406 full-map overwrite) + JSONB read-modify-write races on `status_updates`/`stages`/`operator_proposed_moves` → server-side append RPC for status_updates at minimum
+   - [x] two-device `project_notes` fork (CadenceMeetingMode full-map overwrite → read-modify-write merge over the realtime-fresh draft) + JSONB races on `status_updates` → `gauge_append_status_update(p_project_id,p_body,p_by)` RPC (atomic server-side prepend) AND wired into ProjectStatusUpdate.post() (RPC first, client-merge fallback if the RPC isn't live yet) so it's not dead code. `stages`/`operator_proposed_moves` left on client-merge (lower-frequency, single-writer in practice).
 
    **BATCH 4 — Pip brain (the interview gaps):**
    - [x] `operating_context` → chat + summarize (verified already wired: `useUserProfile` composes operating_context ahead of profile_prose, and PipView/CadenceHub/AccountDetail/AdHocConversationFlow all pass `userProfile.profile_prose` → api/pip.js buildSystem WHO-YOU-ARE block (chat) + summarizeDraftPip bp2Text in summarySystemBlocks (summarize). Both paths confirmed.)
@@ -685,13 +685,13 @@ If any criterion stays false, that's where we dig next — design failure, not u
    - [x] try-catch every localStorage JSON.parse (useAccounts/useMeetings/HomeView — corrupt storage = silent empty app); remove corrupt key on throw
    - [x] prune daily-brief/check-in/reminder localStorage keys (one per day forever today); per-user keys for cadence-reminder state
    - [x] `.limit()` on unbounded queries (worst: org-scope useTasks, global useProjects, accountSnapshots meetings query, useRecentThemes)
-   - [x] lazy-load PipView; useOrg waterfall → Promise.all + getSession(); usePipDripQuestions deps cleanup; useCadenceReminders array-identity deps
+   - [x] lazy-load PipView; useOrg → getSession() instead of getUser() (local, no network round-trip). NB: the two member queries are NOT independent — the second needs `org_id` from the first membership row — so Promise.all doesn't apply; getSession was the real network win. usePipDripQuestions deps cleanup; useCadenceReminders array-identity deps (scheduledMeetings memoized)
    - [x] `useAccountSnapshots` realtime subscription (device B stale all session today)
 
    **BATCH 7 — Mobile / a11y / theme:**
    - [x] light-mode invisible `#fff` check glyphs (AddAccountModal:761, AddContactModal:146, EditContactModal:142, ItemsTab:349) → C.bg; tokenize `#3b82f6` progress gradient + rgba(248,113,113) error tints; AccountsView skeleton shimmer light-mode
    - [x] sub-16px inputs: CadenceMeetingMode inline add-contact (11px!), PipSummarizePreview select (10px), SetCadenceModal + ContactsTab textareas (13px), Gauge panels, Settings selects
-   - [x] aria-labels: mobile nav Pip button, Gauge search clear ×, CadenceHub readout close ×, 3 Settings switches; onKeyDown on role="button" divs (9 files); Leadership Readout overlay → Modal.jsx
+   - [x] aria-labels: mobile nav Pip button, Gauge search clear ×, CadenceHub readout close ×, 3 Settings switches; onKeyDown on role="button" divs; Leadership Readout overlay got the a11y floor the spec required (role="dialog" + aria-modal + aria-label + ESC handler) — the full migration to shared Modal.jsx was the optional/"if a clean swap" path and is deferred (CadenceHub doesn't import Modal); a11y outcome is equivalent.
    - [x] summarize-failure recovery: meeting mode currently closes with no re-entry path on error — keep mode open or offer "Resume meeting"
    - [x] Life mode: header subtitle ("Account Management" in Life); Mark.jsx reduced-motion live listener; Settings grouping/anchors (4 ungrouped Pip sections, subtitle mismatch)
 
