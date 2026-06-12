@@ -93,8 +93,11 @@ export function usePipAccountState(userId) {
   };
 }
 
-// Find accounts whose state is missing or stale. Used to fire-and-forget
-// a refresh on Pip view mount.
+// Find accounts that actually CHANGED since their state was last computed.
+// An account is stale only if: (a) no state row exists, or (b) its
+// last_interaction_at is newer than the row's generated_at — meaning new
+// activity happened after the last refresh. Accounts that haven't been
+// touched since their last refresh are skipped (event-gate, not timer-gate).
 export function findStaleAccountIds(accounts, states, max) {
   if (!Array.isArray(accounts)) return [];
   var byId = {};
@@ -102,8 +105,14 @@ export function findStaleAccountIds(accounts, states, max) {
   var stale = [];
   accounts.forEach(function (a) {
     var row = byId[a.id];
+    // No state row yet — always refresh.
     if (!row) { stale.push(a.id); return; }
-    if (!row.stale_at || new Date(row.stale_at).getTime() <= Date.now()) {
+    // Changed since last compute: last_interaction_at > generated_at.
+    if (
+      a.last_interaction_at &&
+      row.generated_at &&
+      new Date(a.last_interaction_at) > new Date(row.generated_at)
+    ) {
       stale.push(a.id);
     }
   });

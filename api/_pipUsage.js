@@ -17,10 +17,12 @@
 // integers regardless of how small individual call costs are. Display side
 // divides by 1,000,000 to render dollars.
 
-// Cents per 1k tokens.
+// Cents per 1k tokens = $/M × 0.1.
+// Haiku $1/M in, $5/M out → 0.1 / 0.5 cents per 1k.
+// Sonnet $3/M in, $15/M out → 0.3 / 1.5 cents per 1k.
 var COST_PER_K_TOK = {
-  "claude-haiku-4-5-20251001":  { in: 0.0001, out: 0.0005 },
-  "claude-sonnet-4-6":          { in: 0.0003, out: 0.0015 },
+  "claude-haiku-4-5-20251001":  { in: 0.1,  out: 0.5  },
+  "claude-sonnet-4-6":          { in: 0.3,  out: 1.5  },
 };
 var CACHE_READ_DISCOUNT  = 0.1;
 var CACHE_WRITE_PREMIUM  = 1.25;

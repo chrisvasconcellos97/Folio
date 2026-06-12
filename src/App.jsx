@@ -326,9 +326,11 @@ export default function App() {
   var { workspaces: customWorkspaces, addWorkspace: addCustomWorkspace, deleteWorkspace: deleteCustomWorkspace } = useCustomWorkspaces(userId);
 
   // Part 9 — periodic background pip_account_state refresh.
-  // Once per 6h, silently refresh the top 10 accounts by last_interaction_at.
-  // No UI, no toasts. Swallows all failures. Keeps Pip's per-account memory
-  // stale-by-at-most-6h so V2 brain reads current baselines.
+  // Once per 6h, refresh top 10 accounts by last_interaction_at — but only
+  // those that CHANGED since their state was last computed (change-gate:
+  // last_interaction_at > generated_at, or no state row). Accounts that
+  // haven't been touched since their last refresh are skipped, killing
+  // timer-driven Haiku calls for untouched accounts.
   useEffect(function () {
     if (!userId || !accounts || accounts.length === 0) return;
     var key = 'folio_pip_state_refresh_last_' + userId;
@@ -338,7 +340,15 @@ export default function App() {
     var recent = accounts
       .filter(function (a) { return !a.is_inactive && a.last_interaction_at; })
       .sort(function (a, b) { return new Date(b.last_interaction_at) - new Date(a.last_interaction_at); })
-      .slice(0, 10);
+      .slice(0, 10)
+      // Change-gate: only refresh accounts whose last_interaction_at is newer
+      // than their state row's generated_at (or have no state row yet).
+      .filter(function (a) {
+        var row = pipAcctStateApp.getStateRow(a.id);
+        if (!row) return true; // no state yet
+        if (!row.generated_at) return true;
+        return new Date(a.last_interaction_at) > new Date(row.generated_at);
+      });
     recent.forEach(function (a, i) {
       setTimeout(function () { pipAcctStateApp.refreshState(a.id).catch(function () { /* guard-ok: background state refresh, failure is acceptable */ }); }, i * 1200);
     });

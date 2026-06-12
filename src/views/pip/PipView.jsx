@@ -158,12 +158,24 @@ export function PipView(props) {
     }
   }, [messages]);
 
-  // Fire-and-forget rolling-state refresh on mount when stale rows exist.
+  // Fire-and-forget rolling-state refresh on mount when changed accounts exist.
+  // Gated by a 6h localStorage throttle so opening Pip repeatedly in a day
+  // doesn't re-fire. findStaleAccountIds already change-gates per account so
+  // only accounts with new activity since their last refresh are refreshed.
   useEffect(function () {
     if (!userId || stateRefreshFired.current) return;
     if (!accounts || !accounts.length) return;
     if (pipAcctState.loading) return;
+    // 6h throttle — mirrors App.jsx Part 9 periodic-refresh pattern.
+    var throttleKey = "folio_pipview_state_refresh_" + userId;
+    var lastFired = 0;
+    try { lastFired = parseInt(localStorage.getItem(throttleKey) || "0", 10); } catch (e) {}
+    if (Date.now() - lastFired < 6 * 60 * 60 * 1000) {
+      stateRefreshFired.current = true; // already ran recently, skip
+      return;
+    }
     stateRefreshFired.current = true;
+    try { localStorage.setItem(throttleKey, String(Date.now())); } catch (e) {}
     var stale = findStaleAccountIds(accounts, pipAcctState.states, 20);
     if (stale.length) {
       pipAcctState.refreshState(stale);
