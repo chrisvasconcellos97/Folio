@@ -46,10 +46,12 @@ export function useOrg(userId, userEmail) {
               setLoading(false);
               if (r.error) return;
               var allRows = r.data || [];
-              // Patch current user's entry with full_name from Supabase Auth
-              // so ownerLabel() can show a real name instead of the raw email.
-              supabase.auth.getUser().then(function (authResult) {
-                var userData = authResult && authResult.data && authResult.data.user;
+              // Patch current user's entry with full_name from Supabase Auth.
+              // getSession() is resolved locally (no network round-trip) and
+              // is sufficient here — we only need user_metadata.full_name,
+              // not a server-verified identity check.
+              supabase.auth.getSession().then(function (authResult) {
+                var userData = authResult && authResult.data && authResult.data.session && authResult.data.session.user;
                 var fullName = userData && userData.user_metadata && userData.user_metadata.full_name
                   ? userData.user_metadata.full_name
                   : null;

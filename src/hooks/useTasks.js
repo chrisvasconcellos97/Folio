@@ -39,6 +39,7 @@ export function useTasks(userId, opts) {
     if (openOnly)      q = q.eq("done", false);
     q.order("due_date",   { ascending: true,  nullsFirst: false })
      .order("created_at", { ascending: false })
+     .limit(500) // generous cap — a solo user with >500 open tasks is an edge case
      .then(function (r) {
        setLoading(false);
        if (r.error) setError(r.error.message);

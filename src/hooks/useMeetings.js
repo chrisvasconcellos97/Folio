@@ -31,7 +31,10 @@ export function useMeetings(userId, accountId, orgId) {
         setError(result.error.message);
         if (cacheKey) {
           var cached = localStorage.getItem(cacheKey);
-          if (cached) { try { setMeetings(JSON.parse(cached)); } catch (e) {} }
+          if (cached) {
+            try { setMeetings(JSON.parse(cached)); }
+            catch (e) { try { localStorage.removeItem(cacheKey); } catch (_) {} }
+          }
         }
       } else {
         setError(null);

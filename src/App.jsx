@@ -164,14 +164,14 @@ export default function App() {
   var [allUpdates, setAllUpdates]   = useState([]);
   function fetchAllItems() {
     if (!userId) return;
-    supabase.from("folio_tasks").select("*").eq("user_id", userId).is("project_id", null).then(function (r) {
+    supabase.from("folio_tasks").select("*").eq("user_id", userId).is("project_id", null).limit(500).then(function (r) {
       if (r.error) { console.warn("[App] failed to load folio_tasks:", r.error && r.error.message); return; }
       setAllItems((r.data || []).map(function (row) { return Object.assign({}, row, { text: row.title, owner: row.assignee_email }); }));
     });
   }
   function fetchAllContacts() {
     if (!userId) return;
-    supabase.from("folio_contacts").select("*").eq("user_id", userId).then(function (r) {
+    supabase.from("folio_contacts").select("*").eq("user_id", userId).limit(1000).then(function (r) {
       if (r.error) { console.warn("[App] failed to load folio_contacts:", r.error && r.error.message); return; }
       setAllContacts(r.data || []);
     });
@@ -180,7 +180,7 @@ export default function App() {
     if (!userId) return;
     fetchAllItems();
     fetchAllContacts();
-    supabase.from("folio_account_updates").select("*").eq("user_id", userId).order("update_date", { ascending: false }).then(function (r) {
+    supabase.from("folio_account_updates").select("*").eq("user_id", userId).order("update_date", { ascending: false }).limit(500).then(function (r) {
       if (r.error) { console.warn("[App] failed to load folio_account_updates:", r.error && r.error.message); return; }
       setAllUpdates(r.data || []);
     });
@@ -304,9 +304,24 @@ export default function App() {
   // Work / Life mode + the Life module's personal items (appointments, events,
   // honey-do). Hooks live above the authLoading early return (hook-order rule).
   var { mode, setMode } = useMode();
-  var lifeApi = useLifeItems(userId);
+  // Only fetch life_items in Life mode — no query or WS channel in Work mode.
+  var lifeApi = useLifeItems(userId, { enabled: mode === "life" });
   var [showAddLife, setShowAddLife] = useState(false);
-  var { projects: allProjects, error: projectsErrorApp, refetch: refetchProjectsApp, addProject: addProjectApp, updateProject: updateProjectApp } = useProjects(userId);
+  // Single useProjects instance shared with GaugeView — eliminates a second
+  // WS realtime channel and duplicate project fetch when Gauge is open.
+  var {
+    projects:        allProjects,
+    loading:         allProjectsLoading,
+    error:           projectsErrorApp,
+    refetch:         refetchProjectsApp,
+    addProject:      addProjectApp,
+    updateProject:   updateProjectApp,
+    deleteProject:   deleteProjectApp,
+    templates:       allTemplates,
+    addTemplate:     addTemplateApp,
+    updateTemplate:  updateTemplateApp,
+    deleteTemplate:  deleteTemplateApp,
+  } = useProjects(userId, null, orgId);
   var pipAcctStateApp = usePipAccountState(userId);
   var { workspaces: customWorkspaces, addWorkspace: addCustomWorkspace, deleteWorkspace: deleteCustomWorkspace } = useCustomWorkspaces(userId);
 
@@ -434,6 +449,36 @@ export default function App() {
   // auth resolves. No-ops if already computed today (localStorage gate).
   useEffect(function () {
     if (userId) computeAndSaveSnapshots(userId);
+  }, [userId]);
+
+  // Prune stale per-day localStorage keys on startup (once per session).
+  // Keys like folio_daily_brief_vX_<userId>_<date> and folio_checkin_<userId>_<date>
+  // accumulate one entry per day forever. Drop anything older than 7 days.
+  useEffect(function () {
+    if (!userId) return;
+    try {
+      var cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      var PER_DAY_PREFIXES = [
+        "folio_daily_brief_",   // folio_daily_brief_vX_<userId>_YYYY-MM-DD
+        "folio_checkin_" + userId + "_",  // folio_checkin_<userId>_YYYY-MM-DD
+      ];
+      var toDelete = [];
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (!k) continue;
+        for (var j = 0; j < PER_DAY_PREFIXES.length; j++) {
+          if (k.indexOf(PER_DAY_PREFIXES[j]) !== 0) continue;
+          // Extract the trailing YYYY-MM-DD date from the key.
+          var datePart = k.slice(-10);
+          if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+            var keyDate = new Date(datePart + "T00:00:00");
+            if (keyDate < cutoff) toDelete.push(k);
+          }
+          break;
+        }
+      }
+      toDelete.forEach(function (k) { try { localStorage.removeItem(k); } catch (_) {} });
+    } catch (_) { /* localStorage unavailable — swallow */ }
   }, [userId]);
 
   // Top-level write helpers used by Pip's native tool calls.
@@ -1226,6 +1271,19 @@ export default function App() {
         contacts={allContacts}
         orgId={orgId}
         lens={lens}
+        // Pass App-level projects data so GaugeView reuses the single
+        // useProjects instance instead of opening a second WS channel.
+        projectsOverride={allProjects}
+        projectsLoadingOverride={allProjectsLoading}
+        projectsErrorOverride={projectsErrorApp}
+        refetchProjectsOverride={refetchProjectsApp}
+        addProjectOverride={addProjectApp}
+        updateProjectOverride={updateProjectApp}
+        deleteProjectOverride={deleteProjectApp}
+        templatesOverride={allTemplates}
+        addTemplateOverride={addTemplateApp}
+        updateTemplateOverride={updateTemplateApp}
+        deleteTemplateOverride={deleteTemplateApp}
       />
     );
   }

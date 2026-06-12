@@ -25,7 +25,10 @@ export function useAccounts(userId) {
         if (result.error) {
           setError(result.error.message);
           var cached = localStorage.getItem(cacheKey);
-          if (cached) { try { setAccounts(JSON.parse(cached)); } catch (e) {} }
+          if (cached) {
+            try { setAccounts(JSON.parse(cached)); }
+            catch (e) { try { localStorage.removeItem(cacheKey); } catch (_) {} }
+          }
           return;
         }
         setError(null);

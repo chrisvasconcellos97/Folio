@@ -4,6 +4,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
+import { useRealtimeSync } from "./useRealtimeSync";
 
 export function useAccountSnapshots(userId) {
   var [snapshots, setSnapshots]             = useState([]);
@@ -30,6 +31,11 @@ export function useAccountSnapshots(userId) {
   }, [userId]);
 
   useEffect(function () { fetch(); }, [fetch]);
+
+  // Phase 8 — multi-device realtime sync. When snapshots are written (by
+  // computeAndSaveSnapshots on any device) the read hook on device B picks
+  // them up automatically instead of staying stale all session.
+  useRealtimeSync("folio_account_snapshots", userId, fetch);
 
   return { snapshots: snapshots, snapshotHistory: snapshotHistory, loading: loading, refetch: fetch };
 }

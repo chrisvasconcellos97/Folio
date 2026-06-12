@@ -19,7 +19,8 @@ export function useProjects(userId, accountId, orgId, extraAccountIds) {
     var query = supabase
       .from("gauge_projects")
       .select("*")
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(500); // generous cap — correctness requires all projects for health/status
     var extras = extrasKey ? extrasKey.split(",") : [];
     // Match the primary account_id OR membership in the multi-account
     // account_ids array, so a project linked to several accounts surfaces

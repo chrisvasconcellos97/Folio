@@ -11,8 +11,10 @@ var THRESHOLDS = [
 
 var TICK_MS         = 30 * 1000;
 var STALE_AFTER_MS  = 6 * 60 * 60 * 1000;  // drop banners 6h past start
-var FIRED_KEY       = "folio_cadence_reminders_fired";
-var DISMISSED_KEY   = "folio_cadence_reminders_dismissed";
+// Keys are per-user (suffixed with userId) so state doesn't bleed across
+// accounts on a shared device. Matches the signout wipe in useAuth.js.
+var FIRED_KEY_PREFIX      = "folio_cadence_reminders_fired_";
+var DISMISSED_KEY_PREFIX  = "folio_cadence_reminders_dismissed_";
 var ENABLED_KEY     = "folio_meeting_notifications";  // "granted" | "denied" | "asked"
 var BANNERS_KEY     = "folio_meeting_banners_enabled"; // "1" (default) | "0"
 var PROMPTED_KEY    = "folio_meeting_notif_prompted";
@@ -106,15 +108,20 @@ export function useCadenceReminders(userId, cadences, accounts, scheduledMeeting
   var firedRef     = useRef(null);
   var dismissedRef = useRef(null);
 
+  // Per-user keys so fired/dismissed state doesn't leak across accounts on a
+  // shared device. Falls back to "" for unauthenticated (edge case: no-op).
+  var firedKey     = FIRED_KEY_PREFIX     + (userId || "");
+  var dismissedKey = DISMISSED_KEY_PREFIX + (userId || "");
+
   if (firedRef.current === null) {
-    firedRef.current = safeGetJSON(FIRED_KEY) || {};
+    firedRef.current = safeGetJSON(firedKey) || {};
   }
   if (dismissedRef.current === null) {
-    dismissedRef.current = safeGetJSON(DISMISSED_KEY) || {};
+    dismissedRef.current = safeGetJSON(dismissedKey) || {};
   }
 
-  function persistFired()     { safeSetJSON(FIRED_KEY, firedRef.current); }
-  function persistDismissed() { safeSetJSON(DISMISSED_KEY, dismissedRef.current); }
+  function persistFired()     { safeSetJSON(firedKey, firedRef.current); }
+  function persistDismissed() { safeSetJSON(dismissedKey, dismissedRef.current); }
 
   function pruneOldEntries(map, now, maxAgeMs) {
     var changed = false;

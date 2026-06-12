@@ -680,13 +680,13 @@ If any criterion stays false, that's where we dig next — design failure, not u
    - [x] CadenceHub: person-cadence history header now "1:1 History" (was "Meeting History · Account"); manual cadence brief suppressed when the overnight operator "✦ Pip prepped this overnight" block is present
 
    **BATCH 6 — Performance:**
-   - [ ] dedupe fetches: fetchAllContacts/fetchAllItems consume hook data (contacts + tasks each fetched 2× per cold open); single useProjects instance (App→GaugeView prop — kills double WS channel)
-   - [ ] gate `useLifeItems` on mode==="life"
-   - [ ] try-catch every localStorage JSON.parse (useAccounts/useMeetings/HomeView — corrupt storage = silent empty app); remove corrupt key on throw
-   - [ ] prune daily-brief/check-in/reminder localStorage keys (one per day forever today); per-user keys for cadence-reminder state
-   - [ ] `.limit()` on unbounded queries (worst: org-scope useTasks, global useProjects, accountSnapshots meetings query, useRecentThemes)
-   - [ ] lazy-load PipView; useOrg waterfall → Promise.all + getSession(); usePipDripQuestions deps cleanup; useCadenceReminders array-identity deps
-   - [ ] `useAccountSnapshots` realtime subscription (device B stale all session today)
+   - [x] dedupe fetches: fetchAllContacts/fetchAllItems consume hook data (contacts + tasks each fetched 2× per cold open); single useProjects instance (App→GaugeView prop — kills double WS channel)
+   - [x] gate `useLifeItems` on mode==="life"
+   - [x] try-catch every localStorage JSON.parse (useAccounts/useMeetings/HomeView — corrupt storage = silent empty app); remove corrupt key on throw
+   - [x] prune daily-brief/check-in/reminder localStorage keys (one per day forever today); per-user keys for cadence-reminder state
+   - [x] `.limit()` on unbounded queries (worst: org-scope useTasks, global useProjects, accountSnapshots meetings query, useRecentThemes)
+   - [x] lazy-load PipView; useOrg waterfall → Promise.all + getSession(); usePipDripQuestions deps cleanup; useCadenceReminders array-identity deps
+   - [x] `useAccountSnapshots` realtime subscription (device B stale all session today)
 
    **BATCH 7 — Mobile / a11y / theme:**
    - [ ] light-mode invisible `#fff` check glyphs (AddAccountModal:761, AddContactModal:146, EditContactModal:142, ItemsTab:349) → C.bg; tokenize `#3b82f6` progress gradient + rgba(248,113,113) error tints; AccountsView skeleton shimmer light-mode

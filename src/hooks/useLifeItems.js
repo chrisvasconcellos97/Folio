@@ -4,13 +4,17 @@ import { useRealtimeSync } from "./useRealtimeSync";
 
 // Life module data — personal items (appointments / events / honey-do) from the
 // `life_items` table, RLS-scoped to the user. Mirrors the useQuickTasks shape.
-export function useLifeItems(userId) {
+//
+// Pass `enabled: false` (Work mode) to suppress all fetches and subscriptions.
+// The hook returns an empty-but-valid API so consumers don't need null-checks.
+export function useLifeItems(userId, opts) {
+  var enabled = !opts || opts.enabled !== false;
   var [items, setItems]     = useState([]);
   var [loading, setLoading] = useState(false);
   var [error, setError]     = useState(null);
 
   var fetch = useCallback(function () {
-    if (!userId) return;
+    if (!userId || !enabled) return;
     setLoading(true);
     supabase
       .from("life_items")
@@ -23,10 +27,12 @@ export function useLifeItems(userId) {
         setError(null);
         setItems(result.data || []);
       });
-  }, [userId]);
+  }, [userId, enabled]);
 
   useEffect(function () { fetch(); }, [fetch]);
-  useRealtimeSync("life_items", userId, fetch);
+  // Pass null userId to useRealtimeSync when disabled — the hook no-ops on
+  // null so no WS channel is opened in Work mode.
+  useRealtimeSync("life_items", enabled ? userId : null, fetch);
 
   function addItem(data) {
     return supabase

@@ -146,8 +146,34 @@ function buildGaugeInsight(projects, accountsById, handlers) {
   ]);
 }
 
-export function GaugeView({ userId, userEmail, accounts, members, contacts, orgId, lens }) {
-  var { projects, loading, error: projectsError, refetch: refetchProjects, addProject, updateProject, deleteProject, templates, addTemplate, updateTemplate, deleteTemplate } = useProjects(userId, null, orgId);
+export function GaugeView({
+  userId, userEmail, accounts, members, contacts, orgId, lens,
+  // Optional overrides from App.jsx — when provided, this view reuses the
+  // App-level useProjects instance (one WS channel) instead of opening a
+  // second identical subscription.
+  projectsOverride, projectsLoadingOverride, projectsErrorOverride,
+  refetchProjectsOverride, addProjectOverride, updateProjectOverride,
+  deleteProjectOverride, templatesOverride, addTemplateOverride,
+  updateTemplateOverride, deleteTemplateOverride,
+}) {
+  // Fall back to a local useProjects instance only when no override is provided
+  // (e.g. when GaugeView is mounted standalone in tests or other entry points).
+  var localHook = useProjects(
+    projectsOverride !== undefined ? null : userId, // skip fetch when override supplied
+    null,
+    orgId
+  );
+  var projects       = projectsOverride    !== undefined ? projectsOverride    : localHook.projects;
+  var loading        = projectsLoadingOverride !== undefined ? projectsLoadingOverride : localHook.loading;
+  var projectsError  = projectsErrorOverride  !== undefined ? projectsErrorOverride  : localHook.error;
+  var refetchProjects = refetchProjectsOverride !== undefined ? refetchProjectsOverride : localHook.refetch;
+  var addProject      = addProjectOverride     !== undefined ? addProjectOverride     : localHook.addProject;
+  var updateProject   = updateProjectOverride  !== undefined ? updateProjectOverride  : localHook.updateProject;
+  var deleteProject   = deleteProjectOverride  !== undefined ? deleteProjectOverride  : localHook.deleteProject;
+  var templates       = templatesOverride      !== undefined ? templatesOverride      : localHook.templates;
+  var addTemplate     = addTemplateOverride    !== undefined ? addTemplateOverride    : localHook.addTemplate;
+  var updateTemplate  = updateTemplateOverride !== undefined ? updateTemplateOverride : localHook.updateTemplate;
+  var deleteTemplate  = deleteTemplateOverride !== undefined ? deleteTemplateOverride : localHook.deleteTemplate;
   // Phase 3 — flat task queue. Defaults to Tasks tab for Admin lens, Projects for everyone else.
   var { tasks: flatTasks, refetch: refetchTasks } = useTasks(userId);
   var pipAcctState = usePipAccountState(userId);

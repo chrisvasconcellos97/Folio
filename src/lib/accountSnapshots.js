@@ -62,13 +62,15 @@ export async function computeAndSaveSnapshots(userId) {
   if (snapshotsComputedToday(userId)) return;
 
   try {
-    // Fetch everything we need in parallel
+    // Fetch everything we need in parallel.
+    // Meetings capped at 300 — gatherSignals only needs recency signals;
+    // the global useMeetings hook caps at the same value.
     var [accR, itemR, projR, cadR, meetR] = await Promise.all([
       supabase.from("folio_accounts").select("*").eq("user_id", userId).eq("is_inactive", false),
-      supabase.from("folio_tasks").select("id, account_id, done, due_date").eq("user_id", userId).is("project_id", null),
-      supabase.from("gauge_projects").select("id, account_id, status, stages").eq("user_id", userId),
-      supabase.from("folio_cadences").select("id, account_id, frequency, created_at").eq("user_id", userId),
-      supabase.from("folio_meetings").select("id, cadence_id, meeting_date, created_at, status").eq("user_id", userId),
+      supabase.from("folio_tasks").select("id, account_id, done, due_date").eq("user_id", userId).is("project_id", null).limit(500),
+      supabase.from("gauge_projects").select("id, account_id, status, stages").eq("user_id", userId).limit(500),
+      supabase.from("folio_cadences").select("id, account_id, frequency, created_at").eq("user_id", userId).limit(200),
+      supabase.from("folio_meetings").select("id, cadence_id, meeting_date, created_at, status").eq("user_id", userId).order("meeting_date", { ascending: false }).limit(300),
     ]);
 
     if (accR.error || !accR.data) return;
