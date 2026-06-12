@@ -184,11 +184,20 @@ Rules:
 
 // admin is the service-role Supabase client, used for folio_errors inserts.
 // userId is the owner of the run — included in error rows for triage.
-async function runAccountPass(client, admin, userId, ctxText, accountName) {
+async function runAccountPass(client, admin, userId, ctxText, accountName, userContext) {
+  // Two cached system blocks: ACCOUNT_SYSTEM (constant) + the shared user-context
+  // (operating_context / profile / glossary — identical across all of this run's
+  // per-account passes). Caching the user-context here means pass 1 writes it and
+  // passes 2-N read it at 10%, instead of re-billing ~3k tokens in every pass's
+  // user message. The unique per-account ctxText stays in the (uncached) user msg.
+  var system = [{ type: "text", text: ACCOUNT_SYSTEM, cache_control: { type: "ephemeral" } }];
+  if (userContext) {
+    system.push({ type: "text", text: "── WHO THE USER IS ──\n" + userContext, cache_control: { type: "ephemeral" } });
+  }
   var msg = await client.messages.create({
     model: OPERATOR_MODEL,
     max_tokens: 1100,
-    system: [{ type: "text", text: ACCOUNT_SYSTEM, cache_control: { type: "ephemeral" } }],
+    system: system,
     messages: [{ role: "user", content: ctxText }],
   });
   logPipUsage(admin, userId, "operator-run/account-pass", "account-pass", OPERATOR_MODEL, msg.usage);
@@ -542,10 +551,10 @@ async function gatherAndRun(admin, client, userId, acc, snapshot, userContext) {
     pRes.data || [], uRes.data || [], sRes.data || null, snapshot
   );
 
-  if (userContext) {
-    ctxText = "── WHO THE USER IS ──\n" + userContext + "\n\n" + ctxText;
-  }
-  var out = await runAccountPass(client, admin, userId, ctxText, acc.name);
+  // userContext is passed to runAccountPass as a CACHED system block (billed once
+  // per run, read across all passes) rather than prepended to each pass's user
+  // message (which re-bills it ~8× per night).
+  var out = await runAccountPass(client, admin, userId, ctxText, acc.name, userContext);
   if (!out) return { headline: "", situation: "", risks: [], draft_email: "", proposed_moves: [], agenda: "", delta: "" };
 
   // Persist operator state. Insert a fresh row if none exists (state_prose is
