@@ -11,6 +11,7 @@
 //   lg / xl / xxl  → PipOrb3D (hex-lattice 3D, locked Bold Hex design)
 //   xs / sm / md   → classic two-circle SVG (hexes mush at small sizes — locked decision)
 
+import { memo } from "react";
 import { usePipState } from "../lib/pipState";
 import { PipOrb3D } from "./PipOrb3D";
 
@@ -50,11 +51,14 @@ export function PipOrb({ size = "lg", sonar = false, heartbeat = false, isStatic
 // Forwards color/pulse/glow/opacity to PipOrb so callers like
 // MeetingReminderBanner (urgency-tinted, pulsing orb) actually render that
 // state instead of a default idle orb.
-export function PipMark({ size = 12, color, pulse = false, glow = false, opacity = 1 }) {
+// React.memo — props are all primitives, so identical re-renders (the common
+// case: nav marks, card orbs, reminder banners) skip recomputing the style
+// object and re-rendering the orb. Behavior unchanged. (Batch 8.)
+export var PipMark = memo(function PipMark({ size = 12, color, pulse = false, glow = false, opacity = 1 }) {
   // Map old numeric size to new CSS size classes
   var sizeClass = size <= 8 ? "xs" : size <= 16 ? "sm" : size <= 24 ? "md" : "lg";
   var style = { opacity: opacity };
   if (color) style.color = color; // orb circles inherit currentColor
   if (glow)  style.filter = "drop-shadow(0 0 4px " + (color || "var(--c-accent)") + ")";
   return <PipOrb size={sizeClass} sonar={false} state={pulse ? "alert" : undefined} style={style} />;
-}
+});

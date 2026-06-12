@@ -163,7 +163,33 @@ function makeAccountLinkify(accounts, onOpenAccount) {
   };
 }
 
-export function HomeView({ userName, userId, userEmail, accounts, meetings, items, cadences, projects, contacts, themes, onOpenAccount, onOpenAccountTab, onOpenCadenceHub, onOpenConversation, onOpenQuickTask, showOnboardingCard, onStartInterview, onDismissOnboardingCard, dripQuestion, dripQueueCount, onOpenCatchUp, onApplySuggestion, onAnswerDrip, onSkipDrip, onDismissDrip, commitmentNudges, onSnoozeNudge, onMarkNudgeDone, onCloseItem, onUpdateItem, onDeleteItem, onUpdateProject, onOpenDigest, pipFacts, profileProse, scheduledMeetings, onOpenScheduled, onOpenCommitments }) {
+export function HomeView({ userName, userId, userEmail, accounts, meetings, items, cadences, projects, contacts, themes, showOnboardingCard, dripQuestion, dripQueueCount, commitmentNudges, pipFacts, profileProse, scheduledMeetings, handlers }) {
+  // All callback props arrive grouped in one `handlers` bag (Batch 8 — prop-
+  // sprawl reduction). Re-expanded to locals here so the many internal call
+  // sites (onOpenAccount ×17, onOpenCadenceHub ×14, …) stay byte-for-byte
+  // unchanged; behavior is identical.
+  var onOpenAccount          = handlers.onOpenAccount;
+  var onOpenAccountTab       = handlers.onOpenAccountTab;
+  var onOpenCadenceHub       = handlers.onOpenCadenceHub;
+  var onOpenConversation     = handlers.onOpenConversation;
+  var onOpenQuickTask        = handlers.onOpenQuickTask;
+  var onStartInterview       = handlers.onStartInterview;
+  var onDismissOnboardingCard = handlers.onDismissOnboardingCard;
+  var onOpenCatchUp          = handlers.onOpenCatchUp;
+  var onApplySuggestion      = handlers.onApplySuggestion;
+  var onAnswerDrip           = handlers.onAnswerDrip;
+  var onSkipDrip             = handlers.onSkipDrip;
+  var onDismissDrip          = handlers.onDismissDrip;
+  var onSnoozeNudge          = handlers.onSnoozeNudge;
+  var onMarkNudgeDone        = handlers.onMarkNudgeDone;
+  var onCloseItem            = handlers.onCloseItem;
+  var onUpdateItem           = handlers.onUpdateItem;
+  var onDeleteItem           = handlers.onDeleteItem;
+  var onUpdateProject        = handlers.onUpdateProject;
+  var onOpenDigest           = handlers.onOpenDigest;
+  var onOpenScheduled        = handlers.onOpenScheduled;
+  var onOpenCommitments      = handlers.onOpenCommitments;
+
   commitmentNudges = commitmentNudges || [];
   var [editingNudgeTask, setEditingNudgeTask] = useState(null);
   var isDesktop = useBreakpoint();

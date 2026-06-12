@@ -1097,14 +1097,17 @@ export default function App() {
             accounts={accounts}
             members={members}
             globalPeople={globalPeople}
-            onOpenSettings={function () { handleSetView("settings"); }}
-            onBack={handleBack}
-            onEdit={function () { setEditingAccount(selectedAccount); }}
-            onDelete={handleArchiveAccount}
-            onReactivate={handleReactivateAccount}
-            onMerge={handleMergeAccounts}
-            onUpdate={handleUpdateSelectedAccount}
-            onSelectAccount={function (acct) { setSelected(acct); }}
+            handlers={{
+              onOpenSettings: function () { handleSetView("settings"); },
+              onBack: handleBack,
+              onEdit: function () { setEditingAccount(selectedAccount); },
+              onDelete: handleArchiveAccount,
+              onReactivate: handleReactivateAccount,
+              onMerge: handleMergeAccounts,
+              onUpdate: handleUpdateSelectedAccount,
+              onSelectAccount: function (acct) { setSelected(acct); },
+              onAddAccount: addAccount,
+            }}
             pipPrefill={pipPrefill}
             onPipPrefillHandled={function () { setPipPrefill(null); }}
             initialHubCadenceId={pendingHubCadenceId}
@@ -1113,7 +1116,6 @@ export default function App() {
             onPersonHubConsumed={function () { setPendingPersonHubCadenceId(null); }}
             autoOpenMeetingMode={pendingAutoOpenMeetingMode}
             onAutoOpenMeetingModeConsumed={function () { setPendingAutoOpenMeetingMode(false); }}
-            onAddAccount={addAccount}
             allProjects={allProjects}
           />
         </div>
@@ -1150,63 +1152,65 @@ export default function App() {
         items={allItems}
         cadences={cadences}
         projects={allProjects}
-        onOpenAccount={function (accountId) {
-          var a = (accounts || []).find(function (x) { return x.id === accountId; });
-          if (a) {
-            setSelected(a);
-            var target = a.account_type === "internal_team" ? "departments" : a.account_type === "partner" ? "partners" : "accounts";
-            setView(target);
-          }
-        }}
-        onOpenAccountTab={function (accountId, tab) {
-          var a = (accounts || []).find(function (x) { return x.id === accountId; });
-          if (a) {
-            setSelected(a);
-            setPipPrefill({ tab: tab });
-            var target = a.account_type === "internal_team" ? "departments" : a.account_type === "partner" ? "partners" : "accounts";
-            setView(target);
-          }
-        }}
-        onOpenCadenceHub={function (accountId, cadenceId) {
-          var a = (accounts || []).find(function (x) { return x.id === accountId; });
-          if (a) {
-            setSelected(a);
-            setPendingHubCadenceId(cadenceId);
-            var target = a.account_type === "internal_team" ? "departments" : a.account_type === "partner" ? "partners" : "accounts";
-            setView(target);
-          }
-        }}
-        onOpenConversation={function () { setShowStartConv(true); }}
-        onOpenQuickTask={function () { setShowGlobalQuickTask(true); }}
         showOnboardingCard={showOnboardingCard}
-        onStartInterview={function () { setShowInterview(true); }}
-        onDismissOnboardingCard={function () {
-          setDismissedOnboardingCard(true);
-          try { localStorage.setItem("folio_onboarding_dismissed", "1"); } catch (e) {}
-        }}
         dripQuestion={dripHook.activeQuestion}
         dripQueueCount={(dripHook.queuedQuestions || []).length}
-        onOpenCatchUp={function () { setCatchUpOpen(true); }}
-        onApplySuggestion={applyPipSuggestion}
         pipFacts={pipFactsAppApi.activeFactStrings || []}
         profileProse={userProfile && userProfile.profile_prose ? userProfile.profile_prose : null}
-        onAnswerDrip={dripHook.answerQuestion}
-        onSkipDrip={dripHook.skipQuestion}
-        onDismissDrip={dripHook.dismissQuestion}
         commitmentNudges={commitmentNudgesHook.nudges}
-        onSnoozeNudge={commitmentNudgesHook.snooze}
-        onMarkNudgeDone={commitmentNudgesHook.markDone}
-        onCloseItem={closeItem}
-        onUpdateItem={updateItem}
-        onDeleteItem={deleteItem}
         userEmail={session && session.user ? session.user.email : null}
-        onUpdateProject={updateProjectApp}
-        onOpenDigest={function () { setShowDigestIngest(true); }}
         contacts={allContacts}
         themes={recentThemes}
         scheduledMeetings={scheduledMeetings}
-        onOpenScheduled={handleOpenScheduled}
-        onOpenCommitments={function () { handleSetView("commitments"); }}
+        handlers={{
+          onOpenAccount: function (accountId) {
+            var a = (accounts || []).find(function (x) { return x.id === accountId; });
+            if (a) {
+              setSelected(a);
+              var target = a.account_type === "internal_team" ? "departments" : a.account_type === "partner" ? "partners" : "accounts";
+              setView(target);
+            }
+          },
+          onOpenAccountTab: function (accountId, tab) {
+            var a = (accounts || []).find(function (x) { return x.id === accountId; });
+            if (a) {
+              setSelected(a);
+              setPipPrefill({ tab: tab });
+              var target = a.account_type === "internal_team" ? "departments" : a.account_type === "partner" ? "partners" : "accounts";
+              setView(target);
+            }
+          },
+          onOpenCadenceHub: function (accountId, cadenceId) {
+            var a = (accounts || []).find(function (x) { return x.id === accountId; });
+            if (a) {
+              setSelected(a);
+              setPendingHubCadenceId(cadenceId);
+              var target = a.account_type === "internal_team" ? "departments" : a.account_type === "partner" ? "partners" : "accounts";
+              setView(target);
+            }
+          },
+          onOpenConversation: function () { setShowStartConv(true); },
+          onOpenQuickTask: function () { setShowGlobalQuickTask(true); },
+          onStartInterview: function () { setShowInterview(true); },
+          onDismissOnboardingCard: function () {
+            setDismissedOnboardingCard(true);
+            try { localStorage.setItem("folio_onboarding_dismissed", "1"); } catch (e) {}
+          },
+          onOpenCatchUp: function () { setCatchUpOpen(true); },
+          onApplySuggestion: applyPipSuggestion,
+          onAnswerDrip: dripHook.answerQuestion,
+          onSkipDrip: dripHook.skipQuestion,
+          onDismissDrip: dripHook.dismissQuestion,
+          onSnoozeNudge: commitmentNudgesHook.snooze,
+          onMarkNudgeDone: commitmentNudgesHook.markDone,
+          onCloseItem: closeItem,
+          onUpdateItem: updateItem,
+          onDeleteItem: deleteItem,
+          onUpdateProject: updateProjectApp,
+          onOpenDigest: function () { setShowDigestIngest(true); },
+          onOpenScheduled: handleOpenScheduled,
+          onOpenCommitments: function () { handleSetView("commitments"); },
+        }}
       />
     );
   }

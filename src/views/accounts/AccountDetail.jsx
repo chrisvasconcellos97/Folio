@@ -60,7 +60,22 @@ function setDefaultTab(accountId, tab) {
   try { localStorage.setItem("folio_default_tab_" + accountId, tab); } catch(e) {}
 }
 
-export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, accounts, members, globalPeople, onBack, onEdit, onDelete, onReactivate, onMerge, onUpdate, onSelectAccount, pipPrefill, onPipPrefillHandled, initialHubCadenceId, onHubConsumed, initialPersonHubCadenceId, onPersonHubConsumed, autoOpenMeetingMode, onAutoOpenMeetingModeConsumed, onAddAccount, allProjects, onOpenSettings }) {
+export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, accounts, members, globalPeople, handlers, pipPrefill, onPipPrefillHandled, initialHubCadenceId, onHubConsumed, initialPersonHubCadenceId, onPersonHubConsumed, autoOpenMeetingMode, onAutoOpenMeetingModeConsumed, allProjects }) {
+  // Account-level action callbacks arrive grouped in one `handlers` bag (Batch 8
+  // — prop-sprawl reduction). Re-expanded to locals here so the ~40 internal
+  // call sites stay unchanged; behavior is identical. The lifecycle prefill/
+  // consume pairs stay flat — they're tightly coupled to their data props and
+  // threaded together into CadenceHub.
+  var onBack          = handlers.onBack;
+  var onEdit          = handlers.onEdit;
+  var onDelete        = handlers.onDelete;
+  var onReactivate    = handlers.onReactivate;
+  var onMerge         = handlers.onMerge;
+  var onUpdate        = handlers.onUpdate;
+  var onSelectAccount = handlers.onSelectAccount;
+  var onAddAccount    = handlers.onAddAccount;
+  var onOpenSettings  = handlers.onOpenSettings;
+
   var isInternalTeam = account.account_type === 'internal_team';
   var isPartner      = account.account_type === 'partner';
   var isCustomerType = !isInternalTeam && !isPartner;
