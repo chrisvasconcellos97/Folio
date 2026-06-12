@@ -264,7 +264,7 @@ export function AddItemModal({ accountId, userId, userEmail, existing, onSave, o
 
         {error && (
           <div role="alert" aria-live="polite" style={{
-            background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.2)",
+            background: C.redFaint, border: "1px solid " + C.redLine,
             borderRadius: 8, padding: "8px 12px", fontSize: 12, color: C.red,
           }}>
             {error}

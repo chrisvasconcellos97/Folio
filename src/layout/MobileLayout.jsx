@@ -104,7 +104,7 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
                   marginTop: 1,
                 }}
               >
-                Account Management
+                {mode === "life" ? "Life" : "Account Management"}
               </div>
             </div>
           </div>
@@ -254,6 +254,7 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
                   gap: 3,
                   overflow: item.isPip ? "visible" : undefined,
                 }}
+                aria-label={item.isPip ? "Open Pip — your AI field analyst" : undefined}
                 aria-expanded={isWorkspaces ? wsOpen : undefined}
                 aria-haspopup={isWorkspaces ? "menu" : undefined}
               >

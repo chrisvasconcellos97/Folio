@@ -143,7 +143,7 @@ export function AddContactModal({ accountId, userId, onSave, onClose }) {
                     flexShrink: 0,
                   }}
                 >
-                  {t.val && <span style={{ fontSize: 11, color: "#fff" }}>✓</span>}
+                  {t.val && <span style={{ fontSize: 11, color: C.bg }}>✓</span>}
                 </div>
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 600, color: t.val ? t.color : C.text }}>
@@ -163,8 +163,8 @@ export function AddContactModal({ accountId, userId, onSave, onClose }) {
             role="alert"
             aria-live="polite"
             style={{
-              background: "rgba(248,113,113,0.1)",
-              border: "1px solid rgba(248,113,113,0.2)",
+              background: C.redFaint,
+              border: "1px solid " + C.redLine,
               borderRadius: 8,
               padding: "8px 12px",
               fontSize: 12,

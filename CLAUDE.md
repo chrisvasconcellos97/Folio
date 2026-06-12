@@ -689,11 +689,11 @@ If any criterion stays false, that's where we dig next — design failure, not u
    - [x] `useAccountSnapshots` realtime subscription (device B stale all session today)
 
    **BATCH 7 — Mobile / a11y / theme:**
-   - [ ] light-mode invisible `#fff` check glyphs (AddAccountModal:761, AddContactModal:146, EditContactModal:142, ItemsTab:349) → C.bg; tokenize `#3b82f6` progress gradient + rgba(248,113,113) error tints; AccountsView skeleton shimmer light-mode
-   - [ ] sub-16px inputs: CadenceMeetingMode inline add-contact (11px!), PipSummarizePreview select (10px), SetCadenceModal + ContactsTab textareas (13px), Gauge panels, Settings selects
-   - [ ] aria-labels: mobile nav Pip button, Gauge search clear ×, CadenceHub readout close ×, 3 Settings switches; onKeyDown on role="button" divs (9 files); Leadership Readout overlay → Modal.jsx
-   - [ ] summarize-failure recovery: meeting mode currently closes with no re-entry path on error — keep mode open or offer "Resume meeting"
-   - [ ] Life mode: header subtitle ("Account Management" in Life); Mark.jsx reduced-motion live listener; Settings grouping/anchors (4 ungrouped Pip sections, subtitle mismatch)
+   - [x] light-mode invisible `#fff` check glyphs (AddAccountModal:761, AddContactModal:146, EditContactModal:142, ItemsTab:349) → C.bg; tokenize `#3b82f6` progress gradient + rgba(248,113,113) error tints; AccountsView skeleton shimmer light-mode
+   - [x] sub-16px inputs: CadenceMeetingMode inline add-contact (11px!), PipSummarizePreview select (10px), SetCadenceModal + ContactsTab textareas (13px), Gauge panels, Settings selects
+   - [x] aria-labels: mobile nav Pip button, Gauge search clear ×, CadenceHub readout close ×, 3 Settings switches; onKeyDown on role="button" divs (9 files); Leadership Readout overlay → Modal.jsx
+   - [x] summarize-failure recovery: meeting mode currently closes with no re-entry path on error — keep mode open or offer "Resume meeting"
+   - [x] Life mode: header subtitle ("Account Management" in Life); Mark.jsx reduced-motion live listener; Settings grouping/anchors (4 ungrouped Pip sections, subtitle mismatch)
 
    **BATCH 8 — Structural (when touched, not urgent):**
    - [ ] split PipSummarizePreview (1,553 lines: display vs orchestration); prop-bag AccountDetail (27 props) / HomeView (30+)

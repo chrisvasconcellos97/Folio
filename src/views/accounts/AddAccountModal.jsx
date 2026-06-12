@@ -758,7 +758,7 @@ export function AddAccountModal({ userId, onSave, onAddContacts, onClose, existi
                         background: on ? item.color : "transparent",
                         display: "flex", alignItems: "center", justifyContent: "center",
                       }}>
-                        {on && <span style={{ fontSize: 9, color: on && item.key === "is_leader" ? C.bg : "#fff", lineHeight: 1 }}>✓</span>}
+                        {on && <span style={{ fontSize: 9, color: C.bg, lineHeight: 1 }}>✓</span>}
                       </div>
                       <span style={{ fontSize: 11, color: on ? item.color : C.textMuted, fontFamily: "'JetBrains Mono', ui-monospace, monospace" }}>
                         <span style={{ marginRight: 4 }}>{item.icon}</span>{item.label}

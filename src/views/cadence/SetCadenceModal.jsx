@@ -513,12 +513,12 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues, acco
             onChange={function (e) { setNotes(e.target.value); }}
             placeholder={effectiveType === 'task' ? 'Any extra context...' : scope === 'person' ? 'Regular topics, things to remember...' : 'Recurring topics, prep reminders...'}
             rows={2}
-            style={{ width: '100%', padding: '9px 12px', resize: 'vertical', background: 'var(--c-input-fill)', border: '1px solid ' + C.border, borderRadius: 8, color: C.text, fontSize: 13, fontFamily: "'Inter', system-ui, sans-serif" }}
+            style={{ width: '100%', padding: '9px 12px', resize: 'vertical', background: 'var(--c-input-fill)', border: '1px solid ' + C.border, borderRadius: 8, color: C.text, fontSize: 16, fontFamily: "'Inter', system-ui, sans-serif" }}
           />
         </div>
 
         {error && (
-          <div style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: C.red }}>
+          <div style={{ background: C.redFaint, border: '1px solid ' + C.redLine, borderRadius: 8, padding: '8px 12px', fontSize: 12, color: C.red }}>
             {error}
           </div>
         )}

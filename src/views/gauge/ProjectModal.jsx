@@ -800,7 +800,7 @@ export function ProjectModal({
                         display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
                       }}
                     >
-                      {done && <span style={{ fontSize: 10, color: "#fff", fontWeight: 700 }}>✓</span>}
+                      {done && <span style={{ fontSize: 10, color: C.bg, fontWeight: 700 }}>✓</span>}
                     </div>
 
                     {/* Stage title */}

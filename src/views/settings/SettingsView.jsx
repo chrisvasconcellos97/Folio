@@ -1140,7 +1140,7 @@ function ActivitySection({ userId, orgId, role, members, accounts }) {
           aria-label="Filter by account"
           style={{
             background: C.surface, border: "1px solid " + C.rule, borderRadius: 6,
-            padding: "3px 8px", color: C.textSoft, fontSize: 11, fontFamily: SETTINGS_MONO, cursor: "pointer",
+            padding: "3px 8px", color: C.textSoft, fontSize: 16, fontFamily: SETTINGS_MONO, cursor: "pointer",
           }}
         >
           <option value="">All accounts</option>
@@ -1156,7 +1156,7 @@ function ActivitySection({ userId, orgId, role, members, accounts }) {
             aria-label="Filter by event type"
             style={{
               background: C.surface, border: "1px solid " + C.rule, borderRadius: 6,
-              padding: "3px 8px", color: C.textSoft, fontSize: 11, fontFamily: SETTINGS_MONO, cursor: "pointer",
+              padding: "3px 8px", color: C.textSoft, fontSize: 16, fontFamily: SETTINGS_MONO, cursor: "pointer",
             }}
           >
             <option value="">All events</option>
@@ -1173,7 +1173,7 @@ function ActivitySection({ userId, orgId, role, members, accounts }) {
             aria-label="Filter by user"
             style={{
               background: C.surface, border: "1px solid " + C.rule, borderRadius: 6,
-              padding: "3px 8px", color: C.textSoft, fontSize: 11, fontFamily: SETTINGS_MONO, cursor: "pointer",
+              padding: "3px 8px", color: C.textSoft, fontSize: 16, fontFamily: SETTINGS_MONO, cursor: "pointer",
             }}
           >
             <option value="">All users</option>
@@ -1362,6 +1362,7 @@ function NotificationsSection() {
         <button
           role="switch"
           aria-checked={banners}
+          aria-label="In-app banners"
           onClick={toggleBanners}
           style={{
             width: 44, height: 24, borderRadius: 999,
@@ -1588,6 +1589,7 @@ function PipQuestionsSection({ userId, onStartInterview, onOpenCatchUp }) {
         <button
           role="switch"
           aria-checked={paused}
+          aria-label="Pause Pip's drip questions"
           onClick={togglePause}
           disabled={saving || !profile}
           style={{
@@ -1683,10 +1685,18 @@ function PersonalSection() {
       </div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <span style={{ fontSize: 13, color: C.text, fontFamily: "'Inter', system-ui, sans-serif" }}>Show the soccer card</span>
-        <div onClick={toggle} role="switch" aria-checked={on} tabIndex={0} style={{
-          width: 42, height: 24, borderRadius: 12, cursor: "pointer", flexShrink: 0,
-          background: on ? C.accent : C.rule, position: "relative", transition: "background 0.18s ease",
-        }}>
+        <div
+          onClick={toggle}
+          onKeyDown={function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } }}
+          role="switch"
+          aria-label="Show the soccer card"
+          aria-checked={on}
+          tabIndex={0}
+          style={{
+            width: 42, height: 24, borderRadius: 12, cursor: "pointer", flexShrink: 0,
+            background: on ? C.accent : C.rule, position: "relative", transition: "background 0.18s ease",
+          }}
+        >
           <span style={{ position: "absolute", top: 2, left: on ? 20 : 2, width: 20, height: 20, borderRadius: "50%", background: "#fff" /* no token equivalent — toggle thumb is always light */, transition: "left 0.18s ease" }} />
         </div>
       </div>
@@ -1718,13 +1728,19 @@ export function SettingsView({ userId, userMeta, orgId, role, members, accounts,
 
         <ProfileSection userMeta={userMeta} />
 
-        {userId && <PipPrefsSection userId={userId} />}
-
-        {userId && <PipUsageSection userId={userId} />}
-
-        {userId && <PipGlossarySection userId={userId} orgId={orgId} accounts={accounts} />}
-
-        {userId && <PipQuestionsSection userId={userId} onStartInterview={onStartInterview} onOpenCatchUp={onOpenCatchUp} />}
+        {userId && (
+          <div id="pip-settings">
+            <div style={{ fontFamily: SETTINGS_MONO, fontSize: 10, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10, paddingLeft: 2 }}>
+              Pip — AI assistant
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <PipPrefsSection userId={userId} />
+              <PipUsageSection userId={userId} />
+              <PipGlossarySection userId={userId} orgId={orgId} accounts={accounts} />
+              <PipQuestionsSection userId={userId} onStartInterview={onStartInterview} onOpenCatchUp={onOpenCatchUp} />
+            </div>
+          </div>
+        )}
 
         {orgId && (
           <ActivitySection

@@ -23,10 +23,19 @@ import { memo, useEffect, useRef } from "react";
 var SVG_NS = "http://www.w3.org/2000/svg";
 var TAU = Math.PI * 2;
 
-// ── Reduced motion (read once) ─────────────────────────────────────────────
+// ── Reduced motion — read at module load, updated via live listener ────────
 var REDUCE = (typeof window !== "undefined" && window.matchMedia)
   ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
   : false;
+if (typeof window !== "undefined" && window.matchMedia) {
+  var _rmq = window.matchMedia("(prefers-reduced-motion: reduce)");
+  if (_rmq.addEventListener) {
+    _rmq.addEventListener("change", function (e) { REDUCE = e.matches; });
+  } else if (_rmq.addListener) {
+    // Safari <14 fallback
+    _rmq.addListener(function (e) { REDUCE = e.matches; });
+  }
+}
 
 // ── Shared rAF loop ────────────────────────────────────────────────────────
 // Each registered animator is `{ tab, refs }` where `refs` is whatever the

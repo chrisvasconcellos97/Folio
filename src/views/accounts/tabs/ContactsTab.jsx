@@ -415,7 +415,7 @@ export function ContactsTab({ contacts, meetings, accountId, accountName, onAdd,
                     <select
                       value={relRoleDraft}
                       onChange={function (e) { setRelRoleDraft(e.target.value); }}
-                      style={{ width: "100%", fontSize: 13, fontFamily: CT_MONO, color: C.text, background: C.bg, border: "1px solid " + C.rule, borderRadius: 6, padding: "7px 10px", marginBottom: 8, outline: "none", cursor: "pointer" }}
+                      style={{ width: "100%", fontSize: 16, fontFamily: CT_MONO, color: C.text, background: C.bg, border: "1px solid " + C.rule, borderRadius: 6, padding: "7px 10px", marginBottom: 8, outline: "none", cursor: "pointer" }}
                     >
                       <option value="unknown">Not set</option>
                       <option value="champion">Champion</option>
@@ -427,7 +427,7 @@ export function ContactsTab({ contacts, meetings, accountId, accountName, onAdd,
                       onChange={function (e) { setRelNoteDraft(e.target.value.slice(0, 120)); }}
                       placeholder={"Why? e.g. 'owns the budget'"}
                       rows={2}
-                      style={{ width: "100%", fontSize: 13, fontFamily: CT_MONO, color: C.text, background: C.bg, border: "1px solid " + C.rule, borderRadius: 6, padding: "7px 10px", resize: "vertical", outline: "none", boxSizing: "border-box", lineHeight: 1.5, marginBottom: 8 }}
+                      style={{ width: "100%", fontSize: 16, fontFamily: CT_MONO, color: C.text, background: C.bg, border: "1px solid " + C.rule, borderRadius: 6, padding: "7px 10px", resize: "vertical", outline: "none", boxSizing: "border-box", lineHeight: 1.5, marginBottom: 8 }}
                     />
                     <div style={{ display: "flex", gap: 8 }}>
                       <button

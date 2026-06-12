@@ -402,7 +402,7 @@ export function LeaderProjectsView({ projects, accounts, members, userEmail, onO
                         {pct}%
                       </div>
                       <div style={{ position: "relative", height: 4, background: C.surface3, borderRadius: 2, overflow: "hidden" }}>
-                        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, #3b82f6, var(--c-accent))", borderRadius: 2 }} />
+                        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, var(--c-blue), var(--c-accent))", borderRadius: 2 }} />
                         <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: (100 - pct) + "%", background: C.surface3 }} />
                       </div>
                     </>

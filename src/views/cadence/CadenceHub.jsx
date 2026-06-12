@@ -2141,11 +2141,17 @@ export function CadenceHub({
 
   var readoutModal = readoutMeetingId ? (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Leadership Readout"
       onClick={function (e) {
         if (e.target === e.currentTarget) {
           setReadoutMeetingId(null);
           setReadoutEmail("");
         }
+      }}
+      onKeyDown={function (e) {
+        if (e.key === "Escape") { setReadoutMeetingId(null); setReadoutEmail(""); }
       }}
       style={{
         position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
@@ -2166,6 +2172,7 @@ export function CadenceHub({
           </div>
           <button
             onClick={function () { setReadoutMeetingId(null); setReadoutEmail(""); }}
+            aria-label="Close Leadership Readout"
             style={{ background: "none", border: "none", color: C.textMuted, fontSize: 20, cursor: "pointer", padding: "0 4px" }}
           >×</button>
         </div>

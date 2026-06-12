@@ -152,7 +152,7 @@ function AddContactInline({ isMobile, onSave, onCancel }) {
   var [saving, setSaving] = useState(false);
   var inputStyle = {
     background: C.bg, border: "1px solid " + C.rule, borderRadius: 4,
-    padding: "5px 8px", fontSize: isMobile ? 16 : 12, color: C.text,
+    padding: "5px 8px", fontSize: 16, color: C.text,
     fontFamily: INTER, outline: "none",
     width: "100%", boxSizing: "border-box",
   };
@@ -811,9 +811,9 @@ export function CadenceMeetingMode({
         <div style={{
           padding: "8px 16px", fontSize: 12, color: C.red,
           background: C.redFaint, borderBottom: "1px solid " + C.redLine,
-          flexShrink: 0,
+          flexShrink: 0, display: "flex", alignItems: "center", gap: 8,
         }}>
-          {summarizeErr}
+          <span style={{ flex: 1 }}>{summarizeErr} — your notes are safe, tap "End &amp; Summarize" to try again.</span>
         </div>
       )}
 

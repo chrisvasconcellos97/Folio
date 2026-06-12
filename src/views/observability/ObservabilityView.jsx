@@ -214,7 +214,9 @@ export function ObservabilityView({ userId }) {
             <Card key={e.id} style={{ padding: 0, opacity: e.resolved ? 0.55 : 1 }}>
               <div
                 onClick={function () { toggleExpanded(e.id); }}
+                onKeyDown={function (ev) { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); toggleExpanded(e.id); } }}
                 role="button"
+                tabIndex={0}
                 style={{
                   padding: "12px 14px",
                   cursor: "pointer",

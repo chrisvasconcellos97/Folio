@@ -350,7 +350,7 @@ export function ItemsTab({ items, taskCadences, accountId, userId, userEmail, on
             return (
               <div key={item.id} style={Object.assign({}, glass, { display: "flex", alignItems: "flex-start", gap: 10, borderRadius: 10, padding: "11px 13px", marginBottom: 6, opacity: 0.5 })}>
                 <div style={{ width: 16, height: 16, borderRadius: 4, border: "1.5px solid " + C.accentDim, background: C.accentDim, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", marginTop: 2 }}>
-                  <span style={{ fontSize: 10, color: "#fff" }}>✓</span>
+                  <span style={{ fontSize: 10, color: C.bg }}>✓</span>
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 14, color: C.textMuted, textDecoration: "line-through", lineHeight: 1.4 }}>{item.text}</div>

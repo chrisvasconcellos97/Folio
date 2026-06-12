@@ -1033,7 +1033,7 @@ export function PipSummarizePreview({
                     border: "1px solid " + (s.gaugeProjectId ? C.accentLine : C.rule),
                     borderRadius: 6,
                     padding: "3px 8px",
-                    fontSize: 10,
+                    fontSize: 16,
                     fontFamily: MONO,
                     cursor: "pointer",
                   }}

@@ -102,7 +102,7 @@ export function CustomFieldSchemaEditor({ schema, onChange }) {
               placeholder="Column label"
               style={{
                 background: "transparent", border: "none", outline: "none",
-                fontSize: 12, color: C.text, fontFamily: INTER,
+                fontSize: 16, color: C.text, fontFamily: INTER,
               }}
             />
             <select
@@ -113,7 +113,7 @@ export function CustomFieldSchemaEditor({ schema, onChange }) {
               }}
               style={{
                 background: C.bgDark, border: "1px solid " + C.rule, borderRadius: 4,
-                padding: "3px 6px", fontSize: 11, color: C.text, fontFamily: MONO,
+                padding: "3px 6px", fontSize: 16, color: C.text, fontFamily: MONO,
               }}
             >
               {FIELD_TYPES.map(function (t) {
@@ -128,7 +128,7 @@ export function CustomFieldSchemaEditor({ schema, onChange }) {
                   placeholder="Option 1, Option 2, …"
                   style={{
                     width: "100%", background: C.bgDark, border: "1px solid " + C.rule,
-                    borderRadius: 4, padding: "3px 6px", fontSize: 11, color: C.text,
+                    borderRadius: 4, padding: "3px 6px", fontSize: 16, color: C.text,
                     fontFamily: INTER, outline: "none", boxSizing: "border-box",
                   }}
                 />
@@ -160,7 +160,7 @@ export function CustomFieldSchemaEditor({ schema, onChange }) {
           style={{
             flex: 1, background: C.surface, border: "1px solid " + C.rule,
             borderRadius: 6, padding: "6px 8px",
-            fontSize: 12, color: C.text, fontFamily: INTER, outline: "none",
+            fontSize: 16, color: C.text, fontFamily: INTER, outline: "none",
           }}
         />
         <select
@@ -168,7 +168,7 @@ export function CustomFieldSchemaEditor({ schema, onChange }) {
           onChange={function (e) { setDraftType(e.target.value); }}
           style={{
             background: C.bgDark, border: "1px solid " + C.rule, borderRadius: 6,
-            padding: "5px 8px", fontSize: 11, color: C.text, fontFamily: MONO,
+            padding: "5px 8px", fontSize: 16, color: C.text, fontFamily: MONO,
           }}
         >
           {FIELD_TYPES.map(function (t) { return <option key={t.id} value={t.id}>{t.label}</option>; })}

@@ -293,7 +293,7 @@ export function ProjectStageEditor({ project, onUpdate, accounts, members, conta
                   width: "100%", marginTop: 6,
                   background: C.surface, border: "1px solid " + C.redLine,
                   borderRadius: 6, padding: "6px 8px",
-                  fontFamily: INTER, fontSize: 12, color: C.text,
+                  fontFamily: INTER, fontSize: 16, color: C.text,
                   resize: "vertical",
                 }}
               />
@@ -332,7 +332,7 @@ export function ProjectStageEditor({ project, onUpdate, accounts, members, conta
                   style={{
                     flex: 1, background: C.surface, border: "1px solid " + C.rule,
                     borderRadius: 6, padding: "4px 8px",
-                    fontFamily: INTER, fontSize: 11, color: C.text,
+                    fontFamily: INTER, fontSize: 16, color: C.text,
                   }}
                 />
                 {addingSub[idx] && (
@@ -363,7 +363,7 @@ export function ProjectStageEditor({ project, onUpdate, accounts, members, conta
           style={{
             flex: 1, background: C.surface, border: "1px solid " + C.rule,
             borderRadius: 6, padding: "6px 10px",
-            fontFamily: INTER, fontSize: 12, color: C.text,
+            fontFamily: INTER, fontSize: 16, color: C.text,
           }}
         />
         {newStageTitle.trim() && (

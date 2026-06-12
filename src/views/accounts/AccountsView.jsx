@@ -62,11 +62,11 @@ function SkeletonCard() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
         <div style={{ flex: 1 }}>
           <div style={{ display: "flex", gap: 7, marginBottom: 10, alignItems: "center" }}>
-            <div style={{ width: 120, height: 14, borderRadius: 6, background: "rgba(255,255,255,0.05)", animation: "skeleton-pulse 1.5s ease-in-out infinite" }} />
+            <div style={{ width: 120, height: 14, borderRadius: 6, background: "var(--c-input-fill)", animation: "skeleton-pulse 1.5s ease-in-out infinite" }} />
             <div style={{ width: 40, height: 14, borderRadius: 6, background: "var(--c-input-fill)", animation: "skeleton-pulse 1.5s ease-in-out infinite 0.2s" }} />
           </div>
           <div style={{ width: 70, height: 18, borderRadius: 6, background: "var(--c-input-fill)", animation: "skeleton-pulse 1.5s ease-in-out infinite 0.1s", marginBottom: 8 }} />
-          <div style={{ width: 90, height: 10, borderRadius: 4, background: "rgba(255,255,255,0.03)", animation: "skeleton-pulse 1.5s ease-in-out infinite 0.3s" }} />
+          <div style={{ width: 90, height: 10, borderRadius: 4, background: "var(--c-rule-soft)", animation: "skeleton-pulse 1.5s ease-in-out infinite 0.3s" }} />
         </div>
         <div style={{ width: 14, height: 14, borderRadius: 4, background: "var(--c-input-fill)" }} />
       </div>
