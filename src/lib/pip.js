@@ -1537,3 +1537,34 @@ export function callPortfolioBriefPip(payload) {
     });
   });
 }
+
+// On-demand follow-up email draft for OperatorPanel (Fix B — item 48).
+// Called when the user taps "✦ Draft a follow-up" on an account's operator card.
+// Uses mode "email" → Haiku 768 (the right tier for email drafting — cheap,
+// fast, and email quality doesn't need Sonnet reasoning depth).
+// Returns { email: "<plain-text body>" } or rejects on failure.
+export function draftAccountFollowupPip(payload) {
+  var accountName  = payload.accountName  || "this account";
+  var situation    = payload.situation    || "";
+  var risks        = Array.isArray(payload.risks) && payload.risks.length
+    ? payload.risks.join("; ")
+    : "";
+  var profileProse = payload.profileProse || null;
+
+  var prompt = [
+    "Draft a short, ready-to-send follow-up email for " + accountName + ".",
+    "Plain text only. Greeting at the start, sign-off as '[Your name]' at the end. No markdown, no bullet points.",
+    "",
+    "Account situation:",
+    situation,
+    risks ? "\nKey risks / open items: " + risks : "",
+  ].filter(function (s) { return s !== undefined; }).join("\n");
+
+  return callPipApi(
+    [{ role: "user", content: prompt }],
+    {},
+    { mode: "email", profileProse: profileProse || undefined }
+  ).then(function (resp) {
+    return { email: (resp.content || "").trim() };
+  });
+}

@@ -4,6 +4,7 @@ import { MarkdownText } from "./MarkdownText";
 import { PipCard } from "./PipCard";
 import { supabase } from "../lib/supabase";
 import { showToast } from "./Toast";
+import { draftAccountFollowupPip } from "../lib/pip.js";
 
 var INTER = "'Inter', system-ui, sans-serif";
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
@@ -32,10 +33,14 @@ function firstSentence(s) {
   return (m ? m[0] : String(s)).trim();
 }
 
-export function OperatorPanel({ stateRow, accountName, onAddTask, onChanged, fallback }) {
-  var [emailOpen, setEmailOpen] = useState(false);
-  var [busyIdx, setBusyIdx] = useState(null);
-  var [readAt, setReadAt] = useState(null);
+export function OperatorPanel({ stateRow, accountName, onAddTask, onChanged, fallback, profileProse }) {
+  var [emailOpen, setEmailOpen]       = useState(false);
+  var [busyIdx, setBusyIdx]           = useState(null);
+  var [readAt, setReadAt]             = useState(null);
+  // On-demand draft — generated when the user taps "✦ Draft a follow-up".
+  // Cached in component state so it doesn't regenerate on every render.
+  var [draftEmail, setDraftEmail]     = useState("");
+  var [draftLoading, setDraftLoading] = useState(false);
 
   // Unread = the operator wrote this account's state more recently than the
   // last time this device opened the card. Opening it stores the timestamp, so
@@ -65,17 +70,38 @@ export function OperatorPanel({ stateRow, accountName, onAddTask, onChanged, fal
   var headline  = stateRow.operator_headline || firstSentence(situation) || "Pip worked this account overnight.";
   var delta     = stateRow.operator_delta || "";
   var agenda    = stateRow.operator_agenda || "";
-  var email     = stateRow.operator_draft_email || "";
   var risks     = Array.isArray(stateRow.operator_risks) ? stateRow.operator_risks.filter(Boolean) : [];
   var allMoves  = Array.isArray(stateRow.operator_proposed_moves) ? stateRow.operator_proposed_moves : [];
   var pending = allMoves
     .map(function (m, i) { return { m: m, i: i }; })
     .filter(function (x) { return x.m && !x.m.status; });
 
+  // Show the draft button when Pip's situation notes a follow-up is warranted
+  // OR when there are active risks — both are signals the account needs a touch.
+  var showDraftButton = !!(risks.length || situation);
+
+  function handleDraftFollowup() {
+    if (draftLoading || draftEmail) return;
+    setDraftLoading(true);
+    draftAccountFollowupPip({
+      accountName:  accountName || "",
+      situation:    situation,
+      risks:        risks,
+      profileProse: profileProse || null,
+    }).then(function (r) {
+      setDraftEmail(r.email || "");
+      setEmailOpen(true);
+      setDraftLoading(false);
+    }).catch(function () {
+      showToast("Couldn't draft the email — try again");
+      setDraftLoading(false);
+    });
+  }
+
   // Density row — the counts that tell you what's underneath.
   var chips = [];
   if (risks.length) chips.push("⚠ " + risks.length + " risk" + (risks.length > 1 ? "s" : ""));
-  if (email) chips.push("✦ draft ready");
+  if (draftEmail) chips.push("✦ draft ready");
   if (pending.length) chips.push(pending.length + " proposed move" + (pending.length > 1 ? "s" : ""));
 
   function persist(newMoves) {
@@ -139,23 +165,41 @@ export function OperatorPanel({ stateRow, accountName, onAddTask, onChanged, fal
         </div>
       )}
 
-      {email && (
+      {/* On-demand follow-up draft — generated on tap, cached in state, not nightly */}
+      {showDraftButton && !draftEmail && (
+        <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid " + C.rule }}>
+          <button
+            onClick={handleDraftFollowup}
+            disabled={draftLoading}
+            style={{
+              fontFamily: MONO, fontSize: 10, color: C.accent,
+              background: C.accentFaint, border: "1px solid " + C.accentLine,
+              borderRadius: 6, padding: "4px 11px", cursor: draftLoading ? "default" : "pointer",
+              opacity: draftLoading ? 0.6 : 1,
+            }}
+          >
+            {draftLoading ? "Drafting…" : "✦ Draft a follow-up"}
+          </button>
+        </div>
+      )}
+
+      {draftEmail && (
         <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid " + C.rule }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
             <div style={{ fontFamily: MONO, fontSize: 9, color: C.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
               ✦ Pip drafted a follow-up
             </div>
             <div style={{ display: "flex", gap: 6 }}>
-              <button onClick={function () { try { navigator.clipboard.writeText(email); showToast("Draft copied — review before sending"); } catch (_) { showToast("Couldn't copy"); } }}
+              <button onClick={function () { try { navigator.clipboard.writeText(draftEmail); showToast("Draft copied — review before sending"); } catch (_) { showToast("Couldn't copy"); } }}
                 style={{ fontFamily: MONO, fontSize: 10, color: C.accent, background: C.accentFaint, border: "1px solid " + C.accentLine, borderRadius: 6, padding: "3px 9px", cursor: "pointer" }}>Copy</button>
-              <a href={"mailto:?body=" + encodeURIComponent(email)}
+              <a href={"mailto:?body=" + encodeURIComponent(draftEmail)}
                 style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, border: "1px solid " + C.rule, borderRadius: 6, padding: "3px 9px", textDecoration: "none" }}>Open in Mail</a>
               <button onClick={function () { setEmailOpen(function (v) { return !v; }); }}
                 style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, background: "none", border: "1px solid " + C.rule, borderRadius: 6, padding: "3px 9px", cursor: "pointer" }}>{emailOpen ? "Hide" : "Read"}</button>
             </div>
           </div>
           {emailOpen && (
-            <div style={{ fontFamily: INTER, fontSize: 13, color: C.textSoft, lineHeight: 1.6, whiteSpace: "pre-wrap", marginTop: 8 }}>{email}</div>
+            <div style={{ fontFamily: INTER, fontSize: 13, color: C.textSoft, lineHeight: 1.6, whiteSpace: "pre-wrap", marginTop: 8 }}>{draftEmail}</div>
           )}
         </div>
       )}

@@ -65,6 +65,9 @@ function excerpt(s, n) {
 }
 
 // Build the compact per-account context block the deep pass reasons over.
+// All caps below are token-trims, not signal cuts — signal-bearing fields
+// (commitments, champions/blockers, waiting_on) are sorted to the front before
+// the slice so they survive the cap.
 function renderAccountContext(acc, meetings, tasks, contacts, projects, updates, stateRow, snapshot) {
   var lines = [];
   lines.push("ACCOUNT: " + acc.name + (acc.tier ? " (" + acc.tier + " tier)" : ""));
@@ -79,8 +82,18 @@ function renderAccountContext(acc, meetings, tasks, contacts, projects, updates,
   }
 
   if ((contacts || []).length) {
+    // Sort: primary first, then champions/blockers, then the rest — so the cap
+    // of 6 never drops a signal-bearing contact.
+    var sortedContacts = (contacts || []).slice().sort(function (a, b) {
+      function rank(c) {
+        if (c.is_primary) return 0;
+        if (c.relationship_role === "champion" || c.relationship_role === "blocker") return 1;
+        return 2;
+      }
+      return rank(a) - rank(b);
+    });
     lines.push("\nCONTACTS:");
-    contacts.slice(0, 8).forEach(function (c) {
+    sortedContacts.slice(0, 6).forEach(function (c) {
       var tag = [];
       if (c.is_primary) tag.push("primary");
       if (c.relationship_role === "champion") tag.push("CHAMPION");
@@ -91,17 +104,29 @@ function renderAccountContext(acc, meetings, tasks, contacts, projects, updates,
 
   if ((meetings || []).length) {
     lines.push("\nRECENT MEETINGS (newest first):");
-    meetings.slice(0, 5).forEach(function (m) {
+    meetings.slice(0, 3).forEach(function (m) {
       var when = m.meeting_date || (m.created_at ? m.created_at.slice(0, 10) : "");
       lines.push("- " + when + (m.title ? " · " + m.title : "") + (m.pip_tone ? " · tone: " + m.pip_tone : ""));
-      if (m.pip_summary) lines.push("  " + excerpt(m.pip_summary, 240));
+      if (m.pip_summary) lines.push("  " + excerpt(m.pip_summary, 160));
     });
   }
 
   var open = (tasks || []).filter(function (t) { return !t.done && t.status !== "complete"; });
   if (open.length) {
+    // Sort: commitments first, then overdue (has due_date in the past), then
+    // waiting_on, then the rest — so the cap of 8 keeps the signal-bearing tasks.
+    var today = new Date().toISOString().slice(0, 10);
+    open.sort(function (a, b) {
+      function rank(t) {
+        if (t.is_commitment) return 0;
+        if (t.due_date && t.due_date < today) return 1;
+        if (t.waiting_on) return 2;
+        return 3;
+      }
+      return rank(a) - rank(b);
+    });
     lines.push("\nOPEN TASKS:");
-    open.slice(0, 12).forEach(function (t) {
+    open.slice(0, 8).forEach(function (t) {
       var bits = [t.title || "(untitled)"];
       if (t.due_date) bits.push("due " + t.due_date);
       if (t.is_commitment) bits.push("✦ COMMITMENT");
@@ -113,7 +138,7 @@ function renderAccountContext(acc, meetings, tasks, contacts, projects, updates,
 
   if ((projects || []).length) {
     lines.push("\nACTIVE GAUGE PROJECTS:");
-    projects.slice(0, 8).forEach(function (p) {
+    projects.slice(0, 6).forEach(function (p) {
       var latest = Array.isArray(p.status_updates) && p.status_updates.length ? p.status_updates[0] : null;
       lines.push("- " + (p.title || "(untitled)") + " · " + (p.status || "?") +
         (latest ? " · latest: \"" + excerpt(latest.body, 120) + "\"" : "") +
@@ -123,13 +148,13 @@ function renderAccountContext(acc, meetings, tasks, contacts, projects, updates,
 
   if ((updates || []).length) {
     lines.push("\nRECENT ACCOUNT UPDATES:");
-    updates.slice(0, 3).forEach(function (u) {
+    updates.slice(0, 2).forEach(function (u) {
       lines.push("- " + (u.update_date || "") + " · " + (u.update_type || "") + ": " + excerpt(u.title || u.description, 120));
     });
   }
 
   if (stateRow) {
-    if (stateRow.lessons_learned) lines.push("\nLESSONS PIP HAS LEARNED ON THIS ACCOUNT:\n" + excerpt(stateRow.lessons_learned, 400));
+    if (stateRow.lessons_learned) lines.push("\nLESSONS PIP HAS LEARNED ON THIS ACCOUNT:\n" + excerpt(stateRow.lessons_learned, 300));
     if (stateRow.operator_situation) lines.push("\nWHAT PIP SAID LAST RUN (for the 'since last run' delta):\n" + excerpt(stateRow.operator_situation, 300));
   }
 
@@ -141,9 +166,8 @@ var ACCOUNT_SYSTEM = `You are Pip, an account manager's autonomous chief of staf
 Return ONLY valid JSON, no prose, no code fences:
 {
   "headline": "ONE tight sentence — the high-level read at a glance. The gist a busy AM needs before the detail. No markdown. e.g. 'Drifting — follow-up sent 9 days ago, no movement, 6 tasks still open from ABPA.'",
-  "situation": "2-4 sentence read of where this account actually stands right now. Specific. Name people, tasks, numbers. Not a summary of the data — a judgement.",
+  "situation": "2-4 sentence read of where this account actually stands right now. Specific. Name people, tasks, numbers. Not a summary of the data — a judgement. If a follow-up email is warranted (open commitment, promised deliverable, account gone quiet), say so explicitly in this field — e.g. 'A follow-up is overdue on the invoice feed commitment — worth sending a note today.'",
   "risks": ["short risk phrases — overdue commitments, a blocker, cooling tone, a stuck project. [] if genuinely none."],
-  "draft_email": "A ready-to-send follow-up email IF one is clearly warranted (an open commitment, a promised deliverable, a gone-quiet major account). Plain text, no markdown, includes a greeting and sign-off as '[Your name]'. Empty string if no email is warranted today — do NOT manufacture one.",
   "proposed_moves": [
     { "kind": "task" | "reassign" | "due_date" | "project" | "agenda_item", "title": "what to do, imperative", "detail": "one line of why / specifics", "confidence": "high" | "medium" }
   ],
@@ -153,8 +177,8 @@ Return ONLY valid JSON, no prose, no code fences:
 
 Rules:
 - PROPOSE, don't act. Everything you return is a draft the human approves. Never assume it's done.
-- Be concrete and honest. If the account is quiet and fine, say so briefly and return an empty draft_email and few/no moves. Don't invent urgency.
-- A "commitment" (✦) that's overdue is the most important thing — lead your situation with it and draft the email to close it.
+- Be concrete and honest. If the account is quiet and fine, say so briefly with few/no moves. Don't invent urgency.
+- A "commitment" (✦) that's overdue is the most important thing — lead your situation with it.
 - STALENESS HUMILITY: a deadline that just passed is NOT automatically an "overdue fire." Your data can be stale — the work may already be done and just unmarked (the final step finished over the weekend, nobody ticked the box). When something is freshly past-due (a day or two), frame it as a question to verify in the morning check-in ("All Star's final step was due Friday — did it land?"), not a full-confidence alarm. Reserve real urgency for things genuinely sitting open for a while with no movement. Better to ask than to scream and be wrong.
 - Keep it tight. This feeds a morning report; the human skims it fast.`;
 
@@ -199,7 +223,10 @@ async function runAccountPass(client, admin, userId, ctxText, accountName) {
     headline: typeof parsed.headline === "string" ? parsed.headline.trim() : "",
     situation: typeof parsed.situation === "string" ? parsed.situation : "",
     risks: Array.isArray(parsed.risks) ? parsed.risks.filter(function (r) { return typeof r === "string" && r.trim(); }) : [],
-    draft_email: typeof parsed.draft_email === "string" ? parsed.draft_email.trim() : "",
+    // draft_email is no longer generated nightly — the OperatorPanel renders an
+    // on-demand "Draft follow-up" button so output tokens aren't spent on emails
+    // the user may never open. Keep the field for backwards-compat but always "".
+    draft_email: "",
     proposed_moves: Array.isArray(parsed.proposed_moves) ? parsed.proposed_moves.slice(0, 8) : [],
     agenda: typeof parsed.agenda === "string" ? parsed.agenda.trim() : "",
     delta: typeof parsed.delta === "string" ? parsed.delta.trim() : "",
@@ -236,7 +263,7 @@ Rules:
 - Order sections fire → watch → win → signal. Omit any section with no items. Wins never lead.
 - Major-tier accounts outrank Mid/Growth. A broken promise to a named person is the worst outcome — lead with it.
 - STALENESS HUMILITY: your read can be stale. A deadline that JUST passed is not automatically a "fire" — the work may already be done and just unmarked. Don't scream "overdue" at full confidence about something freshly due; phrase it as a verify-this ("worth confirming All Star landed Friday") and let the morning check-in settle it. Save real fire-tone for things genuinely sitting untouched. Confident-and-wrong is the failure that erodes trust fastest.
-- set has_draft true on the item whose account you drafted a follow-up for.
+- has_draft is always false (follow-up emails are now drafted on-demand in the UI, not overnight).
 - The headline and opening carry your personality. The section lines stay tight and useful (light voice, but they're a scannable list, not paragraphs).
 - Don't manufacture content. A genuinely calm day is a warm headline + a one-line opening + maybe one short section. Don't pad.`;
 
