@@ -1,9 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { C } from "../../lib/colors";
 import { fmtShort } from "../../lib/dateUtils";
 import { PipOrb } from "../../components/PipMark";
-import { useSportsFeed } from "../../hooks/useSportsFeed";
-import { SportsCard } from "../home/SportsCard";
 import { upcomingItems, honeyDoSorted } from "../../lib/lifeLadder";
 
 var SERIF = "'Fraunces', Georgia, serif";
@@ -62,15 +60,6 @@ function EmptyRow({ children }) {
 }
 
 export function LifeHome({ userName, items, completeItem, onAddLifeItem, isMobile }) {
-  var [showSports, setShowSports] = useState(function () {
-    try { return localStorage.getItem("folio_show_sports") !== "0"; } catch (_) { return true; }
-  });
-  function onHideSports() {
-    try { localStorage.setItem("folio_show_sports", "0"); } catch (_) { /* ignore */ }
-    setShowSports(false);
-  }
-  var sportsFeed = useSportsFeed(showSports);
-
   var upcoming = useMemo(function () { return upcomingItems(items, 45); }, [items]);
   var honey    = useMemo(function () { return honeyDoSorted(items); }, [items]);
 
@@ -148,9 +137,6 @@ export function LifeHome({ userName, items, completeItem, onAddLifeItem, isMobil
         </CardShell>
       </div>
 
-      {showSports && sportsFeed.data && (
-        <SportsCard data={sportsFeed.data} isMobile={isMobile} onHide={onHideSports} />
-      )}
     </div>
   );
 }

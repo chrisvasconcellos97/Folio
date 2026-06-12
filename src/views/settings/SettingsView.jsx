@@ -1668,42 +1668,6 @@ function AppearanceSection() {
   );
 }
 
-function PersonalSection() {
-  var [on, setOn] = useState(function () {
-    try { return localStorage.getItem("folio_show_sports") !== "0"; } catch (_) { return true; }
-  });
-  function toggle() {
-    var next = !on;
-    setOn(next);
-    try { localStorage.setItem("folio_show_sports", next ? "1" : "0"); } catch (_) { /* ignore */ }
-  }
-  return (
-    <Card>
-      <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 6 }}>Off the clock</div>
-      <div style={{ fontSize: 13, color: C.textSub, lineHeight: 1.6, marginBottom: 14 }}>
-        A personal soccer card on Home — Man United, Brazil, USMNT, and World Cup news, with live scores when a match is on. Turn it off to tuck it away (e.g. when screen-sharing).
-      </div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-        <span style={{ fontSize: 13, color: C.text, fontFamily: "'Inter', system-ui, sans-serif" }}>Show the soccer card</span>
-        <div
-          onClick={toggle}
-          onKeyDown={function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } }}
-          role="switch"
-          aria-label="Show the soccer card"
-          aria-checked={on}
-          tabIndex={0}
-          style={{
-            width: 42, height: 24, borderRadius: 12, cursor: "pointer", flexShrink: 0,
-            background: on ? C.accent : C.rule, position: "relative", transition: "background 0.18s ease",
-          }}
-        >
-          <span style={{ position: "absolute", top: 2, left: on ? 20 : 2, width: 20, height: 20, borderRadius: "50%", background: "#fff" /* no token equivalent — toggle thumb is always light */, transition: "left 0.18s ease" }} />
-        </div>
-      </div>
-    </Card>
-  );
-}
-
 export function SettingsView({ userId, userMeta, orgId, role, members, accounts, onStartInterview, onOpenCatchUp }) {
   return (
     <div style={{ maxWidth: 600, margin: "0 auto", padding: "8px 0 40px" }}>
@@ -1721,8 +1685,6 @@ export function SettingsView({ userId, userMeta, orgId, role, members, accounts,
 
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <AppearanceSection />
-
-        <PersonalSection />
 
         <NotificationsSection />
 
