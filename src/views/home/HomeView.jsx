@@ -217,17 +217,18 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
     var voices = ttsVoicesRef.current.length
       ? ttsVoicesRef.current
       : (window.speechSynthesis.getVoices() || []);
-    // Preference order: Daniel (British male, iOS/macOS), Samantha, Karen, Moira,
-    // then any on-device English voice (localService = not a network voice),
-    // then any English voice as last resort.
-    var names = ["Daniel", "Samantha", "Karen", "Moira", "Aaron", "Fred"];
+    var enVoices = voices.filter(function (v) { return /^en/.test(v.lang); });
+    // Downloaded on-device voices (localService=true) win automatically —
+    // so any Premium/Enhanced voice the user installs in iOS Settings will be used.
+    var local = enVoices.filter(function (v) { return v.localService; });
+    if (local.length) return local[0];
+    // Fall back to named list (compact/network quality)
+    var names = ["Daniel", "Samantha", "Jamie", "Karen", "Moira", "Aaron", "Fred"];
     for (var i = 0; i < names.length; i++) {
-      var match = voices.find(function (v) { return v.name === names[i]; });
+      var match = enVoices.find(function (v) { return v.name === names[i]; });
       if (match) return match;
     }
-    return voices.find(function (v) { return /^en/.test(v.lang) && v.localService; })
-        || voices.find(function (v) { return /^en/.test(v.lang); })
-        || null;
+    return enVoices[0] || null;
   }
 
   function handleReadBrief() {
