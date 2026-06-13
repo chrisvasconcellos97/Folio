@@ -20,6 +20,7 @@ import { showToast } from "../../components/Toast";
 import { HexField } from "../../lib/hexMotif";
 import { fmtShort } from "../../lib/dateUtils";
 import { InfoCard } from "../../components/InfoCard";
+import { usePipTTS } from "../../lib/usePipTTS";
 
 var SERIF = "'Fraunces', Georgia, serif";
 var INTER = "'Inter', system-ui, sans-serif";
@@ -201,41 +202,12 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
   var [briefLoading, setBriefLoading] = useState(false);
   var [briefNonce, setBriefNonce] = useState(0);
   var briefFiredRef = useRef(false);
-  var [briefSpeaking, setBriefSpeaking] = useState(false);
-  var ttsVoicesRef = useRef([]);
-
-  // Load voices as soon as they're available (may fire async on first page load)
-  useEffect(function () {
-    if (!window.speechSynthesis) return;
-    function loadVoices() { ttsVoicesRef.current = window.speechSynthesis.getVoices(); }
-    loadVoices();
-    window.speechSynthesis.addEventListener("voiceschanged", loadVoices);
-    return function () { window.speechSynthesis.removeEventListener("voiceschanged", loadVoices); };
-  }, []);
-
-  function pickVoice() {
-    var voices = ttsVoicesRef.current.length
-      ? ttsVoicesRef.current
-      : (window.speechSynthesis.getVoices() || []);
-    var enVoices = voices.filter(function (v) { return /^en/.test(v.lang); });
-    // Downloaded on-device voices (localService=true) win automatically —
-    // so any Premium/Enhanced voice the user installs in iOS Settings will be used.
-    var local = enVoices.filter(function (v) { return v.localService; });
-    if (local.length) return local[0];
-    // Fall back to named list (compact/network quality)
-    var names = ["Daniel", "Samantha", "Jamie", "Karen", "Moira", "Aaron", "Fred"];
-    for (var i = 0; i < names.length; i++) {
-      var match = enVoices.find(function (v) { return v.name === names[i]; });
-      if (match) return match;
-    }
-    return enVoices[0] || null;
-  }
+  var briefTTS = usePipTTS();
 
   function handleReadBrief() {
-    if (!window.speechSynthesis) return;
-    if (briefSpeaking) {
-      window.speechSynthesis.cancel();
-      setBriefSpeaking(false);
+    if (!briefTTS.supported) return;
+    if (briefTTS.speaking) {
+      briefTTS.cancel();
       return;
     }
     var text = (dailyBrief || "")
@@ -248,16 +220,7 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
         return [c.account_name, c.action, c.reason].filter(Boolean).join(", ");
       }).join(". ");
     }
-    if (!text) return;
-    window.speechSynthesis.cancel();
-    var u = new SpeechSynthesisUtterance(text);
-    var voice = pickVoice();
-    if (voice) u.voice = voice;
-    u.rate = 0.95;
-    u.onend   = function () { setBriefSpeaking(false); };
-    u.onerror = function () { setBriefSpeaking(false); };
-    window.speechSynthesis.speak(u);
-    setBriefSpeaking(true);
+    briefTTS.speak(text);
   }
 
   // Manual "refresh brief" — clears today's cached brief and re-fires the
@@ -1626,17 +1589,17 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
                 {!briefLoading && dailyBrief && (
                   <button
                     onClick={handleReadBrief}
-                    title={briefSpeaking ? "Stop reading" : "Read aloud"}
-                    aria-label={briefSpeaking ? "Stop reading brief" : "Read brief aloud"}
+                    title={briefTTS.speaking ? "Stop reading" : "Read aloud"}
+                    aria-label={briefTTS.speaking ? "Stop reading brief" : "Read brief aloud"}
                     style={{
                       background: "none", border: "none", padding: 4, margin: -4,
                       cursor: "pointer",
-                      color: briefSpeaking ? C.accent : C.textMuted,
+                      color: briefTTS.speaking ? C.accent : C.textMuted,
                       opacity: 0.85,
                       display: "inline-flex", alignItems: "center",
                     }}
                   >
-                    {briefSpeaking ? (
+                    {briefTTS.speaking ? (
                       /* stop square */
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                         <rect x="4" y="4" width="16" height="16" rx="2"/>
@@ -1652,7 +1615,7 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
                 )}
                 {/* Refresh */}
                 <button
-                  onClick={function () { window.speechSynthesis && window.speechSynthesis.cancel(); setBriefSpeaking(false); refreshBrief(); }}
+                  onClick={function () { briefTTS.cancel(); refreshBrief(); }}
                   disabled={briefLoading}
                   title="Refresh brief"
                   aria-label="Refresh brief"

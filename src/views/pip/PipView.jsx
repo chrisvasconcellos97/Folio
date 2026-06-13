@@ -22,7 +22,7 @@ import { HexPulse } from "../../lib/hexMotif";
 import { usePipState } from "../../lib/pipState";
 import { useRecentThemes } from "../../hooks/useRecentThemes";
 import { useUserProfile } from "../../hooks/useUserProfile";
-import { useKokoroTTS } from "../../lib/useKokoroTTS";
+import { usePipTTS } from "../../lib/usePipTTS";
 import { computeAccountHealth, gatherSignals } from "../../lib/accountHealth";
 
 var STARTERS = [
@@ -112,9 +112,8 @@ export function PipView(props) {
   var taskMsgSet                  = useRef(false);
   var recognitionRef              = useRef(null);
   var stateRefreshFired           = useRef(false);
-  var kokoro = useKokoroTTS();
+  var tts = usePipTTS();
   var voiceSupported = typeof window !== "undefined" && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
-  var ttsAvailable   = typeof window !== "undefined" && !!(window.AudioContext || window.webkitAudioContext);
 
   function startListening() {
     var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -142,7 +141,7 @@ export function PipView(props) {
 
   function speak(text) {
     if (!audioEnabled) return;
-    kokoro.speak(text);
+    tts.speak(text);
   }
 
   useEffect(function () {
@@ -670,23 +669,15 @@ export function PipView(props) {
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {ttsAvailable && (
+          {tts.supported && (
             <button
               onClick={function () {
                 setAudio(function (v) {
-                  // v = previous state; !v = new state
-                  if (!v) {
-                    // Turning audio ON — unlock AudioContext synchronously inside
-                    // this user-gesture so iOS Safari allows async playback later
-                    kokoro.activate();
-                  } else {
-                    // Turning audio OFF — stop any current speech
-                    kokoro.cancel();
-                  }
+                  if (v) tts.cancel();
                   return !v;
                 });
               }}
-              title={audioEnabled ? "Mute Pip's voice" : "Unmute Pip's voice (Daniel · Kokoro AI)"}
+              title={audioEnabled ? "Mute Pip's voice" : "Unmute Pip's voice"}
               aria-label={audioEnabled ? "Mute Pip voice" : "Unmute Pip voice"}
               style={{
                 width: 28, height: 28, borderRadius: 6, cursor: "pointer",
@@ -695,21 +686,12 @@ export function PipView(props) {
                 opacity: audioEnabled ? 1 : 0.4,
               }}
             >
-              {kokoro.modelState === "loading" ? (
-                /* spinner while model downloads */
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.accent} strokeWidth="2.5" strokeLinecap="round">
-                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83">
-                    <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="0.9s" repeatCount="indefinite"/>
-                  </path>
-                </svg>
-              ) : (
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.textMuted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  {audioEnabled
-                    ? <><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></>
-                    : <><path d="M11 5L6 9H2v6h4l5 4V5z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></>
-                  }
-                </svg>
-              )}
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.textMuted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                {audioEnabled
+                  ? <><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></>
+                  : <><path d="M11 5L6 9H2v6h4l5 4V5z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></>
+                }
+              </svg>
             </button>
           )}
           <div style={{ fontFamily: MONO, fontSize: 9.5, color: C.textFaint }}>
