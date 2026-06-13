@@ -20,6 +20,7 @@ import { showToast } from "../../components/Toast";
 import { HexField } from "../../lib/hexMotif";
 import { fmtShort } from "../../lib/dateUtils";
 import { InfoCard } from "../../components/InfoCard";
+import { useKokoroTTS } from "../../lib/useKokoroTTS";
 
 var SERIF = "'Fraunces', Georgia, serif";
 var INTER = "'Inter', system-ui, sans-serif";
@@ -201,6 +202,26 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
   var [briefLoading, setBriefLoading] = useState(false);
   var [briefNonce, setBriefNonce] = useState(0);
   var briefFiredRef = useRef(false);
+  var [briefSpeaking, setBriefSpeaking] = useState(false);
+  var briefTTS = useKokoroTTS();
+
+  function handleReadBrief() {
+    if (briefSpeaking) {
+      briefTTS.cancel();
+      setBriefSpeaking(false);
+    } else {
+      // Build readable text: prose + callouts
+      var parts = [dailyBrief];
+      if (briefCallouts && briefCallouts.length > 0) {
+        parts.push(briefCallouts.map(function (c) {
+          return [c.account_name, c.action, c.reason].filter(Boolean).join(": ");
+        }).join(". "));
+      }
+      briefTTS.activate(); // unlock AudioContext from this user gesture (required on iOS)
+      briefTTS.speak(parts.join(". "));
+      setBriefSpeaking(true);
+    }
+  }
 
   // Manual "refresh brief" — clears today's cached brief and re-fires the
   // generation effect (bumping briefNonce). Lets the user rebuild a brief that
@@ -1563,24 +1584,61 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
               }}>
                 Pip · Daily Brief
               </div>
-              <button
-                onClick={refreshBrief}
-                disabled={briefLoading}
-                title="Refresh brief"
-                aria-label="Refresh brief"
-                style={{
-                  background: "none", border: "none", padding: 4, margin: -4,
-                  cursor: briefLoading ? "default" : "pointer",
-                  color: C.textMuted, opacity: briefLoading ? 0.45 : 0.8,
-                  display: "inline-flex", alignItems: "center",
-                }}
-              >
-                <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"
-                     style={briefLoading ? { animation: "fol-spin 0.9s linear infinite" } : undefined}>
-                  <path d="M13.5 8a5.5 5.5 0 1 1-1.7-3.97" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  <path d="M13.7 3v2.6h-2.6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                {/* Read aloud */}
+                {!briefLoading && dailyBrief && (
+                  <button
+                    onClick={handleReadBrief}
+                    title={briefSpeaking ? "Stop reading" : "Read aloud"}
+                    aria-label={briefSpeaking ? "Stop reading brief" : "Read brief aloud"}
+                    style={{
+                      background: "none", border: "none", padding: 4, margin: -4,
+                      cursor: "pointer",
+                      color: briefSpeaking ? C.accent : C.textMuted,
+                      opacity: 0.85,
+                      display: "inline-flex", alignItems: "center",
+                    }}
+                  >
+                    {briefTTS.modelState === "loading" ? (
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83">
+                          <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="0.9s" repeatCount="indefinite"/>
+                        </path>
+                      </svg>
+                    ) : briefSpeaking ? (
+                      /* stop square */
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <rect x="4" y="4" width="16" height="16" rx="2"/>
+                      </svg>
+                    ) : (
+                      /* speaker / play icon */
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                      </svg>
+                    )}
+                  </button>
+                )}
+                {/* Refresh */}
+                <button
+                  onClick={function () { setBriefSpeaking(false); briefTTS.cancel(); refreshBrief(); }}
+                  disabled={briefLoading}
+                  title="Refresh brief"
+                  aria-label="Refresh brief"
+                  style={{
+                    background: "none", border: "none", padding: 4, margin: -4,
+                    cursor: briefLoading ? "default" : "pointer",
+                    color: C.textMuted, opacity: briefLoading ? 0.45 : 0.8,
+                    display: "inline-flex", alignItems: "center",
+                  }}
+                >
+                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"
+                       style={briefLoading ? { animation: "fol-spin 0.9s linear infinite" } : undefined}>
+                    <path d="M13.5 8a5.5 5.5 0 1 1-1.7-3.97" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                    <path d="M13.7 3v2.6h-2.6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              </div>
             </div>
             {briefLoading
               ? <div style={{ fontFamily: INTER, fontSize: 14, color: C.textMuted, lineHeight: 1.6 }}>Pip is thinking…</div>
