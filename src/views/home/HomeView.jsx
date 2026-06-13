@@ -219,10 +219,9 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
         return [c.account_name, c.action, c.reason].filter(Boolean).join(", ");
       }).join(". ");
     }
-    // Cap text so Kokoro doesn't hang on a long brief on mobile (~60 words)
+    // Cap text so mobile TTS doesn't read the whole brief (~60 words is plenty)
     if (text.length > 400) text = text.slice(0, 400).replace(/\s+\S+$/, "") + "…";
-    if (!text) { showToast("Brief is empty", "warn"); return; }
-    showToast("Generating speech…", "info", 8000);
+    if (!text) return;
     briefKokoro.activate();
     briefKokoro.speak(text);
   }
