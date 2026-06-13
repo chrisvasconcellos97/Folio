@@ -3,9 +3,8 @@ import { showToast } from "../components/Toast";
 
 var MODEL_ID = "onnx-community/Kokoro-82M-ONNX";
 var VOICE    = "bm_daniel";
-var DTYPE    = "q8";  // ~80 MB quantized model, cached in browser after first load
+var DTYPE    = "q8";
 
-// Module-level singleton — survives component re-mounts and route changes
 var _tts         = null;
 var _loadPromise = null;
 
@@ -34,47 +33,97 @@ function stripMarkdown(text) {
     .trim();
 }
 
+// Convert Float32Array PCM to a WAV Blob so we can play via <audio>
+// (more reliable on iOS than Web Audio API BufferSource)
+function pcmToWavBlob(samples, sampleRate) {
+  var numChannels = 1;
+  var bitsPerSample = 16;
+  var byteRate = sampleRate * numChannels * bitsPerSample / 8;
+  var blockAlign = numChannels * bitsPerSample / 8;
+  var dataSize = samples.length * 2; // 16-bit = 2 bytes per sample
+  var buffer = new ArrayBuffer(44 + dataSize);
+  var view = new DataView(buffer);
+
+  function writeString(offset, str) {
+    for (var i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+  }
+  writeString(0, "RIFF");
+  view.setUint32(4, 36 + dataSize, true);
+  writeString(8, "WAVE");
+  writeString(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);          // PCM
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, byteRate, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, bitsPerSample, true);
+  writeString(36, "data");
+  view.setUint32(40, dataSize, true);
+
+  // Clamp float32 → int16
+  var offset = 44;
+  for (var i = 0; i < samples.length; i++, offset += 2) {
+    var s = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+  }
+  return new Blob([buffer], { type: "audio/wav" });
+}
+
 export function useKokoroTTS() {
   var [modelState, setModelState] = useState(_tts ? "ready" : "idle");
-  // "idle" | "loading" | "ready" | "error"
-  var stateRef    = useRef(_tts ? "ready" : "idle"); // readable inside async closures
-  var audioCtxRef = useRef(null);
-  var sourceRef   = useRef(null);
+  var stateRef    = useRef(_tts ? "ready" : "idle");
+  var audioElRef  = useRef(null);   // <audio> element — iOS-safe playback
+  var audioCtxRef = useRef(null);   // Web Audio — desktop fallback
 
-  // Must be called from a user-gesture handler (button tap) to unlock AudioContext
-  // on iOS Safari before any async speak() call is made.
+  // Called synchronously inside a user-gesture handler to unlock audio on iOS.
+  // Also kicks off model pre-loading.
   function activate() {
     if (typeof window === "undefined") return;
+
+    // Create a silent <audio> element and play it — this "unlocks" the audio
+    // session on iOS Safari for all subsequent programmatic playback
+    if (!audioElRef.current) {
+      audioElRef.current = new window.Audio();
+      audioElRef.current.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQQAAAAAAA==";
+      audioElRef.current.volume = 0;
+      audioElRef.current.play().catch(function () {});
+    }
+
+    // Also unlock Web Audio context
     var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    if (!audioCtxRef.current) {
+    if (Ctx && !audioCtxRef.current) {
       audioCtxRef.current = new Ctx();
     }
-    // Resume synchronously inside the user gesture — this is what iOS requires
-    if (audioCtxRef.current.state === "suspended") {
+    if (audioCtxRef.current && audioCtxRef.current.state === "suspended") {
       audioCtxRef.current.resume().catch(function () {});
     }
-    // Also kick off model pre-load so it's ready before the first message
+
+    // Kick off model pre-load
     if (!_tts && stateRef.current === "idle") {
       stateRef.current = "loading";
       setModelState("loading");
-      showToast("Loading Pip's voice… first time only (~80 MB)", "info", 12000);
+      showToast("Loading Pip's voice… first time only (~80 MB)", "info", 20000);
       ensureModel().then(function () {
         stateRef.current = "ready";
         setModelState("ready");
+        showToast("Pip's voice ready ✓", "success");
       }).catch(function (e) {
         console.error("[Kokoro] preload failed:", e);
         stateRef.current = "error";
         setModelState("error");
-        showToast("Voice model failed to load — using system voice", "warn");
+        showToast("Voice model failed — using system voice", "warn");
       });
     }
   }
 
   function cancel() {
-    if (sourceRef.current) {
-      try { sourceRef.current.stop(); } catch (_) {}
-      sourceRef.current = null;
+    if (audioElRef.current) {
+      try { audioElRef.current.pause(); audioElRef.current.src = ""; } catch (_) {}
+    }
+    if (audioCtxRef.current) {
+      // suspend to stop any playing source
+      audioCtxRef.current.suspend().catch(function () {});
     }
     if (typeof window !== "undefined" && window.speechSynthesis) {
       window.speechSynthesis.cancel();
@@ -83,68 +132,72 @@ export function useKokoroTTS() {
 
   async function speak(text) {
     if (!text) return;
-    cancel();
+    // stop any current audio first
+    if (audioElRef.current) {
+      try { audioElRef.current.pause(); } catch (_) {}
+    }
 
     var clean = stripMarkdown(text);
     if (!clean) return;
 
-    // Previously failed — fall back to system TTS
     if (stateRef.current === "error") {
       _fallback(clean);
       return;
     }
 
-    // Wait for model if still loading (activate() started it on button tap)
     if (stateRef.current !== "ready") {
-      stateRef.current = "loading";
-      setModelState("loading");
+      if (stateRef.current === "idle") {
+        // activate() wasn't called — start loading now
+        stateRef.current = "loading";
+        setModelState("loading");
+        showToast("Loading Pip's voice… first time only (~80 MB)", "info", 20000);
+      }
       try {
         await ensureModel();
         stateRef.current = "ready";
         setModelState("ready");
+        showToast("Pip's voice ready ✓", "success");
       } catch (e) {
         console.error("[Kokoro] load failed:", e);
         stateRef.current = "error";
         setModelState("error");
-        showToast("Voice model failed to load — using system voice", "warn");
+        showToast("Voice model failed — using system voice", "warn");
         _fallback(clean);
         return;
       }
     }
 
-    // Generate and play via Web Audio API
     try {
       var result = await _tts.generate(clean, { voice: VOICE, speed: 1.0 });
 
-      // Kokoro returns { audio: Float32Array, sampling_rate: number }
-      var samples    = result.audio;
-      var sampleRate = result.sampling_rate;
+      // Defensive: handle both { audio, sampling_rate } and raw RawAudio objects
+      var samples    = result.audio    || result;
+      var sampleRate = result.sampling_rate || 24000;
 
-      // AudioContext was created + unlocked by activate() on button tap —
-      // on iOS it will be in "running" state already (no async resume needed)
-      var ctx = audioCtxRef.current;
-      if (!ctx) {
-        // Fallback: create one now (may be suspended on iOS if activate() wasn't called)
-        var Ctx = window.AudioContext || window.webkitAudioContext;
-        ctx = new Ctx();
-        audioCtxRef.current = ctx;
-      }
-      if (ctx.state === "suspended") {
-        // Best effort — works on non-iOS browsers
-        await ctx.resume();
+      if (!(samples instanceof Float32Array)) {
+        throw new Error("Unexpected audio format from Kokoro: " + typeof samples);
       }
 
-      var buffer = ctx.createBuffer(1, samples.length, sampleRate);
-      buffer.getChannelData(0).set(samples);
+      // Build a WAV blob and play via <audio> element — most iOS-compatible path
+      var blob = pcmToWavBlob(samples, sampleRate);
+      var url  = URL.createObjectURL(blob);
 
-      var source = ctx.createBufferSource();
-      source.buffer = buffer;
-      source.connect(ctx.destination);
-      source.onended = function () { sourceRef.current = null; };
-      sourceRef.current = source;
-      source.start();
+      if (!audioElRef.current) {
+        audioElRef.current = new window.Audio();
+      }
+      audioElRef.current.onended = function () { URL.revokeObjectURL(url); };
+      audioElRef.current.src = url;
+      audioElRef.current.volume = 1;
+
+      // Resume AudioContext if we have one (handles Web Audio path)
+      if (audioCtxRef.current && audioCtxRef.current.state === "suspended") {
+        await audioCtxRef.current.resume().catch(function () {});
+      }
+
+      await audioElRef.current.play();
     } catch (e) {
-      console.error("[Kokoro] generate error:", e);
+      console.error("[Kokoro] generate/play error:", e);
+      showToast("Pip voice error: " + (e && e.message ? e.message.slice(0, 60) : "unknown"), "warn");
       _fallback(clean);
     }
   }
@@ -154,6 +207,7 @@ export function useKokoroTTS() {
 
 function _fallback(text) {
   if (typeof window === "undefined" || !window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
   var u = new SpeechSynthesisUtterance(text);
   u.rate = 1.05;
   window.speechSynthesis.speak(u);
