@@ -175,6 +175,7 @@ export function useKokoroTTS() {
     }
 
     try {
+      showToast("Kokoro: generating…", "info", 15000);
       var result = await _tts.generate(clean, { voice: VOICE, speed: 1.0 });
 
       var samples    = result.audio    || result;
@@ -184,16 +185,16 @@ export function useKokoroTTS() {
         throw new Error("Unexpected audio format from Kokoro: " + typeof samples);
       }
 
-      // Build a WAV ArrayBuffer and decode into an AudioBuffer.
-      // AudioContext.decodeAudioData works freely once the context is unlocked —
-      // no user gesture needed at call time, unlike <audio>.play().
+      showToast("Kokoro: decoding audio…", "info", 5000);
       var wavBuf   = pcmToWavBuffer(samples, sampleRate);
       var audioBuf = await audioCtxRef.current.decodeAudioData(wavBuf);
 
-      // Resume in case iOS suspended the context while the tab was in background
       if (audioCtxRef.current.state === "suspended") {
+        showToast("Kokoro: resuming AudioContext…", "info", 3000);
         await audioCtxRef.current.resume();
       }
+
+      showToast("Kokoro: ctx state = " + audioCtxRef.current.state, "info", 5000);
 
       var src = audioCtxRef.current.createBufferSource();
       src.buffer = audioBuf;
@@ -205,9 +206,10 @@ export function useKokoroTTS() {
       sourceRef.current = src;
       src.start(0);
       setSpeaking(true);
+      showToast("Kokoro: playing ✓", "success", 3000);
     } catch (e) {
       console.error("[Kokoro] generate/play error:", e);
-      showToast("Pip voice error: " + (e && e.message ? e.message.slice(0, 60) : "unknown"), "warn");
+      showToast("Pip voice error: " + (e && e.message ? e.message.slice(0, 80) : "unknown"), "warn", 10000);
       _fallback(clean);
     }
   }

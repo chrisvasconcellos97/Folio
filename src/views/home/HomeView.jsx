@@ -219,8 +219,10 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
         return [c.account_name, c.action, c.reason].filter(Boolean).join(", ");
       }).join(". ");
     }
-    // activate() must be called synchronously inside this user-gesture to
-    // unlock iOS audio, then speak() awaits the model asynchronously
+    // Cap text so Kokoro doesn't hang on a long brief on mobile (~60 words)
+    if (text.length > 400) text = text.slice(0, 400).replace(/\s+\S+$/, "") + "…";
+    if (!text) { showToast("Brief is empty", "warn"); return; }
+    showToast("Generating speech…", "info", 8000);
     briefKokoro.activate();
     briefKokoro.speak(text);
   }
