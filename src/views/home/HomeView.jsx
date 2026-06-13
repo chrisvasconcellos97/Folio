@@ -202,7 +202,33 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
   var [briefNonce, setBriefNonce] = useState(0);
   var briefFiredRef = useRef(false);
   var [briefSpeaking, setBriefSpeaking] = useState(false);
-  var briefUtteranceRef = useRef(null);
+  var ttsVoicesRef = useRef([]);
+
+  // Load voices as soon as they're available (may fire async on first page load)
+  useEffect(function () {
+    if (!window.speechSynthesis) return;
+    function loadVoices() { ttsVoicesRef.current = window.speechSynthesis.getVoices(); }
+    loadVoices();
+    window.speechSynthesis.addEventListener("voiceschanged", loadVoices);
+    return function () { window.speechSynthesis.removeEventListener("voiceschanged", loadVoices); };
+  }, []);
+
+  function pickVoice() {
+    var voices = ttsVoicesRef.current.length
+      ? ttsVoicesRef.current
+      : (window.speechSynthesis.getVoices() || []);
+    // Preference order: Daniel (British male, iOS/macOS), Samantha, Karen, Moira,
+    // then any on-device English voice (localService = not a network voice),
+    // then any English voice as last resort.
+    var names = ["Daniel", "Samantha", "Karen", "Moira", "Aaron", "Fred"];
+    for (var i = 0; i < names.length; i++) {
+      var match = voices.find(function (v) { return v.name === names[i]; });
+      if (match) return match;
+    }
+    return voices.find(function (v) { return /^en/.test(v.lang) && v.localService; })
+        || voices.find(function (v) { return /^en/.test(v.lang); })
+        || null;
+  }
 
   function handleReadBrief() {
     if (!window.speechSynthesis) return;
@@ -211,7 +237,6 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
       setBriefSpeaking(false);
       return;
     }
-    // Strip markdown for clean reading
     var text = (dailyBrief || "")
       .replace(/[*#`_~\[\]]/g, "")
       .replace(/https?:\/\/\S+/g, "")
@@ -225,10 +250,11 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
     if (!text) return;
     window.speechSynthesis.cancel();
     var u = new SpeechSynthesisUtterance(text);
+    var voice = pickVoice();
+    if (voice) u.voice = voice;
     u.rate = 0.95;
     u.onend   = function () { setBriefSpeaking(false); };
     u.onerror = function () { setBriefSpeaking(false); };
-    briefUtteranceRef.current = u;
     window.speechSynthesis.speak(u);
     setBriefSpeaking(true);
   }
