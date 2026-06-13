@@ -72,6 +72,7 @@ function pcmToWavBlob(samples, sampleRate) {
 
 export function useKokoroTTS() {
   var [modelState, setModelState] = useState(_tts ? "ready" : "idle");
+  var [speaking, setSpeaking]     = useState(false);
   var stateRef    = useRef(_tts ? "ready" : "idle");
   var audioElRef  = useRef(null);   // <audio> element — iOS-safe playback
   var audioCtxRef = useRef(null);   // Web Audio — desktop fallback
@@ -122,12 +123,12 @@ export function useKokoroTTS() {
       try { audioElRef.current.pause(); audioElRef.current.src = ""; } catch (_) {}
     }
     if (audioCtxRef.current) {
-      // suspend to stop any playing source
       audioCtxRef.current.suspend().catch(function () {});
     }
     if (typeof window !== "undefined" && window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
+    setSpeaking(false);
   }
 
   async function speak(text) {
@@ -185,7 +186,8 @@ export function useKokoroTTS() {
       if (!audioElRef.current) {
         audioElRef.current = new window.Audio();
       }
-      audioElRef.current.onended = function () { URL.revokeObjectURL(url); };
+      audioElRef.current.onended = function () { URL.revokeObjectURL(url); setSpeaking(false); };
+      audioElRef.current.onerror = function () { setSpeaking(false); };
       audioElRef.current.src = url;
       audioElRef.current.volume = 1;
 
@@ -194,6 +196,7 @@ export function useKokoroTTS() {
         await audioCtxRef.current.resume().catch(function () {});
       }
 
+      setSpeaking(true);
       await audioElRef.current.play();
     } catch (e) {
       console.error("[Kokoro] generate/play error:", e);
@@ -202,7 +205,7 @@ export function useKokoroTTS() {
     }
   }
 
-  return { speak, cancel, activate, modelState };
+  return { speak, cancel, activate, modelState, speaking };
 }
 
 function _fallback(text) {

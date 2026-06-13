@@ -20,7 +20,7 @@ import { showToast } from "../../components/Toast";
 import { HexField } from "../../lib/hexMotif";
 import { fmtShort } from "../../lib/dateUtils";
 import { InfoCard } from "../../components/InfoCard";
-import { usePipTTS } from "../../lib/usePipTTS";
+import { useKokoroTTS } from "../../lib/useKokoroTTS";
 
 var SERIF = "'Fraunces', Georgia, serif";
 var INTER = "'Inter', system-ui, sans-serif";
@@ -202,12 +202,11 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
   var [briefLoading, setBriefLoading] = useState(false);
   var [briefNonce, setBriefNonce] = useState(0);
   var briefFiredRef = useRef(false);
-  var briefTTS = usePipTTS();
+  var briefKokoro = useKokoroTTS();
 
   function handleReadBrief() {
-    if (!briefTTS.supported) return;
-    if (briefTTS.speaking) {
-      briefTTS.cancel();
+    if (briefKokoro.speaking) {
+      briefKokoro.cancel();
       return;
     }
     var text = (dailyBrief || "")
@@ -220,7 +219,10 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
         return [c.account_name, c.action, c.reason].filter(Boolean).join(", ");
       }).join(". ");
     }
-    briefTTS.speak(text);
+    // activate() must be called synchronously inside this user-gesture to
+    // unlock iOS audio, then speak() awaits the model asynchronously
+    briefKokoro.activate();
+    briefKokoro.speak(text);
   }
 
   // Manual "refresh brief" — clears today's cached brief and re-fires the
@@ -1589,17 +1591,17 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
                 {!briefLoading && dailyBrief && (
                   <button
                     onClick={handleReadBrief}
-                    title={briefTTS.speaking ? "Stop reading" : "Read aloud"}
-                    aria-label={briefTTS.speaking ? "Stop reading brief" : "Read brief aloud"}
+                    title={briefKokoro.speaking ? "Stop reading" : "Read aloud"}
+                    aria-label={briefKokoro.speaking ? "Stop reading brief" : "Read brief aloud"}
                     style={{
                       background: "none", border: "none", padding: 4, margin: -4,
                       cursor: "pointer",
-                      color: briefTTS.speaking ? C.accent : C.textMuted,
+                      color: briefKokoro.speaking ? C.accent : C.textMuted,
                       opacity: 0.85,
                       display: "inline-flex", alignItems: "center",
                     }}
                   >
-                    {briefTTS.speaking ? (
+                    {briefKokoro.speaking ? (
                       /* stop square */
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                         <rect x="4" y="4" width="16" height="16" rx="2"/>
@@ -1615,7 +1617,7 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
                 )}
                 {/* Refresh */}
                 <button
-                  onClick={function () { briefTTS.cancel(); refreshBrief(); }}
+                  onClick={function () { briefKokoro.cancel(); refreshBrief(); }}
                   disabled={briefLoading}
                   title="Refresh brief"
                   aria-label="Refresh brief"
