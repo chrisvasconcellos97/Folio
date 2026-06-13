@@ -672,7 +672,20 @@ export function PipView(props) {
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {ttsAvailable && (
             <button
-              onClick={function () { setAudio(function (v) { if (!v) kokoro.cancel(); return !v; }); }}
+              onClick={function () {
+                setAudio(function (v) {
+                  // v = previous state; !v = new state
+                  if (!v) {
+                    // Turning audio ON — unlock AudioContext synchronously inside
+                    // this user-gesture so iOS Safari allows async playback later
+                    kokoro.activate();
+                  } else {
+                    // Turning audio OFF — stop any current speech
+                    kokoro.cancel();
+                  }
+                  return !v;
+                });
+              }}
               title={audioEnabled ? "Mute Pip's voice" : "Unmute Pip's voice (Daniel · Kokoro AI)"}
               aria-label={audioEnabled ? "Mute Pip voice" : "Unmute Pip voice"}
               style={{

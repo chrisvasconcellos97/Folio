@@ -37,9 +37,39 @@ function stripMarkdown(text) {
 export function useKokoroTTS() {
   var [modelState, setModelState] = useState(_tts ? "ready" : "idle");
   // "idle" | "loading" | "ready" | "error"
-  var stateRef   = useRef(_tts ? "ready" : "idle");  // readable inside async closures
+  var stateRef    = useRef(_tts ? "ready" : "idle"); // readable inside async closures
   var audioCtxRef = useRef(null);
   var sourceRef   = useRef(null);
+
+  // Must be called from a user-gesture handler (button tap) to unlock AudioContext
+  // on iOS Safari before any async speak() call is made.
+  function activate() {
+    if (typeof window === "undefined") return;
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new Ctx();
+    }
+    // Resume synchronously inside the user gesture — this is what iOS requires
+    if (audioCtxRef.current.state === "suspended") {
+      audioCtxRef.current.resume().catch(function () {});
+    }
+    // Also kick off model pre-load so it's ready before the first message
+    if (!_tts && stateRef.current === "idle") {
+      stateRef.current = "loading";
+      setModelState("loading");
+      showToast("Loading Pip's voice… first time only (~80 MB)", "info", 12000);
+      ensureModel().then(function () {
+        stateRef.current = "ready";
+        setModelState("ready");
+      }).catch(function (e) {
+        console.error("[Kokoro] preload failed:", e);
+        stateRef.current = "error";
+        setModelState("error");
+        showToast("Voice model failed to load — using system voice", "warn");
+      });
+    }
+  }
 
   function cancel() {
     if (sourceRef.current) {
@@ -64,11 +94,10 @@ export function useKokoroTTS() {
       return;
     }
 
-    // First use — download the model (cached after first load)
-    if (!_tts) {
+    // Wait for model if still loading (activate() started it on button tap)
+    if (stateRef.current !== "ready") {
       stateRef.current = "loading";
       setModelState("loading");
-      showToast("Loading Pip's voice… first time only (~80 MB)", "info", 12000);
       try {
         await ensureModel();
         stateRef.current = "ready";
@@ -83,17 +112,27 @@ export function useKokoroTTS() {
       }
     }
 
-    // Generate and play
+    // Generate and play via Web Audio API
     try {
       var result = await _tts.generate(clean, { voice: VOICE, speed: 1.0 });
-      var samples    = result.audio;         // Float32Array
-      var sampleRate = result.sampling_rate; // 24000
 
-      if (!audioCtxRef.current) {
-        audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
-      }
+      // Kokoro returns { audio: Float32Array, sampling_rate: number }
+      var samples    = result.audio;
+      var sampleRate = result.sampling_rate;
+
+      // AudioContext was created + unlocked by activate() on button tap —
+      // on iOS it will be in "running" state already (no async resume needed)
       var ctx = audioCtxRef.current;
-      if (ctx.state === "suspended") await ctx.resume();
+      if (!ctx) {
+        // Fallback: create one now (may be suspended on iOS if activate() wasn't called)
+        var Ctx = window.AudioContext || window.webkitAudioContext;
+        ctx = new Ctx();
+        audioCtxRef.current = ctx;
+      }
+      if (ctx.state === "suspended") {
+        // Best effort — works on non-iOS browsers
+        await ctx.resume();
+      }
 
       var buffer = ctx.createBuffer(1, samples.length, sampleRate);
       buffer.getChannelData(0).set(samples);
@@ -110,7 +149,7 @@ export function useKokoroTTS() {
     }
   }
 
-  return { speak, cancel, modelState };
+  return { speak, cancel, activate, modelState };
 }
 
 function _fallback(text) {
