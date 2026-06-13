@@ -33,16 +33,17 @@ function stripMarkdown(text) {
     .trim();
 }
 
-// Convert Float32Array PCM to a WAV Blob so we can play via <audio>
-// (more reliable on iOS than Web Audio API BufferSource)
-function pcmToWavBlob(samples, sampleRate) {
-  var numChannels = 1;
+// Float32Array PCM → ArrayBuffer containing a valid WAV file.
+// AudioContext.decodeAudioData() accepts WAV, which avoids the iOS
+// autoplay restriction that blocks <audio>.play() after async work.
+function pcmToWavBuffer(samples, sampleRate) {
+  var numChannels  = 1;
   var bitsPerSample = 16;
-  var byteRate = sampleRate * numChannels * bitsPerSample / 8;
-  var blockAlign = numChannels * bitsPerSample / 8;
-  var dataSize = samples.length * 2; // 16-bit = 2 bytes per sample
-  var buffer = new ArrayBuffer(44 + dataSize);
-  var view = new DataView(buffer);
+  var byteRate     = sampleRate * numChannels * bitsPerSample / 8;
+  var blockAlign   = numChannels * bitsPerSample / 8;
+  var dataSize     = samples.length * 2;
+  var buffer       = new ArrayBuffer(44 + dataSize);
+  var view         = new DataView(buffer);
 
   function writeString(offset, str) {
     for (var i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
@@ -52,7 +53,7 @@ function pcmToWavBlob(samples, sampleRate) {
   writeString(8, "WAVE");
   writeString(12, "fmt ");
   view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);          // PCM
+  view.setUint16(20, 1, true);
   view.setUint16(22, numChannels, true);
   view.setUint32(24, sampleRate, true);
   view.setUint32(28, byteRate, true);
@@ -61,46 +62,39 @@ function pcmToWavBlob(samples, sampleRate) {
   writeString(36, "data");
   view.setUint32(40, dataSize, true);
 
-  // Clamp float32 → int16
   var offset = 44;
   for (var i = 0; i < samples.length; i++, offset += 2) {
     var s = Math.max(-1, Math.min(1, samples[i]));
     view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
   }
-  return new Blob([buffer], { type: "audio/wav" });
+  return buffer;
 }
 
 export function useKokoroTTS() {
   var [modelState, setModelState] = useState(_tts ? "ready" : "idle");
   var [speaking, setSpeaking]     = useState(false);
   var stateRef    = useRef(_tts ? "ready" : "idle");
-  var audioElRef  = useRef(null);   // <audio> element — iOS-safe playback
-  var audioCtxRef = useRef(null);   // Web Audio — desktop fallback
+  var audioCtxRef = useRef(null);  // unlocked once in user gesture, stays unlocked
+  var sourceRef   = useRef(null);  // current AudioBufferSourceNode
 
-  // Called synchronously inside a user-gesture handler to unlock audio on iOS.
-  // Also kicks off model pre-loading.
+  // Must be called synchronously inside a user-gesture handler (button onClick).
+  // Creates and resumes the AudioContext — once resumed from a gesture, iOS
+  // keeps it running even during subsequent async work, so playback can fire
+  // seconds later without another gesture. Also kicks off model preload.
   function activate() {
     if (typeof window === "undefined") return;
 
-    // Create a silent <audio> element and play it — this "unlocks" the audio
-    // session on iOS Safari for all subsequent programmatic playback
-    if (!audioElRef.current) {
-      audioElRef.current = new window.Audio();
-      audioElRef.current.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQQAAAAAAA==";
-      audioElRef.current.volume = 0;
-      audioElRef.current.play().catch(function () {});
-    }
-
-    // Also unlock Web Audio context
     var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (Ctx && !audioCtxRef.current) {
+    if (!Ctx) return;
+
+    if (!audioCtxRef.current) {
       audioCtxRef.current = new Ctx();
     }
-    if (audioCtxRef.current && audioCtxRef.current.state === "suspended") {
+    // resume() must be in the gesture — after this the context stays "running"
+    if (audioCtxRef.current.state === "suspended") {
       audioCtxRef.current.resume().catch(function () {});
     }
 
-    // Kick off model pre-load
     if (!_tts && stateRef.current === "idle") {
       stateRef.current = "loading";
       setModelState("loading");
@@ -119,11 +113,9 @@ export function useKokoroTTS() {
   }
 
   function cancel() {
-    if (audioElRef.current) {
-      try { audioElRef.current.pause(); audioElRef.current.src = ""; } catch (_) {}
-    }
-    if (audioCtxRef.current) {
-      audioCtxRef.current.suspend().catch(function () {});
+    if (sourceRef.current) {
+      try { sourceRef.current.stop(); } catch (_) {}
+      sourceRef.current = null;
     }
     if (typeof window !== "undefined" && window.speechSynthesis) {
       window.speechSynthesis.cancel();
@@ -133,13 +125,15 @@ export function useKokoroTTS() {
 
   async function speak(text) {
     if (!text) return;
-    // stop any current audio first
-    if (audioElRef.current) {
-      try { audioElRef.current.pause(); } catch (_) {}
-    }
 
     var clean = stripMarkdown(text);
     if (!clean) return;
+
+    // Stop any current playback
+    if (sourceRef.current) {
+      try { sourceRef.current.stop(); } catch (_) {}
+      sourceRef.current = null;
+    }
 
     if (stateRef.current === "error") {
       _fallback(clean);
@@ -148,7 +142,6 @@ export function useKokoroTTS() {
 
     if (stateRef.current !== "ready") {
       if (stateRef.current === "idle") {
-        // activate() wasn't called — start loading now
         stateRef.current = "loading";
         setModelState("loading");
         showToast("Loading Pip's voice… first time only (~80 MB)", "info", 20000);
@@ -168,10 +161,22 @@ export function useKokoroTTS() {
       }
     }
 
+    // Ensure we have an AudioContext — activate() should have created one,
+    // but speak() can be called standalone (e.g. from PipView chat).
+    var Ctx = typeof window !== "undefined" && (window.AudioContext || window.webkitAudioContext);
+    if (Ctx && !audioCtxRef.current) {
+      audioCtxRef.current = new Ctx();
+    }
+
+    if (!audioCtxRef.current) {
+      // No AudioContext support — fall back to system voice
+      _fallback(clean);
+      return;
+    }
+
     try {
       var result = await _tts.generate(clean, { voice: VOICE, speed: 1.0 });
 
-      // Defensive: handle both { audio, sampling_rate } and raw RawAudio objects
       var samples    = result.audio    || result;
       var sampleRate = result.sampling_rate || 24000;
 
@@ -179,25 +184,27 @@ export function useKokoroTTS() {
         throw new Error("Unexpected audio format from Kokoro: " + typeof samples);
       }
 
-      // Build a WAV blob and play via <audio> element — most iOS-compatible path
-      var blob = pcmToWavBlob(samples, sampleRate);
-      var url  = URL.createObjectURL(blob);
+      // Build a WAV ArrayBuffer and decode into an AudioBuffer.
+      // AudioContext.decodeAudioData works freely once the context is unlocked —
+      // no user gesture needed at call time, unlike <audio>.play().
+      var wavBuf   = pcmToWavBuffer(samples, sampleRate);
+      var audioBuf = await audioCtxRef.current.decodeAudioData(wavBuf);
 
-      if (!audioElRef.current) {
-        audioElRef.current = new window.Audio();
-      }
-      audioElRef.current.onended = function () { URL.revokeObjectURL(url); setSpeaking(false); };
-      audioElRef.current.onerror = function () { setSpeaking(false); };
-      audioElRef.current.src = url;
-      audioElRef.current.volume = 1;
-
-      // Resume AudioContext if we have one (handles Web Audio path)
-      if (audioCtxRef.current && audioCtxRef.current.state === "suspended") {
-        await audioCtxRef.current.resume().catch(function () {});
+      // Resume in case iOS suspended the context while the tab was in background
+      if (audioCtxRef.current.state === "suspended") {
+        await audioCtxRef.current.resume();
       }
 
+      var src = audioCtxRef.current.createBufferSource();
+      src.buffer = audioBuf;
+      src.connect(audioCtxRef.current.destination);
+      src.onended = function () {
+        sourceRef.current = null;
+        setSpeaking(false);
+      };
+      sourceRef.current = src;
+      src.start(0);
       setSpeaking(true);
-      await audioElRef.current.play();
     } catch (e) {
       console.error("[Kokoro] generate/play error:", e);
       showToast("Pip voice error: " + (e && e.message ? e.message.slice(0, 60) : "unknown"), "warn");
