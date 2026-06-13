@@ -14,6 +14,10 @@ export default defineConfig({
         // SPA navigation fallback must NOT swallow real static pages
         // (mockup review pages live at /mockups/*)
         navigateFallbackDenylist: [/^\/mockups\//],
+        // AI model WASM files are too large to precache and only used when
+        // Kokoro TTS is active — let the browser HTTP cache handle them.
+        globIgnores: ["**/*.wasm"],
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MiB (vendor chunk)
       },
       manifest: {
         name: "Folios",
@@ -40,6 +44,9 @@ export default defineConfig({
       },
     }),
   ],
+  optimizeDeps: {
+    exclude: ["kokoro-js"],
+  },
   build: {
     // "hidden" emits .map files alongside the bundle (so a minified crash like
     // index-XXXX.js:258:663 can be resolved back to the real src/ file + line)
