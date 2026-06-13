@@ -20,7 +20,6 @@ import { showToast } from "../../components/Toast";
 import { HexField } from "../../lib/hexMotif";
 import { fmtShort } from "../../lib/dateUtils";
 import { InfoCard } from "../../components/InfoCard";
-import { useKokoroTTS } from "../../lib/useKokoroTTS";
 
 var SERIF = "'Fraunces', Georgia, serif";
 var INTER = "'Inter', system-ui, sans-serif";
@@ -203,24 +202,35 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
   var [briefNonce, setBriefNonce] = useState(0);
   var briefFiredRef = useRef(false);
   var [briefSpeaking, setBriefSpeaking] = useState(false);
-  var briefTTS = useKokoroTTS();
+  var briefUtteranceRef = useRef(null);
 
   function handleReadBrief() {
+    if (!window.speechSynthesis) return;
     if (briefSpeaking) {
-      briefTTS.cancel();
+      window.speechSynthesis.cancel();
       setBriefSpeaking(false);
-    } else {
-      // Build readable text: prose + callouts
-      var parts = [dailyBrief];
-      if (briefCallouts && briefCallouts.length > 0) {
-        parts.push(briefCallouts.map(function (c) {
-          return [c.account_name, c.action, c.reason].filter(Boolean).join(": ");
-        }).join(". "));
-      }
-      briefTTS.activate(); // unlock AudioContext from this user gesture (required on iOS)
-      briefTTS.speak(parts.join(". "));
-      setBriefSpeaking(true);
+      return;
     }
+    // Strip markdown for clean reading
+    var text = (dailyBrief || "")
+      .replace(/[*#`_~\[\]]/g, "")
+      .replace(/https?:\/\/\S+/g, "")
+      .replace(/\n+/g, ". ")
+      .trim();
+    if (briefCallouts && briefCallouts.length > 0) {
+      text += ". " + briefCallouts.map(function (c) {
+        return [c.account_name, c.action, c.reason].filter(Boolean).join(", ");
+      }).join(". ");
+    }
+    if (!text) return;
+    window.speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance(text);
+    u.rate = 0.95;
+    u.onend   = function () { setBriefSpeaking(false); };
+    u.onerror = function () { setBriefSpeaking(false); };
+    briefUtteranceRef.current = u;
+    window.speechSynthesis.speak(u);
+    setBriefSpeaking(true);
   }
 
   // Manual "refresh brief" — clears today's cached brief and re-fires the
@@ -1599,13 +1609,7 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
                       display: "inline-flex", alignItems: "center",
                     }}
                   >
-                    {briefTTS.modelState === "loading" ? (
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83">
-                          <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="0.9s" repeatCount="indefinite"/>
-                        </path>
-                      </svg>
-                    ) : briefSpeaking ? (
+                    {briefSpeaking ? (
                       /* stop square */
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                         <rect x="4" y="4" width="16" height="16" rx="2"/>
@@ -1621,7 +1625,7 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
                 )}
                 {/* Refresh */}
                 <button
-                  onClick={function () { setBriefSpeaking(false); briefTTS.cancel(); refreshBrief(); }}
+                  onClick={function () { window.speechSynthesis && window.speechSynthesis.cancel(); setBriefSpeaking(false); refreshBrief(); }}
                   disabled={briefLoading}
                   title="Refresh brief"
                   aria-label="Refresh brief"
