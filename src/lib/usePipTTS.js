@@ -29,16 +29,31 @@ export function usePipTTS() {
       ? voicesRef.current
       : ((typeof window !== "undefined" && window.speechSynthesis && window.speechSynthesis.getVoices()) || []);
     var enVoices = voices.filter(function (v) { return /^en/.test(v.lang); });
-    // Downloaded on-device voices (localService=true) automatically win —
-    // any Premium/Enhanced voice installed in iOS Settings will be used.
-    var local = enVoices.filter(function (v) { return v.localService; });
-    if (local.length) return local[0];
-    // Fall back to named list
+
+    // Tier 1: Premium voices — iOS names them "Jamie (Premium)" or encodes
+    // "premium" in the voiceURI (e.g. com.apple.voice.premium.en-GB.Jamie)
+    var premium = enVoices.filter(function (v) {
+      return /(premium)/i.test(v.name + " " + (v.voiceURI || ""));
+    });
+    if (premium.length) return premium[0];
+
+    // Tier 2: Enhanced voices — same pattern with "enhanced"
+    var enhanced = enVoices.filter(function (v) {
+      return /(enhanced)/i.test(v.name + " " + (v.voiceURI || ""));
+    });
+    if (enhanced.length) return enhanced[0];
+
+    // Tier 3: Named quality voices (macOS Daniel, Samantha, etc.)
     var names = ["Daniel", "Samantha", "Jamie", "Karen", "Moira", "Aaron", "Fred"];
     for (var i = 0; i < names.length; i++) {
       var match = enVoices.find(function (v) { return v.name === names[i]; });
       if (match) return match;
     }
+
+    // Tier 4: Any on-device English voice
+    var local = enVoices.find(function (v) { return v.localService; });
+    if (local) return local;
+
     return enVoices[0] || null;
   }
 
