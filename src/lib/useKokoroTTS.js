@@ -139,7 +139,7 @@ export function useKokoroTTS() {
       audioCtxRef.current = new Ctx();
     }
     if (audioCtxRef.current && audioCtxRef.current.state === "suspended") {
-      audioCtxRef.current.resume().catch(function () {});
+      audioCtxRef.current.resume().catch(function () { /* guard-ok: resume() failure is non-critical; speak() handles suspended ctx */ });
     }
 
     if (!_tts && stateRef.current === "idle") {
