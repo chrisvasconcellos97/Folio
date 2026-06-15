@@ -1273,6 +1273,7 @@ export function CadenceHub({
   items,
   cadences,
   projects,
+  deptProjects,
   contacts,
   addContact,
   addMeeting,
@@ -2069,6 +2070,7 @@ export function CadenceHub({
       brief={isPersonCadence ? (portfolioBrief || null) : cadence.pip_brief}
       briefAt={isPersonCadence ? null : cadence.pip_brief_at}
       projects={activeProjects}
+      deptProjects={deptProjects ? deptProjects.filter(function (p) { return p.status !== "complete"; }) : undefined}
       openItems={openItems}
       contacts={rosterContacts || []}
       contactAliases={contactAliases || []}

@@ -288,6 +288,7 @@ export function CadenceMeetingMode({
   brief,
   briefAt,
   projects,
+  deptProjects,
   openItems,
   contacts,
   contactAliases,
@@ -315,6 +316,8 @@ export function CadenceMeetingMode({
   var [discussedItemIds,    setDiscussedItemIds]    = useState([]);
   var [mentionedProjectIds, setMentionedProjectIds] = useState([]);
   var [mentionedItemIds,    setMentionedItemIds]    = useState([]);
+  var [projectScope, setProjectScope]              = useState("all"); // "all" | "dept"
+  var effectiveProjects = (deptProjects && projectScope === "dept") ? deptProjects : (projects || []);
   // Voice dictation state
   var [recording, setRecording]         = useState(false);
   var recognitionRef                    = useRef(null);
@@ -597,7 +600,7 @@ export function CadenceMeetingMode({
     return i.due_date && i.due_date < new Date().toISOString().slice(0, 10);
   }).length;
   var projectHealth = (function () {
-    var list = projects || [];
+    var list = effectiveProjects;
     if (!list.length) return null;
     var atRisk = list.filter(function (p) {
       return p.status === "blocked" || p.status === "on_hold" ||
@@ -633,12 +636,33 @@ export function CadenceMeetingMode({
   }
 
   function renderProjectCards() {
-    if ((projects || []).length === 0) {
-      return <div style={{ fontSize: 11, color: C.textMuted }}>No active projects.</div>;
+    var scopeToggle = deptProjects ? (
+      <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
+        {[{ key: "dept", label: "This dept" }, { key: "all", label: "All" }].map(function (opt) {
+          var active = projectScope === opt.key;
+          return (
+            <button key={opt.key} type="button"
+              onClick={function () { setProjectScope(opt.key); }}
+              style={{
+                padding: "3px 10px", borderRadius: 5, fontSize: 11,
+                fontFamily: MONO, cursor: "pointer",
+                border: "1px solid " + (active ? C.accent : C.rule),
+                background: active ? C.accentFaint : "transparent",
+                color: active ? C.accent : C.textMuted,
+                fontWeight: active ? 600 : 400,
+              }}
+            >{opt.label}</button>
+          );
+        })}
+      </div>
+    ) : null;
+    if (effectiveProjects.length === 0) {
+      return <>{scopeToggle}<div style={{ fontSize: 11, color: C.textMuted }}>No active projects.</div></>;
     }
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {(projects || []).map(function (p) {
+        {scopeToggle}
+        {effectiveProjects.map(function (p) {
           return (
             <MeetingProjectCard
               key={p.id}
@@ -950,7 +974,7 @@ export function CadenceMeetingMode({
           {!sidebarCollapsed && (
             <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 28px 16px" }}>
               {renderAgenda()}
-              <SidebarSection title="Projects — mark ✦ discussed to add notes" count={(projects || []).length}>
+              <SidebarSection title="Projects — mark ✦ discussed to add notes" count={effectiveProjects.length}>
                 {renderProjectCards()}
               </SidebarSection>
               <CollapsibleSection
@@ -1106,7 +1130,7 @@ export function CadenceMeetingMode({
               </div>
               {(function () {
                 var todayStr = new Date().toISOString().slice(0, 10);
-                var stuckCount = (projects || []).filter(function (p) {
+                var stuckCount = effectiveProjects.filter(function (p) {
                   return p.status === "blocked" ||
                     (p.expected_complete_date && p.expected_complete_date < todayStr && p.status !== "complete");
                 }).length;
@@ -1165,7 +1189,7 @@ export function CadenceMeetingMode({
               marginTop: 8,
             }}>
               {renderAgenda()}
-              <SidebarSection title="Projects — mark ✦ discussed to add notes" count={(projects || []).length}>
+              <SidebarSection title="Projects — mark ✦ discussed to add notes" count={effectiveProjects.length}>
                 {renderProjectCards()}
               </SidebarSection>
               <CollapsibleSection

@@ -435,6 +435,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
         items={items}
         cadences={cadences}
         projects={hubProjects}
+        deptProjects={isInternalTeam ? activeProjects : undefined}
         contacts={contacts}
         addContact={addContact}
         addMeeting={addMeeting}
