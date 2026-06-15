@@ -11,7 +11,6 @@ import { getNextOccurrence, formatTime } from "../../lib/cadenceUtils";
 import { useAccountSnapshots } from "../../hooks/useAccountSnapshots";
 import { useOperatorReport } from "../../hooks/useOperatorReport";
 import { OperatorHub } from "./OperatorHub";
-import { CheckInCard } from "./CheckInCard";
 import { generateCheckInQuestions } from "../../lib/checkIn";
 import { callPortfolioBriefPip } from "../../lib/pip";
 import { isProjectComplete } from "../../lib/gaugeStatus";
@@ -1600,15 +1599,6 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
           </div>
         </div>
       </div>
-
-      {briefPhase === "idle" && (
-        <CheckInCard
-          questions={checkInQuestions}
-          receipts={checkInReceipts}
-          onAnswer={handleCheckInAnswer}
-          isMobile={isMobile}
-        />
-      )}
 
       {/* ── Hub carousel — 6 cards in a sliding stage (hidden when done) ── */}
       {briefPhase !== "done" && (
