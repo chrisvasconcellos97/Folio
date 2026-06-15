@@ -86,44 +86,57 @@ export function AuthView({ onSignIn, onSignUp }) {
         minHeight: "100vh",
         background: C.bg,
         display: "flex",
+        flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
+        padding: "32px 20px",
         position: "relative",
-        overflow: "hidden",
+        overflowY: "auto",
+        overflowX: "hidden",
       }}
     >
       {/* Hex lattice watermark */}
       <HexField peak={0.06} />
 
-      {/* Giant Pip — fills most of the viewport, ring spinning behind the card */}
+      {/* Pip orb — big, centered, above the card */}
+      <PipOrb
+        size="xxl"
+        style={{
+          flexShrink: 0,
+          width:     "clamp(200px, 38vmin, 280px)",
+          height:    "clamp(200px, 38vmin, 280px)",
+          boxShadow: "0 0 120px var(--accent-shadow)",
+          position: "relative",
+          zIndex: 1,
+        }}
+      />
+
+      {/* Card — Folios title as header, form below, no overlap with orb */}
       <div
         style={{
-          position: "absolute",
-          inset: 0,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          pointerEvents: "none",
+          marginTop: 28,
+          width: "100%",
+          maxWidth: 380,
+          background: C.bgCard,
+          border: "1px solid " + C.border,
+          borderRadius: 20,
+          boxShadow: "0 4px 48px rgba(0,0,0,0.45)",
+          overflow: "hidden",
+          position: "relative",
+          zIndex: 1,
         }}
       >
-        <PipOrb
-          size="xxl"
+        {/* Card header — wordmark */}
+        <div
           style={{
-            width:     "min(80vw, 80vh)",
-            height:    "min(80vw, 80vh)",
-            boxShadow: "0 0 160px var(--accent-shadow)",
+            textAlign: "center",
+            padding: "28px 24px 22px",
+            borderBottom: "1px solid " + C.border,
           }}
-        />
-      </div>
-
-      {/* Login panel — floats in the center of Pip's ring */}
-      <div style={{ position: "relative", zIndex: 10, width: "100%", maxWidth: 340, padding: "0 20px" }}>
-
-        {/* Wordmark */}
-        <div style={{ textAlign: "center", marginBottom: 22 }}>
+        >
           <div
             style={{
-              fontSize: 38,
+              fontSize: 32,
               fontWeight: 700,
               fontFamily: "'Fraunces', Georgia, serif",
               color: C.text,
@@ -148,16 +161,9 @@ export function AuthView({ onSignIn, onSignUp }) {
           </div>
         </div>
 
-        {/* Card */}
-        <div
-          style={{
-            background: C.bgCard,
-            border: "1px solid " + C.border,
-            borderRadius: 16,
-            padding: "24px 24px 28px",
-            boxShadow: "0 4px 48px rgba(0,0,0,0.5)",
-          }}
-        >
+        {/* Card form body */}
+        <div style={{ padding: "24px 24px 28px" }}>
+
           {/* Mode toggle */}
           <div
             style={{
@@ -302,21 +308,22 @@ export function AuthView({ onSignIn, onSignUp }) {
               {loading ? "..." : (mode === "login" ? "Sign In" : "Create Account")}
             </AmberBtn>
           </form>
-        </div>
+        </div>{/* end card form body */}
+      </div>{/* end card */}
 
-        {/* Pip footer */}
-        <div
-          style={{
-            textAlign: "center",
-            marginTop: 20,
-            fontSize: 11,
-            color: C.textMuted,
-            fontFamily: "'Inter', system-ui, sans-serif",
-            letterSpacing: "0.04em",
-          }}
-        >
-          Pip is standing by.
-        </div>
+      {/* Footer */}
+      <div
+        style={{
+          marginTop: 20,
+          fontSize: 11,
+          color: C.textMuted,
+          fontFamily: "'Inter', system-ui, sans-serif",
+          letterSpacing: "0.04em",
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
+        Pip is standing by.
       </div>
     </div>
   );
