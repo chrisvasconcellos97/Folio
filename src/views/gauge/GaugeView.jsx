@@ -1061,7 +1061,7 @@ export function GaugeView({
               style={{
                 position: "relative",
                 overflow: "hidden",
-                background: C.surface,
+                background: C.surface2,
                 border: "1px solid " + (p.status === "blocked" ? C.statusBlocked.border : isDraft ? C.statusDraft.border : C.rule),
                 borderLeft: leftEdge ? "3px solid " + leftEdge : "1px solid " + (isDraft ? C.statusDraft.border : C.rule),
                 borderRadius: 8,

@@ -459,7 +459,9 @@ export function LeaderProjectsView({ projects, accounts, members, userEmail, onO
                               fontFamily: MONO, fontSize: 10,
                               color: s.assignee_email ? C.textSoft : C.textFaint,
                             }}>
-                              {s.assignee_email || "—"}
+                              {s.assignee_email
+  ? (s.assignee_email.includes("@") ? s.assignee_email.split("@")[0] : s.assignee_email)
+  : "—"}
                             </div>
                             <div style={{
                               fontFamily: MONO, fontSize: 10,

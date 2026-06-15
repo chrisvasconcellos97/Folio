@@ -47,10 +47,31 @@ export function useAutoBullet({ value, onChange, enabled }) {
   var INDENT = "    "; // four spaces per nesting level — visibly deeper sub-bullets
 
   var onKeyDown = useCallback(function (e) {
-    if (!enabledRef.current) return;
     var ta    = e.target;
     var val   = valueRef.current || "";
     var caret = ta.selectionStart;
+
+    // Auto-capitalize runs regardless of bullet mode — phone-keyboard behavior.
+    // A single lowercase letter typed at the start of a bullet/line, the very
+    // start of the note, or right after sentence-ending punctuation + space
+    // becomes uppercase. Plain text in, plain text out.
+    if (/^[a-z]$/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey &&
+        ta.selectionStart === ta.selectionEnd) {
+      var before = val.slice(0, caret);
+      var atSentenceStart =
+        before === "" ||
+        /(^|\n)\s*(• )?$/.test(before) ||           // start of line / bullet
+        /[.!?]["')\]]?\s+$/.test(before);            // after . ! ? + space
+      if (atSentenceStart) {
+        e.preventDefault();
+        var cap  = e.key.toUpperCase();
+        var capVal = val.slice(0, caret) + cap + val.slice(ta.selectionEnd);
+        emit(ta, capVal, caret + 1);
+        return;
+      }
+    }
+
+    if (!enabledRef.current) return;
 
     // Tab / Shift+Tab → indent / outdent (sub-bullets). Captured so focus
     // never leaves the notepad while taking notes.
@@ -127,26 +148,6 @@ export function useAutoBullet({ value, onChange, enabled }) {
       var next   = val.slice(0, caret) + insert + val.slice(caret);
       emit(ta, next, caret + insert.length);
       return;
-    }
-
-    // Auto-capitalize at sentence starts — phone-keyboard behavior. A single
-    // lowercase letter typed at the start of a bullet/line, the very start of
-    // the note, or right after sentence-ending punctuation + space becomes
-    // uppercase. Plain text in, plain text out.
-    if (/^[a-z]$/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey &&
-        ta.selectionStart === ta.selectionEnd) {
-      var before = val.slice(0, caret);
-      var atSentenceStart =
-        before === "" ||
-        /(^|\n)\s*(• )?$/.test(before) ||           // start of line / bullet
-        /[.!?]["')\]]?\s+$/.test(before);            // after . ! ? + space
-      if (atSentenceStart) {
-        e.preventDefault();
-        var cap  = e.key.toUpperCase();
-        var capVal = val.slice(0, caret) + cap + val.slice(ta.selectionEnd);
-        emit(ta, capVal, caret + 1);
-        return;
-      }
     }
 
     if (e.key === "Backspace" && ta.selectionStart === ta.selectionEnd) {

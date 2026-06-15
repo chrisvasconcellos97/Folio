@@ -1132,6 +1132,8 @@ export function CadenceMeetingMode({
                 onKeyDown={bulletProps.onKeyDown}
                 onFocus={bulletProps.onFocus}
                 onPaste={bulletProps.onPaste}
+                autoCapitalize="sentences"
+                autoCorrect="on"
                 placeholder="Start typing — Pip will summarize when you end the meeting…"
                 style={{
                   flex: 1, width: "100%",

@@ -31,7 +31,10 @@ function contactLabel(c) {
  *   style        — passed to the control
  */
 export function PersonPicker({ value, onChange, members, contacts, accounts, accountIds, noneLabel, contactValue, style }) {
-  var mems = members || [];
+  var mems = (members || []).filter(function (m, i, arr) {
+    var key = m.email || m.invited_email || m.id || i;
+    return arr.findIndex(function (x) { return (x.email || x.invited_email || x.id) === key; }) === i;
+  });
   var cons = contacts || [];
   var accts = accounts || [];
   var primaryIds = (accountIds || []).filter(Boolean);
@@ -75,7 +78,10 @@ export function PersonPicker({ value, onChange, members, contacts, accounts, acc
 
   var known = useMemo(function () {
     var k = {};
-    mems.forEach(function (m) { if (m.email) k[m.email] = true; });
+    mems.forEach(function (m) {
+      if (m.email) k[m.email] = true;
+      if (m.invited_email) k[m.invited_email] = true;
+    });
     cons.forEach(function (c) { k[valueOf(c)] = true; });
     return k;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -131,7 +137,7 @@ export function PersonPicker({ value, onChange, members, contacts, accounts, acc
           <optgroup key={gi} label={g.label}>
             {g.members
               ? g.members.map(function (m) {
-                  return <option key={m.email || m.id} value={m.email || ""}>{memberLabel(m)}</option>;
+                  return <option key={m.email || m.invited_email || m.id} value={m.email || m.invited_email || ""}>{memberLabel(m)}</option>;
                 })
               : g.contacts.map(function (c) {
                   return <option key={c.id} value={valueOf(c)}>{contactLabel(c)}</option>;
