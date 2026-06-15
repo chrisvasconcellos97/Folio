@@ -26,9 +26,22 @@ export function AccountPicker({ accounts, value, onChange, placeholder, allowNon
   // name instead of falling back to the placeholder.
   var selectedAccount = value ? (accounts || []).find(function (a) { return a.id === value; }) : null;
 
+  var hasDepts    = activeAccounts.some(function (a) { return a.account_type === "internal_team"; });
+  var hasPartners = activeAccounts.some(function (a) { return a.account_type === "partner"; });
+  var showTabs    = hasDepts || hasPartners;
+
+  function typeOf(a) {
+    if (a.account_type === "internal_team") return "department";
+    if (a.account_type === "partner")       return "partner";
+    return "account";
+  }
+
   var [open, setOpen]         = useState(false);
   var [query, setQuery]       = useState("");
   var [focused, setFocused]   = useState(-1); // -1 = none, 0 = noneOption (if allowNone), else 1-based into filtered
+  var [typeFilter, setTypeFilter] = useState(function () {
+    return selectedAccount ? typeOf(selectedAccount) : "account";
+  });
 
   var inputRef    = useRef(null);
   var containerRef = useRef(null);
@@ -47,15 +60,19 @@ export function AccountPicker({ accounts, value, onChange, placeholder, allowNon
     return function () { document.removeEventListener("mousedown", handleClick); };
   }, [open]);
 
-  // Filtered list
-  var filtered = query.trim()
-    ? activeAccounts.filter(function (a) { return (a.name || "").toLowerCase().includes(query.toLowerCase()); })
+  // Filtered list — type-scoped first, then by search query
+  var typeFiltered = showTabs
+    ? activeAccounts.filter(function (a) { return typeOf(a) === typeFilter; })
     : activeAccounts;
+  var filtered = query.trim()
+    ? typeFiltered.filter(function (a) { return (a.name || "").toLowerCase().includes(query.toLowerCase()); })
+    : typeFiltered;
 
   function openPicker() {
     setOpen(true);
     setQuery("");
     setFocused(-1);
+    setTypeFilter(selectedAccount ? typeOf(selectedAccount) : "account");
     // focus input on next tick
     setTimeout(function () { if (inputRef.current) inputRef.current.focus(); }, 0);
   }
@@ -162,6 +179,40 @@ export function AccountPicker({ accounts, value, onChange, placeholder, allowNon
   // Open state: input + dropdown
   return (
     <div ref={containerRef} style={Object.assign({ position: "relative" }, style)}>
+      {/* Workspace type tabs */}
+      {showTabs && (
+        <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
+          {[
+            { key: "account",    label: "Accounts" },
+            hasDepts    && { key: "department", label: "Departments" },
+            hasPartners && { key: "partner",    label: "Partners" },
+          ].filter(Boolean).map(function (tab) {
+            var active = typeFilter === tab.key;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={function () { setTypeFilter(tab.key); setQuery(""); setFocused(-1); }}
+                style={{
+                  flex: 1,
+                  padding: "5px 0",
+                  borderRadius: 6,
+                  border: "1px solid " + (active ? C.accent : C.rule),
+                  background: active ? C.accentFaint : "transparent",
+                  color: active ? C.accent : C.textMuted,
+                  fontSize: 11,
+                  fontFamily: MONO,
+                  cursor: "pointer",
+                  fontWeight: active ? 600 : 400,
+                }}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Search input */}
       <input
         ref={inputRef}
