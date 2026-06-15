@@ -89,86 +89,82 @@ export function AuthView({ onSignIn, onSignUp }) {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        padding: "32px 20px",
+        padding: "40px 20px",
         position: "relative",
         overflowY: "auto",
         overflowX: "hidden",
+        gap: 0,
       }}
     >
       {/* Hex lattice watermark */}
-      <HexField peak={0.06} />
+      <HexField peak={0.07} />
 
-      {/* Pip orb — big, centered, above the card */}
+      {/* Wordmark — above Pip, sets context */}
+      <div style={{ textAlign: "center", marginBottom: 24, position: "relative", zIndex: 1 }}>
+        <div
+          style={{
+            fontSize: 36,
+            fontWeight: 700,
+            fontFamily: "'Fraunces', Georgia, serif",
+            color: C.text,
+            letterSpacing: "-0.01em",
+            lineHeight: 1,
+          }}
+        >
+          Folios
+        </div>
+        <div
+          style={{
+            fontSize: 10,
+            color: C.textMuted,
+            letterSpacing: "0.18em",
+            marginTop: 8,
+            textTransform: "uppercase",
+            fontFamily: "'Inter', system-ui, sans-serif",
+            fontWeight: 500,
+          }}
+        >
+          Account Management
+        </div>
+      </div>
+
+      {/* Pip — the face of the app */}
       <PipOrb
         size="xxl"
         style={{
           flexShrink: 0,
-          width:     "clamp(200px, 38vmin, 280px)",
-          height:    "clamp(200px, 38vmin, 280px)",
+          width:     "clamp(200px, 36vmin, 260px)",
+          height:    "clamp(200px, 36vmin, 260px)",
           boxShadow: "0 0 120px var(--accent-shadow)",
           position: "relative",
           zIndex: 1,
         }}
       />
 
-      {/* Card — Folios title as header, form below, no overlap with orb */}
+      {/* Glass login card */}
       <div
         style={{
           marginTop: 28,
           width: "100%",
-          maxWidth: 380,
-          background: C.bgCard,
-          border: "1px solid " + C.border,
+          maxWidth: 360,
+          background: "var(--c-auth-glass)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          border: "1px solid " + C.accentLine,
           borderRadius: 20,
-          boxShadow: "0 4px 48px rgba(0,0,0,0.45)",
-          overflow: "hidden",
+          boxShadow: "0 0 0 1px " + C.accentSubtle + " inset, 0 8px 40px rgba(0,0,0,0.35)",
           position: "relative",
           zIndex: 1,
+          overflow: "hidden",
         }}
       >
-        {/* Card header — wordmark */}
-        <div
-          style={{
-            textAlign: "center",
-            padding: "28px 24px 22px",
-            borderBottom: "1px solid " + C.border,
-          }}
-        >
-          <div
-            style={{
-              fontSize: 32,
-              fontWeight: 700,
-              fontFamily: "'Fraunces', Georgia, serif",
-              color: C.text,
-              letterSpacing: "-0.01em",
-              lineHeight: 1,
-            }}
-          >
-            Folios
-          </div>
-          <div
-            style={{
-              fontSize: 10,
-              color: C.textMuted,
-              letterSpacing: "0.18em",
-              marginTop: 8,
-              textTransform: "uppercase",
-              fontFamily: "'Inter', system-ui, sans-serif",
-              fontWeight: 500,
-            }}
-          >
-            Account Management
-          </div>
-        </div>
-
-        {/* Card form body */}
         <div style={{ padding: "24px 24px 28px" }}>
 
           {/* Mode toggle */}
           <div
             style={{
               display: "flex",
-              background: "rgba(0,0,0,0.25)",
+              background: "rgba(0,0,0,0.18)",
               borderRadius: 10,
               padding: 3,
               marginBottom: 24,
@@ -308,13 +304,18 @@ export function AuthView({ onSignIn, onSignUp }) {
               {loading ? "..." : (mode === "login" ? "Sign In" : "Create Account")}
             </AmberBtn>
           </form>
-        </div>{/* end card form body */}
-      </div>{/* end card */}
+
+          {/* Hex signature — ties the card into Pip's visual language */}
+          <div style={{ position: "absolute", bottom: 12, right: 14, opacity: 0.7 }}>
+            <HexSignature cells={3} peak={0.28} cell={5} />
+          </div>
+        </div>
+      </div>{/* end glass card */}
 
       {/* Footer */}
       <div
         style={{
-          marginTop: 20,
+          marginTop: 18,
           fontSize: 11,
           color: C.textMuted,
           fontFamily: "'Inter', system-ui, sans-serif",
