@@ -105,17 +105,6 @@ body {
   animation: pulse-dot 2.4s ease-in-out infinite;
 }
 
-/* ── arm svg ──────────────────────────────────────────── */
-.arm-zone {
-  position: relative;
-  width: 100%; max-width: 480px;
-  height: 100px;
-  display: flex; align-items: flex-start; justify-content: center;
-  flex-shrink: 0; z-index: 4;
-  pointer-events: none;
-}
-.arm-svg { width: 100%; height: 100%; overflow: visible; }
-
 /* ── carousel wrapper ────────────────────────────────── */
 .carousel-outer {
   position: relative; z-index: 5;
@@ -157,8 +146,32 @@ body {
 .card.active {
   transform: scale(1);
   opacity: 1;
-  box-shadow: 0 0 0 1.5px var(--accent-border), 0 8px 40px rgba(0,0,0,0.5), 0 0 24px rgba(74,155,130,0.18);
-  border-color: var(--accent-border);
+  border-color: transparent;
+  box-shadow:
+    0 0 0 1.5px rgba(74,155,130,0.9),
+    0 0 0 3px   rgba(74,155,130,0.25),
+    0 0 18px 4px rgba(74,155,130,0.35),
+    0 0 48px 12px rgba(74,155,130,0.12),
+    0 10px 44px rgba(0,0,0,0.55);
+  animation: card-ring-pulse 4.8s ease-in-out infinite;
+}
+@keyframes card-ring-pulse {
+  0%,100% {
+    box-shadow:
+      0 0 0 1.5px rgba(74,155,130,0.85),
+      0 0 0 3px   rgba(74,155,130,0.2),
+      0 0 14px 3px rgba(74,155,130,0.28),
+      0 0 38px 10px rgba(74,155,130,0.08),
+      0 10px 44px rgba(0,0,0,0.55);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1.5px rgba(74,155,130,1),
+      0 0 0 4px   rgba(74,155,130,0.32),
+      0 0 26px 8px rgba(74,155,130,0.46),
+      0 0 60px 18px rgba(74,155,130,0.18),
+      0 10px 44px rgba(0,0,0,0.55);
+  }
 }
 
 /* card accent borders by type */
@@ -326,13 +339,6 @@ body {
   0%,100% { opacity: 0.7; }
   50%      { opacity: 1; }
 }
-@keyframes arm-pulse {
-  0%,100% { opacity: 0.82; }
-  50%      { opacity: 1; }
-}
-.arm-body { animation: arm-pulse 4.8s ease-in-out infinite; }
-.arm-aura { animation: arm-pulse 4.8s ease-in-out infinite; animation-delay: -1.2s; }
-
 /* ── responsive tweaks ───────────────────────────────── */
 @media (max-width: 400px) {
   :root { --card-w: 290px; }
@@ -488,70 +494,6 @@ body {
   </div>
 </div>
 
-<!-- organic arm — filled tapered goo tentacle -->
-<div class="arm-zone">
-  <svg class="arm-svg" viewBox="0 0 480 100" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <!-- outer glow halo -->
-      <filter id="arm-halo" x="-80%" y="-10%" width="260%" height="120%">
-        <feGaussianBlur in="SourceAlpha" stdDeviation="9" result="blur"/>
-        <feFlood flood-color="#5bbfa0" flood-opacity="0.9" result="flood"/>
-        <feComposite in="flood" in2="blur" operator="in" result="glow"/>
-        <feMerge><feMergeNode in="glow"/><feMergeNode in="SourceGraphic"/></feMerge>
-      </filter>
-      <!-- turbulence displacement — organic wavy edges -->
-      <filter id="arm-turb" x="-30%" y="-5%" width="160%" height="110%">
-        <feTurbulence type="fractalNoise" baseFrequency="0.028 0.014" numOctaves="4" seed="5" result="noise">
-          <animate attributeName="seed" values="5;11;17;5" dur="9.6s" repeatCount="indefinite"/>
-        </feTurbulence>
-        <feDisplacementMap in="SourceGraphic" in2="noise" scale="9" xChannelSelector="R" yChannelSelector="G"/>
-      </filter>
-      <!-- main body gradient: bright at top (exit), fades to nothing at tip -->
-      <linearGradient id="goo-fill" x1="0.5" y1="0" x2="0.5" y2="1">
-        <stop offset="0%"   stop-color="#d0fef0" stop-opacity="1"/>
-        <stop offset="18%"  stop-color="#5bbfa0" stop-opacity="0.96"/>
-        <stop offset="55%"  stop-color="#3a8870" stop-opacity="0.78"/>
-        <stop offset="88%"  stop-color="#1e5240" stop-opacity="0.42"/>
-        <stop offset="100%" stop-color="#0d3328" stop-opacity="0.08"/>
-      </linearGradient>
-      <!-- soft aura gradient -->
-      <linearGradient id="goo-aura" x1="0.5" y1="0" x2="0.5" y2="1">
-        <stop offset="0%"   stop-color="#9ff0d2" stop-opacity="0.55"/>
-        <stop offset="60%"  stop-color="#4a9b82" stop-opacity="0.18"/>
-        <stop offset="100%" stop-color="#4a9b82" stop-opacity="0"/>
-      </linearGradient>
-      <!-- inner core highlight -->
-      <linearGradient id="goo-core" x1="0.5" y1="0" x2="0.5" y2="1">
-        <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.55"/>
-        <stop offset="45%"  stop-color="#ffffff" stop-opacity="0.18"/>
-        <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
-      </linearGradient>
-    </defs>
-
-    <!-- 1. Wide soft aura — behind everything -->
-    <path id="arm-aura" class="arm-aura"
-      fill="url(#goo-aura)"
-      filter="url(#arm-halo)"
-      opacity="0.7"
-      d="M 218 2 C 208 22, 206 48, 212 72 C 217 86, 228 96, 240 99 C 252 96, 263 86, 268 72 C 274 48, 272 22, 262 2 Z"/>
-
-    <!-- 2. Main body — filled, tapered, turbulence distorted -->
-    <path id="arm-body" class="arm-body"
-      fill="url(#goo-fill)"
-      filter="url(#arm-turb)"
-      d="M 229 0 C 222 18, 220 40, 223 62 C 226 78, 233 90, 240 97 C 247 90, 254 78, 257 62 C 260 40, 258 18, 251 0 Z"/>
-
-    <!-- 3. Bright inner core — narrow spine -->
-    <path id="arm-core"
-      fill="url(#goo-core)"
-      d="M 237 0 C 234 20, 233 44, 236 66 C 237 80, 239 90, 240 97 C 241 90, 243 80, 244 66 C 247 44, 246 20, 243 0 Z"/>
-
-    <!-- 4. Arrival bloom at card top -->
-    <ellipse id="arm-tip" cx="240" cy="98" rx="22" ry="3"
-      fill="#5bbfa0" opacity="0.45"
-      filter="url(#arm-halo)"/>
-  </svg>
-</div>
 
 <!-- carousel -->
 <div class="carousel-outer">
@@ -738,12 +680,6 @@ body {
   <p style="margin-top:10px;color:#6b7280;font-size:12px;">Admin still hasn't returned the MSO contract. It's been 8 days. Do you want me to draft a chase note?</p>
 </div>
 
-<style>
-/* arm transition for card-swap */
-.arm-zone { transition: none; }
-.arm-svg .arm-path { transition: d 0.45s ease; }
-</style>
-
 <script>
 // ── carousel state ──────────────────────────────────────────
 const CARDS = 5;
@@ -817,51 +753,6 @@ function renderCarousel() {
   const statusEl = document.querySelector('.pip-status span');
   if (statusEl) statusEl.textContent = `✦ Pip · ${CARD_LABELS[active]}`;
 
-  // animate arm target position
-  updateArm();
-}
-
-// arm shapes — filled tapered goo per card
-// Each entry: { body, aura, core, tipCx }
-// body/aura/core = closed filled paths; tipCx = ellipse center-x
-const ARM_SHAPES = [
-  // 0: YourWord — gentle left belly
-  { body: "M 229 0 C 220 18, 217 40, 221 62 C 225 78, 232 90, 240 97 C 248 90, 256 78, 259 62 C 263 40, 260 18, 251 0 Z",
-    aura: "M 216 2 C 205 22, 204 48, 210 72 C 216 86, 226 96, 240 99 C 254 96, 264 86, 270 72 C 276 48, 275 22, 264 2 Z",
-    core: "M 237 0 C 233 20, 231 44, 235 66 C 237 80, 239 90, 240 97 C 241 90, 243 80, 245 66 C 249 44, 247 20, 243 0 Z",
-    tipCx: 238 },
-  // 1: Today — subtle right belly
-  { body: "M 230 0 C 226 18, 226 40, 228 62 C 231 78, 236 90, 240 97 C 248 90, 256 78, 258 62 C 262 40, 260 18, 252 0 Z",
-    aura: "M 218 2 C 214 22, 214 48, 218 72 C 223 86, 232 96, 240 99 C 252 96, 262 86, 268 72 C 274 48, 272 22, 264 2 Z",
-    core: "M 237 0 C 235 20, 234 44, 237 66 C 238 80, 239 90, 240 97 C 241 90, 243 80, 245 66 C 248 44, 247 20, 244 0 Z",
-    tipCx: 241 },
-  // 2: Fires — straight/centered, most intense
-  { body: "M 229 0 C 222 18, 220 40, 223 62 C 226 78, 233 90, 240 97 C 247 90, 254 78, 257 62 C 260 40, 258 18, 251 0 Z",
-    aura: "M 217 2 C 207 22, 206 48, 212 72 C 217 86, 228 96, 240 99 C 252 96, 263 86, 268 72 C 274 48, 273 22, 263 2 Z",
-    core: "M 237 0 C 234 20, 233 44, 236 66 C 237 80, 239 90, 240 97 C 241 90, 243 80, 244 66 C 247 44, 246 20, 243 0 Z",
-    tipCx: 240 },
-  // 3: InFlight — gentle right belly
-  { body: "M 228 0 C 228 18, 232 40, 234 62 C 236 78, 238 90, 240 97 C 248 90, 256 78, 260 62 C 264 40, 262 18, 252 0 Z",
-    aura: "M 218 2 C 218 22, 222 48, 226 72 C 230 86, 234 96, 240 99 C 252 96, 263 86, 268 72 C 274 48, 274 22, 264 2 Z",
-    core: "M 237 0 C 236 20, 238 44, 239 66 C 240 80, 240 90, 240 97 C 241 90, 242 80, 244 66 C 246 44, 247 20, 244 0 Z",
-    tipCx: 242 },
-  // 4: GoodNews — gentle left belly (mirror of 1)
-  { body: "M 228 0 C 220 18, 218 40, 222 62 C 226 78, 232 90, 240 97 C 247 90, 252 78, 255 62 C 258 40, 256 18, 252 0 Z",
-    aura: "M 216 2 C 206 22, 204 48, 210 72 C 215 86, 226 96, 240 99 C 251 96, 260 86, 265 72 C 271 48, 270 22, 260 2 Z",
-    core: "M 237 0 C 233 20, 232 44, 235 66 C 237 80, 238 90, 240 97 C 241 90, 242 80, 244 66 C 247 44, 246 20, 243 0 Z",
-    tipCx: 239 },
-];
-
-function updateArm() {
-  const s = ARM_SHAPES[active] || ARM_SHAPES[2];
-  const body = document.getElementById('arm-body');
-  const aura = document.getElementById('arm-aura');
-  const core = document.getElementById('arm-core');
-  const tip  = document.getElementById('arm-tip');
-  if (body) body.setAttribute('d', s.body);
-  if (aura) aura.setAttribute('d', s.aura);
-  if (core) core.setAttribute('d', s.core);
-  if (tip)  tip.setAttribute('cx', s.tipCx);
 }
 
 function goTo(logicalIndex) {
@@ -910,57 +801,6 @@ document.addEventListener('keydown', e => {
 
 // initial render
 renderCarousel();
-
-// Organic arm wiggle — nudge the control-point numbers with sin waves
-// The turbulence filter handles micro-edge wobble; JS handles slow breathing undulation.
-let armT = 0;
-const ARM_FREQ = (2 * Math.PI) / 4800; // 4.8s cycle
-
-function morphBodyPath(baseD, t) {
-  // Parse all numbers, nudge the 4 belly control points (2nd & 3rd cubic segments)
-  const nums = baseD.match(/-?\d+\.?\d*/g).map(Number).slice(); // copy
-  // The belly of the shape lives roughly at indices 6-11 (left side mid)
-  // and mirrored on the right side. We apply ±offset driven by sin(t).
-  const sway = Math.sin(t) * 3.5;         // ±3.5px side sway
-  const bulge = Math.sin(t * 1.3) * 2.2;  // ±2.2px width breathe
-  // index map for "M L L L C C C C C C Z" style closed path:
-  // [0]=Mx [1]=My  (top-left start of shape, not changed)
-  // We just nudge a handful of x control points by small amounts
-  // to give the impression the goo is pulsing. Keep it subtle.
-  const nudge = (idx, dx) => { if (nums[idx] !== undefined) nums[idx] += dx; };
-  // Mid belly left side
-  nudge(2, -bulge + sway * 0.4);
-  nudge(4, -bulge + sway * 0.6);
-  nudge(6, -bulge * 0.5 + sway * 0.3);
-  // Mid belly right side (later in path)
-  nudge(10, bulge - sway * 0.4);
-  nudge(12, bulge - sway * 0.6);
-  nudge(14, bulge * 0.5 - sway * 0.3);
-  let ri = 0;
-  return baseD.replace(/-?\d+\.?\d*/g, () => nums[ri++].toFixed(2));
-}
-
-let lastArmTime = null;
-function animateArm(timestamp) {
-  if (!lastArmTime) lastArmTime = timestamp;
-  const dt = timestamp - lastArmTime;
-  lastArmTime = timestamp;
-  armT += dt * ARM_FREQ;
-
-  const body = document.getElementById('arm-body');
-  const tip  = document.getElementById('arm-tip');
-  if (!body) { requestAnimationFrame(animateArm); return; }
-
-  const s = ARM_SHAPES[active] || ARM_SHAPES[2];
-  body.setAttribute('d', morphBodyPath(s.body, armT));
-
-  // tip bloom also breathes gently
-  const tipScale = 1 + Math.sin(armT) * 0.15;
-  if (tip) tip.setAttribute('rx', (22 * tipScale).toFixed(1));
-
-  requestAnimationFrame(animateArm);
-}
-requestAnimationFrame(animateArm);
 </script>
 </body>
 </html>
