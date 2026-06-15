@@ -17,10 +17,12 @@ import { callPortfolioBriefPip } from "../../lib/pip";
 import { isProjectComplete } from "../../lib/gaugeStatus";
 import { suggestionLabel } from "../pip/PipCatchUp";
 import { showToast } from "../../components/Toast";
-import { HexField } from "../../lib/hexMotif";
+import { HexField, HexSignature } from "../../lib/hexMotif";
 import { fmtShort } from "../../lib/dateUtils";
 import { InfoCard } from "../../components/InfoCard";
 import { useKokoroTTS } from "../../lib/useKokoroTTS";
+import { HexRingCanvas } from "../../components/HexRingCanvas";
+import { buildCardScript } from "../../lib/buildCardScript";
 
 var SERIF = "'Fraunces', Georgia, serif";
 var INTER = "'Inter', system-ui, sans-serif";
@@ -203,6 +205,16 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
   var [briefNonce, setBriefNonce] = useState(0);
   var briefFiredRef = useRef(false);
   var briefKokoro = useKokoroTTS();
+  var [activeCard, setActiveCard]  = useState(0);
+  var [scriptOpen, setScriptOpen]  = useState(false);
+  var card0Ref         = useRef(null);
+  var card1Ref         = useRef(null);
+  var card2Ref         = useRef(null);
+  var card3Ref         = useRef(null);
+  var card4Ref         = useRef(null);
+  var stageRef         = useRef(null);
+  var transitioningRef = useRef(false);
+  var activeCardRef    = useRef(0);
 
   function handleReadBrief() {
     if (briefKokoro.speaking) {
@@ -1129,13 +1141,137 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
     );
   }
 
-  var callsPanel   = <Panel title="Today's Calls" accent={C.accent}>{todaysCallsBrief()}</Panel>;
-  var burningPanel = <Panel title="Burning"       accent={C.red}>{burningBrief()}</Panel>;
-  var loosePanel   = <Panel title="Loose Ends"    accent={C.yellow}>{looseEndsBrief()}</Panel>;
-  var aheadPanel   = <Panel title="Ahead"         accent={C.accent}>{aheadBrief()}</Panel>;
+  // ── Hub carousel data ─────────────────────────────────────────────────────
+  var sevenDaysAgoISO = useMemo(function () {
+    return new Date(Date.now() - 7 * 86400000).toISOString();
+  }, []);
 
-  var mobileOrder  = [burningPanel, callsPanel, loosePanel, aheadPanel];
-  var desktopOrder = [callsPanel, burningPanel, loosePanel, aheadPanel];
+  var hubActiveProjects = useMemo(function () {
+    return (projects || []).filter(function (p) {
+      return p.status === "in_progress" && !isProjectComplete(p);
+    }).map(function (p) {
+      var stages = p.stages || [];
+      var hasRecent = stages.some(function (s) { return s.completed_at && s.completed_at > sevenDaysAgoISO; });
+      return Object.assign({}, p, { is_stuck: !hasRecent });
+    });
+  }, [projects, sevenDaysAgoISO]);
+
+  var hubRecentWins = useMemo(function () {
+    return (projects || []).filter(function (p) {
+      return isProjectComplete(p) && p.updated_at && p.updated_at > sevenDaysAgoISO;
+    }).map(function (p) {
+      var acc = accountById[p.account_id];
+      return { left: p.title || "Project", sub: acc ? acc.name : null };
+    });
+  }, [projects, accountById, sevenDaysAgoISO]);
+
+  var hubTodayItems = useMemo(function () {
+    var calls = todaysCalls.map(function (c) {
+      return { label: c.account.name, time: c.cadence.meeting_time || null };
+    });
+    var sched = todaysScheduled.map(function (m) {
+      var acct = accountById[m.account_id];
+      return { label: acct ? acct.name : "Meeting", time: m.meeting_time || null };
+    });
+    return calls.concat(sched);
+  }, [todaysCalls, todaysScheduled, accountById]);
+
+  var cardScript = useMemo(function () {
+    return buildCardScript({
+      wordCommitments: wordCommitments,
+      wordWaitingOn:   wordWaitingOn,
+      todayItems:      hubTodayItems,
+      fireItems:       burningRows,
+      activeProjects:  hubActiveProjects,
+      winItems:        hubRecentWins,
+    });
+  }, [wordCommitments, wordWaitingOn, hubTodayItems, burningRows, hubActiveProjects, hubRecentWins]);
+
+  var cardRefsArr = [card0Ref, card1Ref, card2Ref, card3Ref, card4Ref];
+
+  function goToCard(next) {
+    if (transitioningRef.current) return;
+    var prev = activeCardRef.current;
+    if (next === prev) return;
+    transitioningRef.current = true;
+    activeCardRef.current = next;
+    setActiveCard(next);
+    var prevEl = cardRefsArr[prev] ? cardRefsArr[prev].current : null;
+    var nextEl = cardRefsArr[next] ? cardRefsArr[next].current : null;
+    if (!prevEl || !nextEl) { transitioningRef.current = false; return; }
+    var dir = next > prev ? 1 : -1;
+    nextEl.style.transition = "none";
+    nextEl.style.transform = "translateX(" + (dir * 105) + "%)";
+    nextEl.style.opacity = "0";
+    nextEl.getBoundingClientRect(); // force reflow
+    nextEl.style.transition = "transform 0.52s cubic-bezier(0.22,1,0.36,1), opacity 0.52s ease";
+    prevEl.style.transition = "transform 0.52s cubic-bezier(0.22,1,0.36,1), opacity 0.52s ease";
+    nextEl.style.transform = "translateX(0)";
+    nextEl.style.opacity = "1";
+    prevEl.style.transform = "translateX(" + (-dir * 105) + "%)";
+    prevEl.style.opacity = "0";
+    setTimeout(function () { transitioningRef.current = false; }, 520);
+  }
+  function stepCard(dir) {
+    goToCard(((activeCardRef.current + dir) + 5) % 5);
+  }
+
+  // Card anatomy style constants — defined here so they pick up live C.* tokens
+  var CARD_SURFACE = {
+    position: "absolute", inset: 0,
+    background: C.surface, border: "1px solid " + C.rule,
+    borderRadius: 16, overflow: "hidden",
+  };
+  var CARD_BODY  = { position: "relative", padding: "18px 18px 44px", height: "100%", boxSizing: "border-box", overflowY: "auto" };
+  var CARD_HDR   = { display: "flex", alignItems: "center", gap: 8, marginBottom: 12 };
+  var CARD_LBL   = { fontFamily: MONO, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: C.accent };
+  var BADGE      = { fontFamily: MONO, fontSize: 10, fontWeight: 700, color: C.accent, border: "1px solid " + C.accent, borderRadius: 999, padding: "1px 7px", minWidth: 20, textAlign: "center" };
+  var HUB_ROW    = { display: "flex", alignItems: "center", gap: 8, padding: "7px 0", borderBottom: "1px solid " + C.ruleSoft, flexWrap: "wrap" };
+  var EMPTY_MSG  = { fontFamily: INTER, fontSize: 13, color: C.textMuted, lineHeight: 1.55 };
+  var DONE_BTN   = { background: C.accentFaint, border: "1px solid " + C.accentLine, borderRadius: 6, padding: "3px 9px", fontFamily: MONO, fontSize: 10, color: C.accent, cursor: "pointer" };
+  var CHASE_BTN  = { background: C.accentFaint, border: "1px solid " + C.accentLine, borderRadius: 6, padding: "3px 9px", fontFamily: MONO, fontSize: 10, color: C.accent, cursor: "pointer", whiteSpace: "nowrap" };
+
+  // Card init: position all cards at mount
+  useEffect(function () {
+    cardRefsArr.forEach(function (ref, i) {
+      if (!ref.current) return;
+      ref.current.style.transition = "none";
+      ref.current.style.transform = i === 0 ? "translateX(0)" : "translateX(105%)";
+      ref.current.style.opacity   = i === 0 ? "1" : "0";
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keyboard navigation (skip inside inputs/textareas)
+  useEffect(function () {
+    function handleKey(e) {
+      if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
+      if (e.key === "ArrowLeft")  stepCard(-1);
+      else if (e.key === "ArrowRight") stepCard(1);
+    }
+    window.addEventListener("keydown", handleKey);
+    return function () { window.removeEventListener("keydown", handleKey); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Touch swipe on the stage
+  useEffect(function () {
+    var el = stageRef.current;
+    if (!el) return;
+    var startX = null;
+    function onTouchStart(e) { startX = e.touches[0].clientX; }
+    function onTouchEnd(e) {
+      if (startX === null) return;
+      var dx = e.changedTouches[0].clientX - startX;
+      startX = null;
+      if (Math.abs(dx) < 40) return;
+      stepCard(dx < 0 ? 1 : -1);
+    }
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchend",   onTouchEnd,   { passive: true });
+    return function () {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchend",   onTouchEnd);
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div style={{ position: "relative", minHeight: "100%", paddingBottom: isMobile ? 150 : 32 }}>
@@ -1215,17 +1351,15 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
       }}>
         <HexField />
         <PipOrb size="xxl" heartbeat />
-        {!operatorActive && (
         <div style={{
-          fontFamily: SERIF, fontSize: isMobile ? 18 : 22,
-          color: C.text, lineHeight: 1.45, letterSpacing: "-0.01em",
-          textAlign: "center", maxWidth: 580,
+          fontFamily: MONO, fontSize: 10, fontWeight: 700,
+          textTransform: "uppercase", letterSpacing: "0.12em",
+          color: C.accent,
           opacity: mounted ? 1 : 0,
           transition: "opacity 0.4s ease 0.2s",
         }}>
-          {heroLine}
+          {"✦ Pip · " + cardScript[activeCard].label}
         </div>
-        )}
         <div style={{
           display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center",
           opacity: mounted ? 1 : 0,
@@ -1307,389 +1441,288 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
         isMobile={isMobile}
       />
 
-      {/* Scheduled Today — concrete one-off meetings on the calendar. Moved up
-          to lead the day's commitments (above the drip queue). Always relevant,
-          so NO operator guard — a scheduled meeting matters regardless. */}
-      {todaysScheduled.length > 0 && (
-        <InfoCard
-          label="Scheduled Today"
-          count={todaysScheduled.length}
-          sig={false}
-          style={{ maxWidth: 600, margin: isMobile ? "0 16px 12px" : "0 auto 12px" }}
+      {/* ── Hub carousel — 5 cards in a sliding stage ── */}
+      <div style={{ maxWidth: 600, margin: "0 auto", padding: isMobile ? "0 16px 0" : "0 0 0" }}>
+        <div
+          ref={stageRef}
+          style={{ position: "relative", height: isMobile ? 280 : 310, overflow: "visible" }}
         >
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {todaysScheduled.map(function (m) {
-              var acct = accountById[m.account_id];
-              var time = m.meeting_time ? formatTime(m.meeting_time) : null;
-              var methodLabel = { phone: "Phone", in_person: "In Person", video: "Video", email: "Email" }[m.method] || (m.method || "Meeting");
-              return (
-                <div
-                  key={m.id}
-                  onClick={function () { if (onOpenScheduled) onOpenScheduled(m); }}
-                  role={onOpenScheduled ? "button" : undefined}
-                  tabIndex={onOpenScheduled ? 0 : undefined}
-                  onKeyDown={function (e) {
-                    if ((e.key === "Enter" || e.key === " ") && onOpenScheduled) { e.preventDefault(); onOpenScheduled(m); }
-                  }}
-                  style={{
-                    background: C.bg,
-                    border: "1px solid " + C.rule,
-                    borderLeft: "3px solid " + C.accent,
-                    borderRadius: 10,
-                    padding: "10px 14px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 12,
-                    cursor: onOpenScheduled ? "pointer" : "default",
-                  }}
-                >
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: INTER, fontSize: 14, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {acct ? acct.name : "Meeting"}
-                    </div>
-                    <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, marginTop: 2, letterSpacing: "0.04em" }}>
-                      {methodLabel}{time ? " · " + time : ""}
-                    </div>
-                    {m.agenda && (
-                      <div style={{ fontFamily: INTER, fontSize: 11, color: C.textMuted, marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {m.agenda}
+          {/* Card 0: Your Word */}
+          <div ref={card0Ref} style={{ position: "absolute", inset: 0 }}>
+            <HexRingCanvas active={activeCard === 0} />
+            <div className={activeCard === 0 ? "home-hub-card-active" : undefined} style={CARD_SURFACE}>
+              <div style={CARD_BODY}>
+                <div style={CARD_HDR}>
+                  <span style={CARD_LBL}>Your Word</span>
+                  {(wordCommitments.length + wordWaitingOn.length) > 0 && (
+                    <span style={BADGE}>{wordCommitments.length + wordWaitingOn.length}</span>
+                  )}
+                </div>
+                {wordCommitments.length === 0 && wordWaitingOn.length === 0 && (
+                  <div style={EMPTY_MSG}>Nothing hanging — clear desk today.</div>
+                )}
+                <div style={{ display: "flex", flexDirection: "column" }}>
+                  {wordCommitments.slice(0, 2).map(function (n) {
+                    var dueLabel = n.isOverdue
+                      ? Math.abs(n.daysUntilDue) + "d overdue"
+                      : n.daysUntilDue === 0 ? "today" : n.daysUntilDue + "d";
+                    return (
+                      <div key={n.taskId} style={HUB_ROW}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{n.title}</div>
+                          {n.accountName && <div style={{ fontSize: 11, color: C.textMuted }}>{n.accountName}</div>}
+                        </div>
+                        <span style={{ fontFamily: MONO, fontSize: 10, color: n.isOverdue ? C.red : C.yellow, flexShrink: 0 }}>{dueLabel}</span>
+                        <button onClick={function () { if (onMarkNudgeDone) onMarkNudgeDone(n.taskId); }} style={DONE_BTN}>Done ✓</button>
                       </div>
+                    );
+                  })}
+                  {wordWaitingOn.slice(0, 2).map(function (r) {
+                    return (
+                      <div key={r.kind + r.id} style={HUB_ROW}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>⏳ {r.who}</span>
+                          <span style={{ fontSize: 12, color: C.textMuted }}> · {r.what}</span>
+                        </div>
+                        {r.days !== null && (
+                          <span style={{ fontFamily: MONO, fontSize: 10, color: r.days > 10 ? C.red : C.yellow, flexShrink: 0 }}>{r.days}d held</span>
+                        )}
+                        <button
+                          onClick={function () {
+                            var msg = "Hi " + r.who.split(" ")[0] + " — checking in on \"" + r.what + "\"" +
+                              (r.days ? " (" + r.days + " days now)" : "") + ". Where do things stand?";
+                            navigator.clipboard && navigator.clipboard.writeText(msg);
+                            showToast("Chase note copied");
+                          }}
+                          style={CHASE_BTN}
+                        >Chase</button>
+                      </div>
+                    );
+                  })}
+                  {(wordCommitments.length > 2 || wordWaitingOn.length > 2) && (
+                    <div style={{ fontSize: 11, color: C.textMuted, paddingTop: 6 }}>
+                      {"+" + (Math.max(0, wordCommitments.length - 2) + Math.max(0, wordWaitingOn.length - 2)) + " more"}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <HexSignature cells={3} peak={0.13} />
+            </div>
+          </div>
+
+          {/* Card 1: Today */}
+          <div ref={card1Ref} style={{ position: "absolute", inset: 0 }}>
+            <HexRingCanvas active={activeCard === 1} />
+            <div className={activeCard === 1 ? "home-hub-card-active" : undefined} style={CARD_SURFACE}>
+              <div style={CARD_BODY}>
+                <div style={CARD_HDR}>
+                  <span style={CARD_LBL}>Today</span>
+                  {hubTodayItems.length > 0 && <span style={BADGE}>{hubTodayItems.length}</span>}
+                </div>
+                {hubTodayItems.length === 0 ? (
+                  <div style={EMPTY_MSG}>No calls scheduled — good day to reach out.</div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column" }}>
+                    {hubTodayItems.slice(0, 5).map(function (item, i) {
+                      return (
+                        <div key={i} style={HUB_ROW}>
+                          <div style={{ flex: 1, fontWeight: 600, fontSize: 13, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.label}</div>
+                          {item.time && <span style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, flexShrink: 0 }}>{formatTime(item.time)}</span>}
+                        </div>
+                      );
+                    })}
+                    {hubTodayItems.length > 5 && (
+                      <div style={{ fontSize: 11, color: C.textMuted, paddingTop: 6 }}>{"+" + (hubTodayItems.length - 5) + " more"}</div>
                     )}
                   </div>
-                  {onOpenScheduled && (
-                    <span style={{ fontFamily: MONO, fontSize: 10, color: C.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 }}>
-                      Open →
-                    </span>
+                )}
+              </div>
+              <HexSignature cells={3} peak={0.13} />
+            </div>
+          </div>
+
+          {/* Card 2: Fires */}
+          <div ref={card2Ref} style={{ position: "absolute", inset: 0 }}>
+            <HexRingCanvas active={activeCard === 2} />
+            <div className={activeCard === 2 ? "home-hub-card-active" : undefined} style={CARD_SURFACE}>
+              <div style={CARD_BODY}>
+                <div style={CARD_HDR}>
+                  <span style={CARD_LBL}>Fires</span>
+                  {burningRows.length > 0 && (
+                    <span style={Object.assign({}, BADGE, { color: C.red, borderColor: C.red })}>{burningRows.length}</span>
                   )}
+                </div>
+                {burningRows.length === 0 ? (
+                  <div style={EMPTY_MSG}>Nothing on fire — solid position.</div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column" }}>
+                    {burningRows.slice(0, 5).map(function (row, i) {
+                      return (
+                        <div
+                          key={row.key || i}
+                          role={row.accountId ? "button" : undefined}
+                          tabIndex={row.accountId ? 0 : undefined}
+                          onClick={row.accountId ? function () { onOpenAccount(row.accountId); } : undefined}
+                          onKeyDown={row.accountId ? function (e) { if (e.key === "Enter") onOpenAccount(row.accountId); } : undefined}
+                          style={Object.assign({}, HUB_ROW, row.accountId ? { cursor: "pointer" } : {})}
+                        >
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.left}</div>
+                            {row.sub && <div style={{ fontSize: 11, color: C.textMuted }}>{row.sub}</div>}
+                          </div>
+                          {row.right && (
+                            <span style={{ fontFamily: MONO, fontSize: 10, color: C.red, flexShrink: 0 }}>{row.right}</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {burningRows.length > 5 && (
+                      <div style={{ fontSize: 11, color: C.textMuted, paddingTop: 6 }}>{"+" + (burningRows.length - 5) + " more"}</div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <HexSignature cells={3} peak={0.13} />
+            </div>
+          </div>
+
+          {/* Card 3: In Flight */}
+          <div ref={card3Ref} style={{ position: "absolute", inset: 0 }}>
+            <HexRingCanvas active={activeCard === 3} />
+            <div className={activeCard === 3 ? "home-hub-card-active" : undefined} style={CARD_SURFACE}>
+              <div style={CARD_BODY}>
+                <div style={CARD_HDR}>
+                  <span style={CARD_LBL}>In Flight</span>
+                  {hubActiveProjects.length > 0 && <span style={BADGE}>{hubActiveProjects.length}</span>}
+                </div>
+                {hubActiveProjects.length === 0 ? (
+                  <div style={EMPTY_MSG}>No active projects — start something in Gauge.</div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column" }}>
+                    {hubActiveProjects.slice(0, 5).map(function (p, i) {
+                      var acc = accountById[p.account_id];
+                      return (
+                        <div key={p.id || i} style={HUB_ROW}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.title}</div>
+                            {acc && <div style={{ fontSize: 11, color: C.textMuted }}>{acc.name}</div>}
+                          </div>
+                          {p.is_stuck && (
+                            <span style={{ fontFamily: MONO, fontSize: 9, color: C.yellow, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", flexShrink: 0 }}>Stalled</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {hubActiveProjects.length > 5 && (
+                      <div style={{ fontSize: 11, color: C.textMuted, paddingTop: 6 }}>{"+" + (hubActiveProjects.length - 5) + " more"}</div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <HexSignature cells={3} peak={0.13} />
+            </div>
+          </div>
+
+          {/* Card 4: Good News */}
+          <div ref={card4Ref} style={{ position: "absolute", inset: 0 }}>
+            <HexRingCanvas active={activeCard === 4} />
+            <div className={activeCard === 4 ? "home-hub-card-active" : undefined} style={CARD_SURFACE}>
+              <div style={CARD_BODY}>
+                <div style={CARD_HDR}>
+                  <span style={CARD_LBL}>Good News</span>
+                  {hubRecentWins.length > 0 && (
+                    <span style={BADGE}>{hubRecentWins.length}</span>
+                  )}
+                </div>
+                {hubRecentWins.length === 0 ? (
+                  <div style={EMPTY_MSG}>Close something this week — it'll show here.</div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column" }}>
+                    {hubRecentWins.slice(0, 5).map(function (w, i) {
+                      return (
+                        <div key={i} style={HUB_ROW}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{w.left}</div>
+                            {w.sub && <div style={{ fontSize: 11, color: C.textMuted }}>{w.sub}</div>}
+                          </div>
+                          <span style={{ fontSize: 14, color: C.accent }}>✓</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              <HexSignature cells={3} peak={0.13} />
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation: ‹ dots › */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 18 }}>
+          <button
+            onClick={function () { stepCard(-1); }}
+            aria-label="Previous card"
+            style={{ background: "none", border: "1px solid " + C.rule, borderRadius: "50%", width: 32, height: 32, cursor: "pointer", color: C.textMuted, fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+          >‹</button>
+          {[0, 1, 2, 3, 4].map(function (i) {
+            return (
+              <button
+                key={i}
+                onClick={function () { goToCard(i); }}
+                aria-label={"Go to " + cardScript[i].label}
+                style={{ background: "none", border: "none", padding: "4px 3px", cursor: "pointer", color: activeCard === i ? C.accent : C.rule, fontSize: 11, lineHeight: 1 }}
+              >●</button>
+            );
+          })}
+          <button
+            onClick={function () { stepCard(1); }}
+            aria-label="Next card"
+            style={{ background: "none", border: "1px solid " + C.rule, borderRadius: "50%", width: 32, height: 32, cursor: "pointer", color: C.textMuted, fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+          >›</button>
+        </div>
+
+        {/* What Pip said toggle */}
+        <div style={{ textAlign: "center", marginTop: 10 }}>
+          <button
+            onClick={function () { setScriptOpen(function (p) { return !p; }); }}
+            style={{ background: "none", border: "none", fontFamily: MONO, fontSize: 10, color: C.textMuted, cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.08em", padding: "4px 8px" }}
+          >
+            {scriptOpen ? "Hide Pip's read ▴" : "What Pip said ▾"}
+          </button>
+        </div>
+
+        {scriptOpen && (
+          <div style={{ marginTop: 8, background: C.surface, border: "1px solid " + C.rule, borderRadius: 12, overflow: "hidden" }}>
+            {cardScript.map(function (card, i) {
+              var isActive = i === activeCard;
+              return (
+                <div
+                  key={i}
+                  onClick={function () { goToCard(i); }}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={function (e) { if (e.key === "Enter") goToCard(i); }}
+                  style={{
+                    padding: "12px 16px",
+                    borderTop: i === 0 ? "none" : "1px solid " + C.ruleSoft,
+                    borderLeft: isActive ? "3px solid " + C.accent : "3px solid transparent",
+                    opacity: isActive ? 1 : 0.55,
+                    cursor: "pointer",
+                    background: isActive ? C.accentFaint : "transparent",
+                  }}
+                >
+                  <div style={{ fontFamily: MONO, fontSize: 9, color: C.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>
+                    {card.label}
+                  </div>
+                  <div style={{ fontFamily: INTER, fontSize: 13, color: C.textSoft, lineHeight: 1.55 }}>
+                    {card.text}
+                  </div>
                 </div>
               );
             })}
           </div>
-        </InfoCard>
-      )}
-
-      {/* ── Your word (Phase 1.5) — what you owe people + what they owe you.
-          The keeper-of-his-word surface; commitments lost their nav slot to
-          Pip (item 43) and live here instead. Items with a live check-in
-          question this morning are suppressed here (check-in wins, item 47). ── */}
-      {(wordCommitments.length > 0 || wordWaitingOn.length > 0) && (
-        <InfoCard
-          label="✦ Your word"
-          accent={C.yellow}
-          sig={false}
-          style={{ maxWidth: 600, margin: isMobile ? "0 16px 12px" : "0 auto 12px", borderLeftWidth: 3 }}
-        >
-          {wordCommitments.length > 0 && (
-            <div style={{ marginBottom: wordWaitingOn.length ? 12 : 0 }}>
-              <div style={{ fontFamily: MONO, fontSize: 9, color: C.textMuted, letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 7 }}>
-                You owe ({wordCommitments.length})
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {wordCommitments.slice(0, 3).map(function (n) {
-                  var dueLabel = n.isOverdue
-                    ? Math.abs(n.daysUntilDue) + "d overdue"
-                    : n.daysUntilDue === 0 ? "due today"
-                    : n.daysUntilDue === 1 ? "due tomorrow"
-                    : "due in " + n.daysUntilDue + "d";
-                  return (
-                    <div key={n.taskId} style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                      <div style={{ flex: 1, minWidth: 180, fontSize: 13, color: C.text }}>
-                        {n.title}
-                        {n.accountName ? <span style={{ color: C.textMuted, fontSize: 12 }}>{" · " + n.accountName}</span> : null}
-                      </div>
-                      <span style={{ fontFamily: MONO, fontSize: 10, color: n.isOverdue ? C.red : C.yellow, whiteSpace: "nowrap", fontFeatureSettings: '"tnum"' }}>
-                        {dueLabel}
-                      </span>
-                      <button
-                        onClick={function () { if (onMarkNudgeDone) onMarkNudgeDone(n.taskId); }}
-                        style={{ background: C.accentFaint, border: "1px solid " + C.accentLine, borderRadius: 6, padding: "3px 10px", fontFamily: MONO, fontSize: 10.5, color: C.accent, cursor: "pointer" }}
-                      >
-                        Done ✓
-                      </button>
-                      <button
-                        onClick={function () { if (onSnoozeNudge) onSnoozeNudge(n.taskId); }}
-                        style={{ background: "none", border: "1px solid " + C.rule, borderRadius: 6, padding: "3px 10px", fontFamily: MONO, fontSize: 10.5, color: C.textMuted, cursor: "pointer" }}
-                      >
-                        Snooze
-                      </button>
-                      <button
-                        onClick={function () {
-                          var task = (items || []).find(function (i) { return i.id === n.taskId; });
-                          if (task) setEditingNudgeTask(task);
-                        }}
-                        style={{ background: "none", border: "1px solid " + C.rule, borderRadius: 6, padding: "3px 10px", fontFamily: MONO, fontSize: 10.5, color: C.textMuted, cursor: "pointer" }}
-                      >
-                        Edit
-                      </button>
-                    </div>
-                  );
-                })}
-                {wordCommitments.length > 3 && (
-                  <span style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted }}>
-                    {"+" + (wordCommitments.length - 3) + " more"}
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-
-          {wordWaitingOn.length > 0 && (
-            <div>
-              <div style={{ fontFamily: MONO, fontSize: 9, color: C.textMuted, letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 7 }}>
-                ⏳ They owe you ({wordWaitingOn.length})
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {wordWaitingOn.map(function (r) {
-                  var acct = r.accountId ? accountById[r.accountId] : null;
-                  return (
-                    <div key={r.kind + r.id} style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                      <div style={{ flex: 1, minWidth: 180 }}>
-                        <span style={{ fontSize: 13, color: C.text, fontWeight: 600 }}>{r.who}</span>
-                        <span style={{ fontSize: 12.5, color: C.textSoft }}> · {r.what}</span>
-                        {acct && (
-                          <span
-                            role="button"
-                            tabIndex={0}
-                            onClick={function () { onOpenAccount(acct.id); }}
-                            onKeyDown={function (e) { if (e.key === "Enter") onOpenAccount(acct.id); }}
-                            style={{ fontSize: 11.5, color: C.accent, cursor: "pointer", marginLeft: 6 }}
-                          >
-                            {acct.name}
-                          </span>
-                        )}
-                      </div>
-                      {r.days !== null && (
-                        <span style={{
-                          fontFamily: MONO, fontSize: 10, fontFeatureSettings: '"tnum"',
-                          color: r.days > 10 ? C.red : C.yellow, whiteSpace: "nowrap",
-                        }}>
-                          {r.days}d held
-                        </span>
-                      )}
-                      <button
-                        onClick={function () {
-                          var msg = "Hi " + r.who.split(" ")[0] + " — checking in on \"" + r.what + "\"" +
-                            (r.days ? " (with you for " + r.days + " days now)" : "") +
-                            ". Where do things stand? Anything you need from me to move it? Thanks!";
-                          navigator.clipboard && navigator.clipboard.writeText(msg);
-                          showToast("Chase note copied — paste into email or Teams");
-                        }}
-                        style={{
-                          background: C.accentFaint, border: "1px solid " + C.accentLine,
-                          borderRadius: 6, padding: "3px 10px",
-                          fontSize: 10.5, color: C.accent, fontFamily: MONO,
-                          cursor: "pointer", whiteSpace: "nowrap",
-                        }}
-                      >
-                        Copy chase
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* See all → CommitmentsView (the full list is otherwise unreachable
-              on mobile — item 3). */}
-          {onOpenCommitments && (
-            <div style={{ marginTop: 12, textAlign: "right" }}>
-              <button
-                type="button"
-                onClick={onOpenCommitments}
-                style={{
-                  background: "none", border: "none", color: C.yellow,
-                  fontFamily: MONO, fontSize: 10, fontWeight: 700,
-                  textTransform: "uppercase", letterSpacing: "0.06em",
-                  cursor: "pointer", padding: 0,
-                }}
-              >
-                See all →
-              </button>
-            </div>
-          )}
-        </InfoCard>
-      )}
-
-      {/* Calls today — real scheduling (with times) the operator report doesn't
-          carry. Shown inside the hub since the four narrative panels below are
-          suppressed when the operator report is active. */}
-      {operatorActive && todaysCalls.length > 0 && (
-        <div style={{
-          maxWidth: 980, margin: "0 auto",
-          padding: isMobile ? "0 12px 14px" : "0 32px 14px",
-          opacity: mounted ? 1 : 0, transition: "opacity 0.4s ease 0.45s",
-        }}>
-          <div style={{
-            background: C.surface, border: "1px solid " + C.rule, borderRadius: 14, overflow: "hidden",
-          }}>
-            <div style={{
-              display: "flex", alignItems: "center", gap: 8, padding: "9px 14px",
-              background: C.accentFaint, borderBottom: "1px solid " + C.rule,
-            }}>
-              <span style={{ color: C.accent, fontSize: 11, lineHeight: 1 }}>◷</span>
-              <span style={{ fontFamily: MONO, fontSize: 10.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", color: C.accent }}>
-                On the Calendar
-              </span>
-              <span style={{
-                marginLeft: "auto", fontFamily: MONO, fontSize: 10, fontWeight: 700, color: C.accent,
-                minWidth: 18, textAlign: "center", border: "1px solid " + C.accent, borderRadius: 999, padding: "1px 7px",
-              }}>
-                {todaysCalls.length}
-              </span>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              {todaysCalls.map(function (call, i) {
-                var t = call.cadence.meeting_time ? formatTime(call.cadence.meeting_time) : "—";
-                return (
-                  <div
-                    key={call.cadence.id}
-                    onClick={function () { onOpenCadenceHub(call.account.id, call.cadence.id); }}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpenCadenceHub(call.account.id, call.cadence.id); } }}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 12,
-                      padding: "11px 14px", cursor: "pointer",
-                      borderTop: i === 0 ? "none" : "1px solid " + C.ruleSoft,
-                    }}
-                  >
-                    <span style={{ fontFamily: MONO, fontSize: 12, fontWeight: 700, color: C.text, fontVariantNumeric: "tabular-nums", flexShrink: 0, minWidth: 52 }}>{t}</span>
-                    <span style={{ fontFamily: INTER, fontSize: 14, fontWeight: 600, color: C.text, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{call.account.name}</span>
-                    <span style={{ fontFamily: MONO, fontSize: 9, color: C.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 }}>Prep →</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {!operatorActive && (dailyBrief || briefLoading) && (
-        <div style={{
-          padding: isMobile ? "0 12px 12px" : "0 32px 12px",
-          maxWidth: 980, margin: "0 auto",
-          opacity: mounted ? 1 : 0,
-          transition: "opacity 0.4s ease 0.4s",
-        }}>
-          <div style={{
-            background: C.surface,
-            border: "1px solid " + C.rule,
-            borderLeft: "2px solid " + C.accent,
-            borderRadius: 12,
-            padding: "14px 16px 16px",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-              <div style={{
-                fontFamily: MONO, fontSize: 10, color: C.accent,
-                fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em",
-              }}>
-                Pip · Daily Brief
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                {/* Read aloud */}
-                {!briefLoading && dailyBrief && (
-                  <button
-                    onClick={handleReadBrief}
-                    title={briefKokoro.speaking ? "Stop reading" : "Read aloud"}
-                    aria-label={briefKokoro.speaking ? "Stop reading brief" : "Read brief aloud"}
-                    style={{
-                      background: "none", border: "none", padding: 4, margin: -4,
-                      cursor: "pointer",
-                      color: briefKokoro.speaking ? C.accent : C.textMuted,
-                      opacity: 0.85,
-                      display: "inline-flex", alignItems: "center",
-                    }}
-                  >
-                    {briefKokoro.speaking ? (
-                      /* stop square */
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                        <rect x="4" y="4" width="16" height="16" rx="2"/>
-                      </svg>
-                    ) : (
-                      /* speaker / play icon */
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <path d="M11 5L6 9H2v6h4l5 4V5z"/>
-                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
-                      </svg>
-                    )}
-                  </button>
-                )}
-                {/* Refresh */}
-                <button
-                  onClick={function () { briefKokoro.cancel(); refreshBrief(); }}
-                  disabled={briefLoading}
-                  title="Refresh brief"
-                  aria-label="Refresh brief"
-                  style={{
-                    background: "none", border: "none", padding: 4, margin: -4,
-                    cursor: briefLoading ? "default" : "pointer",
-                    color: C.textMuted, opacity: briefLoading ? 0.45 : 0.8,
-                    display: "inline-flex", alignItems: "center",
-                  }}
-                >
-                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"
-                       style={briefLoading ? { animation: "fol-spin 0.9s linear infinite" } : undefined}>
-                    <path d="M13.5 8a5.5 5.5 0 1 1-1.7-3.97" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                    <path d="M13.7 3v2.6h-2.6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-            {briefLoading
-              ? <div style={{ fontFamily: INTER, fontSize: 14, color: C.textMuted, lineHeight: 1.6 }}>Pip is thinking…</div>
-              : (
-                <div>
-                  <MarkdownText
-                    text={dailyBrief}
-                    linkify={makeAccountLinkify(accounts, onOpenAccount)}
-                    style={{ fontFamily: INTER, fontSize: 14, color: C.textSoft, lineHeight: 1.7 }}
-                  />
-                  {briefCallouts && briefCallouts.length > 0 && (
-                    <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 7 }}>
-                      {briefCallouts.map(function (c, i) {
-                        var acc = (accounts || []).find(function (a) { return a.name === c.account_name; });
-                        // Priority dot color
-                        var dotColor = c.priority === "now" ? C.red
-                          : c.priority === "this_week" ? C.yellow
-                          : C.textMuted;
-                        return (
-                          <div key={i} style={{ display: "flex", alignItems: "baseline", gap: 6, flexWrap: "wrap" }}>
-                            {/* Priority dot */}
-                            <span style={{ color: dotColor, fontSize: 14, lineHeight: 1, flexShrink: 0 }}>•</span>
-                            {/* Major tier badge */}
-                            {c.tier === "major" && (
-                              <span style={{ fontFamily: MONO, fontSize: 9, color: C.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 }}>[M]</span>
-                            )}
-                            {/* Account name — clickable if we can find it */}
-                            {c.account_name && (acc
-                              ? <Glow onClick={function () { onOpenAccount(acc.id); }}>{c.account_name}</Glow>
-                              : <span style={{ fontFamily: INTER, fontSize: 13, color: C.accent }}>{c.account_name}</span>
-                            )}
-                            {/* Action verb — bold */}
-                            {c.action && (
-                              <span style={{ fontFamily: INTER, fontSize: 13, color: C.text, fontWeight: 600 }}>→ {c.action}</span>
-                            )}
-                            {/* Reason */}
-                            {c.reason && (
-                              <span style={{ fontFamily: INTER, fontSize: 13, color: C.textMuted }}>— {c.reason}</span>
-                            )}
-                            {/* Specific item */}
-                            {c.item && (
-                              <span style={{ fontFamily: INTER, fontSize: 13, color: C.textMuted, fontStyle: "italic" }}>· "{c.item}"</span>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )
-            }
-          </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {operatorActive && (
         <OperatorHub
@@ -1981,35 +2014,6 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
               );
             })}
           </div>
-        </div>
-      )}
-
-      {/* Narrative panels — the fallback hub when the nightly operator report
-          hasn't run. When the operator report IS active, its structured section
-          cards cover this ground, so we suppress the panels to avoid a long,
-          duplicative scroll. */}
-      {!operatorActive && (
-        <div style={{
-          padding: isMobile ? "0 12px 16px" : "0 32px 24px",
-          display: "grid",
-          gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
-          gap: isMobile ? 10 : 14,
-          maxWidth: 980, margin: "0 auto",
-        }}>
-          {(isMobile ? mobileOrder : desktopOrder).map(function (panel, i) {
-            return (
-              <div
-                key={i}
-                style={{
-                  opacity: mounted ? 1 : 0,
-                  transform: mounted ? "translateY(0)" : "translateY(6px)",
-                  transition: "opacity 0.32s ease " + (0.45 + i * 0.08) + "s, transform 0.32s ease " + (0.45 + i * 0.08) + "s",
-                }}
-              >
-                {panel}
-              </div>
-            );
-          })}
         </div>
       )}
 
