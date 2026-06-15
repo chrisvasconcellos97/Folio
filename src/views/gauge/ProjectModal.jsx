@@ -84,9 +84,8 @@ export function ProjectModal({
   var [status, setStatus]           = useState(existing ? existing.status : "planned");
   var [priority, setPriority]       = useState(existing ? existing.priority : "medium");
   var [dueDate, setDueDate]         = useState(existing ? existing.due_date || "" : "");
-  var [startDate, setStartDate]     = useState(existing ? existing.start_date || "" : "");
+  var [startDate, setStartDate]     = useState(existing ? existing.start_date || "" : new Date().toISOString().slice(0, 10));
   var [accountIds, setAccountIds]   = useState(initAccountIds);
-  var [scope, setScope]             = useState(existing ? existing.scope || "personal" : "personal");
   var [assigneeEmail, setAssignee]  = useState(existing ? existing.assignee || "" : "");
   var [waitingOn, setWaitingOn]     = useState(existing ? existing.waiting_on || "" : "");
   var [requestedBy, setRequestedBy] = useState(existing ? existing.requested_by || "" : "");
@@ -158,8 +157,7 @@ export function ProjectModal({
       start_date:    startDate || null,
       account_id:    accountIds[0] || null,
       account_ids:   accountIds,
-      scope,
-      assignee:      (scope === "team" && assigneeEmail) ? assigneeEmail : null,
+      assignee:      assigneeEmail || null,
       requested_by:  requestedBy || null,
       blocked_reason: null,
       stages,
@@ -353,8 +351,7 @@ export function ProjectModal({
       start_date:    startDate || null,
       account_id:    accountIds[0] || null,
       account_ids:   accountIds,
-      scope,
-      assignee:      (scope === "team" && assigneeEmail) ? assigneeEmail : null,
+      assignee:      assigneeEmail || null,
       requested_by:  requestedBy || null,
       // Waiting-on: stamp the since-date when the holder is set or changed;
       // clear both together. "Who's holding the ball" — Phase 1.4.
@@ -671,34 +668,20 @@ export function ProjectModal({
           </div>
         </div>
 
-        {/* Scope */}
+        {/* Assigned To */}
         <div>
-          <FL>Project Scope</FL>
-          <SelectField
-            value={scope}
-            onChange={function (e) { setScope(e.target.value); setAssignee(""); }}
-          >
-            <option value="personal">Personal — just me</option>
-            <option value="team">Team — visible to my team</option>
-          </SelectField>
+          <FL>Assigned To</FL>
+          <PersonPicker
+            value={assigneeEmail}
+            members={members}
+            contacts={allContacts && allContacts.length ? allContacts : contacts}
+            accounts={accounts}
+            accountIds={accountIds}
+            onChange={function (v) { setAssignee(v || ""); }}
+            noneLabel="Unassigned"
+            contactValue={function (c) { return c.name; }}
+          />
         </div>
-
-        {/* Assigned To — only show for team scope */}
-        {scope === "team" && (
-          <div>
-            <FL>Assigned To</FL>
-            <PersonPicker
-              value={assigneeEmail}
-              members={members}
-              contacts={allContacts && allContacts.length ? allContacts : contacts}
-              accounts={accounts}
-              accountIds={accountIds}
-              onChange={function (v) { setAssignee(v || ""); }}
-              noneLabel="Unassigned"
-              contactValue={function (c) { return c.name; }}
-            />
-          </div>
-        )}
 
         {/* Waiting on — who's holding the ball (Phase 1.4) */}
         <div>
