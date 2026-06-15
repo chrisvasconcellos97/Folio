@@ -99,8 +99,8 @@ body {
 .card-stage {
   position: relative;
   width: 100%; max-width: 380px;
-  height: 300px;      /* fixed height — cards are absolutely positioned inside */
-  overflow: hidden;
+  height: 300px;
+  overflow: visible; /* allow hex ring to bleed slightly outside */
   z-index: 5;
 }
 
@@ -115,6 +115,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  overflow: visible; /* hex ring bleeds outside card edge */
   /* start off-stage right */
   transform: translateX(105%);
   transition: transform 0.48s cubic-bezier(0.34, 1.18, 0.64, 1),
@@ -197,6 +198,21 @@ body {
   height: 1px; background: var(--border); margin: 2px 0;
 }
 .card-sub { font-size: 11px; color: var(--text-dim); margin-top: 1px; }
+
+/* hex border ring canvas */
+.hex-ring-canvas {
+  position: absolute;
+  top: -6px; left: -6px;
+  width: calc(100% + 12px);
+  height: calc(100% + 12px);
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0;
+  transition: opacity 0.48s ease;
+}
+.card.active .hex-ring-canvas { opacity: 1; }
+/* push card content above the canvas */
+.card-header, .card-rows, .hex-sig { position: relative; z-index: 1; }
 
 /* hex signature bottom-right */
 .hex-sig {
@@ -385,6 +401,7 @@ body {
 
   <!-- 0: Your Word -->
   <div class="card active" id="card-0">
+    <canvas class="hex-ring-canvas" id="hex-0"></canvas>
     <div class="card-header">
       <span class="card-label">Your Word</span>
       <span class="card-count">5 items</span>
@@ -423,6 +440,7 @@ body {
 
   <!-- 1: Today -->
   <div class="card" id="card-1">
+    <canvas class="hex-ring-canvas" id="hex-1"></canvas>
     <div class="card-header">
       <span class="card-label">Today</span>
       <span class="card-count">2 calls</span>
@@ -456,6 +474,7 @@ body {
 
   <!-- 2: Fires -->
   <div class="card" id="card-2">
+    <canvas class="hex-ring-canvas" id="hex-2"></canvas>
     <div class="card-header">
       <span class="card-label">Fires</span>
       <span class="card-count" style="color:var(--red); background:rgba(224,82,82,0.1); border-color:rgba(224,82,82,0.25)">1 account</span>
@@ -482,6 +501,7 @@ body {
 
   <!-- 3: In Flight -->
   <div class="card" id="card-3">
+    <canvas class="hex-ring-canvas" id="hex-3"></canvas>
     <div class="card-header">
       <span class="card-label">In Flight</span>
       <span class="card-count">4 projects</span>
@@ -513,6 +533,7 @@ body {
 
   <!-- 4: Good News -->
   <div class="card" id="card-4">
+    <canvas class="hex-ring-canvas" id="hex-4"></canvas>
     <div class="card-header">
       <span class="card-label">Good News</span>
       <span class="card-count" style="color:#6ec9a8; background:rgba(74,155,130,0.08); border-color:rgba(74,155,130,0.2)">2 wins</span>
@@ -672,6 +693,163 @@ document.getElementById('card-stage').addEventListener('touchend', e => {
 document.addEventListener('keydown', e => {
   if (e.key === 'ArrowLeft')  step(-1);
   if (e.key === 'ArrowRight') step(1);
+});
+
+// ── hex ring border animation ──────────────────────────────
+const TAU = Math.PI * 2;
+
+function initCanvas(id) {
+  const canvas = document.getElementById(id);
+  if (!canvas) return null;
+  // size canvas to its rendered size
+  const card = canvas.closest('.card');
+  canvas.width  = card.offsetWidth  + 12;
+  canvas.height = card.offsetHeight + 12;
+  return canvas;
+}
+
+// build ordered list of [x, y, normalAngle] points around the rect perimeter
+function buildPerimeter(W, H, spacing) {
+  const pts = [];
+  const r   = 18; // corner radius (matches card border-radius)
+  // We approximate the rounded corners as straight, close enough at this scale
+  // Travel: top → right → bottom → left
+  const edges = [
+    { x0: r,   y0: 0,   x1: W-r,  y1: 0,   nx: 0,  ny: -1 }, // top
+    { x0: W,   y0: r,   x1: W,    y1: H-r, nx: 1,  ny:  0 }, // right
+    { x0: W-r, y0: H,   x1: r,    y1: H,   nx: 0,  ny:  1 }, // bottom
+    { x0: 0,   y0: H-r, x1: 0,    y1: r,   nx: -1, ny:  0 }, // left
+  ];
+  for (const e of edges) {
+    const len  = Math.hypot(e.x1 - e.x0, e.y1 - e.y0);
+    const n    = Math.max(1, Math.round(len / spacing));
+    for (let i = 0; i < n; i++) {
+      const t = i / n;
+      pts.push({
+        x:  e.x0 + (e.x1 - e.x0) * t,
+        y:  e.y0 + (e.y1 - e.y0) * t,
+        nx: e.nx,
+        ny: e.ny,
+      });
+    }
+  }
+  return pts;
+}
+
+function drawHexCell(ctx, x, y, size, angle, alpha, fill) {
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * TAU + Math.PI / 6; // pointy-top
+    const px = Math.cos(a) * size;
+    const py = Math.sin(a) * size;
+    i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+  ctx.fillStyle   = fill;
+  ctx.strokeStyle = '#5bbfa0';
+  ctx.lineWidth   = 0.85;
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+}
+
+// pre-build perimeter points once per canvas
+const perimCache = {};
+function getPerim(canvasId, W, H) {
+  if (!perimCache[canvasId]) {
+    perimCache[canvasId] = buildPerimeter(W, H, 17);
+  }
+  return perimCache[canvasId];
+}
+
+let hexPhase    = 0;
+let hexLastTime = null;
+const HEX_SPIN  = (1 / 5500); // full cycle in 5.5s
+const BREATH_W  = TAU / 4800; // 4.8s breath
+
+function drawHexRing(timestamp) {
+  if (!hexLastTime) hexLastTime = timestamp;
+  const dt = timestamp - hexLastTime;
+  hexLastTime = timestamp;
+
+  hexPhase = (hexPhase + dt * HEX_SPIN) % 1;
+  const breathT  = timestamp * BREATH_W;
+  const bs       = 0.55 + 0.56 * (0.5 + 0.5 * Math.sin(breathT)); // 0..1.11 like PIP_SPEC
+
+  // draw only active card
+  const id     = 'hex-' + active;
+  const canvas = document.getElementById(id);
+  if (!canvas) { requestAnimationFrame(drawHexRing); return; }
+
+  const W = canvas.width, H = canvas.height;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+
+  const pts  = getPerim(id, W, H);
+  const N    = pts.length;
+  if (!N) { requestAnimationFrame(drawHexRing); return; }
+
+  // glow context shadow
+  ctx.shadowColor  = '#4a9b82';
+  ctx.shadowBlur   = 8;
+
+  for (let i = 0; i < N; i++) {
+    const { x, y, nx, ny } = pts[i];
+
+    // position along perimeter (0..1)
+    const t = i / N;
+
+    // phase offset creates the traveling-glow effect
+    const relPhase = ((t - hexPhase) % 1 + 1) % 1; // 0..1
+    // brightness: hot spot at relPhase=0, falls off, anti-spot at 0.5
+    const dist     = Math.min(relPhase, 1 - relPhase) * 2; // 0 at spot, 1 at antipode
+    const bright   = 1 - dist * dist; // quadratic falloff, 1 at spot
+
+    // twist: rotate each cell slightly based on position + phase wave
+    const twistAmt = Math.sin(t * TAU * 2 + hexPhase * TAU) * 0.45;
+    const baseAngle = Math.atan2(ny, nx) + Math.PI / 2;
+    const angle     = baseAngle + twistAmt;
+
+    // size breathes on the 4.8s clock (open/close like ring cells)
+    const size = (3.2 + bs * 2.1) * (0.65 + 0.35 * bright);
+
+    // alpha: deep/mid/surface depth buckets like PIP_SPEC
+    const depth = 0.4 + 0.55 * bright; // 0.4..0.95
+    const alpha = depth * (0.35 + 0.65 * bright);
+
+    // fill: slightly open the interior at the bright spot
+    const fillAlpha = (bright * 0.10 * bs).toFixed(3);
+    const fill = `rgba(74,155,130,${fillAlpha})`;
+
+    drawHexCell(ctx, x, y, size, angle, alpha, fill);
+  }
+
+  // bright leading-edge highlight — tiny bright oval at phase position
+  const leadIdx  = Math.floor(hexPhase * N) % N;
+  const lead     = pts[leadIdx];
+  if (lead) {
+    ctx.save();
+    ctx.globalAlpha = 0.55 * bs;
+    ctx.shadowBlur  = 18;
+    ctx.shadowColor = '#9ff0d2';
+    ctx.beginPath();
+    ctx.arc(lead.x, lead.y, 3.5, 0, TAU);
+    ctx.fillStyle = '#9ff0d2';
+    ctx.fill();
+    ctx.restore();
+  }
+
+  requestAnimationFrame(drawHexRing);
+}
+
+// init canvases after DOM is ready
+window.addEventListener('load', () => {
+  for (let i = 0; i < CARDS; i++) initCanvas('hex-' + i);
+  requestAnimationFrame(drawHexRing);
 });
 </script>
 </body>
