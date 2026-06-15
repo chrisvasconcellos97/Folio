@@ -1,7 +1,7 @@
 // Build per-card Pip-voiced script text from real Home data.
 // Pure function — zero AI cost, deterministic, called from HomeView useMemo.
 
-export function buildCardScript({ wordCommitments, wordWaitingOn, todayItems, fireItems, activeProjects, winItems }) {
+export function buildCardScript({ wordCommitments, wordWaitingOn, todayItems, fireItems, activeProjects, winItems, upcomingCadences }) {
   var owe   = wordCommitments || [];
   var owing = wordWaitingOn   || [];
 
@@ -100,11 +100,25 @@ export function buildCardScript({ wordCommitments, wordWaitingOn, todayItems, fi
   }
   var goodNewsScript = winParts.join(" ");
 
+  // ── Card 5 — This Week ─────────────────────────────────────────────────
+  var upcoming = upcomingCadences || [];
+  var weekParts = [];
+  if (upcoming.length === 0) {
+    weekParts.push("Nothing on the cadence calendar this week. Good time to reach out to anyone who's gone quiet.");
+  } else if (upcoming.length === 1) {
+    weekParts.push(upcoming.length + " cadence this week — " + upcoming[0].label + (upcoming[0].daysOut === 1 ? " tomorrow" : " in " + upcoming[0].daysOut + " days") + ".");
+  } else {
+    weekParts.push(upcoming.length + " cadences coming up. First: " + upcoming[0].label + (upcoming[0].daysOut === 1 ? " tomorrow" : " in " + upcoming[0].daysOut + " days") + ".");
+    weekParts.push("Then " + upcoming[1].label + " in " + upcoming[1].daysOut + "d.");
+  }
+  var thisWeekScript = weekParts.join(" ");
+
   return [
     { label: "Your Word",  text: wordScript     },
     { label: "Today",      text: todayScript     },
     { label: "Fires",      text: firesScript     },
     { label: "In Flight",  text: inFlightScript  },
     { label: "Good News",  text: goodNewsScript  },
+    { label: "This Week",  text: thisWeekScript  },
   ];
 }

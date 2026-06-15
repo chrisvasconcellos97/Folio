@@ -207,14 +207,24 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
   var briefKokoro = useKokoroTTS();
   var [activeCard, setActiveCard]  = useState(0);
   var [scriptOpen, setScriptOpen]  = useState(false);
+  var [briefPhase, setBriefPhase]  = useState("idle"); // "idle"|"playing"|"done"
+  var [waitingForAnswer, setWaitingForAnswer] = useState(false);
+  var [currentCheckIn, setCurrentCheckIn]     = useState(null);
   var card0Ref         = useRef(null);
   var card1Ref         = useRef(null);
   var card2Ref         = useRef(null);
   var card3Ref         = useRef(null);
   var card4Ref         = useRef(null);
+  var card5Ref         = useRef(null);
   var stageRef         = useRef(null);
   var transitioningRef = useRef(false);
   var activeCardRef    = useRef(0);
+  var briefPhaseRef    = useRef("idle");
+  var seqIdxRef        = useRef(0);
+  var prevSpeakingRef  = useRef(false);
+  var waitingAnswerRef = useRef(false);
+  var playSeqRef       = useRef([]);
+  var cardScriptRef    = useRef([]);
 
   function handleReadBrief() {
     if (briefKokoro.speaking) {
@@ -1176,18 +1186,36 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
     return calls.concat(sched);
   }, [todaysCalls, todaysScheduled, accountById]);
 
+  var hubUpcomingCadences = useMemo(function () {
+    var today = startOfToday();
+    var weekOut = new Date(today.getTime() + 7 * 86400000);
+    var tomorrow = new Date(today.getTime() + 86400000);
+    return (cadences || []).filter(function (c) {
+      if (c.type === "task") return false;
+      var next = getNextOccurrence(c, tomorrow);
+      if (!next || next > weekOut) return false;
+      return true;
+    }).map(function (c) {
+      var acct = accountById[c.account_id];
+      var next = getNextOccurrence(c, tomorrow);
+      var daysOut = Math.ceil((next.getTime() - today.getTime()) / 86400000);
+      return { label: acct ? acct.name : "Meeting", daysOut: daysOut };
+    }).sort(function (a, b) { return a.daysOut - b.daysOut; }).slice(0, 5);
+  }, [cadences, accountById]);
+
   var cardScript = useMemo(function () {
     return buildCardScript({
-      wordCommitments: wordCommitments,
-      wordWaitingOn:   wordWaitingOn,
-      todayItems:      hubTodayItems,
-      fireItems:       burningRows,
-      activeProjects:  hubActiveProjects,
-      winItems:        hubRecentWins,
+      wordCommitments:  wordCommitments,
+      wordWaitingOn:    wordWaitingOn,
+      todayItems:       hubTodayItems,
+      fireItems:        burningRows,
+      activeProjects:   hubActiveProjects,
+      winItems:         hubRecentWins,
+      upcomingCadences: hubUpcomingCadences,
     });
-  }, [wordCommitments, wordWaitingOn, hubTodayItems, burningRows, hubActiveProjects, hubRecentWins]);
+  }, [wordCommitments, wordWaitingOn, hubTodayItems, burningRows, hubActiveProjects, hubRecentWins, hubUpcomingCadences]);
 
-  var cardRefsArr = [card0Ref, card1Ref, card2Ref, card3Ref, card4Ref];
+  var cardRefsArr = [card0Ref, card1Ref, card2Ref, card3Ref, card4Ref, card5Ref];
 
   function goToCard(next) {
     if (transitioningRef.current) return;
@@ -1213,7 +1241,7 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
     setTimeout(function () { transitioningRef.current = false; }, 520);
   }
   function stepCard(dir) {
-    goToCard(((activeCardRef.current + dir) + 5) % 5);
+    goToCard(((activeCardRef.current + dir) + 6) % 6);
   }
 
   // Card anatomy style constants — defined here so they pick up live C.* tokens
@@ -1251,6 +1279,108 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
     window.addEventListener("keydown", handleKey);
     return function () { window.removeEventListener("keydown", handleKey); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── 3f: playSequence — interleaves card items + check-in questions ──
+  var playSequence = useMemo(function () {
+    var seq = [];
+    for (var ci = 0; ci < 6; ci++) {
+      seq.push({ type: "card", idx: ci });
+      // After card 1 (Today), weave in any unanswered check-in questions
+      if (ci === 1) {
+        (checkInQuestions || []).forEach(function (q) {
+          seq.push({ type: "checkin", q: q });
+        });
+      }
+    }
+    return seq;
+  }, [checkInQuestions]);
+
+  // Keep refs in sync so the rAF/interval closures see fresh values
+  useEffect(function () { playSeqRef.current = playSequence; }, [playSequence]);
+  useEffect(function () { cardScriptRef.current = cardScript; }, [cardScript]);
+
+  // ── 3g: voice functions + auto-advance effect ──
+  function advanceSeq(idx) {
+    var seq = playSeqRef.current;
+    if (idx >= seq.length) {
+      setBriefPhase("done");
+      briefPhaseRef.current = "done";
+      return;
+    }
+    seqIdxRef.current = idx;
+    var item = seq[idx];
+    if (item.type === "card") {
+      goToCard(item.idx);
+      var txt = (cardScriptRef.current[item.idx] || {}).text || "";
+      briefKokoro.speak(txt);
+    } else {
+      waitingAnswerRef.current = true;
+      setWaitingForAnswer(true);
+      setCurrentCheckIn(item.q);
+      briefKokoro.speak(item.q.text);
+    }
+  }
+
+  function startBrief() {
+    briefKokoro.activate();
+    setBriefPhase("playing");
+    briefPhaseRef.current = "playing";
+    seqIdxRef.current = 0;
+    prevSpeakingRef.current = false;
+    waitingAnswerRef.current = false;
+    setWaitingForAnswer(false);
+    setCurrentCheckIn(null);
+    // slight delay so the orb activates before speech
+    setTimeout(function () { advanceSeq(0); }, 200);
+  }
+
+  function replayBrief() {
+    briefKokoro.activate();
+    setBriefPhase("playing");
+    briefPhaseRef.current = "playing";
+    seqIdxRef.current = 0;
+    prevSpeakingRef.current = false;
+    waitingAnswerRef.current = false;
+    setWaitingForAnswer(false);
+    setCurrentCheckIn(null);
+    goToCard(0);
+    setTimeout(function () { advanceSeq(0); }, 200);
+  }
+
+  function handleVoiceCheckInAnswer(q, optId) {
+    waitingAnswerRef.current = false;
+    setWaitingForAnswer(false);
+    setCurrentCheckIn(null);
+    handleCheckInAnswer(q, optId);
+    // advance to next sequence item
+    advanceSeq(seqIdxRef.current + 1);
+  }
+
+  // Auto-advance: when TTS finishes a non-checkin item, move to the next
+  useEffect(function () {
+    var speaking = briefKokoro.speaking;
+    if (briefPhaseRef.current !== "playing") {
+      prevSpeakingRef.current = speaking;
+      return;
+    }
+    if (waitingAnswerRef.current) {
+      prevSpeakingRef.current = speaking;
+      return;
+    }
+    // Detect trailing edge: was speaking, now stopped
+    if (prevSpeakingRef.current && !speaking) {
+      prevSpeakingRef.current = false;
+      // Small delay so user can hear the last word before the card slides
+      setTimeout(function () {
+        if (briefPhaseRef.current === "playing" && !waitingAnswerRef.current) {
+          advanceSeq(seqIdxRef.current + 1);
+        }
+      }, 320);
+    } else {
+      prevSpeakingRef.current = speaking;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [briefKokoro.speaking]);
 
   // Touch swipe on the stage
   useEffect(function () {
@@ -1350,7 +1480,7 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
         padding: isMobile ? (operatorActive ? "16px 16px 18px" : "22px 16px 26px") : "32px 32px 36px",
       }}>
         <HexField />
-        <PipOrb size="xxl" heartbeat />
+        <PipOrb size="xxl" heartbeat state={briefPhase === "playing" ? "speaking" : undefined} />
         <div style={{
           fontFamily: MONO, fontSize: 10, fontWeight: 700,
           textTransform: "uppercase", letterSpacing: "0.12em",
@@ -1358,14 +1488,51 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
           opacity: mounted ? 1 : 0,
           transition: "opacity 0.4s ease 0.2s",
         }}>
-          {"✦ Pip · " + cardScript[activeCard].label}
+          {briefPhase === "playing"
+            ? (waitingForAnswer ? "✦ Pip · Check-in" : "✦ Pip · " + (cardScript[activeCard] || {}).label)
+            : briefPhase === "done"
+            ? "✦ Pip · Done"
+            : "✦ Pip · " + (cardScript[activeCard] || {}).label}
         </div>
+
+        {/* Start / Stop brief buttons */}
+        <div style={{
+          display: "flex", gap: 8, alignItems: "center", justifyContent: "center",
+          opacity: mounted ? 1 : 0,
+          transition: "opacity 0.4s ease 0.25s",
+        }}>
+          {briefPhase === "idle" && (
+            <button
+              onClick={startBrief}
+              style={{
+                background: C.accentDeep, border: "1px solid " + C.accent,
+                borderRadius: 20, padding: "7px 20px",
+                fontFamily: MONO, fontSize: 11, fontWeight: 700,
+                color: C.bg, cursor: "pointer",
+                letterSpacing: "0.05em", textTransform: "uppercase",
+              }}
+            >▶ Start my day</button>
+          )}
+          {briefPhase === "playing" && (
+            <button
+              onClick={function () { briefKokoro.cancel(); setBriefPhase("idle"); briefPhaseRef.current = "idle"; waitingAnswerRef.current = false; setWaitingForAnswer(false); setCurrentCheckIn(null); }}
+              style={{
+                background: "none", border: "1px solid " + C.rule,
+                borderRadius: 20, padding: "7px 20px",
+                fontFamily: MONO, fontSize: 11, fontWeight: 700,
+                color: C.textMuted, cursor: "pointer",
+                letterSpacing: "0.05em", textTransform: "uppercase",
+              }}
+            >■ Stop</button>
+          )}
+        </div>
+
         <div style={{
           display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center",
           opacity: mounted ? 1 : 0,
           transition: "opacity 0.4s ease 0.35s",
         }}>
-          {todaysCalls.length > 0 && (
+          {todaysCalls.length > 0 && briefPhase === "idle" && (
           <LitPill onClick={function () {
             onOpenCadenceHub(todaysCalls[0].account.id, todaysCalls[0].cadence.id);
           }}>
@@ -1434,15 +1601,53 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
         </div>
       </div>
 
-      <CheckInCard
-        questions={checkInQuestions}
-        receipts={checkInReceipts}
-        onAnswer={handleCheckInAnswer}
-        isMobile={isMobile}
-      />
+      {briefPhase === "idle" && (
+        <CheckInCard
+          questions={checkInQuestions}
+          receipts={checkInReceipts}
+          onAnswer={handleCheckInAnswer}
+          isMobile={isMobile}
+        />
+      )}
 
-      {/* ── Hub carousel — 5 cards in a sliding stage ── */}
+      {/* ── Hub carousel — 6 cards in a sliding stage (hidden when done) ── */}
+      {briefPhase !== "done" && (
       <div style={{ maxWidth: 600, margin: "0 auto", padding: isMobile ? "0 16px 0" : "0 0 0" }}>
+        {/* Check-in overlay during voice brief */}
+        {briefPhase === "playing" && waitingForAnswer && currentCheckIn && (
+          <div style={{
+            position: "relative", zIndex: 10,
+            maxWidth: 600, margin: "0 auto 12px",
+            padding: "16px",
+            background: C.surface,
+            border: "2px solid " + C.accent,
+            borderRadius: 14,
+          }}>
+            <div style={{ fontFamily: MONO, fontSize: 10, color: C.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
+              ✦ Pip · Check-in
+            </div>
+            <div style={{ fontFamily: INTER, fontSize: 14, color: C.text, lineHeight: 1.55, marginBottom: 14 }}>
+              {currentCheckIn.text}
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {(currentCheckIn.options || []).map(function (opt) {
+                return (
+                  <button
+                    key={opt.id}
+                    onClick={function () { handleVoiceCheckInAnswer(currentCheckIn, opt.id); }}
+                    style={{
+                      background: C.accentFaint, border: "1px solid " + C.accentLine,
+                      borderRadius: 20, padding: "8px 16px",
+                      fontFamily: INTER, fontSize: 13, color: C.text, cursor: "pointer",
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
         <div
           ref={stageRef}
           style={{ position: "relative", height: isMobile ? 280 : 310, overflow: "visible" }}
@@ -1655,6 +1860,36 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
               <HexSignature cells={3} peak={0.13} />
             </div>
           </div>
+
+          {/* Card 5: This Week */}
+          <div ref={card5Ref} style={{ position: "absolute", inset: 0 }}>
+            <HexRingCanvas active={activeCard === 5} />
+            <div className={activeCard === 5 ? "home-hub-card-active" : undefined} style={CARD_SURFACE}>
+              <div style={CARD_BODY}>
+                <div style={CARD_HDR}>
+                  <span style={CARD_LBL}>This Week</span>
+                  {hubUpcomingCadences.length > 0 && <span style={BADGE}>{hubUpcomingCadences.length}</span>}
+                </div>
+                {hubUpcomingCadences.length === 0 ? (
+                  <div style={EMPTY_MSG}>Nothing on the cadence calendar. Good time to reach out.</div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column" }}>
+                    {hubUpcomingCadences.slice(0, 5).map(function (item, i) {
+                      return (
+                        <div key={i} style={HUB_ROW}>
+                          <div style={{ flex: 1, fontWeight: 600, fontSize: 13, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.label}</div>
+                          <span style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, flexShrink: 0 }}>
+                            {item.daysOut === 1 ? "tomorrow" : item.daysOut + "d"}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              <HexSignature cells={3} peak={0.13} />
+            </div>
+          </div>
         </div>
 
         {/* Navigation: ‹ dots › */}
@@ -1664,7 +1899,7 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
             aria-label="Previous card"
             style={{ background: "none", border: "1px solid " + C.rule, borderRadius: "50%", width: 32, height: 32, cursor: "pointer", color: C.textMuted, fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
           >‹</button>
-          {[0, 1, 2, 3, 4].map(function (i) {
+          {[0, 1, 2, 3, 4, 5].map(function (i) {
             return (
               <button
                 key={i}
@@ -1723,6 +1958,62 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
           </div>
         )}
       </div>
+      )}
+
+      {/* ── 3k: Done-phase 2×3 mini-card grid ── */}
+      {briefPhase === "done" && (
+        <div style={{ maxWidth: 600, margin: "0 auto", padding: isMobile ? "0 16px" : "0" }}>
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: 10,
+            marginBottom: 16,
+          }}>
+            {cardScript.map(function (card, i) {
+              return (
+                <div
+                  key={i}
+                  role="button"
+                  tabIndex={0}
+                  onClick={function () { setBriefPhase("idle"); briefPhaseRef.current = "idle"; goToCard(i); }}
+                  onKeyDown={function (e) { if (e.key === "Enter") { setBriefPhase("idle"); briefPhaseRef.current = "idle"; goToCard(i); } }}
+                  style={{
+                    background: C.surface,
+                    border: "1px solid " + C.rule,
+                    borderRadius: 12,
+                    padding: "12px 10px",
+                    cursor: "pointer",
+                    animation: "card-shoot 0.38s cubic-bezier(0.22,1,0.36,1) both",
+                    animationDelay: (i * 0.07) + "s",
+                    overflow: "hidden",
+                    position: "relative",
+                  }}
+                >
+                  <div style={{ fontFamily: MONO, fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: C.accent, marginBottom: 6 }}>
+                    {card.label}
+                  </div>
+                  <div style={{ fontFamily: INTER, fontSize: 11, color: C.textMuted, lineHeight: 1.45, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}>
+                    {card.text}
+                  </div>
+                  <HexSignature cells={2} peak={0.10} />
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ textAlign: "center", paddingBottom: 8 }}>
+            <button
+              onClick={replayBrief}
+              style={{
+                background: "none", border: "1px solid " + C.rule,
+                borderRadius: 20, padding: "7px 20px",
+                fontFamily: MONO, fontSize: 11, fontWeight: 700,
+                color: C.textMuted, cursor: "pointer",
+                letterSpacing: "0.05em", textTransform: "uppercase",
+              }}
+            >↺ Replay</button>
+          </div>
+        </div>
+      )}
 
       {operatorActive && (
         <OperatorHub
