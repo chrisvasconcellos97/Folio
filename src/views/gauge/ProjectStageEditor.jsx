@@ -70,6 +70,8 @@ export function ProjectStageEditor({ project, onUpdate, accounts, members, conta
   var [detailIdx, setDetailIdx] = useState(null);
   var [showNewDetail, setShowNewDetail] = useState(false);
   var [lastAddedIdx, setLastAddedIdx] = useState(null);
+  var [dragIdx, setDragIdx] = useState(null);
+  var [dropIdx, setDropIdx] = useState(null);
   // Optimistic local stages — applied immediately on mutations, cleared when DB confirms via prop update.
   var [localStages, setLocalStages] = useState(null);
   useEffect(function () { setLocalStages(null); }, [project.stages]);
@@ -156,6 +158,14 @@ export function ProjectStageEditor({ project, onUpdate, accounts, members, conta
     commitStages(next);
   }
 
+  function moveStage(from, to) {
+    if (from === to || from == null || to == null) return;
+    var next = stages.slice();
+    var moved = next.splice(from, 1)[0];
+    next.splice(to, 0, moved);
+    commitStages(next);
+  }
+
   function acceptStageSuggestion(idx, suggestion, kind) {
     var contactVal = suggestion.type !== "account"
       ? (suggestion.contact.email || suggestion.contact.name || "")
@@ -183,12 +193,23 @@ export function ProjectStageEditor({ project, onUpdate, accounts, members, conta
                        : "planned";
 
         return (
-          <div key={idx} style={{
+          <div
+            key={idx}
+            draggable
+            onDragStart={function () { setDragIdx(idx); }}
+            onDragOver={function (e) { e.preventDefault(); setDropIdx(idx); }}
+            onDragEnd={function () { moveStage(dragIdx, dropIdx); setDragIdx(null); setDropIdx(null); }}
+            style={{
             background: C.surface3 || "rgba(0,0,0,0.18)",
-            border: "1px solid " + (blocked ? C.redLine : C.rule),
+            border: "1px solid " + (dropIdx === idx && dragIdx !== idx ? C.accent : blocked ? C.redLine : C.rule),
             borderRadius: 8, padding: "8px 10px",
+            opacity: dragIdx === idx ? 0.4 : 1,
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span
+                title="Drag to reorder"
+                style={{ cursor: "grab", color: C.textMuted, fontSize: 13, opacity: 0.45, flexShrink: 0, userSelect: "none" }}
+              >⠿</span>
               <StageIcon stage={s} onClick={function () { toggleStageComplete(idx); }} />
               <div
                 onClick={function () { if (subs.length > 0) setExpanded(function (prev) { return Object.assign({}, prev, { [idx]: !prev[idx] }); }); }}
