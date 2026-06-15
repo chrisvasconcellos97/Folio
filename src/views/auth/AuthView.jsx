@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { C } from "../../lib/colors";
-import { FolioIcon } from "../../components/FolioIcon";
-import { PipMark } from "../../components/PipMark";
+import { PipOrb } from "../../components/PipMark";
 import { AmberBtn } from "../../components/Buttons";
 import { InputField } from "../../components/InputField";
 import { HexField } from "../../lib/hexMotif";
@@ -89,35 +88,62 @@ export function AuthView({ onSignIn, onSignUp }) {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        padding: 20,
         position: "relative",
         overflow: "hidden",
       }}
     >
-      <HexField peak={0.1} />
-      <div style={{ width: "100%", maxWidth: 400, position: "relative" }}>
-        {/* Logo */}
-        <div style={{ textAlign: "center", marginBottom: 40 }}>
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
-            <div
-              style={{
-                width: 72,
-                height: 72,
-                borderRadius: 18,
-                background: C.accentGlow,
-                border: "1px solid " + C.accentSubtle,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <FolioIcon size={38} />
-            </div>
-          </div>
-          <div style={{ fontSize: 26, fontWeight: 600, color: C.text, letterSpacing: "0.02em" }}>
+      {/* Hex lattice watermark */}
+      <HexField peak={0.06} />
+
+      {/* Giant Pip — fills most of the viewport, ring spinning behind the card */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          pointerEvents: "none",
+        }}
+      >
+        <PipOrb
+          size="xxl"
+          style={{
+            width:     "min(80vw, 80vh)",
+            height:    "min(80vw, 80vh)",
+            boxShadow: "0 0 160px var(--accent-shadow)",
+          }}
+        />
+      </div>
+
+      {/* Login panel — floats in the center of Pip's ring */}
+      <div style={{ position: "relative", zIndex: 10, width: "100%", maxWidth: 340, padding: "0 20px" }}>
+
+        {/* Wordmark */}
+        <div style={{ textAlign: "center", marginBottom: 22 }}>
+          <div
+            style={{
+              fontSize: 38,
+              fontWeight: 700,
+              fontFamily: "'Fraunces', Georgia, serif",
+              color: C.text,
+              letterSpacing: "-0.01em",
+              lineHeight: 1,
+            }}
+          >
             Folios
           </div>
-          <div style={{ fontSize: 11, color: C.textMuted, letterSpacing: "0.12em", marginTop: 4, textTransform: "uppercase" }}>
+          <div
+            style={{
+              fontSize: 10,
+              color: C.textMuted,
+              letterSpacing: "0.18em",
+              marginTop: 8,
+              textTransform: "uppercase",
+              fontFamily: "'Inter', system-ui, sans-serif",
+              fontWeight: 500,
+            }}
+          >
             Account Management
           </div>
         </div>
@@ -128,7 +154,8 @@ export function AuthView({ onSignIn, onSignUp }) {
             background: C.bgCard,
             border: "1px solid " + C.border,
             borderRadius: 16,
-            padding: 28,
+            padding: "24px 24px 28px",
+            boxShadow: "0 4px 48px rgba(0,0,0,0.5)",
           }}
         >
           {/* Mode toggle */}
@@ -278,11 +305,17 @@ export function AuthView({ onSignIn, onSignUp }) {
         </div>
 
         {/* Pip footer */}
-        <div style={{ textAlign: "center", marginTop: 28, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-          <PipMark size={7} color={C.accent} pulse />
-          <span style={{ fontSize: 11, color: C.textMuted }}>
-            Pip is standing by.
-          </span>
+        <div
+          style={{
+            textAlign: "center",
+            marginTop: 20,
+            fontSize: 11,
+            color: C.textMuted,
+            fontFamily: "'Inter', system-ui, sans-serif",
+            letterSpacing: "0.04em",
+          }}
+        >
+          Pip is standing by.
         </div>
       </div>
     </div>
