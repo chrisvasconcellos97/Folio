@@ -1,0 +1,984 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Folios — Home Hub mockup</title>
+<style>
+/* ── tokens ─────────────────────────────────────────── */
+:root {
+  --bg:           #0a0a0f;
+  --surface:      #13131a;
+  --surface2:     #0f0f16;
+  --border:       #1e1e2e;
+  --accent:       #4a9b82;
+  --accent-hi:    #5bbfa0;
+  --accent-deep:  #2d7560;
+  --accent-faint: rgba(74,155,130,0.12);
+  --accent-glow:  rgba(74,155,130,0.35);
+  --accent-border:rgba(74,155,130,0.45);
+  --text:         #e8e8f0;
+  --text-dim:     #9ba3ab;
+  --text-mute:    #4a5260;
+  --yellow:       #d4a017;
+  --yellow-faint: rgba(212,160,23,0.14);
+  --red:          #c0392b;
+  --red-faint:    rgba(192,57,43,0.13);
+  --blue:         #3b7fd4;
+  --blue-faint:   rgba(59,127,212,0.12);
+  --green:        #27ae60;
+  --green-faint:  rgba(39,174,96,0.12);
+  --card-w:       320px;
+  --gap:          14px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0;
+  position: relative;
+}
+
+/* ── ambient bg ─────────────────────────────────────── */
+.ambient {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background: radial-gradient(ellipse 60% 50% at 50% -10%, rgba(74,155,130,0.07) 0%, transparent 70%);
+}
+
+/* ── top bar ─────────────────────────────────────────── */
+.topbar {
+  width: 100%; max-width: 480px;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16px 20px 0;
+  position: relative; z-index: 10;
+}
+.topbar-left { font-size: 13px; color: var(--text-mute); font-weight: 500; letter-spacing: 0.04em; }
+.topbar-right {
+  font-size: 11px; font-family: 'JetBrains Mono', 'Courier New', monospace;
+  color: var(--accent); border: 1px solid var(--accent-border);
+  padding: 5px 10px; border-radius: 6px;
+  background: var(--accent-faint);
+  cursor: pointer; letter-spacing: 0.05em;
+  display: flex; align-items: center; gap: 5px;
+}
+.morning-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent);
+  animation: pulse-dot 4.8s ease-in-out infinite;
+}
+@keyframes pulse-dot { 0%,100%{opacity:0.5} 50%{opacity:1} }
+
+/* ── pip container ───────────────────────────────────── */
+.pip-zone {
+  position: relative; z-index: 5;
+  display: flex; flex-direction: column; align-items: center;
+  padding-top: 20px;
+  margin-bottom: 0;
+}
+
+/* ── pip orb (3D hex approximation) ─────────────────── */
+.pip-orb {
+  position: relative;
+  width: 160px; height: 160px;
+  display: flex; align-items: center; justify-content: center;
+  filter: drop-shadow(0 0 32px rgba(74,155,130,0.4));
+}
+.pip-orb svg { width: 160px; height: 160px; overflow: visible; }
+
+/* ── status strip ────────────────────────────────────── */
+.pip-status {
+  margin-top: 10px;
+  display: flex; align-items: center; gap: 7px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; color: var(--text-dim);
+  letter-spacing: 0.06em;
+}
+.pip-status-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--accent);
+  animation: pulse-dot 2.4s ease-in-out infinite;
+}
+
+/* ── arm svg ──────────────────────────────────────────── */
+.arm-zone {
+  position: relative;
+  width: 100%; max-width: 480px;
+  height: 90px;
+  display: flex; align-items: flex-start; justify-content: center;
+  flex-shrink: 0; z-index: 4;
+  pointer-events: none;
+}
+.arm-svg { width: 100%; height: 100%; overflow: visible; }
+
+/* ── carousel wrapper ────────────────────────────────── */
+.carousel-outer {
+  position: relative; z-index: 5;
+  width: 100%; max-width: 540px;
+  padding: 0 0 24px;
+  overflow: hidden;
+}
+.carousel-track {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+  transition: transform 0.45s cubic-bezier(0.34, 1.22, 0.64, 1);
+  will-change: transform;
+  /* centered on active card */
+  padding: 10px 0 20px;
+}
+
+/* ── cards ────────────────────────────────────────────── */
+.card {
+  flex-shrink: 0;
+  width: var(--card-w);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px 18px 16px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.45s cubic-bezier(0.34, 1.22, 0.64, 1),
+              opacity 0.45s ease,
+              box-shadow 0.45s ease,
+              border-color 0.45s ease;
+  cursor: pointer;
+  user-select: none;
+}
+.card.side-left  { transform: scale(0.74) translateX(18%); opacity: 0.38; }
+.card.side-left2 { transform: scale(0.62) translateX(55%); opacity: 0.18; }
+.card.side-right { transform: scale(0.74) translateX(-18%); opacity: 0.38; }
+.card.side-right2{ transform: scale(0.62) translateX(-55%); opacity: 0.18; }
+.card.active {
+  transform: scale(1);
+  opacity: 1;
+  box-shadow: 0 0 0 1.5px var(--accent-border), 0 8px 40px rgba(0,0,0,0.5), 0 0 24px rgba(74,155,130,0.18);
+  border-color: var(--accent-border);
+}
+
+/* card accent borders by type */
+.card.your-word  { border-left: 2px solid var(--accent); }
+.card.today      { border-left: 2px solid #7c88ff; }
+.card.fires      { border-left: 2px solid var(--red); }
+.card.in-flight  { border-left: 2px solid var(--blue); }
+.card.good-news  { border-left: 2px solid var(--green); }
+
+.card.side-left .hex-sig,
+.card.side-right .hex-sig,
+.card.side-left2 .hex-sig,
+.card.side-right2 .hex-sig { opacity: 0; }
+
+/* card header */
+.card-header {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 13px;
+}
+.card-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text-dim);
+  flex: 1;
+}
+.card-badge {
+  font-size: 11px; font-weight: 700;
+  padding: 2px 8px; border-radius: 100px;
+  letter-spacing: 0.03em;
+}
+.your-word  .card-badge { background: var(--accent-faint); color: var(--accent-hi); }
+.today      .card-badge { background: rgba(124,136,255,0.14); color: #9ba6ff; }
+.fires      .card-badge { background: var(--red-faint); color: #e05a4e; }
+.in-flight  .card-badge { background: var(--blue-faint); color: #6eaaec; }
+.good-news  .card-badge { background: var(--green-faint); color: #4dcb7a; }
+
+/* card body */
+.card-body { display: flex; flex-direction: column; gap: 0; }
+
+/* split columns for Your Word */
+.split-cols { display: flex; gap: 10px; }
+.split-col { flex: 1; }
+.split-col-head {
+  font-size: 10px; font-weight: 600;
+  color: var(--text-mute);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  margin-bottom: 7px;
+}
+.your-word .split-col:first-child .split-col-head { color: var(--accent); }
+.your-word .split-col:last-child .split-col-head { color: var(--yellow); }
+
+/* item rows */
+.item-row {
+  display: flex; align-items: flex-start; gap: 7px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 13px; color: var(--text);
+  line-height: 1.35;
+}
+.item-row:last-child { border-bottom: none; }
+.item-dot {
+  width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; margin-top: 5px;
+}
+.accent-dot { background: var(--accent); }
+.yellow-dot { background: var(--yellow); }
+.red-dot    { background: var(--red); }
+.blue-dot   { background: var(--blue); }
+.green-dot  { background: var(--green); }
+.item-text { font-size: 12.5px; line-height: 1.4; }
+.item-meta { font-size: 11px; color: var(--text-mute); margin-top: 2px; }
+
+/* today card */
+.meeting-row {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+  gap: 8px;
+}
+.meeting-row:last-child { border-bottom: none; }
+.meeting-info { flex: 1; }
+.meeting-name { font-size: 13px; color: var(--text); line-height: 1.3; }
+.meeting-time { font-size: 11px; color: var(--text-mute); margin-top: 2px; font-family: 'JetBrains Mono', monospace; }
+.prep-btn {
+  font-size: 10px; font-family: 'JetBrains Mono', monospace;
+  color: var(--accent); background: var(--accent-faint);
+  border: 1px solid var(--accent-border); border-radius: 5px;
+  padding: 3px 7px; flex-shrink: 0; cursor: pointer; white-space: nowrap;
+  letter-spacing: 0.04em;
+}
+
+/* hex signature bottom-right */
+.hex-sig {
+  position: absolute; bottom: 10px; right: 10px;
+  transition: opacity 0.45s ease;
+}
+
+/* ── nav arrows ───────────────────────────────────────── */
+.carousel-nav {
+  display: flex; gap: 12px; justify-content: center;
+  margin-bottom: 0; position: relative; z-index: 10;
+}
+.nav-btn {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--text-dim); font-size: 17px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.2s; flex-shrink: 0;
+}
+.nav-btn:hover {
+  border-color: var(--accent-border); color: var(--accent);
+  background: var(--accent-faint);
+}
+.card-dots {
+  display: flex; gap: 6px; align-items: center; margin: 0 8px;
+}
+.card-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--text-mute);
+  transition: all 0.3s; cursor: pointer;
+}
+.card-dot.active-dot {
+  background: var(--accent);
+  transform: scale(1.3);
+}
+
+/* ── transcript toggle ────────────────────────────────── */
+.transcript-toggle {
+  font-size: 12px; color: var(--text-mute);
+  cursor: pointer; display: flex; align-items: center; gap: 5px;
+  padding: 8px 20px;
+  transition: color 0.2s;
+  position: relative; z-index: 10;
+  user-select: none;
+  margin-top: 2px;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.04em;
+}
+.transcript-toggle:hover { color: var(--text-dim); }
+
+/* ── transcript panel ─────────────────────────────────── */
+.transcript-panel {
+  width: 100%; max-width: 440px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin: 0 20px 30px;
+  position: relative; z-index: 10;
+  font-size: 13px; color: var(--text-dim); line-height: 1.6;
+  display: none;
+}
+.transcript-panel.open { display: block; }
+.transcript-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; color: var(--accent); letter-spacing: 0.1em;
+  text-transform: uppercase; margin-bottom: 7px;
+}
+
+/* ── animations ───────────────────────────────────────── */
+@keyframes pip-ring-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes breathe {
+  0%,100% { opacity: 0.7; }
+  50%      { opacity: 1; }
+}
+@keyframes arm-breathe {
+  0%,100% { opacity: 0.65; filter: drop-shadow(0 0 6px rgba(74,155,130,0.5)); }
+  50%      { opacity: 1;    filter: drop-shadow(0 0 14px rgba(74,155,130,0.85)); }
+}
+@keyframes arm-morph {
+  0%   { d: path("M 240 158 C 235 168, 225 180, 220 195 C 215 210, 215 220, 220 235 C 225 248, 232 252, 240 255"); }
+  33%  { d: path("M 240 158 C 244 170, 248 182, 245 198 C 242 212, 236 222, 236 238 C 236 250, 238 254, 240 255"); }
+  66%  { d: path("M 240 158 C 232 169, 226 181, 228 197 C 230 211, 238 219, 242 235 C 246 249, 243 253, 240 255"); }
+  100% { d: path("M 240 158 C 235 168, 225 180, 220 195 C 215 210, 215 220, 220 235 C 225 248, 232 252, 240 255"); }
+}
+.arm-path {
+  animation: arm-breathe 4.8s ease-in-out infinite, arm-morph 8s ease-in-out infinite;
+}
+
+/* ── responsive tweaks ───────────────────────────────── */
+@media (max-width: 400px) {
+  :root { --card-w: 290px; }
+  .pip-orb { width: 130px; height: 130px; }
+  .pip-orb svg { width: 130px; height: 130px; }
+}
+</style>
+</head>
+<body>
+<div class="ambient"></div>
+
+<!-- top bar -->
+<div class="topbar">
+  <div class="topbar-left">Sunday · Jun 15</div>
+  <div class="topbar-right" onclick="this.textContent=this.textContent.includes('Morning')?'✦ Work View':'Morning Mode ✦'">
+    <div class="morning-dot"></div>
+    Morning Mode ✦
+  </div>
+</div>
+
+<!-- pip orb -->
+<div class="pip-zone">
+  <div class="pip-orb">
+    <svg viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <!-- glow filters -->
+        <filter id="pip-glow" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur"/>
+          <feColorMatrix in="blur" type="matrix"
+            values="0 0 0 0 0.29  0 0 0 0 0.61  0 0 0 0 0.51  0 0 0 1 0"/>
+          <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="core-glow" x="-80%" y="-80%" width="260%" height="260%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="9"/>
+        </filter>
+        <filter id="sphere-glow" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur"/>
+          <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+
+        <!-- radial gradient for spheres -->
+        <radialGradient id="head-grad" cx="40%" cy="35%" r="60%">
+          <stop offset="0%"   stop-color="#9ff0d2" stop-opacity="0.9"/>
+          <stop offset="55%"  stop-color="#4a9b82" stop-opacity="0.8"/>
+          <stop offset="100%" stop-color="#2d7560" stop-opacity="0.6"/>
+        </radialGradient>
+        <radialGradient id="tail-grad" cx="40%" cy="35%" r="60%">
+          <stop offset="0%"   stop-color="#6ec9a8" stop-opacity="0.55"/>
+          <stop offset="100%" stop-color="#2d7560" stop-opacity="0.25"/>
+        </radialGradient>
+        <radialGradient id="ring-grad" cx="50%" cy="50%" r="50%">
+          <stop offset="0%"   stop-color="#5bbfa0" stop-opacity="0.9"/>
+          <stop offset="100%" stop-color="#2d7560" stop-opacity="0.5"/>
+        </radialGradient>
+
+        <!-- clip for torus ring section -->
+        <clipPath id="ring-clip">
+          <ellipse cx="80" cy="80" rx="76" ry="76"/>
+        </clipPath>
+      </defs>
+
+      <!-- breathing group drives everything -->
+      <g class="pip-breath" style="animation:breathe 4.8s ease-in-out infinite; transform-origin:80px 80px">
+
+        <!-- soft core glow -->
+        <ellipse cx="80" cy="82" rx="22" ry="26" fill="#4a9b82" opacity="0.18" filter="url(#core-glow)"/>
+
+        <!-- HEAD sphere — hex lattice approximation -->
+        <g filter="url(#sphere-glow)" style="animation:breathe 4.8s ease-in-out infinite 0.1s; transform-origin:80px 68px">
+          <!-- base sphere -->
+          <circle cx="80" cy="68" r="16" fill="url(#head-grad)" opacity="0.9"/>
+          <!-- hex cells on head sphere (approximate hex grid projected on sphere) -->
+          <g stroke="#9ff0d2" stroke-width="0.9" fill="none" opacity="0.55">
+            <!-- top row -->
+            <polygon points="80,54 86,57 86,63 80,66 74,63 74,57"/>
+            <!-- middle row left -->
+            <polygon points="70,60 76,63 76,69 70,72 64,69 64,63"/>
+            <!-- middle row right -->
+            <polygon points="90,60 96,63 96,69 90,72 84,69 84,63"/>
+            <!-- bottom center -->
+            <polygon points="80,66 86,69 86,75 80,78 74,75 74,69"/>
+            <!-- small partials at edges -->
+            <polygon points="76,56 80,54 84,56 84,60 80,62 76,60" opacity="0.4"/>
+          </g>
+          <!-- highlight -->
+          <ellipse cx="75" cy="62" rx="5" ry="4" fill="#c8f5e3" opacity="0.22"/>
+        </g>
+
+        <!-- TAIL sphere -->
+        <g filter="url(#sphere-glow)" style="animation:breathe 4.8s ease-in-out infinite 0.3s; transform-origin:80px 98px">
+          <circle cx="80" cy="98" r="11.2" fill="url(#tail-grad)" opacity="0.52"/>
+          <g stroke="#6ec9a8" stroke-width="0.8" fill="none" opacity="0.4">
+            <polygon points="80,89 85,92 85,97 80,100 75,97 75,92"/>
+            <polygon points="73,93 78,96 78,101 73,104 68,101 68,96" opacity="0.5"/>
+            <polygon points="87,93 92,96 92,101 87,104 82,101 82,96" opacity="0.5"/>
+          </g>
+        </g>
+
+        <!-- RING — hex-tiled torus (approximated as tilted elliptical ring with hex segments) -->
+        <g filter="url(#pip-glow)">
+          <!-- outer ring path -->
+          <ellipse cx="80" cy="80" rx="72" ry="30"
+            fill="none" stroke="url(#ring-grad)" stroke-width="12"
+            opacity="0.22"
+            transform="rotate(-22 80 80)"/>
+
+          <!-- hex cell segments along the ring (approximate) -->
+          <g stroke="#5bbfa0" stroke-width="1.1" fill="rgba(74,155,130,0.06)" opacity="0.72"
+            transform="rotate(-22 80 80)">
+
+            <!-- top arc cells -->
+            <polygon points="38,72 44,68 50,70 50,76 44,80 38,78"/>
+            <polygon points="52,66 58,62 64,64 64,70 58,74 52,72"/>
+            <polygon points="66,62 72,58 78,60 78,66 72,70 66,68"/>
+            <polygon points="80,60 86,56 92,58 92,64 86,68 80,66"/>
+            <polygon points="94,62 100,58 106,60 106,66 100,70 94,68"/>
+            <polygon points="108,66 114,62 120,64 120,70 114,74 108,72"/>
+            <polygon points="120,72 124,68 128,70 128,78 124,82 120,80"/>
+
+            <!-- bottom arc cells -->
+            <polygon points="38,82 44,80 50,82 50,88 44,92 38,90"/>
+            <polygon points="52,86 58,84 64,86 64,92 58,96 52,94"/>
+            <polygon points="66,90 72,88 78,90 78,96 72,100 66,98"/>
+            <polygon points="80,92 86,90 92,92 92,98 86,102 80,100"/>
+            <polygon points="94,90 100,88 106,90 106,96 100,100 94,98"/>
+            <polygon points="108,86 114,84 120,86 120,92 114,96 108,94"/>
+            <polygon points="120,80 124,78 128,80 128,88 124,92 120,90"/>
+          </g>
+
+          <!-- ring spine highlight -->
+          <ellipse cx="80" cy="80" rx="72" ry="30"
+            fill="none" stroke="#9ff0d2" stroke-width="1.2"
+            opacity="0.3"
+            transform="rotate(-22 80 80)"/>
+
+          <!-- ring inner shadow -->
+          <ellipse cx="80" cy="80" rx="60" ry="20"
+            fill="none" stroke="#2d7560" stroke-width="6"
+            opacity="0.35"
+            transform="rotate(-22 80 80)"/>
+        </g>
+
+        <!-- connecting lines head→tail -->
+        <line x1="80" y1="84" x2="80" y2="87" stroke="#4a9b82" stroke-width="1.5" opacity="0.6"/>
+      </g>
+    </svg>
+  </div>
+
+  <!-- status strip -->
+  <div class="pip-status">
+    <div class="pip-status-dot"></div>
+    <span>✦ Pip is speaking · Your Word</span>
+  </div>
+</div>
+
+<!-- organic arm -->
+<div class="arm-zone">
+  <svg class="arm-svg" viewBox="0 0 480 90" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <filter id="arm-glow" x="-100%" y="-100%" width="300%" height="300%">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur"/>
+        <feColorMatrix in="blur" type="matrix"
+          values="0 0 0 0 0.29  0 0 0 0 0.61  0 0 0 0 0.51  0 0 0 0.8 0"/>
+        <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+      <linearGradient id="arm-grad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stop-color="#5bbfa0" stop-opacity="0.9"/>
+        <stop offset="60%"  stop-color="#4a9b82" stop-opacity="0.7"/>
+        <stop offset="100%" stop-color="#4a9b82" stop-opacity="0.3"/>
+      </linearGradient>
+      <!-- tapered stroke: use multiple overlapping paths -->
+    </defs>
+
+    <!-- glow layer (wide, faint) -->
+    <path id="arm-glow-path"
+      d="M 240 2
+         C 238 15, 232 25, 228 38
+         C 224 50, 226 60, 232 70
+         C 237 78, 241 82, 240 88"
+      fill="none"
+      stroke="url(#arm-grad)"
+      stroke-width="12"
+      stroke-linecap="round"
+      opacity="0.25"
+      filter="url(#arm-glow)"/>
+
+    <!-- core arm (tapered via multiple strokes) -->
+    <path class="arm-path"
+      d="M 240 2
+         C 238 15, 232 25, 228 38
+         C 224 50, 226 60, 232 70
+         C 237 78, 241 82, 240 88"
+      fill="none"
+      stroke="url(#arm-grad)"
+      stroke-width="3.5"
+      stroke-linecap="round"/>
+
+    <!-- inner highlight -->
+    <path
+      d="M 240 2
+         C 239 14, 234 24, 230 37
+         C 227 49, 229 59, 234 69
+         C 238 77, 240 81, 240 88"
+      fill="none"
+      stroke="#9ff0d2"
+      stroke-width="1"
+      stroke-linecap="round"
+      opacity="0.35"
+      style="animation: breathe 4.8s ease-in-out infinite"/>
+
+    <!-- small side tendrils for organic feel -->
+    <path
+      d="M 228 42 C 222 40, 218 43, 220 48"
+      fill="none" stroke="#4a9b82" stroke-width="1.2" stroke-linecap="round" opacity="0.35"/>
+    <path
+      d="M 232 62 C 227 60, 224 64, 228 68"
+      fill="none" stroke="#4a9b82" stroke-width="1" stroke-linecap="round" opacity="0.25"/>
+
+    <!-- arrival bloom at card top -->
+    <ellipse cx="240" cy="88" rx="20" ry="3.5"
+      fill="#4a9b82" opacity="0.18"
+      filter="url(#arm-glow)"/>
+  </svg>
+</div>
+
+<!-- carousel -->
+<div class="carousel-outer">
+  <div class="carousel-track" id="track">
+
+    <!-- CARD 0: Good News (far left, hidden) -->
+    <div class="card good-news side-left2" data-index="4" onclick="goTo(4)">
+      <div class="card-header">
+        <span class="card-label">Good News</span>
+        <span class="card-badge">2 wins</span>
+      </div>
+      <div class="card-body">
+        <div class="item-row">
+          <div class="item-dot green-dot"></div>
+          <div><div class="item-text">Fenix Audit — connected</div><div class="item-meta">Integrated this week</div></div>
+        </div>
+        <div class="item-row">
+          <div class="item-dot green-dot"></div>
+          <div><div class="item-text">Western Auto — back on cadence</div><div class="item-meta">First meeting in 38 days</div></div>
+        </div>
+      </div>
+      <svg class="hex-sig" width="42" height="36" viewBox="0 0 42 36">
+        <polygon points="34,8 40,11.5 40,18.5 34,22 28,18.5 28,11.5" fill="none" stroke="#27ae60" stroke-width="1" opacity="0.28"/>
+        <polygon points="22,16 28,19.5 28,26.5 22,30 16,26.5 16,19.5" fill="none" stroke="#27ae60" stroke-width="1" opacity="0.18"/>
+        <polygon points="10,22 16,25.5 16,32.5 10,36 4,32.5 4,25.5" fill="none" stroke="#27ae60" stroke-width="1" opacity="0.1"/>
+      </svg>
+    </div>
+
+    <!-- CARD 1: In Flight (left) -->
+    <div class="card in-flight side-left" data-index="3" onclick="goTo(3)">
+      <div class="card-header">
+        <span class="card-label">In Flight</span>
+        <span class="card-badge">6 active</span>
+      </div>
+      <div class="card-body">
+        <div class="item-row">
+          <div class="item-dot blue-dot"></div>
+          <div><div class="item-text">MSO Rebuild — Phase 2</div><div class="item-meta">Due Jul 3</div></div>
+        </div>
+        <div class="item-row">
+          <div class="item-dot blue-dot"></div>
+          <div><div class="item-text">All Star Body — Onboarding</div><div class="item-meta">Week 3 of 6</div></div>
+        </div>
+        <div class="item-row">
+          <div class="item-dot blue-dot"></div>
+          <div><div class="item-text">CUNA Mutual — Contract</div><div class="item-meta">Waiting on legal</div></div>
+        </div>
+      </div>
+      <svg class="hex-sig" width="42" height="36" viewBox="0 0 42 36">
+        <polygon points="34,8 40,11.5 40,18.5 34,22 28,18.5 28,11.5" fill="none" stroke="#3b7fd4" stroke-width="1" opacity="0.28"/>
+        <polygon points="22,16 28,19.5 28,26.5 22,30 16,26.5 16,19.5" fill="none" stroke="#3b7fd4" stroke-width="1" opacity="0.18"/>
+        <polygon points="10,22 16,25.5 16,32.5 10,36 4,32.5 4,25.5" fill="none" stroke="#3b7fd4" stroke-width="1" opacity="0.1"/>
+      </svg>
+    </div>
+
+    <!-- CARD 2: Your Word (ACTIVE) -->
+    <div class="card your-word active" data-index="0" id="card-active">
+      <div class="card-header">
+        <span class="card-label">Your Word</span>
+        <span class="card-badge">5 items</span>
+      </div>
+      <div class="card-body">
+        <div class="split-cols">
+          <!-- you owe -->
+          <div class="split-col">
+            <div class="split-col-head">You Owe (3)</div>
+            <div class="item-row">
+              <div class="item-dot accent-dot"></div>
+              <div><div class="item-text">Fenix Audit follow-up</div><div class="item-meta">Due today</div></div>
+            </div>
+            <div class="item-row">
+              <div class="item-dot accent-dot"></div>
+              <div><div class="item-text">CUNA Mutual deck</div><div class="item-meta">Due Wed</div></div>
+            </div>
+            <div class="item-row">
+              <div class="item-dot accent-dot"></div>
+              <div><div class="item-text">Western Auto intro email</div><div class="item-meta">Overdue 2d</div></div>
+            </div>
+          </div>
+          <!-- they owe -->
+          <div class="split-col">
+            <div class="split-col-head">They Owe (2)</div>
+            <div class="item-row">
+              <div class="item-dot yellow-dot"></div>
+              <div><div class="item-text">MSO contract sign-off</div><div class="item-meta">Admin · 8d</div></div>
+            </div>
+            <div class="item-row">
+              <div class="item-dot yellow-dot"></div>
+              <div><div class="item-text">All Star shop list</div><div class="item-meta">Supplier · 3d</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- hex signature: 3 cells, accent color -->
+      <svg class="hex-sig" width="42" height="36" viewBox="0 0 42 36">
+        <polygon points="34,8 40,11.5 40,18.5 34,22 28,18.5 28,11.5" fill="none" stroke="#4a9b82" stroke-width="1.1" opacity="0.3"/>
+        <polygon points="22,16 28,19.5 28,26.5 22,30 16,26.5 16,19.5" fill="none" stroke="#4a9b82" stroke-width="1.1" opacity="0.20"/>
+        <polygon points="10,22 16,25.5 16,32.5 10,36 4,32.5 4,25.5" fill="none" stroke="#4a9b82" stroke-width="1.1" opacity="0.11"/>
+      </svg>
+    </div>
+
+    <!-- CARD 3: Today -->
+    <div class="card today side-right" data-index="1" onclick="goTo(1)">
+      <div class="card-header">
+        <span class="card-label">Today</span>
+        <span class="card-badge">2 calls</span>
+      </div>
+      <div class="card-body">
+        <div class="meeting-row">
+          <div class="meeting-info">
+            <div class="meeting-name">Fenix Audit — Weekly Sync</div>
+            <div class="meeting-time">9:00 AM · Cadence</div>
+          </div>
+          <div class="prep-btn">Prep ✦</div>
+        </div>
+        <div class="meeting-row">
+          <div class="meeting-info">
+            <div class="meeting-name">All Star Body — Onboarding</div>
+            <div class="meeting-time">2:30 PM · Cadence</div>
+          </div>
+          <div class="prep-btn">Prep ✦</div>
+        </div>
+      </div>
+      <svg class="hex-sig" width="42" height="36" viewBox="0 0 42 36">
+        <polygon points="34,8 40,11.5 40,18.5 34,22 28,18.5 28,11.5" fill="none" stroke="#7c88ff" stroke-width="1" opacity="0.28"/>
+        <polygon points="22,16 28,19.5 28,26.5 22,30 16,26.5 16,19.5" fill="none" stroke="#7c88ff" stroke-width="1" opacity="0.18"/>
+        <polygon points="10,22 16,25.5 16,32.5 10,36 4,32.5 4,25.5" fill="none" stroke="#7c88ff" stroke-width="1" opacity="0.1"/>
+      </svg>
+    </div>
+
+    <!-- CARD 4: Fires -->
+    <div class="card fires side-right2" data-index="2" onclick="goTo(2)">
+      <div class="card-header">
+        <span class="card-label">Fires</span>
+        <span class="card-badge">4 overdue</span>
+      </div>
+      <div class="card-body">
+        <div class="item-row">
+          <div class="item-dot red-dot"></div>
+          <div><div class="item-text">Western Auto — Audit late</div><div class="item-meta">4d overdue</div></div>
+        </div>
+        <div class="item-row">
+          <div class="item-dot red-dot"></div>
+          <div><div class="item-text">MSO Rebuild — stalled</div><div class="item-meta">No update in 11d</div></div>
+        </div>
+        <div class="item-row">
+          <div class="item-dot red-dot"></div>
+          <div><div class="item-text">Fenix — shop list missing</div><div class="item-meta">Blocking integration</div></div>
+        </div>
+      </div>
+      <svg class="hex-sig" width="42" height="36" viewBox="0 0 42 36">
+        <polygon points="34,8 40,11.5 40,18.5 34,22 28,18.5 28,11.5" fill="none" stroke="#c0392b" stroke-width="1" opacity="0.28"/>
+        <polygon points="22,16 28,19.5 28,26.5 22,30 16,26.5 16,19.5" fill="none" stroke="#c0392b" stroke-width="1" opacity="0.18"/>
+        <polygon points="10,22 16,25.5 16,32.5 10,36 4,32.5 4,25.5" fill="none" stroke="#c0392b" stroke-width="1" opacity="0.1"/>
+      </svg>
+    </div>
+
+  </div><!-- /track -->
+</div><!-- /carousel-outer -->
+
+<!-- nav controls -->
+<div class="carousel-nav">
+  <div class="nav-btn" onclick="step(-1)">‹</div>
+  <div class="card-dots">
+    <div class="card-dot active-dot" onclick="goTo(0)"></div>
+    <div class="card-dot" onclick="goTo(1)"></div>
+    <div class="card-dot" onclick="goTo(2)"></div>
+    <div class="card-dot" onclick="goTo(3)"></div>
+    <div class="card-dot" onclick="goTo(4)"></div>
+  </div>
+  <div class="nav-btn" onclick="step(1)">›</div>
+</div>
+
+<!-- transcript toggle -->
+<div class="transcript-toggle" onclick="toggleTranscript(this)">
+  <span id="transcript-arrow">↓</span>
+  <span id="transcript-label">What Pip said</span>
+</div>
+
+<!-- transcript panel -->
+<div class="transcript-panel" id="transcript-panel">
+  <div class="transcript-label">✦ Pip · 8:47 AM</div>
+  <p>Good morning. You have three things you owe people today — the Fenix follow-up is the most urgent, it's already on their radar. The Western Auto intro email is two days late; I'd send that before your 9am sync.</p>
+  <p style="margin-top:10px;color:#6b7280;font-size:12px;">Admin still hasn't returned the MSO contract. It's been 8 days. Do you want me to draft a chase note?</p>
+</div>
+
+<style>
+/* arm transition for card-swap */
+.arm-zone { transition: none; }
+.arm-svg .arm-path { transition: d 0.45s ease; }
+</style>
+
+<script>
+// ── carousel state ──────────────────────────────────────────
+const CARDS = 5;
+// labels for the arm Pip voice line
+const CARD_LABELS = ['Your Word', 'Today', 'Fires', 'In Flight', 'Good News'];
+// data-index of each dom card: [4, 3, 0, 1, 2]
+// DOM order: Good News (4), In Flight (3), Your Word (0), Today (1), Fires (2)
+
+let active = 0; // logical index (0=YourWord, 1=Today, 2=Fires, 3=InFlight, 4=GoodNews)
+
+const CLASS_BY_POS = {
+  'active':      ['active'],
+  'side-left':   ['side-left'],
+  'side-left2':  ['side-left2'],
+  'side-right':  ['side-right'],
+  'side-right2': ['side-right2'],
+  'hidden':      ['hidden'],
+};
+
+// Logical card order: 0=YourWord 1=Today 2=Fires 3=InFlight 4=GoodNews
+// DOM order:           0=GoodNews 1=InFlight 2=YourWord 3=Today 4=Fires
+// dom[i].dataset.index gives the logical index
+
+function getDomCards() {
+  return Array.from(document.querySelectorAll('.card'));
+}
+
+function getRelativePos(logicalActive, logicalCard) {
+  // returns -2,-1,0,1,2 = far-left, left, active, right, far-right
+  let diff = logicalCard - logicalActive;
+  // wrap around
+  if (diff > 2)  diff -= CARDS;
+  if (diff < -2) diff += CARDS;
+  return diff;
+}
+
+function posToClass(diff) {
+  if (diff === 0)  return 'active';
+  if (diff === -1) return 'side-left';
+  if (diff === -2) return 'side-left2';
+  if (diff === 1)  return 'side-right';
+  if (diff === 2)  return 'side-right2';
+  return 'hidden';
+}
+
+const ALL_POS_CLASSES = ['active', 'side-left', 'side-left2', 'side-right', 'side-right2', 'hidden'];
+
+function renderCarousel() {
+  const domCards = getDomCards();
+  domCards.forEach(card => {
+    const logicalIndex = parseInt(card.dataset.index, 10);
+    const diff = getRelativePos(active, logicalIndex);
+    const cls  = posToClass(diff);
+    ALL_POS_CLASSES.forEach(c => card.classList.remove(c));
+    card.classList.add(cls);
+
+    // update card accent border based on which one is active
+    const isActive = diff === 0;
+    if (isActive) {
+      // reset box-shadow based on card type
+    }
+  });
+
+  // update dots
+  const dots = document.querySelectorAll('.card-dot');
+  dots.forEach((d, i) => {
+    d.classList.toggle('active-dot', i === active);
+  });
+
+  // update Pip status label
+  const statusEl = document.querySelector('.pip-status span');
+  if (statusEl) statusEl.textContent = `✦ Pip · ${CARD_LABELS[active]}`;
+
+  // animate arm target position
+  updateArm();
+}
+
+// arm: different sinuous path shapes per card
+const ARM_PATHS = [
+  // 0: YourWord — straight with gentle wave
+  "M 240 2 C 238 15, 232 25, 228 38 C 224 50, 226 60, 232 70 C 237 78, 241 82, 240 88",
+  // 1: Today — leans right
+  "M 240 2 C 243 14, 248 26, 248 40 C 248 52, 244 62, 244 74 C 244 80, 242 84, 242 88",
+  // 2: Fires — leans further right
+  "M 240 2 C 246 13, 254 25, 256 40 C 258 54, 252 64, 248 76 C 246 81, 244 85, 244 88",
+  // 3: InFlight — leans left
+  "M 240 2 C 236 14, 230 26, 230 40 C 230 52, 234 62, 236 74 C 237 80, 238 84, 238 88",
+  // 4: GoodNews — leans further left
+  "M 240 2 C 233 13, 224 25, 222 40 C 220 54, 226 64, 230 76 C 232 81, 236 85, 236 88",
+];
+
+function updateArm() {
+  const armPath    = document.querySelector('.arm-path');
+  const armGlowP   = document.querySelector('#arm-glow-path');
+  const highlight  = document.querySelector('.arm-svg path:nth-child(3)'); // inner highlight
+
+  const p = ARM_PATHS[active] || ARM_PATHS[0];
+
+  if (armPath)   armPath.setAttribute('d', p);
+  if (armGlowP)  armGlowP.setAttribute('d', p);
+  if (highlight) {
+    // offset highlight slightly
+    highlight.setAttribute('d', p.replace(/C /g, 'C '));
+  }
+}
+
+function goTo(logicalIndex) {
+  active = ((logicalIndex % CARDS) + CARDS) % CARDS;
+  renderCarousel();
+}
+
+function step(dir) {
+  active = ((active + dir) % CARDS + CARDS) % CARDS;
+  renderCarousel();
+}
+
+// transcript
+function toggleTranscript(el) {
+  const panel  = document.getElementById('transcript-panel');
+  const arrow  = document.getElementById('transcript-arrow');
+  const label  = document.getElementById('transcript-label');
+  const isOpen = panel.classList.toggle('open');
+  arrow.textContent = isOpen ? '↑' : '↓';
+  label.textContent = isOpen ? 'Hide' : 'What Pip said';
+}
+
+// swipe support
+let touchStartX = 0;
+let touchStartY = 0;
+const track = document.getElementById('track');
+
+track.addEventListener('touchstart', e => {
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+}, { passive: true });
+
+track.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  const dy = e.changedTouches[0].clientY - touchStartY;
+  if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
+    step(dx < 0 ? 1 : -1);
+  }
+}, { passive: true });
+
+// keyboard nav
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft')  step(-1);
+  if (e.key === 'ArrowRight') step(1);
+});
+
+// initial render
+renderCarousel();
+
+// continuous arm morph animation via JS (more organic than CSS d: animation which has limited browser support)
+const ARM_WIGGLE = [
+  // tiny sinuous wiggles around each base path — 3 keyframes per card
+  [
+    "M 240 2 C 238 15, 232 25, 228 38 C 224 50, 226 60, 232 70 C 237 78, 241 82, 240 88",
+    "M 240 2 C 239 16, 234 26, 231 39 C 228 52, 228 62, 233 72 C 238 79, 241 83, 240 88",
+    "M 240 2 C 237 14, 231 24, 226 37 C 222 50, 225 60, 231 70 C 236 78, 240 82, 240 88",
+  ],
+  [
+    "M 240 2 C 243 14, 248 26, 248 40 C 248 52, 244 62, 244 74 C 244 80, 242 84, 242 88",
+    "M 240 2 C 244 15, 250 27, 250 41 C 250 53, 246 63, 246 75 C 246 81, 243 85, 242 88",
+    "M 240 2 C 242 13, 246 25, 246 39 C 246 51, 243 61, 242 73 C 242 79, 241 83, 242 88",
+  ],
+  [
+    "M 240 2 C 246 13, 254 25, 256 40 C 258 54, 252 64, 248 76 C 246 81, 244 85, 244 88",
+    "M 240 2 C 248 14, 256 26, 258 41 C 260 55, 254 65, 250 77 C 248 82, 245 86, 244 88",
+    "M 240 2 C 244 12, 252 24, 254 39 C 256 53, 250 63, 246 75 C 244 80, 242 84, 244 88",
+  ],
+  [
+    "M 240 2 C 236 14, 230 26, 230 40 C 230 52, 234 62, 236 74 C 237 80, 238 84, 238 88",
+    "M 240 2 C 235 15, 229 27, 228 41 C 228 53, 232 63, 234 75 C 235 81, 237 85, 238 88",
+    "M 240 2 C 237 13, 231 25, 232 39 C 232 51, 236 61, 238 73 C 239 79, 239 83, 238 88",
+  ],
+  [
+    "M 240 2 C 233 13, 224 25, 222 40 C 220 54, 226 64, 230 76 C 232 81, 236 85, 236 88",
+    "M 240 2 C 232 14, 222 26, 220 41 C 218 55, 224 65, 228 77 C 231 82, 235 86, 236 88",
+    "M 240 2 C 234 12, 226 24, 224 39 C 222 53, 228 63, 232 75 C 234 80, 237 84, 236 88",
+  ],
+];
+
+let wiggleFrame = 0;
+let wiggleT = 0;
+const WIGGLE_SPEED = 0.004; // fraction of keyframe per ms
+
+function interpolatePath(pathA, pathB, t) {
+  // very simple: extract all numbers from both paths and interpolate
+  const numsA = pathA.match(/-?\d+\.?\d*/g).map(Number);
+  const numsB = pathB.match(/-?\d+\.?\d*/g).map(Number);
+  const result = numsA.map((a, i) => a + (numsB[i] - a) * t);
+  let ri = 0;
+  return pathA.replace(/-?\d+\.?\d*/g, () => result[ri++].toFixed(1));
+}
+
+let lastTime = null;
+function animateArm(timestamp) {
+  if (!lastTime) lastTime = timestamp;
+  const dt = timestamp - lastTime;
+  lastTime = timestamp;
+
+  const armPath  = document.querySelector('.arm-path');
+  const armGlowP = document.querySelector('#arm-glow-path');
+  if (!armPath) { requestAnimationFrame(animateArm); return; }
+
+  wiggleT += dt * WIGGLE_SPEED;
+  if (wiggleT >= 1) {
+    wiggleT -= 1;
+    wiggleFrame = (wiggleFrame + 1) % 3;
+  }
+
+  const kf   = ARM_WIGGLE[active];
+  const base  = kf[wiggleFrame % kf.length];
+  const next  = kf[(wiggleFrame + 1) % kf.length];
+  const interp = interpolatePath(base, next, wiggleT);
+
+  armPath.setAttribute('d', interp);
+  armGlowP.setAttribute('d', interp);
+
+  requestAnimationFrame(animateArm);
+}
+requestAnimationFrame(animateArm);
+</script>
+</body>
+</html>
