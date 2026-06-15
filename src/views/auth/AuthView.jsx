@@ -3,7 +3,7 @@ import { C } from "../../lib/colors";
 import { PipOrb } from "../../components/PipMark";
 import { AmberBtn } from "../../components/Buttons";
 import { InputField } from "../../components/InputField";
-import { HexField } from "../../lib/hexMotif";
+import { HexField, HexSignature } from "../../lib/hexMotif";
 
 function passwordStrength(pw) {
   if (!pw) return null;
