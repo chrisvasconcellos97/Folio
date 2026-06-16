@@ -983,7 +983,10 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
           <Glow onClick={function () { onOpenCadenceHub(first.account.id, first.cadence.id); }}>
             {first.account.name}
           </Glow>{" "}
-          at <strong style={{ color: C.text, fontWeight: 600 }}>{firstT}</strong>. I'll prep you.
+          at <strong style={{ color: C.text, fontWeight: 600 }}>{firstT}</strong>.{" "}
+          <Glow onClick={function () { onOpenCadenceHub(first.account.id, first.cadence.id); }}>
+            I'll prep you.
+          </Glow>
         </span>
       );
     }
@@ -1000,7 +1003,10 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
           <Glow onClick={function () { onOpenCadenceHub(second.account.id, second.cadence.id); }}>
             {second.account.name}
           </Glow>{" "}
-          at {secondT}. I'll prep both.
+          at {secondT}.{" "}
+          <Glow onClick={function () { onOpenCadenceHub(first.account.id, first.cadence.id); }}>
+            I'll prep both.
+          </Glow>
         </span>
       );
     }

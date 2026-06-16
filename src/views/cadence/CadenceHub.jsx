@@ -1315,6 +1315,7 @@ export function CadenceHub({
   var [summarizeErrors, setSummarizeErrors] = useState({}); // { draftId: msg }
   var [previewPlan, setPreviewPlan]         = useState(null); // { plan, summary, draftId, suggestedTitle, meetingTitle, unknownPeople }
   var [previewTitleDraft, setPreviewTitleDraft] = useState(null); // edited title from preview modal
+  var [prepDismissed, setPrepDismissed] = useState({}); // { questionId: true }
   var [lastDiscussedProjectIds, setLastDiscussedProjectIds] = useState([]);
   var [lastDiscussedItemIds,    setLastDiscussedItemIds]    = useState([]);
   var [readoutMeetingId, setReadoutMeetingId] = useState(null);
@@ -1767,6 +1768,112 @@ export function CadenceHub({
     var match = (meetings || []).find(function (m) { return m.id === meetingMode.draft.id; });
     return match || meetingMode.draft;
   }, [meetingMode, meetings]);
+
+  /* ---- Pre-meeting check-in questions (deterministic, zero AI cost) ---- */
+  var prepQuestions = useMemo(function () {
+    if (isPersonCadence) return [];
+    var today = new Date().toISOString().slice(0, 10);
+    var qs = [];
+    // 1. Waiting-on projects
+    activeProjects.forEach(function (p) {
+      if (p.waiting_on && qs.length < 3) {
+        qs.push({
+          id: "wait_" + p.id,
+          text: "Did " + p.waiting_on + " get back to you on " + p.title + "?",
+          yesLabel: "Yes — clear it",
+          noLabel: "Still waiting",
+          onYes: function () { updateProject(p.id, { waiting_on: null, waiting_on_since: null }); },
+        });
+      }
+    });
+    // 2. Blocked projects
+    activeProjects.forEach(function (p) {
+      if (p.status === "blocked" && qs.length < 3) {
+        qs.push({
+          id: "blocked_" + p.id,
+          text: p.title + " is blocked — resolved?",
+          yesLabel: "Unblocked",
+          noLabel: "Still blocked",
+          onYes: function () { updateProject(p.id, { status: "in_progress" }); },
+        });
+      }
+    });
+    // 3. Overdue commitments
+    openItems.forEach(function (i) {
+      if (i.is_commitment && i.due_date && i.due_date < today && qs.length < 3) {
+        qs.push({
+          id: "commit_" + i.id,
+          text: "Did you deliver on “" + (i.text || i.title) + "”?",
+          yesLabel: "Done ✓",
+          noLabel: "Not yet",
+          onYes: function () { closeItem(i.id); },
+        });
+      }
+    });
+    return qs;
+  }, [activeProjects, openItems, isPersonCadence, updateProject, closeItem]);
+
+  var visiblePrepQuestions = prepQuestions.filter(function (q) { return !prepDismissed[q.id]; });
+
+  var prepCheckInSection = visiblePrepQuestions.length > 0 ? (
+    <div style={{
+      background: C.surface2, border: "1px solid " + C.rule,
+      borderLeft: "2px solid " + C.accent,
+      borderRadius: 10, padding: "12px 14px",
+    }}>
+      <div style={{
+        fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+        fontSize: 9.5, color: C.accent, fontWeight: 700,
+        textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10,
+      }}>
+        ✦ Before you start
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {visiblePrepQuestions.map(function (q) {
+          return (
+            <div key={q.id} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <div style={{ fontSize: 13, color: C.text, lineHeight: 1.4, fontFamily: "'Inter', system-ui, sans-serif" }}>
+                {q.text}
+              </div>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button
+                  type="button"
+                  onClick={function () {
+                    q.onYes();
+                    setPrepDismissed(function (prev) { return Object.assign({}, prev, { [q.id]: true }); });
+                  }}
+                  style={{
+                    padding: "4px 12px", borderRadius: 6, fontSize: 11,
+                    fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+                    cursor: "pointer", fontWeight: 600,
+                    background: C.accentFaint, border: "1px solid " + C.accentLine,
+                    color: C.accent,
+                  }}
+                >
+                  {q.yesLabel}
+                </button>
+                <button
+                  type="button"
+                  onClick={function () {
+                    setPrepDismissed(function (prev) { return Object.assign({}, prev, { [q.id]: true }); });
+                  }}
+                  style={{
+                    padding: "4px 10px", borderRadius: 6, fontSize: 11,
+                    fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+                    cursor: "pointer",
+                    background: "transparent", border: "1px solid " + C.rule,
+                    color: C.textMuted,
+                  }}
+                >
+                  {q.noLabel}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  ) : null;
 
   /* ---- Sections ---- */
   var briefSection = isPersonCadence ? (
@@ -2234,6 +2341,7 @@ export function CadenceHub({
     return (
       <div>
         {header}
+        {prepCheckInSection && <div style={{ marginBottom: 10 }}>{prepCheckInSection}</div>}
         {briefSection}
         <div style={{ marginTop: 14 }}>{startMeetingSection}</div>
         <div style={{
@@ -2290,6 +2398,7 @@ export function CadenceHub({
     <div>
       {header}
       <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+        {prepCheckInSection}
         {briefSection}
         {startMeetingSection}
         {draftsSection}
