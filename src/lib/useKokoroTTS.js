@@ -12,12 +12,24 @@ var _loadPromise = null;
 var _isMobile = typeof navigator !== "undefined"
   && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
+// ── DIAGNOSTIC BLOCK (remove once root cause confirmed) ──────────────────────
+if (typeof window !== "undefined") {
+  console.log("[KokoroTTS] UA:", navigator.userAgent);
+  console.log("[KokoroTTS] _isMobile:", _isMobile);
+  console.log("[KokoroTTS] crossOriginIsolated:", window.crossOriginIsolated);
+  console.log("[KokoroTTS] SharedArrayBuffer:", typeof SharedArrayBuffer);
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 async function ensureModel() {
   if (_tts) return _tts;
   if (_loadPromise) return _loadPromise;
   _loadPromise = (async function () {
+    console.log("[KokoroTTS] importing kokoro-js…");
     var { KokoroTTS } = await import("kokoro-js");
+    console.log("[KokoroTTS] kokoro-js imported, calling from_pretrained…");
     _tts = await KokoroTTS.from_pretrained(MODEL_ID, { dtype: DTYPE });
+    console.log("[KokoroTTS] model ready ✓");
     return _tts;
   })();
   try {
@@ -151,10 +163,10 @@ export function useKokoroTTS() {
         setModelState("ready");
         showToast("Pip's voice ready ✓", "success");
       }).catch(function (e) {
-        console.error("[Kokoro] preload failed:", e);
+        console.error("[KokoroTTS] preload FAILED:", e);
         stateRef.current = "error";
         setModelState("error");
-        showToast("Voice model failed — using system voice", "warn");
+        showToast("Voice model failed (" + (e && e.message ? e.message.slice(0, 60) : "unknown") + ")", "error");
       });
     }
   }
@@ -241,14 +253,19 @@ export function useKokoroTTS() {
     }
 
     var Ctx = typeof window !== "undefined" && (window.AudioContext || window.webkitAudioContext);
+    console.log("[KokoroTTS] AudioContext available:", !!Ctx);
     if (Ctx && !audioCtxRef.current) audioCtxRef.current = new Ctx();
     if (!audioCtxRef.current) {
+      console.warn("[KokoroTTS] no AudioContext — falling back to system voice");
       speakWithSystemVoice(clean, function () { setSpeaking(false); });
       return;
     }
+    console.log("[KokoroTTS] AudioContext state:", audioCtxRef.current.state);
 
     try {
+      console.log("[KokoroTTS] calling _tts.generate…");
       var result = await _tts.generate(clean, { voice: VOICE, speed: 1.0 });
+      console.log("[KokoroTTS] generate() returned:", typeof result, Object.keys(result || {}));
       var samples    = result.audio    || result;
       var sampleRate = result.sampling_rate || 24000;
 
@@ -256,6 +273,7 @@ export function useKokoroTTS() {
         throw new Error("Unexpected audio format: " + typeof samples);
       }
 
+      console.log("[KokoroTTS] PCM samples:", samples.length, "sampleRate:", sampleRate);
       var wavBuf   = pcmToWavBuffer(samples, sampleRate);
       var audioBuf = await audioCtxRef.current.decodeAudioData(wavBuf);
 
@@ -270,9 +288,12 @@ export function useKokoroTTS() {
       sourceRef.current = src;
       src.start(0);
       setSpeaking(true);
+      console.log("[KokoroTTS] playback started ✓");
     } catch (e) {
-      console.error("[Kokoro] generate/play error:", e);
-      showToast("Pip voice error: " + (e && e.message ? e.message.slice(0, 60) : "unknown"), "warn");
+      console.error("[KokoroTTS] generate/play FAILED:", e);
+      // NOTE: temporarily NOT falling back to system voice so the real error is visible.
+      // Re-enable the fallback once root cause is confirmed.
+      showToast("Pip voice error: " + (e && e.message ? e.message.slice(0, 80) : "unknown"), "error");
       speakWithSystemVoice(clean, function () { setSpeaking(false); });
     }
   }
