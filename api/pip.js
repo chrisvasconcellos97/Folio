@@ -167,6 +167,15 @@ var MODEL_SONNET = "claude-sonnet-4-6";
 // on Haiku; summarize is already Sonnet for semantic project matching.
 var CHAT_MODEL = process.env.PIP_CHAT_MODEL || MODEL_SONNET;
 
+// Summarize is structured extraction, not creative writing — a low temperature
+// makes Pip's task plan consistent and conservative run-to-run instead of
+// improvising (the "great once, nonsense usually" variance). Env-overridable so
+// it can be nudged (0.3 → 0.5) without a redeploy. Other modes keep the API
+// default (~1.0), which suits conversational/brief surfaces.
+var SUMMARY_TEMP = process.env.PIP_SUMMARY_TEMPERATURE
+  ? parseFloat(process.env.PIP_SUMMARY_TEMPERATURE)
+  : 0.3;
+
 var MODE_CONFIG = {
   chat:    { model: CHAT_MODEL, max_tokens: 900 }, // 900 (was 512): keep Sonnet chat replies from cutting off mid-answer
   action:  { model: MODEL_HAIKU, max_tokens: 384 },
@@ -180,8 +189,9 @@ var MODE_CONFIG = {
   // per row + summary + short_title + tone. Long meetings with 10+ action
   // items can easily exceed 1024 and get truncated mid-JSON, producing an
   // empty plan downstream. 3072 comfortably handles 15+ rows.
-  // Sonnet for summarize: semantic project matching requires stronger reasoning
-  summary: { model: MODEL_SONNET, max_tokens: 3072 },
+  // Sonnet for summarize: semantic project matching requires stronger reasoning.
+  // Low temperature: consistent, conservative extraction (see SUMMARY_TEMP).
+  summary: { model: MODEL_SONNET, max_tokens: 3072, temperature: SUMMARY_TEMP },
   email:   { model: MODEL_HAIKU, max_tokens: 768 },
 };
 
@@ -420,6 +430,9 @@ export default async function handler(req, res) {
     messages:   trimmed,
     tools:      mode === "summary" ? undefined : PIP_TOOLS,
   };
+  // Only set temperature where a mode opts in (summary) — others keep the
+  // API default.
+  if (typeof cfg.temperature === "number") createParams.temperature = cfg.temperature;
     if (wantStream) {
       res.setHeader("Content-Type", "text/event-stream");
       res.setHeader("Cache-Control", "no-cache, no-transform");
