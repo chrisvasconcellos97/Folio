@@ -157,10 +157,29 @@ export function useKokoroTTS() {
         src.start(0);
         src.disconnect();
       };
+      var doUnlockAndTest = function () {
+        unlock();
+        // 440 Hz sine-wave test — if you hear a 0.3s beep, AudioContext works.
+        // If silent, the problem is iOS audio routing, not Kokoro/WAV.
+        try {
+          var rate    = ctx.sampleRate;
+          var frames  = Math.floor(rate * 0.3);
+          var testBuf = ctx.createBuffer(1, frames, rate);
+          var data    = testBuf.getChannelData(0);
+          for (var i = 0; i < frames; i++) {
+            data[i] = Math.sin(2 * Math.PI * 440 * i / rate) * 0.5;
+          }
+          var testSrc = ctx.createBufferSource();
+          testSrc.buffer = testBuf;
+          testSrc.connect(ctx.destination);
+          testSrc.start(0);
+          showToast("🔔 440Hz test tone — did you hear a beep?", "info", 4000);
+        } catch (_) {}
+      };
       if (ctx.state === "suspended") {
-        ctx.resume().then(unlock).catch(function () {});
+        ctx.resume().then(doUnlockAndTest).catch(function () {});
       } else {
-        try { unlock(); } catch (_) {}
+        doUnlockAndTest();
       }
     }
 
@@ -251,21 +270,35 @@ export function useKokoroTTS() {
         throw new Error("Unexpected audio format: " + typeof samples);
       }
 
-      // DIAGNOSTIC toast — remove once root cause confirmed
-      showToast("🔊 " + samples.length + " samples @ " + sampleRate + "Hz · ctx:" + audioCtxRef.current.state, "info", 8000);
-
       if (samples.length === 0) {
-        throw new Error("Kokoro returned 0 samples — no audio generated");
+        throw new Error("Kokoro returned 0 samples");
       }
+
+      // Amplitude check on raw Kokoro PCM
+      var maxAmp = 0, sumAmp = 0;
+      for (var i = 0; i < Math.min(samples.length, 4000); i++) {
+        var v = Math.abs(samples[i]);
+        if (v > maxAmp) maxAmp = v;
+        sumAmp += v;
+      }
+      var avgAmp = sumAmp / Math.min(samples.length, 4000);
+      showToast("🔊 PCM: " + samples.length + "smp · max=" + maxAmp.toFixed(4) + " avg=" + avgAmp.toFixed(4), "info", 10000);
 
       var wavBuf   = pcmToWavBuffer(samples, sampleRate);
       var audioBuf = await audioCtxRef.current.decodeAudioData(wavBuf);
 
-      // Always resume before playback — iOS can re-suspend after async work
-      try { await audioCtxRef.current.resume(); } catch (_) {}
+      // Amplitude check on decoded AudioBuffer
+      var ch = audioBuf.getChannelData(0);
+      var maxDec = 0, sumDec = 0;
+      for (var j = 0; j < Math.min(ch.length, 4000); j++) {
+        var w = Math.abs(ch[j]);
+        if (w > maxDec) maxDec = w;
+        sumDec += w;
+      }
+      showToast("🎚 decoded: dur=" + audioBuf.duration.toFixed(2) + "s · max=" + maxDec.toFixed(4) + " ctx=" + audioCtxRef.current.state, "info", 10000);
 
-      // DIAGNOSTIC toast
-      showToast("▶ playing · ctx:" + audioCtxRef.current.state + " · dur:" + audioBuf.duration.toFixed(1) + "s", "info", 8000);
+      // Always resume before playback
+      try { await audioCtxRef.current.resume(); } catch (_) {}
 
       var src = audioCtxRef.current.createBufferSource();
       src.buffer = audioBuf;
