@@ -139,14 +139,29 @@ export function useKokoroTTS() {
       voicesRef.current = window.speechSynthesis.getVoices() || voicesRef.current;
     }
 
-    // Create + resume AudioContext inside the user gesture so it stays
-    // unlocked through subsequent async work (model generate, etc.)
+    // Create + unlock AudioContext inside the user gesture.
+    // iOS Safari suspends AudioContext after async work, so we play a tiny
+    // silent buffer here — this permanently unlocks the audio session so
+    // src.start() later (after model generation) actually produces sound.
     var Ctx = window.AudioContext || window.webkitAudioContext;
     if (Ctx && !audioCtxRef.current) {
       audioCtxRef.current = new Ctx();
     }
-    if (audioCtxRef.current && audioCtxRef.current.state === "suspended") {
-      audioCtxRef.current.resume().catch(function () { /* guard-ok: resume() failure is non-critical; speak() handles suspended ctx */ });
+    if (audioCtxRef.current) {
+      var ctx = audioCtxRef.current;
+      var unlock = function () {
+        var buf = ctx.createBuffer(1, 1, 22050);
+        var src = ctx.createBufferSource();
+        src.buffer = buf;
+        src.connect(ctx.destination);
+        src.start(0);
+        src.disconnect();
+      };
+      if (ctx.state === "suspended") {
+        ctx.resume().then(unlock).catch(function () {});
+      } else {
+        try { unlock(); } catch (_) {}
+      }
     }
 
     if (!_tts && stateRef.current === "idle") {
@@ -239,9 +254,10 @@ export function useKokoroTTS() {
       var wavBuf   = pcmToWavBuffer(samples, sampleRate);
       var audioBuf = await audioCtxRef.current.decodeAudioData(wavBuf);
 
-      if (audioCtxRef.current.state === "suspended") {
-        await audioCtxRef.current.resume();
-      }
+      // Always resume before playback — iOS can re-suspend after async work
+      // even if we already resumed during the user gesture in activate().
+      try { await audioCtxRef.current.resume(); } catch (_) {}
+      console.log("[KokoroTTS] ctx state before start:", audioCtxRef.current.state);
 
       var src = audioCtxRef.current.createBufferSource();
       src.buffer = audioBuf;
