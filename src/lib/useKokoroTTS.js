@@ -115,11 +115,9 @@ function pcmToWavBuffer(samples, sampleRate) {
 }
 
 export function useKokoroTTS() {
-  var [modelState, setModelState] = useState(
-    _isMobile ? "mobile" : (_tts ? "ready" : "idle")
-  );
+  var [modelState, setModelState] = useState(_tts ? "ready" : "idle");
   var [speaking, setSpeaking]     = useState(false);
-  var stateRef    = useRef(_isMobile ? "mobile" : (_tts ? "ready" : "idle"));
+  var stateRef    = useRef(_tts ? "ready" : "idle");
   var audioCtxRef = useRef(null);
   var sourceRef   = useRef(null);
   var voicesRef   = useRef([]);
@@ -136,16 +134,13 @@ export function useKokoroTTS() {
   function activate() {
     if (typeof window === "undefined") return;
 
-    // Mobile: no Kokoro — just ensure voices are loaded for system TTS
-    if (_isMobile) {
-      if (window.speechSynthesis) {
-        voicesRef.current = window.speechSynthesis.getVoices() || voicesRef.current;
-      }
-      return;
+    // Eagerly refresh system voices list (fallback if Kokoro fails)
+    if (window.speechSynthesis) {
+      voicesRef.current = window.speechSynthesis.getVoices() || voicesRef.current;
     }
 
-    // Desktop: create + resume AudioContext inside the user gesture so it
-    // stays unlocked through subsequent async work (model generate, etc.)
+    // Create + resume AudioContext inside the user gesture so it stays
+    // unlocked through subsequent async work (model generate, etc.)
     var Ctx = window.AudioContext || window.webkitAudioContext;
     if (Ctx && !audioCtxRef.current) {
       audioCtxRef.current = new Ctx();
@@ -172,13 +167,6 @@ export function useKokoroTTS() {
   }
 
   function cancel() {
-    if (_isMobile) {
-      if (typeof window !== "undefined" && window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
-      setSpeaking(false);
-      return;
-    }
     if (sourceRef.current) {
       try { sourceRef.current.stop(); } catch (_) {}
       sourceRef.current = null;
@@ -194,33 +182,7 @@ export function useKokoroTTS() {
     var clean = stripMarkdown(text);
     if (!clean) return;
 
-    // ── Mobile path: Web Speech API with best available voice ──────────────
-    if (_isMobile) {
-      if (typeof window === "undefined" || !window.speechSynthesis) return;
-      window.speechSynthesis.cancel();
-      var u = new SpeechSynthesisUtterance(clean);
-      // Prefer voices that were loaded eagerly; fall back to getVoices() now
-      var voices = voicesRef.current.length
-        ? voicesRef.current
-        : (window.speechSynthesis.getVoices() || []);
-      var enVoices = voices.filter(function (v) { return /^en/.test(v.lang); });
-      var voice = enVoices.find(function (v) { return /(premium)/i.test(v.name + " " + (v.voiceURI || "")); })
-        || enVoices.find(function (v) { return /(enhanced)/i.test(v.name + " " + (v.voiceURI || "")); })
-        || enVoices.find(function (v) {
-             var names = ["Daniel","Samantha","Jamie","Karen","Moira","Aaron","Fred"];
-             return names.indexOf(v.name) !== -1;
-           })
-        || enVoices[0] || null;
-      if (voice) u.voice = voice;
-      u.rate = 0.95;
-      u.onstart = function () { setSpeaking(true); };
-      u.onend   = function () { setSpeaking(false); };
-      u.onerror = function () { setSpeaking(false); };
-      window.speechSynthesis.speak(u);
-      return;
-    }
-
-    // ── Desktop path: Kokoro → AudioContext ────────────────────────────────
+    // ── Kokoro path (all devices) ──────────────────────────────────────────
     if (sourceRef.current) {
       try { sourceRef.current.stop(); } catch (_) {}
       sourceRef.current = null;
