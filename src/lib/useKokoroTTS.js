@@ -117,10 +117,11 @@ function pcmToWavBuffer(samples, sampleRate) {
 export function useKokoroTTS() {
   var [modelState, setModelState] = useState(_tts ? "ready" : "idle");
   var [speaking, setSpeaking]     = useState(false);
-  var stateRef    = useRef(_tts ? "ready" : "idle");
-  var audioCtxRef = useRef(null);
-  var sourceRef   = useRef(null);
-  var voicesRef   = useRef([]);
+  var stateRef     = useRef(_tts ? "ready" : "idle");
+  var audioCtxRef  = useRef(null);
+  var sourceRef    = useRef(null);
+  var voicesRef    = useRef([]);
+  var keepAliveRef = useRef(null);
 
   // Eagerly load system voices list on mount (needed for pickSystemVoice on mobile)
   useEffect(function () {
@@ -159,6 +160,19 @@ export function useKokoroTTS() {
       };
       var doUnlockAndTest = function () {
         unlock();
+        // Keep AudioContext alive with a near-silent oscillator so Safari
+        // never re-suspends it between the user gesture and async playback.
+        if (!keepAliveRef.current) {
+          try {
+            var osc  = ctx.createOscillator();
+            var gain = ctx.createGain();
+            gain.gain.value = 0.00001;
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            keepAliveRef.current = osc;
+          } catch (_) {}
+        }
         // 440 Hz sine-wave test — if you hear a 0.3s beep, AudioContext works.
         // If silent, the problem is iOS audio routing, not Kokoro/WAV.
         try {
@@ -201,6 +215,10 @@ export function useKokoroTTS() {
   }
 
   function cancel() {
+    if (keepAliveRef.current) {
+      try { keepAliveRef.current.stop(); } catch (_) {}
+      keepAliveRef.current = null;
+    }
     if (sourceRef.current) {
       try { sourceRef.current.stop(); } catch (_) {}
       sourceRef.current = null;
