@@ -8,6 +8,18 @@ var DTYPE    = "q8";
 var _tts         = null;
 var _loadPromise = null;
 
+// ── Persistent, screenshot-able diagnostic trail ──────────────────────────
+// Toasts vanish before the full sequence can be read on a phone. diag() also
+// appends to a module-level ring buffer that the hook renders as a fixed panel.
+var _diag        = [];
+var _diagSetters = [];
+function diag(line, type, ms) {
+  var stamped = new Date().toTimeString().slice(0, 8) + "  " + line;
+  _diag = _diag.concat([stamped]).slice(-16);
+  _diagSetters.forEach(function (fn) { try { fn(_diag); } catch (_) {} });
+  showToast(line, type || "info", ms || 4000);
+}
+
 async function ensureModel() {
   if (_tts) return _tts;
   if (_loadPromise) return _loadPromise;
@@ -51,7 +63,7 @@ function pickSystemVoice() {
 
 function speakWithSystemVoice(text, onEnd) {
   if (typeof window === "undefined" || !window.speechSynthesis) {
-    showToast("DIAG: no speechSynthesis on this browser", "warn", 5000);
+    diag("no speechSynthesis on this browser", "warn", 5000);
     if (onEnd) onEnd();
     return;
   }
@@ -60,10 +72,9 @@ function speakWithSystemVoice(text, onEnd) {
   var voice = pickSystemVoice();
   if (voice) u.voice = voice;
   u.rate = 0.95;
-  // DIAG: confirm the fallback fired + which voice. onstart proves iOS accepted it.
-  u.onstart = function () { showToast("DIAG: system voice speaking · " + (voice ? voice.name : "default"), "info", 4000); };
-  u.onend   = function () { showToast("DIAG: system voice ended", "info", 2500); if (onEnd) onEnd(); };
-  u.onerror = function (ev) { showToast("DIAG: system voice error · " + (ev && ev.error ? ev.error : "?"), "warn", 5000); if (onEnd) onEnd(); };
+  u.onstart = function () { diag("system voice speaking · " + (voice ? voice.name : "default")); };
+  u.onend   = function () { diag("system voice ended"); if (onEnd) onEnd(); };
+  u.onerror = function (ev) { diag("system voice error · " + (ev && ev.error ? ev.error : "?"), "warn", 5000); if (onEnd) onEnd(); };
   window.speechSynthesis.speak(u);
 }
 
@@ -76,6 +87,13 @@ export function useKokoroTTS() {
   var keepAliveRef = useRef(null);   // looping silent source so iOS doesn't auto-suspend
   var sourceRef    = useRef(null);   // current playing BufferSource
   var voicesRef    = useRef([]);
+  var [diagLines, setDiagLines] = useState(_diag);
+
+  useEffect(function () {
+    _diagSetters.push(setDiagLines);
+    setDiagLines(_diag);
+    return function () { _diagSetters = _diagSetters.filter(function (f) { return f !== setDiagLines; }); };
+  }, []);
 
   useEffect(function () {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
@@ -113,9 +131,10 @@ export function useKokoroTTS() {
     // the right to play buffers scheduled later (after async model inference).
     var ctx = getCtx();
     if (!ctx) {
-      showToast("DIAG: no AudioContext on this browser", "warn", 6000);
+      diag("no AudioContext on this browser", "warn", 6000);
       return;
     }
+    diag("activate · ctx created · state=" + ctx.state);
     try {
       var buf = ctx.createBuffer(1, 1, ctx.sampleRate);
       var unlockSrc = ctx.createBufferSource();
@@ -138,14 +157,21 @@ export function useKokoroTTS() {
         keepAliveRef.current = ka;
       }
 
-      ctx.resume().then(function () {
+      var rp = ctx.resume();
+      if (rp && rp.then) {
+        rp.then(function () {
+          ctxUnlockedRef.current = true;
+          diag("WebAudio unlocked ✓ · state=" + ctx.state);
+        }).catch(function (err) {
+          diag("WebAudio resume FAILED · " + (err && err.name ? err.name : "?"), "warn", 6000);
+        });
+      } else {
+        // Old webkit: resume() returns undefined, not a promise.
         ctxUnlockedRef.current = true;
-        showToast("DIAG: WebAudio unlocked ✓ · " + ctx.state, "info", 2500);
-      }).catch(function (err) {
-        showToast("DIAG: WebAudio resume FAILED · " + (err && err.name ? err.name : "?"), "warn", 6000);
-      });
+        diag("WebAudio resume (no-promise) · state=" + ctx.state);
+      }
     } catch (err) {
-      showToast("DIAG: WebAudio unlock threw · " + (err && err.name ? err.name : "?"), "warn", 6000);
+      diag("WebAudio unlock threw · " + (err && err.name ? err.name : "?"), "warn", 6000);
     }
 
     if (!_tts && stateRef.current === "idle") {
@@ -181,8 +207,7 @@ export function useKokoroTTS() {
     var clean = stripMarkdown(text);
     if (!clean) return;
 
-    // DIAG: prove speak() is reached + the model/unlock state at entry.
-    showToast("DIAG: speak() reached · model=" + stateRef.current + " · unlocked=" + ctxUnlockedRef.current, "info", 4000);
+    diag("speak() reached · model=" + stateRef.current + " · unlocked=" + ctxUnlockedRef.current);
 
     if (stateRef.current === "error") {
       speakWithSystemVoice(clean, function () { setSpeaking(false); });
@@ -219,6 +244,8 @@ export function useKokoroTTS() {
       var samples    = result.audio    || result;
       var sampleRate = result.sampling_rate || 24000;
 
+      diag("Kokoro generated · " + (samples && samples.length ? samples.length : 0) + " samples @ " + sampleRate);
+
       if (!(samples instanceof Float32Array) || samples.length === 0) {
         throw new Error("Kokoro returned no audio data");
       }
@@ -235,28 +262,30 @@ export function useKokoroTTS() {
 
       // Resume again right before playback — idempotent, and reactivates the
       // context if iOS auto-suspended it since the unlock gesture.
-      await ctx.resume();
+      var rp2 = ctx.resume();
+      if (rp2 && rp2.then) { await rp2; }
+      diag("pre-start · ctx=" + ctx.state);
 
       if (sourceRef.current) { try { sourceRef.current.stop(); } catch (_) {} }
       var src = ctx.createBufferSource();
       src.buffer = audioBuf;
       src.connect(ctx.destination);
-      src.onended = function () { setSpeaking(false); if (sourceRef.current === src) sourceRef.current = null; };
+      src.onended = function () { diag("Kokoro source ended"); setSpeaking(false); if (sourceRef.current === src) sourceRef.current = null; };
       sourceRef.current = src;
       src.start(0);
       setSpeaking(true);
 
-      // DIAG: decisive. If you SEE this and HEAR nothing now, it's the device
-      // volume (WebAudio ignores the Ring/Silent switch, so that's ruled out).
-      showToast("DIAG: ▶ Kokoro playing (WebAudio) · ctx=" + ctx.state + " · " + samples.length + " samples", "info", 7000);
+      // Decisive: if you SEE this and HEAR nothing, only device VOLUME is left —
+      // WebAudio ignores the Ring/Silent switch, so that's ruled out.
+      diag("▶ Kokoro playing (WebAudio) · ctx=" + ctx.state + " · " + samples.length + " samples", "info", 7000);
     } catch (e) {
       console.error("[KokoroTTS] speak failed:", e);
       var name = e && e.name ? e.name : "Error";
       var msg  = e && e.message ? e.message : "unknown";
-      showToast("DIAG: Kokoro failed (" + name + "): " + msg + " — trying system voice", "warn", 8000);
+      diag("Kokoro failed (" + name + "): " + msg + " — trying system voice", "warn", 8000);
       speakWithSystemVoice(clean, function () { setSpeaking(false); });
     }
   }
 
-  return { speak, cancel, activate, modelState, speaking };
+  return { speak, cancel, activate, modelState, speaking, diag: diagLines };
 }

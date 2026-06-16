@@ -719,6 +719,25 @@ export function PipView(props) {
         </div>
       </div>
 
+      {/* DIAG: persistent TTS trail — screenshot this, then we strip it. */}
+      {audioEnabled && kokoro.diag && kokoro.diag.length > 0 && (
+        <div
+          style={{
+            position: "fixed", left: 8, bottom: 8, zIndex: 9999,
+            maxWidth: "92vw", maxHeight: "40vh", overflowY: "auto",
+            background: "rgba(0,0,0,0.86)", color: "#9ef7c8",
+            fontFamily: MONO, fontSize: 10, lineHeight: 1.45,
+            padding: "8px 10px", borderRadius: 8, border: "1px solid #2c5",
+            whiteSpace: "pre-wrap", pointerEvents: "auto",
+          }}
+        >
+          <div style={{ color: "#7fd", marginBottom: 4, fontWeight: 700 }}>TTS DIAG (tap to clear)</div>
+          <div onClick={function () { kokoro.cancel(); }}>
+            {kokoro.diag.join("\n")}
+          </div>
+        </div>
+      )}
+
       {/* Messages */}
       <div
         aria-live="polite"
