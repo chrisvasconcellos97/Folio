@@ -674,16 +674,14 @@ export function PipView(props) {
           {ttsAvailable && (
             <button
               onClick={function () {
-                setAudio(function (v) {
-                  var next = !v;
-                  audioEnabledRef.current = next;
-                  if (next) {
-                    kokoro.activate();
-                  } else {
-                    kokoro.cancel();
-                  }
-                  return next;
-                });
+                var next = !audioEnabledRef.current;
+                audioEnabledRef.current = next;
+                setAudio(next);
+                if (next) {
+                  kokoro.activate();
+                } else {
+                  kokoro.cancel();
+                }
               }}
               title={audioEnabled ? "Mute Pip's voice" : "Unmute Pip's voice (Daniel · Kokoro AI)"}
               aria-label={audioEnabled ? "Mute Pip voice" : "Unmute Pip voice"}
