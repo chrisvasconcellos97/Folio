@@ -108,6 +108,7 @@ export function PipView(props) {
     return function () { pipMood.setSpeaking(false); };
   }, [loading, pipMood]);
   var [audioEnabled, setAudio]    = useState(false);
+  var audioEnabledRef             = useRef(false);
   var bottomRef                   = useRef(null);
   var taskMsgSet                  = useRef(false);
   var recognitionRef              = useRef(null);
@@ -141,7 +142,7 @@ export function PipView(props) {
   }
 
   function speak(text) {
-    if (!audioEnabled) return;
+    if (!audioEnabledRef.current) return;
     kokoro.speak(text);
   }
 
@@ -674,12 +675,14 @@ export function PipView(props) {
             <button
               onClick={function () {
                 setAudio(function (v) {
-                  if (!v) {
+                  var next = !v;
+                  audioEnabledRef.current = next;
+                  if (next) {
                     kokoro.activate();
                   } else {
                     kokoro.cancel();
                   }
-                  return !v;
+                  return next;
                 });
               }}
               title={audioEnabled ? "Mute Pip's voice" : "Unmute Pip's voice (Daniel · Kokoro AI)"}
