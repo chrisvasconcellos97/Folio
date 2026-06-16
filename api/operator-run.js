@@ -29,7 +29,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
-import { logPipUsage } from "./_pipUsage.js";
+import { logPipUsage, overDailySpendCap } from "./_pipUsage.js";
 
 // Give the function a real time budget — it does several model calls. 60s is
 // valid on every Vercel plan; with the per-account passes parallelized below
@@ -68,9 +68,14 @@ function excerpt(s, n) {
 // All caps below are token-trims, not signal cuts — signal-bearing fields
 // (commitments, champions/blockers, waiting_on) are sorted to the front before
 // the slice so they survive the cap.
-function renderAccountContext(acc, meetings, tasks, contacts, projects, updates, stateRow, snapshot) {
+function renderAccountContext(acc, meetings, tasks, contacts, projects, updates, stateRow, snapshot, userId) {
   var lines = [];
   lines.push("ACCOUNT: " + acc.name + (acc.tier ? " (" + acc.tier + " tier)" : ""));
+  // Item 38 — ownership signal: tell Pip when this user is project-involved
+  // only (not the relationship owner) so it skips outreach/follow-up nudges.
+  if (acc.owner_user_id && userId && acc.owner_user_id !== userId) {
+    lines.push("RELATIONSHIP_OWNER: NO — this account is managed by someone else; this user is project-involved only");
+  }
   if (acc.objective) lines.push("Their goal: " + excerpt(acc.objective, 200));
   if (Array.isArray(acc.systems) && acc.systems.length) {
     lines.push("Systems they use: " + acc.systems.map(function (s) { return typeof s === "string" ? s : (s && s.name) || ""; }).filter(Boolean).join(", "));
@@ -177,6 +182,7 @@ Return ONLY valid JSON, no prose, no code fences:
 
 Rules:
 - PROPOSE, don't act. Everything you return is a draft the human approves. Never assume it's done.
+- RELATIONSHIP OWNERSHIP: If the context says "RELATIONSHIP_OWNER: NO", this user is project-involved only — do NOT suggest outreach, follow-up emails, cadence nudges, or "you should reach out" items. Only surface project-level work (tasks, Gauge projects, deliverables tied to this account).
 - Be concrete and honest. If the account is quiet and fine, say so briefly with few/no moves. Don't invent urgency.
 - A "commitment" (✦) that's overdue is the most important thing — lead your situation with it.
 - STALENESS HUMILITY: a deadline that just passed is NOT automatically an "overdue fire." Your data can be stale — the work may already be done and just unmarked (the final step finished over the weekend, nobody ticked the box). When something is freshly past-due (a day or two), frame it as a question to verify in the morning check-in ("All Star's final step was due Friday — did it land?"), not a full-confidence alarm. Reserve real urgency for things genuinely sitting open for a while with no movement. Better to ask than to scream and be wrong.
@@ -377,7 +383,7 @@ async function processUser(admin, client, userId, tz) {
 
   // Load the active book.
   var accRes = await admin.from("folio_accounts")
-    .select("id,name,tier,objective,systems,account_type")
+    .select("id,name,tier,objective,systems,account_type,owner_user_id")
     .eq("user_id", userId)
     .or("is_inactive.is.null,is_inactive.eq.false");
   var accounts = (accRes.data || []).filter(function (a) { return a.account_type !== "internal_team"; });
@@ -444,6 +450,14 @@ async function processUser(admin, client, userId, tz) {
   (opGenRes.data || []).forEach(function (r) { if (r.account_id) opGenByAcct[r.account_id] = r.operator_generated_at; });
 
   var moved = pickMovedAccounts(accounts, activitySinceIds, snapById, opGenByAcct, lastRunIso);
+
+  // Item 48 — skip deep passes if the daily spend cap is already hit.
+  // The roll-up still runs from prior state (no fresh passes → no new cost).
+  var overCap = await overDailySpendCap(admin, userId);
+  if (overCap) {
+    console.log("[operator-run] over daily spend cap for user", userId.slice(0, 8), "— skipping deep passes");
+    moved = [];
+  }
 
   // Deep pass per moved account — run in bounded-concurrency waves so the whole
   // sweep finishes well inside the function's time budget. Sequential here meant
@@ -548,7 +562,7 @@ async function gatherAndRun(admin, client, userId, acc, snapshot, userContext) {
 
   var ctxText = renderAccountContext(
     acc, mRes.data || [], tRes.data || [], cRes.data || [],
-    pRes.data || [], uRes.data || [], sRes.data || null, snapshot
+    pRes.data || [], uRes.data || [], sRes.data || null, snapshot, userId
   );
 
   // userContext is passed to runAccountPass as a CACHED system block (billed once

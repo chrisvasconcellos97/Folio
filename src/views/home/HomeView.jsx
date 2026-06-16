@@ -427,9 +427,11 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
         return p.status === "complete" && p.updated_at && p.updated_at > sevenDaysAgo;
       }).map(function (p) { return Object.assign({}, p, { completed_recently: true }); });
 
-      // Cold accounts — healthy/watching accounts with no contact in 30+ days (cap 5)
+      // Cold accounts — healthy/watching accounts with no contact in 30+ days (cap 5).
+      // Item 38: exclude accounts owned by someone else (relationship-owner distinction).
       var coldAccounts = (accounts || []).filter(function (a) {
         if (a.is_inactive) return false;
+        if (a.owner_user_id && userId && a.owner_user_id !== userId) return false; // not my relationship
         var snap = (snapshots || []).find(function (s) { return s.account_id === a.id; });
         if (!snap) return false;
         return snap.days_since_contact !== null && snap.days_since_contact >= 30 &&
@@ -540,6 +542,8 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
       var anomalySignals = [];
       (accounts || []).forEach(function (a) {
         if (a.is_inactive) return;
+        // Item 38: skip off-cadence nudges for accounts owned by someone else.
+        if (a.owner_user_id && userId && a.owner_user_id !== userId) return;
         var dates = (meetings || [])
           .filter(function (m) { return m.account_id === a.id && m.meeting_date && m.status !== "scheduled"; })
           .map(function (m) { return m.meeting_date; })

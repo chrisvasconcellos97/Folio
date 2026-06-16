@@ -20,14 +20,16 @@ export function usePipDripQuestions(userId, profile, onTermLearned) {
   var [loading, setLoading] = useState(false);
   var [error, setError]   = useState(null);
 
-  var fetch = useCallback(function () {
+  // Renamed from `fetch` to `loadRows` so `triggerFollowup` below can call
+  // the browser-native `fetch` API without shadowing this hook's refetch fn.
+  var loadRows = useCallback(function () {
     if (!userId) return;
     setLoading(true);
     supabase
       .from("folio_pip_questions")
       .select("*")
       .eq("user_id", userId)
-      .eq("source", "gap_observed")
+      .in("source", ["gap_observed", "followup"])
       .in("status", ["queued", "asked"])
       .order("priority", { ascending: false })
       .order("created_at", { ascending: true })
@@ -39,7 +41,7 @@ export function usePipDripQuestions(userId, profile, onTermLearned) {
       });
   }, [userId]);
 
-  useEffect(function () { fetch(); }, [fetch]);
+  useEffect(function () { loadRows(); }, [loadRows]);
 
   // ── Throttle + re-synthesis count (single query) ───────────────────────
   //
@@ -61,7 +63,7 @@ export function usePipDripQuestions(userId, profile, onTermLearned) {
       .from("folio_pip_questions")
       .select("status, answered_at")
       .eq("user_id", userId)
-      .eq("source", "gap_observed")
+      .in("source", ["gap_observed", "followup"])
       .in("status", ["answered", "skipped", "dismissed"])
       .gt("answered_at", floor)
       .order("answered_at", { ascending: false })
@@ -153,7 +155,7 @@ export function usePipDripQuestions(userId, profile, onTermLearned) {
         setRows(function (prev) {
           return prev.filter(function (x) { return x.id !== id; });
         });
-        fetch();
+        loadRows();
         // Resolve with the structured suggestion (if any) so the caller can
         // offer a "save it to the account/contact" approval.
         return { suggestion: suggestion };
@@ -196,11 +198,41 @@ export function usePipDripQuestions(userId, profile, onTermLearned) {
   // throttle check and after each answer.
   var [answeredSince, setAnsweredSince] = useState(0);
 
+  // Item 36 — conversational follow-up. After a substantive answer, fire a
+  // Haiku call that writes one deeper follow-up question into the queue so
+  // Teach Pip feels like a dialogue, not a form. Fire-and-forget; ~60% gate
+  // is applied by the caller (answerAndCount) before invoking this.
+  function triggerFollowup(question, answerText) {
+    if (!userId || !answerText || answerText.length < 30) return;
+    if (!question || question.source === "followup" || question.category === "terminology") return;
+    supabase.auth.getSession().then(function (res) {
+      var token = res.data && res.data.session && res.data.session.access_token;
+      if (!token) return;
+      fetch("/api/followup-question", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        body: JSON.stringify({
+          questionId:     question.id,
+          questionText:   question.question_text,
+          answerText:     answerText,
+          questionSource: question.source,
+        }),
+      }).then(function (r) {
+        if (r.ok) loadRows(); // surface the new follow-up immediately
+      }).catch(function () { /* guard-ok: fire-and-forget follow-up network error, state unaffected */ });
+    }).catch(function () { /* guard-ok: fire-and-forget session fetch, follow-up silently skipped */ });
+  }
+
   // Wrap answerQuestion to refresh the throttle+count state afterward.
   function answerAndCount(id, text) {
     return answerQuestion(id, text).then(function (result) {
       // Trigger a fresh throttle+count check so answeredSince updates.
       loadThrottleAndCount().then(function (t) { setAnsweredSince(t.answeredSince); }).catch(function () { /* guard-ok: throttle refresh, state stays at prior value */ });
+      // Item 36 — conversational follow-up (fire-and-forget, ~60% of the time).
+      if (Math.random() < 0.6) {
+        var q = rows.find(function (r) { return r.id === id; });
+        if (q) triggerFollowup(q, text);
+      }
       return result;
     });
   }
@@ -214,6 +246,6 @@ export function usePipDripQuestions(userId, profile, onTermLearned) {
     answeredSinceSynthesis: answeredSince,
     loading:                loading,
     error:                  error,
-    refetch:                fetch,
+    refetch:                loadRows,
   };
 }

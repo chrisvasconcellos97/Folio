@@ -136,17 +136,27 @@ export default async function handler(req, res) {
 
     if (accounts.length === 0) return res.status(200).json({ skipped: true, reason: "no_accounts" });
 
-    // Account lines (compact).
-    var acctLines = accounts.slice(0, 50).map(function (a) {
+    // Item 37 — split accounts by type so Pip understands org structure:
+    // internal_team = the user's OWN departments (not external relationships);
+    // everything else = external managed accounts.
+    function fmtAcctLine(a) {
       var bits = [a.name];
       if (a.tier) bits.push(a.tier);
-      if (a.account_type && a.account_type !== "standard") bits.push(a.account_type);
       var ds = daysSince(a.last_interaction_at);
       if (ds != null) bits.push(ds + "d since contact");
       if (a.status_override) bits.push("flagged " + a.status_override);
       if (!a.objective || !a.objective.trim()) bits.push("no objective on file");
       return "- " + bits.join(" · ");
-    }).join("\n");
+    }
+    var internalAccts = accounts.slice(0, 50).filter(function (a) { return a.account_type === "internal_team"; });
+    var externalAccts = accounts.slice(0, 50).filter(function (a) { return a.account_type !== "internal_team"; });
+    var acctBlock = "";
+    if (internalAccts.length) {
+      acctBlock += "YOUR OWN INTERNAL TEAMS / DEPARTMENTS (you ARE part of these — they are NOT external relationships to manage):\n" +
+        internalAccts.map(fmtAcctLine).join("\n") + "\n\n";
+    }
+    acctBlock += "YOUR MANAGED ACCOUNTS (external suppliers, partners, clients — you maintain the relationship):\n" +
+      (externalAccts.map(fmtAcctLine).join("\n") || "(none)");
 
     // Theme counts across recent meetings.
     var themeCounts = {};
@@ -209,6 +219,7 @@ export default async function handler(req, res) {
       "TWO kinds of questions, mixed:",
       "  - \"portfolio\": a question that reasons across the data — a theme on multiple accounts, a gap between what they do and what you understand, something that doesn't add up, what 'good' looks like, how they're measured, who really decides. ALWAYS anchor it to something specific you see (name the account/theme/project). Lead with the observation, then the question.",
       "  - \"term\": a SIMPLE clarifier when you see a proper noun, acronym, brand, or system you don't understand (and it isn't already in known facts). e.g. \"You mention <X> a lot — what is it?\". Set the \"term\" field to that word.",
+      "ORG STRUCTURE: 'YOUR OWN INTERNAL TEAMS' are the user's own departments — never ask questions that treat them as external relationships to manage. Only ask about them in terms of how they coordinate with external managed accounts.",
       "Voice: first person, plain, a little eager-to-help. Never generic personality-quiz filler ('what does a great week look like'). Every question must be impossible to ask without having read THIS portfolio.",
       "Do NOT ask anything already answered by Known facts / profile, and do NOT repeat anything in Already asked.",
       "HARD DATA LINE (locked rule — never violate): NEVER ask for revenue figures, transaction volumes, customer counts, shop lists or rosters, pricing, or contract terms. This notebook deliberately excludes the employer's quantitative business data. When business performance matters, ask DIRECTIONALLY ('is volume trending up or down since the integration?') — never for a number, a count, or a list of customers.",
@@ -224,7 +235,7 @@ export default async function handler(req, res) {
     }
 
     var userMsg = [
-      "ACCOUNTS (" + accounts.length + "):", acctLines || "(none)",
+      "ACCOUNTS (" + accounts.length + " total — " + externalAccts.length + " managed, " + internalAccts.length + " internal teams):", acctBlock,
       "", "RECURRING MEETING THEMES:", themeLines || "(none recorded)",
       "", "ACTIVE GAUGE PROJECTS:", projectLines || "(none)",
       "", "RELATIONSHIP MAP (champions/blockers):", relLines || "(none recorded)",
