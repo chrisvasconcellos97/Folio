@@ -142,7 +142,12 @@ export function PipView(props) {
   }
 
   function speak(text) {
-    if (!audioEnabledRef.current) return;
+    // DIAG: prove PipView.speak() is invoked after Pip responds, and whether
+    // the audio toggle gate let it through.
+    if (!audioEnabledRef.current) {
+      showToast("DIAG: speak() called but audio toggle is OFF — tap the speaker", "info", 4000);
+      return;
+    }
     kokoro.speak(text);
   }
 

@@ -50,13 +50,20 @@ function pickSystemVoice() {
 }
 
 function speakWithSystemVoice(text, onEnd) {
-  if (typeof window === "undefined" || !window.speechSynthesis) { if (onEnd) onEnd(); return; }
+  if (typeof window === "undefined" || !window.speechSynthesis) {
+    showToast("DIAG: no speechSynthesis on this browser", "warn", 5000);
+    if (onEnd) onEnd();
+    return;
+  }
   window.speechSynthesis.cancel();
   var u = new SpeechSynthesisUtterance(text);
   var voice = pickSystemVoice();
   if (voice) u.voice = voice;
   u.rate = 0.95;
-  if (onEnd) { u.onend = onEnd; u.onerror = onEnd; }
+  // DIAG: confirm the fallback fired + which voice. onstart proves iOS accepted it.
+  u.onstart = function () { showToast("DIAG: system voice speaking · " + (voice ? voice.name : "default"), "info", 4000); };
+  u.onend   = function () { showToast("DIAG: system voice ended", "info", 2500); if (onEnd) onEnd(); };
+  u.onerror = function (ev) { showToast("DIAG: system voice error · " + (ev && ev.error ? ev.error : "?"), "warn", 5000); if (onEnd) onEnd(); };
   window.speechSynthesis.speak(u);
 }
 
@@ -97,9 +104,10 @@ export function useKokoroTTS() {
   var [modelState, setModelState] = useState(_tts ? "ready" : "idle");
   var [speaking, setSpeaking]     = useState(false);
   var stateRef   = useRef(_tts ? "ready" : "idle");
-  var audioElRef = useRef(null);   // HTMLAudioElement — retains iOS gesture unlock across async work
-  var blobUrlRef = useRef(null);   // current Blob URL, revoked on next play
-  var voicesRef  = useRef([]);
+  var audioElRef       = useRef(null);   // HTMLAudioElement — retains iOS gesture unlock across async work
+  var audioUnlockedRef = useRef(false);  // did the silent-WAV unlock play() actually resolve?
+  var blobUrlRef       = useRef(null);   // current Blob URL, revoked on next play
+  var voicesRef        = useRef([]);
 
   useEffect(function () {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
@@ -114,6 +122,15 @@ export function useKokoroTTS() {
 
     if (window.speechSynthesis) {
       voicesRef.current = window.speechSynthesis.getVoices() || voicesRef.current;
+      // Prime speechSynthesis INSIDE the user gesture. iOS commonly drops the
+      // first utterance unless it was primed by a gesture-bound speak() call —
+      // without this the system-voice fallback can be silently ignored later.
+      try {
+        window.speechSynthesis.cancel();
+        var primer = new SpeechSynthesisUtterance(" ");
+        primer.volume = 0;
+        window.speechSynthesis.speak(primer);
+      } catch (_) {}
     }
 
     // Create and unlock HTMLAudioElement inside the user gesture.
@@ -127,10 +144,15 @@ export function useKokoroTTS() {
     var silentUrl = URL.createObjectURL(new Blob([silentWav], { type: "audio/wav" }));
     audioElRef.current.src = silentUrl;
     audioElRef.current.play().then(function () {
+      audioUnlockedRef.current = true;
       audioElRef.current.pause();
+      try { audioElRef.current.currentTime = 0; } catch (_) {}
       URL.revokeObjectURL(silentUrl);
-    }).catch(function () {
+      showToast("DIAG: audio unlocked ✓", "info", 2500);
+    }).catch(function (err) {
+      audioUnlockedRef.current = false;
       URL.revokeObjectURL(silentUrl);
+      showToast("DIAG: audio unlock FAILED · " + (err && err.name ? err.name : "?"), "warn", 6000);
     });
 
     if (!_tts && stateRef.current === "idle") {
@@ -168,6 +190,9 @@ export function useKokoroTTS() {
     if (!text) return;
     var clean = stripMarkdown(text);
     if (!clean) return;
+
+    // DIAG: prove speak() is reached + the model/unlock state at entry.
+    showToast("DIAG: speak() reached · model=" + stateRef.current + " · unlocked=" + audioUnlockedRef.current, "info", 4000);
 
     if (stateRef.current === "error") {
       speakWithSystemVoice(clean, function () { setSpeaking(false); });
@@ -230,14 +255,17 @@ export function useKokoroTTS() {
       el.src = url;
       await el.play();
       setSpeaking(true);
+      // DIAG: this is the decisive test. If you SEE this toast but HEAR nothing,
+      // the code path works — the silence is the iPhone Ring/Silent switch or
+      // media volume (HTMLAudioElement obeys the mute switch; WebAudio did not,
+      // which is why the old beep was audible). If you never see this toast,
+      // playback was rejected and we fell through to the catch below.
+      showToast("DIAG: ▶ Kokoro playing. Hear nothing? Check the Ring/Silent switch + volume.", "info", 7000);
     } catch (e) {
       console.error("[KokoroTTS] speak failed:", e);
-      var msg = e && e.message ? e.message : "unknown error";
-      if (msg.indexOf("NotAllowedError") !== -1) {
-        showToast("Tap the speaker button first to enable Pip's voice", "info");
-      } else {
-        showToast("Pip voice error — using system voice", "warn");
-      }
+      var name = e && e.name ? e.name : "Error";
+      var msg  = e && e.message ? e.message : "unknown";
+      showToast("DIAG: Kokoro failed (" + name + "): " + msg + " — trying system voice", "warn", 8000);
       speakWithSystemVoice(clean, function () { setSpeaking(false); });
     }
   }
