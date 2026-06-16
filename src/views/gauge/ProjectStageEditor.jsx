@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { C } from "../../lib/colors";
 import { TaskDetailPanel } from "./TaskDetailPanel";
 import { TaskEntityDetector } from "../../components/TaskEntityDetector";
+import { useEntityDetection } from "../../hooks/useEntityDetection";
 import { autoStatusPatch } from "../../lib/gaugeStatus";
 import { fmtShort, fmtMedium } from "../../lib/dateUtils";
 
@@ -72,8 +73,10 @@ export function ProjectStageEditor({ project, onUpdate, accounts, members, conta
   var [lastAddedIdx, setLastAddedIdx] = useState(null);
   var [dragIdx, setDragIdx] = useState(null);
   var [dropIdx, setDropIdx] = useState(null);
+  var [pendingTitle, setPendingTitle] = useState(null); // title waiting for quick-assign
   // Optimistic local stages — applied immediately on mutations, cleared when DB confirms via prop update.
   var [localStages, setLocalStages] = useState(null);
+  var entitySuggestion = useEntityDetection(newStageTitle, contacts || [], aliases || [], accounts || []);
   useEffect(function () { setLocalStages(null); }, [project.stages]);
 
   var stages = localStages !== null ? localStages : (project.stages || []);
@@ -134,9 +137,21 @@ export function ProjectStageEditor({ project, onUpdate, accounts, members, conta
   function addStage() {
     var t = newStageTitle.trim();
     if (!t) return;
-    var next = stages.concat([{ title: t, completed_at: null, is_external: false, blocked_reason: null, sub_stages: [] }]);
-    var newIdx = next.length - 1;
+    // Go to quick-assign row instead of saving immediately.
+    setPendingTitle(t);
     setNewStageTitle("");
+  }
+
+  function commitPending(assigneeEmail) {
+    var t = pendingTitle;
+    setPendingTitle(null);
+    if (!t) return;
+    var next = stages.concat([{
+      title: t, completed_at: null, is_external: false,
+      blocked_reason: null, sub_stages: [],
+      assignee_email: assigneeEmail || null,
+    }]);
+    var newIdx = next.length - 1;
     commitStages(next);
     setLastAddedIdx(newIdx);
   }
@@ -374,46 +389,137 @@ export function ProjectStageEditor({ project, onUpdate, accounts, members, conta
         );
       })}
 
-      <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 4 }}>
-        <input
-          type="text"
-          value={newStageTitle}
-          onChange={function (e) { setNewStageTitle(e.target.value); }}
-          onKeyDown={function (e) { if (e.key === "Enter") { e.preventDefault(); addStage(); } }}
-          placeholder="+ Add task"
-          style={{
-            flex: 1, background: C.surface, border: "1px solid " + C.rule,
-            borderRadius: 6, padding: "6px 10px",
-            fontFamily: INTER, fontSize: 16, color: C.text,
-          }}
-        />
-        {newStageTitle.trim() && (
-          <button
-            onClick={addStage}
-            style={{
-              background: C.accentFaint, border: "1px solid " + C.accentLine,
-              color: C.accent, borderRadius: 6, padding: "6px 12px",
-              fontFamily: MONO, fontSize: 11, cursor: "pointer",
+      {/* Title input row — hidden while quick-assign card is showing */}
+      {!pendingTitle && (
+        <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 4 }}>
+          <input
+            type="text"
+            value={newStageTitle}
+            onChange={function (e) { setNewStageTitle(e.target.value); }}
+            onKeyDown={function (e) {
+              if (e.key === "Enter") { e.preventDefault(); addStage(); }
+              if (e.key === "Escape") { e.preventDefault(); setNewStageTitle(""); }
             }}
-          >
-            Add task
-          </button>
-        )}
-        {hasSchema && (
-          <button
-            onClick={function () { setShowNewDetail(true); }}
-            title="Add task with full details"
+            placeholder="+ Add task"
             style={{
-              background: "transparent", border: "1px solid " + C.rule,
-              color: C.textMuted, borderRadius: 6, padding: "6px 10px",
-              fontFamily: MONO, fontSize: 10, cursor: "pointer",
-              letterSpacing: "0.06em", textTransform: "uppercase",
+              flex: 1, background: C.surface, border: "1px solid " + C.rule,
+              borderRadius: 6, padding: "6px 10px",
+              fontFamily: INTER, fontSize: 16, color: C.text,
             }}
-          >
-            + with details
-          </button>
-        )}
-      </div>
+          />
+          {newStageTitle.trim() && (
+            <button
+              onClick={addStage}
+              style={{
+                background: C.accentFaint, border: "1px solid " + C.accentLine,
+                color: C.accent, borderRadius: 6, padding: "6px 12px",
+                fontFamily: MONO, fontSize: 11, cursor: "pointer",
+              }}
+            >
+              Add task
+            </button>
+          )}
+          {hasSchema && (
+            <button
+              onClick={function () { setShowNewDetail(true); }}
+              title="Add task with full details"
+              style={{
+                background: "transparent", border: "1px solid " + C.rule,
+                color: C.textMuted, borderRadius: 6, padding: "6px 10px",
+                fontFamily: MONO, fontSize: 10, cursor: "pointer",
+                letterSpacing: "0.06em", textTransform: "uppercase",
+              }}
+            >
+              + with details
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Quick-assign card — shown after Enter in the title input */}
+      {pendingTitle && (function () {
+        var suggestedEmail = entitySuggestion && entitySuggestion.contact
+          ? (entitySuggestion.contact.email || entitySuggestion.contact.name || null)
+          : null;
+        var visibleContacts = (contacts || []).slice(0, 5);
+        return (
+          <div style={{
+            marginTop: 6, padding: "10px 10px 8px",
+            background: C.surface2, border: "1px solid " + C.accent,
+            borderRadius: 8,
+          }}>
+            <div style={{ fontFamily: MONO, fontSize: 10, color: C.textMuted, marginBottom: 7, letterSpacing: "0.06em" }}>
+              {pendingTitle}
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center" }}>
+              {/* Myself */}
+              {userEmail && (
+                <button
+                  type="button"
+                  onClick={function () { commitPending(userEmail); }}
+                  style={{
+                    padding: "4px 11px", borderRadius: 6, fontSize: 11,
+                    fontFamily: MONO, cursor: "pointer", fontWeight: 600,
+                    background: C.accentFaint, border: "1px solid " + C.accentLine,
+                    color: C.accent,
+                  }}
+                >
+                  Myself
+                </button>
+              )}
+              {/* Entity-detected contact — highlighted */}
+              {suggestedEmail && (
+                <button
+                  type="button"
+                  onClick={function () { commitPending(suggestedEmail); }}
+                  style={{
+                    padding: "4px 11px", borderRadius: 6, fontSize: 11,
+                    fontFamily: MONO, cursor: "pointer", fontWeight: 600,
+                    background: C.accentFaint, border: "1px solid " + C.accent,
+                    color: C.accent,
+                  }}
+                >
+                  {"✦ " + (entitySuggestion.contact.name || suggestedEmail)}
+                </button>
+              )}
+              {/* Other contacts */}
+              {visibleContacts
+                .filter(function (ct) { return ct.email !== suggestedEmail && ct.name !== suggestedEmail; })
+                .map(function (ct) {
+                  var val = ct.email || ct.name || "";
+                  return (
+                    <button
+                      key={ct.id || val}
+                      type="button"
+                      onClick={function () { commitPending(val); }}
+                      style={{
+                        padding: "4px 10px", borderRadius: 6, fontSize: 11,
+                        fontFamily: MONO, cursor: "pointer",
+                        background: "transparent", border: "1px solid " + C.rule,
+                        color: C.textSoft,
+                      }}
+                    >
+                      {ct.name || val}
+                    </button>
+                  );
+                })}
+              {/* Skip */}
+              <button
+                type="button"
+                onClick={function () { commitPending(null); }}
+                style={{
+                  padding: "4px 8px", borderRadius: 6, fontSize: 11,
+                  fontFamily: MONO, cursor: "pointer",
+                  background: "transparent", border: "none",
+                  color: C.textFaint, marginLeft: "auto",
+                }}
+              >
+                Skip →
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       {showNewDetail && (
         <TaskDetailPanel
