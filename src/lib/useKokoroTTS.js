@@ -197,6 +197,9 @@ export function useKokoroTTS() {
     var clean = stripMarkdown(text);
     if (!clean) return;
 
+    // DIAGNOSTIC — remove once confirmed
+    showToast("🎙 speak() · model:" + stateRef.current + " · len:" + clean.length, "info", 6000);
+
     // ── Kokoro path (all devices) ──────────────────────────────────────────
     if (sourceRef.current) {
       try { sourceRef.current.stop(); } catch (_) {}
