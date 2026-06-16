@@ -8,28 +8,12 @@ var DTYPE    = "q8";
 var _tts         = null;
 var _loadPromise = null;
 
-// Kokoro's ONNX WASM runtime hangs on iOS Safari — use Web Speech API there.
-var _isMobile = typeof navigator !== "undefined"
-  && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
-// ── DIAGNOSTIC BLOCK (remove once root cause confirmed) ──────────────────────
-if (typeof window !== "undefined") {
-  console.log("[KokoroTTS] UA:", navigator.userAgent);
-  console.log("[KokoroTTS] _isMobile:", _isMobile);
-  console.log("[KokoroTTS] crossOriginIsolated:", window.crossOriginIsolated);
-  console.log("[KokoroTTS] SharedArrayBuffer:", typeof SharedArrayBuffer);
-}
-// ─────────────────────────────────────────────────────────────────────────────
-
 async function ensureModel() {
   if (_tts) return _tts;
   if (_loadPromise) return _loadPromise;
   _loadPromise = (async function () {
-    console.log("[KokoroTTS] importing kokoro-js…");
     var { KokoroTTS } = await import("kokoro-js");
-    console.log("[KokoroTTS] kokoro-js imported, calling from_pretrained…");
     _tts = await KokoroTTS.from_pretrained(MODEL_ID, { dtype: DTYPE });
-    console.log("[KokoroTTS] model ready ✓");
     return _tts;
   })();
   try {
@@ -49,18 +33,13 @@ function stripMarkdown(text) {
     .trim();
 }
 
-// Pick the best available English voice — prefers downloaded Premium/Enhanced.
 function pickSystemVoice() {
   if (typeof window === "undefined" || !window.speechSynthesis) return null;
-  var voices    = window.speechSynthesis.getVoices() || [];
-  var enVoices  = voices.filter(function (v) { return /^en/.test(v.lang); });
-  var premium   = enVoices.find(function (v) {
-    return /(premium)/i.test(v.name + " " + (v.voiceURI || ""));
-  });
+  var voices   = window.speechSynthesis.getVoices() || [];
+  var enVoices = voices.filter(function (v) { return /^en/.test(v.lang); });
+  var premium  = enVoices.find(function (v) { return /(premium)/i.test(v.name + " " + (v.voiceURI || "")); });
   if (premium) return premium;
-  var enhanced  = enVoices.find(function (v) {
-    return /(enhanced)/i.test(v.name + " " + (v.voiceURI || ""));
-  });
+  var enhanced = enVoices.find(function (v) { return /(enhanced)/i.test(v.name + " " + (v.voiceURI || "")); });
   if (enhanced) return enhanced;
   var names = ["Daniel", "Samantha", "Jamie", "Karen", "Moira", "Aaron", "Fred"];
   for (var i = 0; i < names.length; i++) {
@@ -71,7 +50,7 @@ function pickSystemVoice() {
 }
 
 function speakWithSystemVoice(text, onEnd) {
-  if (typeof window === "undefined" || !window.speechSynthesis) return;
+  if (typeof window === "undefined" || !window.speechSynthesis) { if (onEnd) onEnd(); return; }
   window.speechSynthesis.cancel();
   var u = new SpeechSynthesisUtterance(text);
   var voice = pickSystemVoice();
@@ -81,15 +60,15 @@ function speakWithSystemVoice(text, onEnd) {
   window.speechSynthesis.speak(u);
 }
 
-// Float32Array PCM → WAV ArrayBuffer for AudioContext.decodeAudioData()
+// Float32Array PCM → WAV ArrayBuffer (for HTMLAudioElement Blob playback)
 function pcmToWavBuffer(samples, sampleRate) {
-  var numChannels  = 1;
+  var numChannels   = 1;
   var bitsPerSample = 16;
-  var byteRate     = sampleRate * numChannels * bitsPerSample / 8;
-  var blockAlign   = numChannels * bitsPerSample / 8;
-  var dataSize     = samples.length * 2;
-  var buffer       = new ArrayBuffer(44 + dataSize);
-  var view         = new DataView(buffer);
+  var byteRate      = sampleRate * numChannels * bitsPerSample / 8;
+  var blockAlign    = numChannels * bitsPerSample / 8;
+  var dataSize      = samples.length * 2;
+  var buffer        = new ArrayBuffer(44 + dataSize);
+  var view          = new DataView(buffer);
   function writeString(offset, str) {
     for (var i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
   }
@@ -117,13 +96,11 @@ function pcmToWavBuffer(samples, sampleRate) {
 export function useKokoroTTS() {
   var [modelState, setModelState] = useState(_tts ? "ready" : "idle");
   var [speaking, setSpeaking]     = useState(false);
-  var stateRef     = useRef(_tts ? "ready" : "idle");
-  var audioCtxRef  = useRef(null);
-  var sourceRef    = useRef(null);
-  var voicesRef    = useRef([]);
-  var keepAliveRef = useRef(null);
+  var stateRef   = useRef(_tts ? "ready" : "idle");
+  var audioElRef = useRef(null);   // HTMLAudioElement — retains iOS gesture unlock across async work
+  var blobUrlRef = useRef(null);   // current Blob URL, revoked on next play
+  var voicesRef  = useRef([]);
 
-  // Eagerly load system voices list on mount (needed for pickSystemVoice on mobile)
   useEffect(function () {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
     function load() { voicesRef.current = window.speechSynthesis.getVoices(); }
@@ -135,67 +112,26 @@ export function useKokoroTTS() {
   function activate() {
     if (typeof window === "undefined") return;
 
-    // Eagerly refresh system voices list (fallback if Kokoro fails)
     if (window.speechSynthesis) {
       voicesRef.current = window.speechSynthesis.getVoices() || voicesRef.current;
     }
 
-    // Create + unlock AudioContext inside the user gesture.
-    // iOS Safari suspends AudioContext after async work, so we play a tiny
-    // silent buffer here — this permanently unlocks the audio session so
-    // src.start() later (after model generation) actually produces sound.
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (Ctx && !audioCtxRef.current) {
-      audioCtxRef.current = new Ctx();
+    // Create and unlock HTMLAudioElement inside the user gesture.
+    // iOS Safari grants playback rights to an HTMLAudioElement unlocked this
+    // way and retains them across async work — unlike AudioContext, which loses
+    // audible-output rights once the gesture context expires.
+    if (!audioElRef.current) {
+      audioElRef.current = new Audio();
     }
-    if (audioCtxRef.current) {
-      var ctx = audioCtxRef.current;
-      var unlock = function () {
-        var buf = ctx.createBuffer(1, 1, 22050);
-        var src = ctx.createBufferSource();
-        src.buffer = buf;
-        src.connect(ctx.destination);
-        src.start(0);
-        src.disconnect();
-      };
-      var doUnlockAndTest = function () {
-        unlock();
-        // Keep AudioContext alive with a near-silent oscillator so Safari
-        // never re-suspends it between the user gesture and async playback.
-        if (!keepAliveRef.current) {
-          try {
-            var osc  = ctx.createOscillator();
-            var gain = ctx.createGain();
-            gain.gain.value = 0.00001;
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start();
-            keepAliveRef.current = osc;
-          } catch (_) {}
-        }
-        // 440 Hz sine-wave test — if you hear a 0.3s beep, AudioContext works.
-        // If silent, the problem is iOS audio routing, not Kokoro/WAV.
-        try {
-          var rate    = ctx.sampleRate;
-          var frames  = Math.floor(rate * 0.3);
-          var testBuf = ctx.createBuffer(1, frames, rate);
-          var data    = testBuf.getChannelData(0);
-          for (var i = 0; i < frames; i++) {
-            data[i] = Math.sin(2 * Math.PI * 440 * i / rate) * 0.5;
-          }
-          var testSrc = ctx.createBufferSource();
-          testSrc.buffer = testBuf;
-          testSrc.connect(ctx.destination);
-          testSrc.start(0);
-          showToast("🔔 440Hz test tone — did you hear a beep?", "info", 4000);
-        } catch (_) {}
-      };
-      if (ctx.state === "suspended") {
-        ctx.resume().then(doUnlockAndTest).catch(function () {});
-      } else {
-        doUnlockAndTest();
-      }
-    }
+    var silentWav = pcmToWavBuffer(new Float32Array(1), 22050);
+    var silentUrl = URL.createObjectURL(new Blob([silentWav], { type: "audio/wav" }));
+    audioElRef.current.src = silentUrl;
+    audioElRef.current.play().then(function () {
+      audioElRef.current.pause();
+      URL.revokeObjectURL(silentUrl);
+    }).catch(function () {
+      URL.revokeObjectURL(silentUrl);
+    });
 
     if (!_tts && stateRef.current === "idle") {
       stateRef.current = "loading";
@@ -206,22 +142,21 @@ export function useKokoroTTS() {
         setModelState("ready");
         showToast("Pip's voice ready ✓", "success");
       }).catch(function (e) {
-        console.error("[KokoroTTS] preload FAILED:", e);
+        console.error("[KokoroTTS] load failed:", e);
         stateRef.current = "error";
         setModelState("error");
-        showToast("Voice model failed (" + (e && e.message ? e.message.slice(0, 60) : "unknown") + ")", "error");
+        showToast("Voice model failed — using system voice", "warn");
       });
     }
   }
 
   function cancel() {
-    if (keepAliveRef.current) {
-      try { keepAliveRef.current.stop(); } catch (_) {}
-      keepAliveRef.current = null;
+    if (audioElRef.current) {
+      try { audioElRef.current.pause(); } catch (_) {}
     }
-    if (sourceRef.current) {
-      try { sourceRef.current.stop(); } catch (_) {}
-      sourceRef.current = null;
+    if (blobUrlRef.current) {
+      try { URL.revokeObjectURL(blobUrlRef.current); } catch (_) {}
+      blobUrlRef.current = null;
     }
     if (typeof window !== "undefined" && window.speechSynthesis) {
       window.speechSynthesis.cancel();
@@ -233,15 +168,6 @@ export function useKokoroTTS() {
     if (!text) return;
     var clean = stripMarkdown(text);
     if (!clean) return;
-
-    // DIAGNOSTIC — remove once confirmed
-    showToast("🎙 speak() · model:" + stateRef.current + " · len:" + clean.length, "info", 6000);
-
-    // ── Kokoro path (all devices) ──────────────────────────────────────────
-    if (sourceRef.current) {
-      try { sourceRef.current.stop(); } catch (_) {}
-      sourceRef.current = null;
-    }
 
     if (stateRef.current === "error") {
       speakWithSystemVoice(clean, function () { setSpeaking(false); });
@@ -260,74 +186,58 @@ export function useKokoroTTS() {
         setModelState("ready");
         showToast("Pip's voice ready ✓", "success");
       } catch (e) {
-        console.error("[Kokoro] load failed:", e);
         stateRef.current = "error";
         setModelState("error");
-        showToast("Voice model failed — using system voice", "warn");
         speakWithSystemVoice(clean, function () { setSpeaking(false); });
         return;
       }
     }
 
-    var Ctx = typeof window !== "undefined" && (window.AudioContext || window.webkitAudioContext);
-    console.log("[KokoroTTS] AudioContext available:", !!Ctx);
-    if (Ctx && !audioCtxRef.current) audioCtxRef.current = new Ctx();
-    if (!audioCtxRef.current) {
-      console.warn("[KokoroTTS] no AudioContext — falling back to system voice");
+    if (!audioElRef.current) {
       speakWithSystemVoice(clean, function () { setSpeaking(false); });
       return;
     }
-    console.log("[KokoroTTS] AudioContext state:", audioCtxRef.current.state);
 
     try {
-      var result = await _tts.generate(clean, { voice: VOICE, speed: 1.0 });
+      var result     = await _tts.generate(clean, { voice: VOICE, speed: 1.0 });
       var samples    = result.audio    || result;
       var sampleRate = result.sampling_rate || 24000;
 
-      if (!(samples instanceof Float32Array)) {
-        throw new Error("Unexpected audio format: " + typeof samples);
+      if (!(samples instanceof Float32Array) || samples.length === 0) {
+        throw new Error("Kokoro returned no audio data");
       }
 
-      if (samples.length === 0) {
-        throw new Error("Kokoro returned 0 samples");
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = null;
       }
 
-      // Amplitude check on raw Kokoro PCM
-      var maxAmp = 0, sumAmp = 0;
-      for (var i = 0; i < Math.min(samples.length, 4000); i++) {
-        var v = Math.abs(samples[i]);
-        if (v > maxAmp) maxAmp = v;
-        sumAmp += v;
-      }
-      var avgAmp = sumAmp / Math.min(samples.length, 4000);
-      showToast("🔊 PCM: " + samples.length + "smp · max=" + maxAmp.toFixed(4) + " avg=" + avgAmp.toFixed(4), "info", 10000);
+      var url = URL.createObjectURL(new Blob([pcmToWavBuffer(samples, sampleRate)], { type: "audio/wav" }));
+      blobUrlRef.current = url;
 
-      var wavBuf   = pcmToWavBuffer(samples, sampleRate);
-      var audioBuf = await audioCtxRef.current.decodeAudioData(wavBuf);
-
-      // Amplitude check on decoded AudioBuffer
-      var ch = audioBuf.getChannelData(0);
-      var maxDec = 0, sumDec = 0;
-      for (var j = 0; j < Math.min(ch.length, 4000); j++) {
-        var w = Math.abs(ch[j]);
-        if (w > maxDec) maxDec = w;
-        sumDec += w;
-      }
-      showToast("🎚 decoded: dur=" + audioBuf.duration.toFixed(2) + "s · max=" + maxDec.toFixed(4) + " ctx=" + audioCtxRef.current.state, "info", 10000);
-
-      // Always resume before playback
-      try { await audioCtxRef.current.resume(); } catch (_) {}
-
-      var src = audioCtxRef.current.createBufferSource();
-      src.buffer = audioBuf;
-      src.connect(audioCtxRef.current.destination);
-      src.onended = function () { sourceRef.current = null; setSpeaking(false); };
-      sourceRef.current = src;
-      src.start(0);
+      var el = audioElRef.current;
+      el.onended = function () {
+        setSpeaking(false);
+        if (blobUrlRef.current === url) {
+          URL.revokeObjectURL(url);
+          blobUrlRef.current = null;
+        }
+      };
+      el.onerror = function () {
+        setSpeaking(false);
+        speakWithSystemVoice(clean, function () { setSpeaking(false); });
+      };
+      el.src = url;
+      await el.play();
       setSpeaking(true);
     } catch (e) {
-      console.error("[KokoroTTS] generate/play FAILED:", e);
-      showToast("Pip voice error: " + (e && e.message ? e.message.slice(0, 80) : "unknown"), "error");
+      console.error("[KokoroTTS] speak failed:", e);
+      var msg = e && e.message ? e.message : "unknown error";
+      if (msg.indexOf("NotAllowedError") !== -1) {
+        showToast("Tap the speaker button first to enable Pip's voice", "info");
+      } else {
+        showToast("Pip voice error — using system voice", "warn");
+      }
       speakWithSystemVoice(clean, function () { setSpeaking(false); });
     }
   }
