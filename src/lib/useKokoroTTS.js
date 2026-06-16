@@ -240,9 +240,7 @@ export function useKokoroTTS() {
     console.log("[KokoroTTS] AudioContext state:", audioCtxRef.current.state);
 
     try {
-      console.log("[KokoroTTS] calling _tts.generate…");
       var result = await _tts.generate(clean, { voice: VOICE, speed: 1.0 });
-      console.log("[KokoroTTS] generate() returned:", typeof result, Object.keys(result || {}));
       var samples    = result.audio    || result;
       var sampleRate = result.sampling_rate || 24000;
 
@@ -250,14 +248,21 @@ export function useKokoroTTS() {
         throw new Error("Unexpected audio format: " + typeof samples);
       }
 
-      console.log("[KokoroTTS] PCM samples:", samples.length, "sampleRate:", sampleRate);
+      // DIAGNOSTIC toast — remove once root cause confirmed
+      showToast("🔊 " + samples.length + " samples @ " + sampleRate + "Hz · ctx:" + audioCtxRef.current.state, "info", 8000);
+
+      if (samples.length === 0) {
+        throw new Error("Kokoro returned 0 samples — no audio generated");
+      }
+
       var wavBuf   = pcmToWavBuffer(samples, sampleRate);
       var audioBuf = await audioCtxRef.current.decodeAudioData(wavBuf);
 
       // Always resume before playback — iOS can re-suspend after async work
-      // even if we already resumed during the user gesture in activate().
       try { await audioCtxRef.current.resume(); } catch (_) {}
-      console.log("[KokoroTTS] ctx state before start:", audioCtxRef.current.state);
+
+      // DIAGNOSTIC toast
+      showToast("▶ playing · ctx:" + audioCtxRef.current.state + " · dur:" + audioBuf.duration.toFixed(1) + "s", "info", 8000);
 
       var src = audioCtxRef.current.createBufferSource();
       src.buffer = audioBuf;
@@ -266,11 +271,8 @@ export function useKokoroTTS() {
       sourceRef.current = src;
       src.start(0);
       setSpeaking(true);
-      console.log("[KokoroTTS] playback started ✓");
     } catch (e) {
       console.error("[KokoroTTS] generate/play FAILED:", e);
-      // NOTE: temporarily NOT falling back to system voice so the real error is visible.
-      // Re-enable the fallback once root cause is confirmed.
       showToast("Pip voice error: " + (e && e.message ? e.message.slice(0, 80) : "unknown"), "error");
       speakWithSystemVoice(clean, function () { setSpeaking(false); });
     }
