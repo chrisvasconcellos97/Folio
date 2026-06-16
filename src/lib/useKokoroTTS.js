@@ -240,7 +240,18 @@ export function useKokoroTTS() {
     }
 
     try {
-      var result     = await _tts.generate(clean, { voice: VOICE, speed: 1.0 });
+      // Kokoro inference hangs indefinitely on iOS (82M ONNX model exhausts the
+      // tab memory mid-generate — no resolve, no throw). Race it against a
+      // timeout so a stall falls through to the system voice instead of going
+      // silent forever.
+      diag("generating… (Kokoro inference)");
+      var GEN_TIMEOUT_MS = 15000;
+      var result = await Promise.race([
+        _tts.generate(clean, { voice: VOICE, speed: 1.0 }),
+        new Promise(function (_, reject) {
+          setTimeout(function () { reject(new Error("generate timeout (" + GEN_TIMEOUT_MS + "ms)")); }, GEN_TIMEOUT_MS);
+        }),
+      ]);
       var samples    = result.audio    || result;
       var sampleRate = result.sampling_rate || 24000;
 
