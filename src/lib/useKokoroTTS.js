@@ -67,47 +67,15 @@ function speakWithSystemVoice(text, onEnd) {
   window.speechSynthesis.speak(u);
 }
 
-// Float32Array PCM → WAV ArrayBuffer (for HTMLAudioElement Blob playback)
-function pcmToWavBuffer(samples, sampleRate) {
-  var numChannels   = 1;
-  var bitsPerSample = 16;
-  var byteRate      = sampleRate * numChannels * bitsPerSample / 8;
-  var blockAlign    = numChannels * bitsPerSample / 8;
-  var dataSize      = samples.length * 2;
-  var buffer        = new ArrayBuffer(44 + dataSize);
-  var view          = new DataView(buffer);
-  function writeString(offset, str) {
-    for (var i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
-  }
-  writeString(0, "RIFF");
-  view.setUint32(4, 36 + dataSize, true);
-  writeString(8, "WAVE");
-  writeString(12, "fmt ");
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, numChannels, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, byteRate, true);
-  view.setUint16(32, blockAlign, true);
-  view.setUint16(34, bitsPerSample, true);
-  writeString(36, "data");
-  view.setUint32(40, dataSize, true);
-  var offset = 44;
-  for (var i = 0; i < samples.length; i++, offset += 2) {
-    var s = Math.max(-1, Math.min(1, samples[i]));
-    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-  }
-  return buffer;
-}
-
 export function useKokoroTTS() {
   var [modelState, setModelState] = useState(_tts ? "ready" : "idle");
   var [speaking, setSpeaking]     = useState(false);
-  var stateRef   = useRef(_tts ? "ready" : "idle");
-  var audioElRef       = useRef(null);   // HTMLAudioElement — retains iOS gesture unlock across async work
-  var audioUnlockedRef = useRef(false);  // did the silent-WAV unlock play() actually resolve?
-  var blobUrlRef       = useRef(null);   // current Blob URL, revoked on next play
-  var voicesRef        = useRef([]);
+  var stateRef     = useRef(_tts ? "ready" : "idle");
+  var audioCtxRef  = useRef(null);   // WebAudio context — ignores the iOS Ring/Silent switch
+  var ctxUnlockedRef = useRef(false); // did the gesture-time resume()+silent buffer take?
+  var keepAliveRef = useRef(null);   // looping silent source so iOS doesn't auto-suspend
+  var sourceRef    = useRef(null);   // current playing BufferSource
+  var voicesRef    = useRef([]);
 
   useEffect(function () {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
@@ -117,14 +85,21 @@ export function useKokoroTTS() {
     return function () { window.speechSynthesis.removeEventListener("voiceschanged", load); };
   }, []);
 
+  function getCtx() {
+    if (audioCtxRef.current) return audioCtxRef.current;
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return null;
+    audioCtxRef.current = new Ctx();
+    return audioCtxRef.current;
+  }
+
   function activate() {
     if (typeof window === "undefined") return;
 
     if (window.speechSynthesis) {
       voicesRef.current = window.speechSynthesis.getVoices() || voicesRef.current;
-      // Prime speechSynthesis INSIDE the user gesture. iOS commonly drops the
-      // first utterance unless it was primed by a gesture-bound speak() call —
-      // without this the system-voice fallback can be silently ignored later.
+      // Prime speechSynthesis INSIDE the user gesture — iOS commonly drops the
+      // first utterance unless it was gesture-primed (the fallback path).
       try {
         window.speechSynthesis.cancel();
         var primer = new SpeechSynthesisUtterance(" ");
@@ -133,27 +108,45 @@ export function useKokoroTTS() {
       } catch (_) {}
     }
 
-    // Create and unlock HTMLAudioElement inside the user gesture.
-    // iOS Safari grants playback rights to an HTMLAudioElement unlocked this
-    // way and retains them across async work — unlike AudioContext, which loses
-    // audible-output rights once the gesture context expires.
-    if (!audioElRef.current) {
-      audioElRef.current = new Audio();
+    // Unlock WebAudio inside the gesture. Unlike HTMLAudioElement, an AudioContext
+    // ignores the iOS Ring/Silent switch — and once resumed in a gesture it keeps
+    // the right to play buffers scheduled later (after async model inference).
+    var ctx = getCtx();
+    if (!ctx) {
+      showToast("DIAG: no AudioContext on this browser", "warn", 6000);
+      return;
     }
-    var silentWav = pcmToWavBuffer(new Float32Array(1), 22050);
-    var silentUrl = URL.createObjectURL(new Blob([silentWav], { type: "audio/wav" }));
-    audioElRef.current.src = silentUrl;
-    audioElRef.current.play().then(function () {
-      audioUnlockedRef.current = true;
-      audioElRef.current.pause();
-      try { audioElRef.current.currentTime = 0; } catch (_) {}
-      URL.revokeObjectURL(silentUrl);
-      showToast("DIAG: audio unlocked ✓", "info", 2500);
-    }).catch(function (err) {
-      audioUnlockedRef.current = false;
-      URL.revokeObjectURL(silentUrl);
-      showToast("DIAG: audio unlock FAILED · " + (err && err.name ? err.name : "?"), "warn", 6000);
-    });
+    try {
+      var buf = ctx.createBuffer(1, 1, ctx.sampleRate);
+      var unlockSrc = ctx.createBufferSource();
+      unlockSrc.buffer = buf;
+      unlockSrc.connect(ctx.destination);
+      unlockSrc.start(0);
+
+      // Light keep-alive: a silent looping source through a zero gain node so the
+      // context never auto-suspends between responses.
+      if (!keepAliveRef.current) {
+        var silent = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+        var ka = ctx.createBufferSource();
+        ka.buffer = silent;
+        ka.loop = true;
+        var g = ctx.createGain();
+        g.gain.value = 0;
+        ka.connect(g);
+        g.connect(ctx.destination);
+        ka.start(0);
+        keepAliveRef.current = ka;
+      }
+
+      ctx.resume().then(function () {
+        ctxUnlockedRef.current = true;
+        showToast("DIAG: WebAudio unlocked ✓ · " + ctx.state, "info", 2500);
+      }).catch(function (err) {
+        showToast("DIAG: WebAudio resume FAILED · " + (err && err.name ? err.name : "?"), "warn", 6000);
+      });
+    } catch (err) {
+      showToast("DIAG: WebAudio unlock threw · " + (err && err.name ? err.name : "?"), "warn", 6000);
+    }
 
     if (!_tts && stateRef.current === "idle") {
       stateRef.current = "loading";
@@ -173,12 +166,9 @@ export function useKokoroTTS() {
   }
 
   function cancel() {
-    if (audioElRef.current) {
-      try { audioElRef.current.pause(); } catch (_) {}
-    }
-    if (blobUrlRef.current) {
-      try { URL.revokeObjectURL(blobUrlRef.current); } catch (_) {}
-      blobUrlRef.current = null;
+    if (sourceRef.current) {
+      try { sourceRef.current.stop(); } catch (_) {}
+      sourceRef.current = null;
     }
     if (typeof window !== "undefined" && window.speechSynthesis) {
       window.speechSynthesis.cancel();
@@ -192,7 +182,7 @@ export function useKokoroTTS() {
     if (!clean) return;
 
     // DIAG: prove speak() is reached + the model/unlock state at entry.
-    showToast("DIAG: speak() reached · model=" + stateRef.current + " · unlocked=" + audioUnlockedRef.current, "info", 4000);
+    showToast("DIAG: speak() reached · model=" + stateRef.current + " · unlocked=" + ctxUnlockedRef.current, "info", 4000);
 
     if (stateRef.current === "error") {
       speakWithSystemVoice(clean, function () { setSpeaking(false); });
@@ -218,7 +208,8 @@ export function useKokoroTTS() {
       }
     }
 
-    if (!audioElRef.current) {
+    var ctx = getCtx();
+    if (!ctx) {
       speakWithSystemVoice(clean, function () { setSpeaking(false); });
       return;
     }
@@ -232,35 +223,32 @@ export function useKokoroTTS() {
         throw new Error("Kokoro returned no audio data");
       }
 
-      if (blobUrlRef.current) {
-        URL.revokeObjectURL(blobUrlRef.current);
-        blobUrlRef.current = null;
+      // Build an AudioBuffer DIRECTLY from the PCM — no decodeAudioData (which
+      // expects an encoded container and was the likely silent-failure in the
+      // earlier WebAudio attempts). The context resamples 24k → device rate.
+      var audioBuf = ctx.createBuffer(1, samples.length, sampleRate);
+      if (audioBuf.copyToChannel) {
+        audioBuf.copyToChannel(samples, 0, 0);
+      } else {
+        audioBuf.getChannelData(0).set(samples);
       }
 
-      var url = URL.createObjectURL(new Blob([pcmToWavBuffer(samples, sampleRate)], { type: "audio/wav" }));
-      blobUrlRef.current = url;
+      // Resume again right before playback — idempotent, and reactivates the
+      // context if iOS auto-suspended it since the unlock gesture.
+      await ctx.resume();
 
-      var el = audioElRef.current;
-      el.onended = function () {
-        setSpeaking(false);
-        if (blobUrlRef.current === url) {
-          URL.revokeObjectURL(url);
-          blobUrlRef.current = null;
-        }
-      };
-      el.onerror = function () {
-        setSpeaking(false);
-        speakWithSystemVoice(clean, function () { setSpeaking(false); });
-      };
-      el.src = url;
-      await el.play();
+      if (sourceRef.current) { try { sourceRef.current.stop(); } catch (_) {} }
+      var src = ctx.createBufferSource();
+      src.buffer = audioBuf;
+      src.connect(ctx.destination);
+      src.onended = function () { setSpeaking(false); if (sourceRef.current === src) sourceRef.current = null; };
+      sourceRef.current = src;
+      src.start(0);
       setSpeaking(true);
-      // DIAG: this is the decisive test. If you SEE this toast but HEAR nothing,
-      // the code path works — the silence is the iPhone Ring/Silent switch or
-      // media volume (HTMLAudioElement obeys the mute switch; WebAudio did not,
-      // which is why the old beep was audible). If you never see this toast,
-      // playback was rejected and we fell through to the catch below.
-      showToast("DIAG: ▶ Kokoro playing. Hear nothing? Check the Ring/Silent switch + volume.", "info", 7000);
+
+      // DIAG: decisive. If you SEE this and HEAR nothing now, it's the device
+      // volume (WebAudio ignores the Ring/Silent switch, so that's ruled out).
+      showToast("DIAG: ▶ Kokoro playing (WebAudio) · ctx=" + ctx.state + " · " + samples.length + " samples", "info", 7000);
     } catch (e) {
       console.error("[KokoroTTS] speak failed:", e);
       var name = e && e.name ? e.name : "Error";
