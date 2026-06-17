@@ -92,7 +92,7 @@ export function CommitmentsView({ items, accounts, onOpenAccount, onMarkDone }) 
           {/* Account chip */}
           {acct && (
             <button
-              onClick={function () { onOpenAccount && onOpenAccount(acct); }}
+              onClick={function () { onOpenAccount && onOpenAccount(acct.id); }}
               style={{
                 background: C.accentFaint,
                 border: "1px solid " + C.accentLine,

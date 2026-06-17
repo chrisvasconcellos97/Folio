@@ -2313,6 +2313,8 @@ export function CadenceHub({
               onClick={function () {
                 navigator.clipboard.writeText(readoutEmail).then(function () {
                   showToast("Copied to clipboard");
+                }).catch(function () {
+                  showToast("Couldn't copy — try again", "error");
                 });
               }}
               style={{

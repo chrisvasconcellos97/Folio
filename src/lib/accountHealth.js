@@ -95,7 +95,7 @@ function computeMissedCadences(accountId, allCadences, allMeetings, todayISO) {
 
     var lastDate = null;
     cadenceMeetings.forEach(function (m) {
-      var d = new Date(m.meeting_date || m.created_at);
+      var d = new Date(m.meeting_date ? m.meeting_date + "T00:00:00" : m.created_at);
       if (!lastDate || d > lastDate) lastDate = d;
     });
 

@@ -976,7 +976,7 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
     calls: todaysCalls.length + todaysScheduled.length,
     overdue: burningRows.filter(function (r) { return r.kind === "item"; }).length,
     cold: burningRows.filter(function (r) { return r.kind === "cold"; }).length,
-    commitments: commitmentNudges.length,
+    commitments: wordCommitments.length,
   });
 
   // ── Panels ──────────────────────────────────────────────────────────

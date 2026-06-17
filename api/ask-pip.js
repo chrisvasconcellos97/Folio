@@ -4,6 +4,10 @@ import { logPipUsage } from "./_pipUsage.js";
 
 var MODEL_HAIKU = "claude-haiku-4-5-20251001";
 
+// Meeting-mode Haiku runs 12-20s; without this Vercel kills the function at the
+// 10s default before the client's 70s timeout, surfacing as a silent network error.
+export const config = { maxDuration: 60 };
+
 var rateLimitMap = new Map();
 var WINDOW_MS    = 60 * 1000;
 var MAX_REQUESTS = 20;

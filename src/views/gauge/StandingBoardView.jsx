@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { C } from "../../lib/colors";
 import { taskStatusLabel, formatFieldValue } from "../../lib/gaugeFields";
+import { autoStatusPatch } from "../../lib/gaugeStatus";
 import { TaskDetailPanel } from "./TaskDetailPanel";
 import { useBreakpoint } from "../../hooks/useBreakpoint";
 import { resolveAssignee } from "../../lib/ownerLabel";
@@ -53,7 +54,12 @@ export function StandingBoardView({ project, accounts, members, contacts, aliase
     } else {
       nextTasks = tasks.map(function (t, i) { return i === taskIndex ? newTask : t; });
     }
-    return onUpdate(project.id, { stages: nextTasks });
+    // Auto-flip project status when the last card completes / one re-opens —
+    // same shared helper commitStages uses, so every completion path agrees.
+    var payload = { stages: nextTasks };
+    var sp = autoStatusPatch(nextTasks, project.status, project.is_standing);
+    if (sp) Object.assign(payload, sp);
+    return onUpdate(project.id, payload);
   }
 
   function deleteTask(taskIndex) {
