@@ -148,6 +148,18 @@ function renderAccountContext(acc, meetings, tasks, contacts, projects, updates,
       lines.push("- " + (p.title || "(untitled)") + " · " + (p.status || "?") +
         (latest ? " · latest: \"" + excerpt(latest.body, 120) + "\"" : "") +
         (p.waiting_on ? " · ⏳ WAITING ON " + p.waiting_on + (p.waiting_on_since ? " (since " + p.waiting_on_since + ")" : "") : ""));
+      // Open tasks INSIDE the project (gauge_projects.stages — the canonical
+      // store for project tasks; folio_tasks holds mostly loose items). Without
+      // this the operator was blind to everything happening inside a project.
+      var openStages = Array.isArray(p.stages)
+        ? p.stages.filter(function (t) { return t && !t.completed_at; })
+        : [];
+      openStages.slice(0, 5).forEach(function (t) {
+        var tb = ["  · " + (t.title || t.text || "(untitled task)")];
+        if (t.due_date) tb.push("due " + t.due_date);
+        if (t.assignee || t.assignee_email) tb.push("→ " + (t.assignee || t.assignee_email));
+        lines.push("  " + tb.join(" · "));
+      });
     });
   }
 
@@ -552,7 +564,7 @@ async function gatherAndRun(admin, client, userId, acc, snapshot, userContext) {
     .select("name,title,is_primary,relationship_role")
     .eq("account_id", acc.id).limit(20);
   var pRes = await admin.from("gauge_projects")
-    .select("title,status,status_updates,account_id,account_ids,waiting_on,waiting_on_since")
+    .select("title,status,status_updates,account_id,account_ids,waiting_on,waiting_on_since,stages")
     .or("account_id.eq." + acc.id + ",account_ids.cs.{" + acc.id + "}").limit(20);
   var uRes = await admin.from("folio_account_updates")
     .select("update_date,update_type,title,description")
