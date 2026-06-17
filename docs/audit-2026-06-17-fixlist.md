@@ -220,3 +220,16 @@ P1: (4) PipView buildContext missing globalPeople [the "suggests known people" b
 P2: (11) OperatorHub draftFor string-match; (12) logActivity no-op for solo; (13) followup-question uncapped/no-rate-limit; (14) merge doesn't re-parent suggestion/alias account_id; (15) useMeetings select(*) no limit.
 
 Full per-item REAL list lives in the sweep result (session record). §3 (Pip-wiring, ~16 real) + §10 (structural: buildAccountContext, dual-task-model, file splits) are the heavy reserved-for-a-session work.
+
+### BATCH2 SHIPPED — 2026-06-17 (commit merged into work branch; all 5 gates green)
+Contained REAL items landed via Patch batch2 (38 files):
+- §5 theme: MeetingsTab gauge btn token, DigestIngestModal contrast, HexSignature 3-cell canonical
+- §6 a11y: SummarizeStreamingOverlay (role/aria/reduced-motion/focus-restore), AccountDetailTabs (tablist/tab/aria-controls), AuthView + CheckInCard role=status, input font floors
+- §7 perf/cost: prompt caching on business-review/generate-questions/leadership-readout, pip-state-refresh wave cap(4), useMeetings limits, _pipUsage dynamic ET offset, rate limits on detect-terminology+followup-question, OperatorRunButton 90s timeout
+- §8 guards/CI: Guard 5 (hook order) + Guard 6 (bare ISO date); CI lint(advisory)+audit(high); form-data HIGH patched
+- §9 docs: ai-governance two-brain + WORK_CLAUDE_PROMPT; data-handling merge re-parenting
+- §1 contained: portfolio-brief try-catch, useItems Closed filter, health-pill gatherSignals(+cadences,meetings) [merged w/ ET-date fix], OperatorHub draftFor by id + last-run date, MeetingsTab sendToGauge via hook, CadenceTab MarkdownText+confirm, pipPlanApply update_task warn, renderCommitmentsInBlock ET, getNextOccurrence guard, PipGaugeCard team-load key, AdHoc cadenceId null, meeting_time validation
+- §2 code: search_history user-scoped, App share-target guard, onAddContacts catch, SUMMARIZE injection line, followup cap, detect/followup rate limits
+- §4: isMine helper, METHOD_LABEL dedup, completion-task via hook, ContactsTab PipInsightCard, AddContactModal is_primary, EVERGREEN removed
+
+REMAINING (dedicated session): §3 Pip-context wiring (~16, incl. globalPeople→chat #1 bug), §10 structural (buildAccountContext, dual-task-model, file splits, circular import), 4 JUDGMENT, + any §7 unbounded-query/memo items the batch deferred.
