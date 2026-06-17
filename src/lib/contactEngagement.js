@@ -65,7 +65,7 @@ export function computeContactEngagement(contacts, meetings) {
 
   (meetings || []).forEach(function (m) {
     if (!m.attendees || !Array.isArray(m.attendees)) return;
-    var meetingDate = m.date || m.meeting_date || m.created_at;
+    var meetingDate = m.meeting_date || m.created_at;
     if (!meetingDate) return;
     var t = new Date(meetingDate).getTime();
     var seenThisMeeting = {};

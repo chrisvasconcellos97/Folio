@@ -125,6 +125,7 @@ export function applyPipPlan(selected, ctx) {
           account_id:        taskAcct,
           source_meeting_id: meetingId,
           created_at:        pipCreatedAt,
+          is_commitment:     row.is_commitment || false,
           custom_fields:     {},
         };
         if (!row._userAdded) taskEntry.pip_created_at = pipCreatedAt;

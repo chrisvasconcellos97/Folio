@@ -17,8 +17,8 @@ Check off `[x]` as we go. Work order suggestion: §1 → §2 → §3 → §4 →
 - [ ] (S,P1) `useItems.js:38` — `.eq("done",false)` → ItemsTab "Closed" section permanently empty (completed tasks vanish). Parameterize / 2nd query on expand.
 - [x] (S,P1) `CommitmentsView.jsx:95` — now passes `acct.id` (was full OBJECT) vs HomeView's `(account.id)` → tap opens wrong account / crashes on .name. One-char.
 - [ ] (M,P1) `AdHocConversationFlow.jsx:164-173` — `discussedProjectIds`/`discussedItemIds` not forwarded into `previewPlan` → every ad-hoc summarize throws away Pip's project-routing signal.
-- [ ] (S,P1) `pipPlanApply.js:118-130` — new_task Gauge-staging path drops `is_commitment` → commitment tasks routed to a project never reach "Your word"/nudges/ledger.
-- [ ] (S,P1) `pip.js:1238-1248` — `normalizePlanRow` new_task branch drops `suggested_project_title` → "Pip suggests a project" banner never fires for task rows.
+- [x] (S,P1) `pipPlanApply.js:118-130` — FIXED: is_commitment now carried on staged taskEntry. — new_task Gauge-staging path drops `is_commitment` → commitment tasks routed to a project never reach "Your word"/nudges/ledger.
+- [x] (S,P1) `pip.js:1238-1248` — FALSE POSITIVE: new_task is always project-bound (rejects no project_id); suggested_project_title is for standalone new_item grouping only. Not applicable. — `normalizePlanRow` new_task branch drops `suggested_project_title` → "Pip suggests a project" banner never fires for task rows.
 - [ ] (M,P1) `DigestIngestModal.jsx:91` — OWE rows call `insertTask({title:...})` but column is `text` → verify useTasks.insertTask shape; possible silent null-text task.
 - [ ] (M,P1) Health pill contradicts sparkline — AccountDetail header + AccountsView call `gatherSignals` WITHOUT cadences/meetings → missedCadences always 0 → header "Healthy" while sparkline "watching". Pass cadences+meetings in.
 - [x] (S,P1) `accountHealth.js:98` computeMissedCadences — added T00:00:00 to meeting_date parse — bare `meeting_date` parsed UTC → off-by-one after ~8pm ET → spurious "cadence missed". Add `+'T00:00:00'`.
@@ -32,7 +32,7 @@ Check off `[x]` as we go. Work order suggestion: §1 → §2 → §3 → §4 →
 - [ ] (M,P2) `OperatorRunButton:21` — no fetch timeout (hangs in "working" forever) + never reads JSON error body.
 - [ ] (M,P2) `OperatorHub:239` — draftFor matches `account_name` string → casing/space mismatch silently kills "✦ Draft ready". Join by account_id.
 - [ ] (S,P2) `OperatorHub` — "last run" shows only time (no date) → 2-day-old report looks like today. Add full date.
-- [ ] (S,P2) `contactEngagement.js:68` — reads nonexistent `m.date`, falls back to created_at not meeting_date → "last seen Xd" silently wrong → poisons staleness.
+- [x] (S,P2) `contactEngagement.js:68` — overstated: chain already lands on meeting_date; removed dead m.date ref. — reads nonexistent `m.date`, falls back to created_at not meeting_date → "last seen Xd" silently wrong → poisons staleness.
 - [ ] (M,P2) `MeetingsTab.jsx:121-135` sendToGauge — direct supabase.insert bypasses addProject → no account_ids[], no logActivity, no realtime.
 - [ ] (M,P2) `CadenceTab.jsx:291,294` — pip_summary as plain `<em>` (loses markdown) + delete fires with NO confirm (mis-tap destroys meeting). Use MarkdownText + two-step.
 - [ ] (S,P2) `pipPlanApply.js` update_task — silent no-op when findIndex=-1 → add warn/correction log.
