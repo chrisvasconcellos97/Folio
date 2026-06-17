@@ -93,15 +93,27 @@ function daysSince(iso) {
   return Math.floor((Date.now() - t) / 86400000);
 }
 
-function buildPrompt(account, meetings, items, contacts, projects) {
+function buildPrompt(account, meetings, items, contacts, projects, userId) {
   var lines = [];
   lines.push("ACCOUNT: " + (account.name || "Untitled"));
   var hd = "Status: " + (account.status || "—") + (account.status_override ? " (pinned: " + account.status_override + ")" : "");
+  if (account.tier) hd += " · Tier: " + account.tier;
   if (account.last_interaction_at) {
     var ds = daysSince(account.last_interaction_at);
     hd += " · Last contact: " + account.last_interaction_at + (ds != null ? " (" + ds + "d ago)" : "");
   }
   lines.push(hd);
+  // Org/ownership context so the compressed state doesn't mislabel an internal
+  // team or a colleague-owned account as the user's own external relationship.
+  if (account.account_type === "internal_team" || account.is_my_department) {
+    lines.push("TYPE: your own internal team/department — NOT an external account you manage.");
+  }
+  if (account.owner_user_id && userId && account.owner_user_id !== userId) {
+    lines.push("OWNERSHIP: managed by a colleague — you are project-involved only; do not frame as your relationship.");
+  }
+  if (Array.isArray(account.systems) && account.systems.length) {
+    lines.push("Systems they use: " + account.systems.join(", "));
+  }
 
   if (meetings && meetings.length) {
     lines.push("");
@@ -206,7 +218,7 @@ export default async function handler(req, res) {
 
   // Pull everything we need in 4 parallel queries, scoped via .in()
     var pAccts  = userClient.from("folio_accounts")
-      .select("id, name, status, status_override, last_interaction_at, tier, region")
+      .select("id, name, status, status_override, last_interaction_at, tier, region, account_type, is_my_department, owner_user_id, systems")
       .in("id", accountIds);
     var pMtgs   = userClient.from("folio_meetings")
       .select("account_id, meeting_date, title, notes, pip_summary, action_items, follow_up_date")
@@ -258,7 +270,7 @@ export default async function handler(req, res) {
 
     var systemBlocks = buildStateSystemBlocks();
     var calls = accts.map(function (a) {
-      var prompt = buildPrompt(a, mByAcct[a.id], iByAcct[a.id], cByAcct[a.id], pByAcct[a.id]);
+      var prompt = buildPrompt(a, mByAcct[a.id], iByAcct[a.id], cByAcct[a.id], pByAcct[a.id], user.id);
       return client.messages.create({
         model: MODEL_HAIKU,
         max_tokens: MAX_TOKENS,
