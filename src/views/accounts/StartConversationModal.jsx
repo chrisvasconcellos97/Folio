@@ -23,7 +23,7 @@ var METHODS = [
   { value: "email",     label: "Email" },
 ];
 
-var METHOD_LABEL = {
+export var METHOD_LABEL = {
   phone:     "Phone",
   in_person: "In Person",
   video:     "Video",
@@ -723,4 +723,4 @@ export function StartConversationModal({ accountId, accounts, userId, orgId, mem
   );
 }
 
-export { METHOD_LABEL };
+

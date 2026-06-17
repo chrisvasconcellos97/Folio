@@ -88,8 +88,10 @@ export default async function handler(req, res) {
     var resp = await client.messages.create({
       model: READOUT_MODEL,
       max_tokens: 900,
-      system: systemPrompt,
+      // cache_control on the static system prompt to reduce per-call cost.
+      system:  [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
       messages: [{ role: "user", content: userPrompt }],
+      betas:    ["prompt-caching-2024-07-31"],
     });
     logPipUsage(userClient, user.id, "leadership-readout", "readout", READOUT_MODEL, resp.usage);
     if (resp.stop_reason === "max_tokens") {

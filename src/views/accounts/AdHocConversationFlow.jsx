@@ -15,13 +15,7 @@ import { applyPipPlan } from "../../lib/pipPlanApply";
 import { updateTask, insertTask } from "../../hooks/useTasks";
 import { CadenceMeetingMode } from "../cadence/CadenceMeetingMode";
 import { PipSummarizePreview } from "../cadence/PipSummarizePreview";
-
-var METHOD_LABEL = {
-  phone:     "Phone",
-  in_person: "In Person",
-  video:     "Video",
-  email:     "Email",
-};
+import { METHOD_LABEL } from "./StartConversationModal.jsx";
 
 /**
  * Self-contained ad-hoc conversation runner. Loads account-scoped data the
@@ -187,6 +181,7 @@ export function AdHocConversationFlow({
       updateProject:  updateProject,
       addHint:        hintsApi.addHint,
       accountId:      account.id,
+      cadenceId:      null,  // ad-hoc meeting — no cadence to tag tasks against
       meetingId:      pDraftId || null,
       activeProjects: activeProjects,
       userId:         userId,

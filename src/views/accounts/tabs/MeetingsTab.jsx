@@ -118,21 +118,8 @@ function CopyBtn({ text }) {
   );
 }
 
-function sendToGauge(meeting, userId) {
-  supabase
-    .from("gauge_projects")
-    .insert([{
-      user_id:    userId,
-      account_id: meeting.account_id,
-      meeting_id: meeting.id,
-      title:      meeting.commitments.slice(0, 120),
-      status:     "planned",
-    }])
-    .then(function (result) {
-      if (result.error) { showToast("Failed to send to Gauge", "error"); return; }
-      showToast("Project added to Gauge");
-    });
-}
+// sendToGauge is now a method on MeetingsTab that uses the addProject hook.
+// Left here as a legacy stub — replaced by handleSendToGauge below.
 
 function copySummary(meeting, accountName) {
   var lines = [];
@@ -148,11 +135,43 @@ function copySummary(meeting, accountName) {
   });
 }
 
-export function MeetingsTab({ meetings, accountName, accountId, userId, openItems, addItem, onLogMeeting, onDelete, onAddMeeting, onUpdateMeeting, logCorrection, accountObjective, accountSystems, glossary }) {
+export function MeetingsTab({ meetings, accountName, accountId, userId, openItems, addItem, addProject, onLogMeeting, onDelete, onAddMeeting, onUpdateMeeting, logCorrection, accountObjective, accountSystems, glossary }) {
   var [loadingPip, setLoadingPip] = useState({});
   var [pipErrors, setPipErrors]   = useState({});
   var [confirmDeleteId, setConfirmDeleteId] = useState(null);
   var [editingMeeting, setEditingMeeting]   = useState(null);
+
+  function handleSendToGauge(m) {
+    if (addProject) {
+      // Use the proper hook — includes logActivity, account_ids[], and realtime refresh.
+      addProject({
+        account_id:  accountId,
+        account_ids: accountId ? [accountId] : [],
+        meeting_id:  m.id,
+        title:       (m.commitments || "").slice(0, 120) || "From meeting " + m.meeting_date,
+        status:      "planned",
+      }).then(function () {
+        showToast("Project added to Gauge");
+      }).catch(function (err) {
+        showToast((err && err.message) || "Failed to send to Gauge", "error");
+      });
+    } else {
+      // Fallback: direct insert (no addProject available — MeetingsTab used outside AccountDetail).
+      supabase
+        .from("gauge_projects")
+        .insert([{
+          user_id:    userId,
+          account_id: accountId,
+          meeting_id: m.id,
+          title:      (m.commitments || "").slice(0, 120),
+          status:     "planned",
+        }])
+        .then(function (result) {
+          if (result.error) { showToast("Failed to send to Gauge", "error"); return; }
+          showToast("Project added to Gauge");
+        });
+    }
+  }
 
   function handleAskPip(m) {
     if (loadingPip[m.id]) return;
@@ -331,15 +350,15 @@ export function MeetingsTab({ meetings, accountName, accountId, userId, openItem
                   <FL style={{ marginBottom: 0 }}>Commitments</FL>
                   {userId && (
                     <button
-                      onClick={function (e) { e.stopPropagation(); sendToGauge(m, userId); }}
+                      onClick={function (e) { e.stopPropagation(); handleSendToGauge(m); }}
                       style={{
-                        background: "rgba(103,200,249,0.08)",
-                        border: "1px solid rgba(103,200,249,0.2)",
+                        background: C.statusPlanned.bg,
+                        border: "1px solid " + C.statusPlanned.border,
                         borderRadius: 6,
                         padding: "2px 8px",
                         fontSize: 10,
                         fontWeight: 600,
-                        color: C.blue,
+                        color: C.statusPlanned.text,
                         fontFamily: "'Inter', system-ui, sans-serif",
                         cursor: "pointer",
                       }}

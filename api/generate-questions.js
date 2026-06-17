@@ -254,8 +254,10 @@ export default async function handler(req, res) {
       var msg = await client.messages.create({
         model:      questionsModel,
         max_tokens: 1200, // Sonnet's question JSON is fuller; lower risked truncating the array
-        system:     system,
+        // cache_control on the static system prompt to reduce per-call cost.
+        system:     [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
         messages:   [{ role: "user", content: userMsg.slice(0, 9000) }],
+        betas:      ["prompt-caching-2024-07-31"],
       });
       logPipUsage(supabase, userId, "generate-questions", "questions", questionsModel, msg.usage);
       var raw = (msg.content && msg.content[0] && msg.content[0].text) || "{}";

@@ -112,14 +112,20 @@ export async function overDailySpendCap(supabaseClient, userId) {
     var cap = parseInt(process.env.PIP_DAILY_SPEND_CAP_CENTS || String(DEFAULT_DAILY_CAP_CENTS), 10);
     if (isNaN(cap) || cap <= 0) return false;
     // ET date (mirrors operator-run's local-date logic).
+    var now    = new Date();
     var etDate = new Intl.DateTimeFormat("en-CA", {
       timeZone: "America/New_York",
       year: "numeric", month: "2-digit", day: "2-digit",
-    }).format(new Date());
+    }).format(now);
+    // Compute the actual ET offset (handles EST -05:00 vs EDT -04:00 automatically).
+    var etOffset = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York", timeZoneName: "shortOffset",
+    }).formatToParts(now).find(function (p) { return p.type === "timeZoneName"; }).value
+      .replace("GMT", ""); // e.g. "-05:00" or "-04:00"
     // folio_pip_usage has a created_at timestamptz column. We filter to rows
     // where created_at falls within the current ET day.
-    var dayStart = etDate + "T00:00:00-05:00";
-    var dayEnd   = etDate + "T23:59:59-05:00";
+    var dayStart = etDate + "T00:00:00" + etOffset;
+    var dayEnd   = etDate + "T23:59:59" + etOffset;
     var r = await supabaseClient
       .from("folio_pip_usage")
       .select("cost_micro_cents")

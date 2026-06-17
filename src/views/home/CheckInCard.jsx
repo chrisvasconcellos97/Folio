@@ -33,16 +33,18 @@ export function CheckInCard({ questions, receipts, onAnswer, isMobile }) {
         </span>
       </div>
 
-      {(receipts || []).map(function (r, i) {
-        return (
-          <div key={"r" + i} style={{
-            fontSize: 12, color: C.textMuted, lineHeight: 1.5,
-            marginBottom: 6, fontFamily: INTER,
-          }}>
-            ✓ {r}
-          </div>
-        );
-      })}
+      <div role="status" aria-live="polite" aria-atomic="false">
+        {(receipts || []).map(function (r, i) {
+          return (
+            <div key={"r" + i} style={{
+              fontSize: 12, color: C.textMuted, lineHeight: 1.5,
+              marginBottom: 6, fontFamily: INTER,
+            }}>
+              ✓ {r}
+            </div>
+          );
+        })}
+      </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {questions.map(function (q) {

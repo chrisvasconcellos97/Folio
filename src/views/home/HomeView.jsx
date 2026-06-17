@@ -874,6 +874,9 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
 
     (accounts || []).forEach(function (a) {
       if (a.is_inactive) return;
+      // Only surface cold nudges for accounts I own — not-mine accounts are
+      // someone else's relationship to manage (item 38 ownership distinction).
+      if (a.owner_user_id && userId && a.owner_user_id !== userId) return;
       var last = a.last_interaction_at ? new Date(a.last_interaction_at).getTime() : 0;
       if (!last) return;
       var daysCold = Math.floor((Date.now() - last) / 86400000);
@@ -2007,7 +2010,7 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
                   <div style={{ fontFamily: INTER, fontSize: 11, color: C.textMuted, lineHeight: 1.45, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}>
                     {card.text}
                   </div>
-                  <HexSignature cells={2} peak={0.10} />
+                  <HexSignature cells={3} peak={0.13} />
                 </div>
               );
             })}

@@ -11,6 +11,18 @@ import { logPipUsage } from "./_pipUsage.js";
 
 export const config = { maxDuration: 60 };
 
+var rateLimitMap = new Map();
+var WINDOW_MS    = 60 * 1000;
+var MAX_REQUESTS = 5;
+function isRateLimited(userId) {
+  var now = Date.now();
+  var timestamps = (rateLimitMap.get(userId) || []).filter(function (t) { return now - t < WINDOW_MS; });
+  if (timestamps.length >= MAX_REQUESTS) return true;
+  timestamps.push(now);
+  rateLimitMap.set(userId, timestamps);
+  return false;
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -34,6 +46,8 @@ export default async function handler(req, res) {
     if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
 
     var userId = user.id;
+
+    if (isRateLimited(userId)) return res.status(429).json({ error: "rate_limited" });
 
     // Cost guard: if the user already has a backlog of queued questions, skip
     // the Haiku call entirely — never generate into a pile. Keeps tokens near

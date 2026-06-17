@@ -22,7 +22,7 @@ var SECTION_META = {
 // scannable: account name (tappable) → the line → an action/buttons row.
 function SectionRow({ it, meta, first, accounts, draftFor, onOpenAccount }) {
   var acc = it.account_name ? (accounts || []).find(function (a) { return a.name === it.account_name; }) : null;
-  var draft = it.has_draft && it.account_name ? draftFor(it.account_name) : null;
+  var draft = it.has_draft && it.account_name ? draftFor(acc ? acc.id : null, it.account_name) : null;
   var hasActions = it.action || draft || acc;
   return (
     <div style={{
@@ -150,7 +150,14 @@ function SectionCard({ sec, accounts, draftFor, onOpenAccount }) {
 function PipGlanceCard({ report, chips, linkify }) {
   var [open, setOpen] = useState(false);
   var ranAt = report.generated_at
-    ? new Date(report.generated_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+    ? (function () {
+        var d = new Date(report.generated_at);
+        var today = new Date();
+        var sameDay = d.toDateString() === today.toDateString();
+        var timePart = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+        if (sameDay) return timePart;
+        return d.toLocaleDateString([], { month: "short", day: "numeric" }) + " · " + timePart; // eslint-ok: one-off locale format
+      })()
     : null;
   // Headline is the tight at-a-glance read; fall back to the first line of the
   // prose if the operator didn't emit one.
@@ -236,8 +243,14 @@ function PipGlanceCard({ report, chips, linkify }) {
 export function OperatorHub({ report, drafts, accounts, isMobile, mounted, onOpenAccount, linkify }) {
   var sections = Array.isArray(report.plan_items) ? report.plan_items : [];
 
-  function draftFor(name) {
-    return (drafts || []).find(function (d) { return d.account_name === name; });
+  function draftFor(accountId, accountName) {
+    // Prefer exact account_id match to avoid name casing/space mismatches.
+    if (accountId) {
+      var byId = (drafts || []).find(function (d) { return d.account_id === accountId; });
+      if (byId) return byId;
+    }
+    // Fallback to name match for drafts that predate account_id storage.
+    return (drafts || []).find(function (d) { return d.account_name === accountName; });
   }
   function byKind(k) {
     return sections.find(function (s) { return s && s.kind === k && Array.isArray(s.items) && s.items.length; });

@@ -13,6 +13,7 @@ export function AddContactModal({ accountId, userId, onSave, onClose }) {
   var [linkedin, setLinkedin] = useState("");
   var [poc, setPoc]           = useState(false);
   var [leader, setLeader]     = useState(false);
+  var [primary, setPrimary]   = useState(false);
   var [notes, setNotes]       = useState("");
   var [loading, setLoading]   = useState(false);
   var [error, setError]       = useState(null);
@@ -31,6 +32,7 @@ export function AddContactModal({ accountId, userId, onSave, onClose }) {
       linkedin:   linkedin.trim() || null,
       is_poc:     poc,
       is_leader:  leader,
+      is_primary: primary,
       notes:      notes.trim()    || null,
     })
       .then(function () {
@@ -111,6 +113,7 @@ export function AddContactModal({ accountId, userId, onSave, onClose }) {
 
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {[
+            { key: "primary", label: "Primary (📌)",              desc: "Day-to-day go-to contact",       color: C.accent,  val: primary, set: setPrimary },
             { key: "poc",    label: "Primary Point of Contact", desc: "Main person at this account",   color: C.accent,  val: poc,    set: setPoc    },
             { key: "leader", label: "Leader / Decision Maker",  desc: "Has authority to approve deals", color: C.yellow, val: leader, set: setLeader },
           ].map(function (t) {

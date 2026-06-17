@@ -160,7 +160,7 @@ export function DigestIngestModal({ accounts, userId, addMeeting, onClose }) {
                   background: raw.trim() ? C.accentDeep : C.accentFaint,
                   border: "none", borderRadius: 8, padding: "9px 18px",
                   fontSize: 13, fontWeight: 700,
-                  color: raw.trim() ? C.bg : C.textMuted,
+                  color: raw.trim() ? "#fff" : C.textMuted,
                   fontFamily: INTER, cursor: raw.trim() ? "pointer" : "default",
                 }}
               >

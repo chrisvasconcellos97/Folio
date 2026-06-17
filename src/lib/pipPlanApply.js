@@ -139,7 +139,11 @@ export function applyPipPlan(selected, ctx) {
         var upStage = ensureStage(row.project_id);
         if (!upStage) { fail("Project not found"); return Promise.resolve(); }
         var i = upStage.stages.findIndex(function (t) { return t && t.id === row.task_id; });
-        if (i < 0) { fail("Task not found in project"); return Promise.resolve(); }
+        if (i < 0) {
+          console.warn("[pipPlanApply] update_task: task_id", row.task_id, "not found in project", row.project_id, "— row skipped");
+          fail("Task not found in project");
+          return Promise.resolve();
+        }
         upStage.stages[i] = Object.assign({}, upStage.stages[i], row.fields);
         return Promise.resolve();
       }

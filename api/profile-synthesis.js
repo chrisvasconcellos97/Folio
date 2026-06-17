@@ -84,9 +84,10 @@ export default async function handler(req, res) {
       // Degrades to Haiku when the daily spend cap is exceeded.
       model:      profileModel,
       max_tokens: 1000, // 1000 (was 600): headroom so Sonnet's prose + slots JSON never truncates
-
-      system:     systemPrompt,
+      // cache_control on the static system prompt to reduce per-call cost.
+      system:     [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
       messages:   [{ role: "user", content: userPrompt }],
+      betas:      ["prompt-caching-2024-07-31"],
     });
     logPipUsage(supabase, user.id, "profile-synthesis", "synthesis", profileModel, msg.usage);
 

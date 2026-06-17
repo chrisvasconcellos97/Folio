@@ -80,7 +80,7 @@ export function PipSummarizePreview({
         accounts={accountRoster}
         accountIds={personAccountIds}
         noneLabel={noneLabel || "— Unassigned —"}
-        style={{ fontSize: 12, maxWidth: 220 }}
+        style={{ fontSize: 14, maxWidth: 220 }}
       />
     );
   }

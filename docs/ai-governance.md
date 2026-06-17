@@ -1,6 +1,6 @@
 # Folios — AI Governance
 
-*Last updated: 2026-06-17 (operator now manual-trigger only; nightly cron retired)*
+*Last updated: 2026-06-17 (operator manual-trigger only; two-brain architecture documented)*
 
 This document describes how Folios uses AI (Pip) responsibly. It
 covers what Pip can and can't do, what guardrails are in place, how
@@ -72,6 +72,44 @@ quantitative business data:
   quantitative business data the user discloses ("high-volume supplier,
   trending healthy" — never the number). The user's own raw notes are
   never silently edited.
+
+## Two-brain architecture (the data-line bridge)
+
+Folios enforces the data line by design, not policy. The user operates
+with two AI assistants that never share raw corporate data:
+
+- **Work Claude** (the corporate side) — the user's external
+  email/Teams analysis tool. It has access to inboxes, spreadsheets,
+  and quantitative data. It is **not** Folios.
+- **Pip** (the personal side, inside Folios) — the user's account
+  memory and workflow assistant. It never receives raw business data.
+
+The bridge between them is the **Folios Digest** flow
+(`DigestIngestModal`):
+
+1. The user asks Work Claude to append a sanitized "Folios digest"
+   block to its daily analysis. The prompt for this (`WORK_CLAUDE_PROMPT`,
+   a client-side constant in `src/views/home/DigestIngestModal.jsx`)
+   enforces the data line at the source with explicit rules:
+   - Never include revenue figures, transaction volumes, customer
+     counts, shop lists, pricing, or contract terms.
+   - Qualitative conclusions only ("high-volume supplier, volume
+     healthy" — never the number).
+2. The user copies the sanitized digest block and pastes it into
+   Folios via Home → Quick Capture → "Paste work digest ✦".
+3. Folios parses the digest with a deterministic parser
+   (`src/lib/digestParse.js`, zero AI cost) and maps lines to
+   accounts, commitments, and waiting-ons.
+
+This architecture means quantitative corporate data never reaches
+Folios or Anthropic's API — it stays in the Work Claude session,
+which is governed by the user's employer's own AI policy.
+
+**The prompt copy button** in the digest modal copies `WORK_CLAUDE_PROMPT`
+to the clipboard for pasting into a Work Claude conversation. The
+prompt content is a user-facing string, not a secret.
+
+---
 
 ## Where the user is always in control
 

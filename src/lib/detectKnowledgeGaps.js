@@ -6,7 +6,7 @@ import { buildContactIndex, resolveAttendeeToContact } from "./contactEngagement
 // Dedupes by (user_id, question_text) against existing open rows.
 // Called once per day from App.jsx as a fire-and-forget effect.
 
-export var EVERGREEN_QUESTIONS = [
+var EVERGREEN_QUESTIONS = [
   { question_text: "What does a great week look like for you?", category: "working_style", priority: 3 },
   { question_text: "Who do you report to, and what do they care about most?", category: "goals", priority: 3 },
   { question_text: "What's the metric you're judged on — quota, retention, margin?", category: "goals", priority: 3 },

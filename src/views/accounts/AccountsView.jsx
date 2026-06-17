@@ -20,15 +20,19 @@ var SERIF = "'Fraunces', Georgia, serif";
 
 var DENSITY_KEY = "folio_density";
 
-function loadSearchHistory() {
-  try { return JSON.parse(localStorage.getItem("folio_search_history") || "[]"); } catch(e) { return []; }
+function historyKey(userId) {
+  // Scope by userId so different accounts on the same device don't see each other's history.
+  return userId ? "folio_search_history_" + userId : "folio_search_history";
 }
-function saveSearchHistory(query) {
+function loadSearchHistory(userId) {
+  try { return JSON.parse(localStorage.getItem(historyKey(userId)) || "[]"); } catch(e) { return []; }
+}
+function saveSearchHistory(query, userId) {
   if (!query || !query.trim()) return;
-  var history = loadSearchHistory().filter(function(h) { return h !== query.trim(); });
+  var history = loadSearchHistory(userId).filter(function(h) { return h !== query.trim(); });
   history.unshift(query.trim());
   history = history.slice(0, 5);
-  try { localStorage.setItem("folio_search_history", JSON.stringify(history)); } catch(e) {}
+  try { localStorage.setItem(historyKey(userId), JSON.stringify(history)); } catch(e) {}
 }
 
 var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red, new: C.textMuted };
@@ -100,7 +104,7 @@ function matchesTypeFilter(account, typeFilter) {
   return (!t || t === "standard" || t === "mso" || t === "shop") && !account.custom_workspace_id;
 }
 
-export function AccountsView({ accounts, allAccounts, loading, onSelect, onAddAccount, tasks, addTask, updateTask, deleteTask, hasMeetings, hasCadences, items, meetings, contacts, onColdClick, onOverdueClick, onFollowUpClick, onOpenConversation, typeFilter, onTypeFilterChange, userId, members, bannerFilter, onClearBannerFilter, customWorkspaces, addCustomWorkspace }) {
+export function AccountsView({ accounts, allAccounts, loading, onSelect, onAddAccount, tasks, addTask, updateTask, deleteTask, hasMeetings, hasCadences, items, meetings, cadences, contacts, onColdClick, onOverdueClick, onFollowUpClick, onOpenConversation, typeFilter, onTypeFilterChange, userId, members, bannerFilter, onClearBannerFilter, customWorkspaces, addCustomWorkspace }) {
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
   var activeType = typeFilter || "customer";
@@ -256,11 +260,11 @@ export function AccountsView({ accounts, allAccounts, loading, onSelect, onAddAc
   var healthByAccount = useMemo(function () {
     var map = {};
     accounts.forEach(function (a) {
-      var signals = gatherSignals(a, items, [], todayStr);
+      var signals = gatherSignals(a, items, [], todayStr, cadences || [], meetings || []);
       map[a.id] = computeAccountHealth(a, signals);
     });
     return map;
-  }, [accounts, items, todayStr]);
+  }, [accounts, items, cadences, meetings, todayStr]);
 
   var filtered = useMemo(function () {
     return accounts
@@ -685,7 +689,7 @@ export function AccountsView({ accounts, allAccounts, loading, onSelect, onAddAc
               onFocus={function() { setSearchFocused(true); }}
               onBlur={function() {
                 setTimeout(function() { setSearchFocused(false); }, 150);
-                saveSearchHistory(search);
+                saveSearchHistory(search, userId);
               }}
               style={{
                 paddingLeft: 38,
@@ -747,9 +751,9 @@ export function AccountsView({ accounts, allAccounts, loading, onSelect, onAddAc
             {density === "comfortable" ? "⊟" : "⊞"}
           </button>
         </div>
-        {searchFocused && !search && loadSearchHistory().length > 0 && (
+        {searchFocused && !search && loadSearchHistory(userId).length > 0 && (
           <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 6 }}>
-            {loadSearchHistory().map(function(h) {
+            {loadSearchHistory(userId).map(function(h) {
               return (
                 <button
                   key={h}

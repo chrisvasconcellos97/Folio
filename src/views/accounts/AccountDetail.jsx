@@ -227,8 +227,9 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
   // Compute Pip health for this account (used by header pill + override modal).
   // ET-anchored (matches accountSnapshots) so the header health pill agrees
   // with the snapshot-driven sparkline instead of flipping a day early after 8pm ET.
+  // cadences+meetings passed so missedCadences is real (not always 0) in the header.
   var todayISO   = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
-  var healthSignals = gatherSignals(account, items, projects, todayISO);
+  var healthSignals = gatherSignals(account, items, projects, todayISO, cadences, meetings);
   var computedHealth = computeAccountHealth(account, healthSignals);
 
   function handleSaveHealthOverride(data) {
@@ -624,6 +625,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
           userId={userId}
           openItems={items}
           addItem={function (data) { return addItem(Object.assign({ account_id: account.id }, data)); }}
+          addProject={addProject}
           onLogMeeting={function () { setMeetingModal(true); }}
           onDelete={deleteMeeting}
           onAddMeeting={addMeeting}
