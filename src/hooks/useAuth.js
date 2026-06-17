@@ -20,6 +20,9 @@ var SENSITIVE_LOCALSTORAGE_PREFIXES = [
   "folio_cadence_reminders_fired_",        // Per-user cadence reminder fired state
   "folio_cadence_reminders_dismissed_",    // Per-user cadence reminder dismissed state
   "folio_sports_cache_v1",                 // Sports feed cache (may include followed-team preferences)
+  "folio_portfolio_brief_",                // Cached Pip portfolio analysis (account names/risks) — must not survive signout on a shared device
+  "folio_pip_state_refresh_last_",         // Per-user Pip state-refresh throttle stamp
+  "folio_pip_compression_last_",           // Per-user Pip compression throttle stamp
 ];
 
 function wipeSensitiveLocalStorage() {

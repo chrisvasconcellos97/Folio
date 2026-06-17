@@ -45,15 +45,15 @@ Check off `[x]` as we go. Work order suggestion: §1 → §2 → §3 → §4 →
 
 ## §2 — SECURITY & DB HARDENING
 
-- [ ] (S,P1) `api/invite.js:47` — `appUrl` from request body embedded in invite email unvalidated → phishing-link vector. Allowlist origins.
-- [ ] (M,P1) `api/invite.js` — no rate limit → floods arbitrary emails via Resend. Add per-user limiter (pattern from business-review.js).
-- [ ] (S,P1) `api/invite.js:10` — no email-format validation; raw email to Resend `to:`. Add regex guard.
-- [ ] (M,P1) `useAuth.js:12-23` — add to SENSITIVE_LOCALSTORAGE_PREFIXES: `folio_portfolio_brief_`, `folio_pip_state_refresh_last_`, `folio_pip_compression_last_`, `folio_checkin_dismissed_` (Pip portfolio analysis survives signout on shared device).
-- [ ] (M,P1) `schema.sql` + `team_org_layer.sql` — canonical has WEAK `members_self_accept` (no email-guard/role-immutability). Fold phase1_security.sql hardening in (else fresh-rebuild = role-escalation).
+- [x] (S,P1) `api/invite.js:47` — `appUrl` from request body embedded in invite email unvalidated → phishing-link vector. Allowlist origins.
+- [x] (M,P1) `api/invite.js` — no rate limit → floods arbitrary emails via Resend. Add per-user limiter (pattern from business-review.js).
+- [x] (S,P1) `api/invite.js:10` — no email-format validation; raw email to Resend `to:`. Add regex guard.
+- [x] (M,P1) `useAuth.js:12-23` — add to SENSITIVE_LOCALSTORAGE_PREFIXES: `folio_portfolio_brief_`, `folio_pip_state_refresh_last_`, `folio_pip_compression_last_`, `folio_checkin_dismissed_` (Pip portfolio analysis survives signout on shared device).
+- [ ] (M,P1, FLAGGED) PROD IS SAFE (hardened policy already applied live); this is rebuild-from-scratch-only. Careful SQL fold of phase1_security.sql into schema.sql pending. `schema.sql` + `team_org_layer.sql` — canonical has WEAK `members_self_accept` (no email-guard/role-immutability). Fold phase1_security.sql hardening in (else fresh-rebuild = role-escalation).
 - [ ] (M,P2) `useOrg.js:81-90` — pending-invite lookup queries invited_email but NO RLS policy allows it → invite banner never renders for new users. Add `members_invite_read` policy.
-- [ ] (S,P2) DB: 4 functions mutable search_path (update_updated_at, update_last_interaction, folio_tasks_touch_updated_at, set_updated_at) → `SET search_path = ''`.
-- [ ] (S,P2) DB: REVOKE EXECUTE FROM anon,authenticated on 6 SECURITY DEFINER RLS-helpers (folio_member_role_unchanged, folio_org_peer_user_ids, folio_user_org_ids, folio_user_writable_org_ids, gauge_owner_unchanged, rls_auto_enable).
-- [ ] (S,P2) DB: enable auth_leaked_password_protection (dashboard toggle / config).
+- [ ] (S,P2, NEEDS-GO) touches LIVE prod DB via MCP — awaiting Chris go. DB: 4 functions mutable search_path (update_updated_at, update_last_interaction, folio_tasks_touch_updated_at, set_updated_at) → `SET search_path = ''`.
+- [ ] (S,P2, NEEDS-GO) touches LIVE prod DB + verify not app-called first. DB: REVOKE EXECUTE FROM anon,authenticated on 6 SECURITY DEFINER RLS-helpers (folio_member_role_unchanged, folio_org_peer_user_ids, folio_user_org_ids, folio_user_writable_org_ids, gauge_owner_unchanged, rls_auto_enable).
+- [ ] (S,P2, NEEDS-GO) prod auth setting. DB: enable auth_leaked_password_protection (dashboard toggle / config).
 - [ ] (S,P2) `search_history` localStorage global key not user-scoped → cross-user overwrite. Scope by userId.
 - [ ] (S,P2) `App.jsx:875-879` — share-target detects on ANY URL with ?title/text/url → add `pathname==="/share-target"` check (hijack guard).
 - [ ] (S,P2) `App.jsx:1434` onAddContacts inline supabase.insert no .catch → route through hook/logSilentFailure.

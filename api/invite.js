@@ -1,5 +1,18 @@
 import { createClient } from "@supabase/supabase-js";
 
+// Resend HTTP call — headroom over Vercel's 10s default.
+export const config = { maxDuration: 15 };
+
+// Per-user invite rate limit (in-memory, single instance): 10 per 10 min.
+// Without it an authenticated user could flood arbitrary addresses via Resend.
+var INVITE_RATE = new Map();
+var INVITE_WINDOW_MS = 10 * 60 * 1000;
+var INVITE_MAX = 10;
+
+// Allowlist the app origin embedded in the invite email — never trust a
+// client-supplied appUrl (phishing-link vector on Folios-branded mail).
+var ALLOWED_APP_ORIGINS = ["https://folioshq.com", "http://localhost:5173"];
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
@@ -9,6 +22,7 @@ export default async function handler(req, res) {
 
   var { email, role, orgId, appUrl } = req.body || {};
   if (!email) return res.status(400).json({ error: "email required" });
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) return res.status(400).json({ error: "invalid email" });
   if (!orgId) return res.status(400).json({ error: "orgId required" });
 
   var resendKey = process.env.RESEND_API_KEY;
@@ -19,6 +33,13 @@ export default async function handler(req, res) {
     var anonClient = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
     var { data: { user }, error: authError } = await anonClient.auth.getUser(token);
     if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
+
+    // Rate limit per user (sliding 10-min window).
+    var nowTs = Date.now();
+    var hist = (INVITE_RATE.get(user.id) || []).filter(function (t) { return nowTs - t < INVITE_WINDOW_MS; });
+    if (hist.length >= INVITE_MAX) return res.status(429).json({ error: "Too many invites — try again in a bit." });
+    hist.push(nowTs);
+    INVITE_RATE.set(user.id, hist);
 
     var adminClient = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
     var { data: org, error: orgError } = await adminClient
@@ -44,7 +65,8 @@ export default async function handler(req, res) {
 
     var orgName = org.name;
     var inviterEmail = user.email || "a teammate";
-    var signupUrl = (appUrl || "https://folioshq.com").replace(/\/$/, "") + "/";
+    var cleanedAppUrl = String(appUrl || "").replace(/\/$/, "");
+    var signupUrl = (ALLOWED_APP_ORIGINS.indexOf(cleanedAppUrl) !== -1 ? cleanedAppUrl : "https://folioshq.com") + "/";
     var roleLabel = role === "leadership" ? "Leadership" : "Member";
 
     var subject = "You've been invited to " + orgName + " on Folios";
