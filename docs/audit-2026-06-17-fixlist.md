@@ -233,3 +233,12 @@ Contained REAL items landed via Patch batch2 (38 files):
 - §4: isMine helper, METHOD_LABEL dedup, completion-task via hook, ContactsTab PipInsightCard, AddContactModal is_primary, EVERGREEN removed
 
 REMAINING (dedicated session): §3 Pip-context wiring (~11; data-line on remember_fact+compressCorrections DONE; owner_user_id ownership-awareness in generate-questions DONE; globalPeople→chat #1 bug NOW FIXED — App→PipView→buildContext→curateContext→renderContextProse 'PEOPLE YOU ALREADY KNOW'), §10 structural (buildAccountContext, dual-task-model, file splits, circular import), 4 JUDGMENT, + any §7 unbounded-query/memo items the batch deferred.
+
+### DIGEST PARSER v2 (queued 2026-06-17) — accept the friendly format work-Claude actually emits
+Today's parser needs literal [OWE]/[WAITING]/[QUIET]/[TOUCH] + pipe fields. Sonnet-Low paraphrases into section headers + dashes instead. Loosen digestParse.js + DigestIngestModal preview to ALSO accept:
+- Section headers → kinds: "Things I said I would do"→OWE, "Things I'm waiting on"→WAITING, "Conversations that went quiet…"→QUIET, "Good conversations worth remembering"→TOUCH
+- Dash-delimited fields ("- A - B - C") as an alternative to pipes
+- Combined "Person, Account" first field → split, match account against roster (the comma-tail or any segment), keep person as the WAITING/QUIET person
+- Natural dates "June 15"/"(June 16)" → ISO using current year; non-dates ("promised same day","expect soon") → null due
+- Detect "done"/"sent"/"completed" in an OWE line → file the commitment already-complete (or skip) instead of as open
+- Keep the strict bracket format working too (don't break the existing path)
