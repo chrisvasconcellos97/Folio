@@ -35,7 +35,7 @@ function buildPerimeter(W, H, spacing) {
   return pts;
 }
 
-function drawHexCell(ctx, x, y, size, angle, alpha, fill) {
+function drawHexCell(ctx, x, y, size, angle, alpha, strokeColor, fillColor) {
   ctx.save();
   ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
   ctx.translate(x, y);
@@ -48,16 +48,28 @@ function drawHexCell(ctx, x, y, size, angle, alpha, fill) {
     if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
   }
   ctx.closePath();
-  ctx.fillStyle   = fill;
-  ctx.strokeStyle = "#5bbfa0";
+  ctx.fillStyle   = fillColor;
+  ctx.strokeStyle = strokeColor;
   ctx.lineWidth   = 0.85;
   ctx.fill();
   ctx.stroke();
   ctx.restore();
 }
 
+// Resolve the current accent color from CSS custom properties so the canvas
+// respects theme changes (dark/light). Falls back to the default accent hex.
+function resolveAccentColor(el) {
+  try {
+    var val = getComputedStyle(el || document.documentElement)
+      .getPropertyValue("--c-accent").trim();
+    return val || "#4a9b82";
+  } catch (e) {
+    return "#4a9b82";
+  }
+}
+
 // active prop controls CSS opacity (0 → 1 with a 0.48s ease transition).
-// The rAF loop always runs so there's no start-up lag on activation.
+// The rAF loop is gated on active so the canvas is quiet when not visible.
 export function HexRingCanvas({ active }) {
   var canvasRef = useRef(null);
   var stateRef  = useRef({ hexPhase: 0, lastTime: null, pts: null });
@@ -65,6 +77,14 @@ export function HexRingCanvas({ active }) {
   useEffect(function () {
     var canvas = canvasRef.current;
     if (!canvas) return;
+
+    // Respect prefers-reduced-motion — don't start the rAF loop
+    var mq = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (mq && mq.matches) return;
+
+    // Don't run the loop when not active (saves battery / CPU)
+    if (!active) return;
+
     var rafId;
     var s = stateRef.current;
 
@@ -98,6 +118,10 @@ export function HexRingCanvas({ active }) {
       var breath = 0.5 + 0.5 * Math.sin(timestamp * BREATH_W);
       var bs     = 0.55 + 0.56 * breath;
 
+      // Read the accent color from CSS custom properties each frame so it
+      // responds to theme toggles without a remount.
+      var accent = resolveAccentColor(canvas);
+
       var pts = s.pts;
       var N   = pts.length;
 
@@ -113,28 +137,29 @@ export function HexRingCanvas({ active }) {
         var alpha     = bright > 0.1
           ? 0.22 + bright * 0.72
           : 0.08 + (bs - 0.55) * 0.18;
-        var fill      = bright > 0.1
-          ? "rgba(74,155,130," + (0.04 + bright * 0.28) + ")"
-          : "rgba(74,155,130,0.02)";
-        drawHexCell(ctx, p.x + p.nx * 6, p.y + p.ny * 6, size, angle, alpha, fill);
+        var fill = bright > 0.1
+          ? accent + Math.round((0.04 + bright * 0.28) * 255).toString(16).padStart(2, "0")
+          : accent + "05";
+        drawHexCell(ctx, p.x + p.nx * 6, p.y + p.ny * 6, size, angle, alpha, accent, fill);
       }
 
       // Leading-edge bright accent cell
       var li = Math.floor(s.hexPhase * N) % N;
       var lp = pts[li];
       var la = Math.atan2(lp.ny, lp.nx) + Math.PI / 2;
-      drawHexCell(ctx, lp.x + lp.nx * 6, lp.y + lp.ny * 6, 5.5 + bs * 1.2, la, 0.9, "rgba(159,240,210,0.35)");
+      drawHexCell(ctx, lp.x + lp.nx * 6, lp.y + lp.ny * 6, 5.5 + bs * 1.2, la, 0.9, accent, accent + "59");
 
       rafId = requestAnimationFrame(draw);
     }
 
     rafId = requestAnimationFrame(draw);
     return function () { cancelAnimationFrame(rafId); };
-  }, []);
+  }, [active]);
 
   return (
     <canvas
       ref={canvasRef}
+      aria-hidden="true"
       style={{
         position:   "absolute",
         top:        -6,

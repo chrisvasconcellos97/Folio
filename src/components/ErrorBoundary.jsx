@@ -166,7 +166,7 @@ export class ErrorBoundary extends React.Component {
             style={{
               background: C.accent, border: "none", borderRadius: 8,
               padding: "9px 18px", fontSize: 13, fontWeight: 600,
-              color: "#fff", cursor: "pointer", fontFamily: SANS,
+              color: C.bg, cursor: "pointer", fontFamily: SANS,
             }}
           >
             Reload
@@ -206,7 +206,7 @@ export class ErrorBoundary extends React.Component {
                 style={{
                   background: C.accent, border: "none", borderRadius: 8,
                   padding: "7px 14px", fontSize: 12.5, fontWeight: 600,
-                  color: "#fff", cursor: this.state.noteText.trim() ? "pointer" : "not-allowed",
+                  color: C.bg, cursor: this.state.noteText.trim() ? "pointer" : "not-allowed",
                   opacity: this.state.noteText.trim() ? 1 : 0.5,
                   fontFamily: SANS,
                 }}

@@ -14,6 +14,7 @@ export function LitPill({ onClick, children, style, disabled, showDot, type, tit
       disabled={!!disabled}
       title={title}
       aria-label={ariaLabel}
+      aria-disabled={disabled ? "true" : undefined}
       className="lit-pill"
       style={style}
     >

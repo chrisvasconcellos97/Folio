@@ -34,6 +34,7 @@ export function AddToTasksButton({ actionItemsText, accountId, openItems, addIte
     <button
       onClick={handleClick}
       title="Add each action item as a task"
+      aria-label="Add each action item as a task"
       style={Object.assign({
         background: C.yellowFaint,
         border: "1px solid " + C.yellow,

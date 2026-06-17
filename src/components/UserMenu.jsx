@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { C } from "../lib/colors";
 import { Modal } from "./Modal";
@@ -84,6 +84,7 @@ export function UserMenu({ userMeta, onSignOut, onTour, onSettings, onTeam, onDi
   var [open, setOpen]           = useState(false);
   var [showProfile, setProfile] = useState(false);
   var menuRef                   = useRef(null);
+  var dropdownRef               = useRef(null);
 
   var initials = getInitials(userMeta ? userMeta.full_name : "");
 
@@ -93,11 +94,31 @@ export function UserMenu({ userMeta, onSignOut, onTour, onSettings, onTeam, onDi
       if (menuRef.current && menuRef.current.contains(e.target)) return;
       setOpen(false);
     }
+    function handleKeydown(e) {
+      if (!dropdownRef.current) return;
+      var items = Array.from(dropdownRef.current.querySelectorAll('[role="menuitem"]:not([disabled])'));
+      if (!items.length) return;
+      var focused = document.activeElement;
+      var currentIdx = items.indexOf(focused);
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        var next = currentIdx < items.length - 1 ? items[currentIdx + 1] : items[0];
+        next.focus();
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        var prev = currentIdx > 0 ? items[currentIdx - 1] : items[items.length - 1];
+        prev.focus();
+      } else if (e.key === "Escape") {
+        setOpen(false);
+      }
+    }
     document.addEventListener("mousedown", handleOutside);
     document.addEventListener("touchstart", handleOutside);
+    document.addEventListener("keydown", handleKeydown);
     return function () {
       document.removeEventListener("mousedown", handleOutside);
       document.removeEventListener("touchstart", handleOutside);
+      document.removeEventListener("keydown", handleKeydown);
     };
   }, [open]);
 
@@ -124,7 +145,7 @@ export function UserMenu({ userMeta, onSignOut, onTour, onSettings, onTeam, onDi
             width: 32, height: 32, borderRadius: "50%",
             background: open ? C.accent : C.accentGlow,
             border: "1px solid " + (open ? C.accent : C.accentRing),
-            color: open ? "#091712" : C.accent,
+            color: open ? C.bg : C.accent,
             fontSize: 11, fontWeight: 700,
             fontFamily: "'Inter', system-ui, sans-serif",
             cursor: "pointer",
@@ -139,6 +160,9 @@ export function UserMenu({ userMeta, onSignOut, onTour, onSettings, onTeam, onDi
         {/* Dropdown */}
         {open && (
           <div
+            ref={dropdownRef}
+            role="menu"
+            aria-label="User menu"
             className="fade-in"
             style={{
               position: "absolute",
@@ -172,6 +196,7 @@ export function UserMenu({ userMeta, onSignOut, onTour, onSettings, onTeam, onDi
             <div style={{ padding: "5px 0" }}>
               {onDiagnostics && (
                 <button
+                  role="menuitem"
                   onClick={function () { handleItem("diagnostics"); }}
                   style={{
                     width: "100%",
@@ -205,6 +230,8 @@ export function UserMenu({ userMeta, onSignOut, onTour, onSettings, onTeam, onDi
                 return (
                   <button
                     key={item.id}
+                    role="menuitem"
+                    aria-disabled={item.soon ? "true" : undefined}
                     onClick={function () { if (!item.soon) handleItem(item.id); }}
                     style={{
                       width: "100%",
@@ -240,6 +267,7 @@ export function UserMenu({ userMeta, onSignOut, onTour, onSettings, onTeam, onDi
             {/* Sign out */}
             <div style={{ borderTop: "1px solid " + C.border, padding: "5px 0 4px" }}>
               <button
+                role="menuitem"
                 onClick={function () { handleItem("signout"); }}
                 style={{
                   width: "100%", padding: "9px 14px",

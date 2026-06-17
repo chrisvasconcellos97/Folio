@@ -11,6 +11,7 @@ export function GaugeIcon({ size = 40, color, glow, pulse }) {
       height={s}
       viewBox="0 0 60 60"
       fill="none"
+      aria-hidden="true"
       className={pulse ? "pip-pulse" : ""}
     >
       <defs>
