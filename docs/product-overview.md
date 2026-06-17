@@ -1,6 +1,6 @@
 # Folios — Product Overview
 
-*Last updated: 2026-06-10 (Pip 3D "Bold Hex" visual form; Work/Life mode, mobile Home hub, Teach Pip, split-screen meeting mode)*
+*Last updated: 2026-06-17 (operator now manual-trigger only; nightly cron retired)*
 
 This is the substantive product read after the [one-pager](./one-pager.md).
 Covers what Folios does, how it's structured, and what makes the Pip
@@ -262,17 +262,22 @@ icon set — needs-now, keep-an-eye, good-news, cross-account-pattern, done) in
 place of generic emoji, so a brief reads at a glance. Email drafts stay plain
 prose (no markup) since they're meant to be sent as-is.
 
-### Autonomous Operator — Pip works the book overnight
+### Autonomous Operator — Pip works the book on demand
 
-Pip is not only pull-triggered. A scheduled nightly loop runs the portfolio
-before the day starts, so the user wakes up to work that's already been done
-rather than a dashboard to interpret.
+Pip is not only pull-triggered. A manual operator pass sweeps the portfolio
+on demand, so the user can run it when they want a fresh read rather than
+staring at a dashboard to interpret.
 
-- **Signal-gated sweep.** Each night a server-side job reviews the book and
-  runs a deep per-account pass *only on the accounts that moved* since the last
-  run (new activity, or a health/at-risk signal). Accounts that didn't change
-  are skipped — cost and effort scale with what actually changed, not with
-  portfolio size. The per-account passes are capped per night.
+**How to run:** tap "Run Pip's pass" on the Home screen. The pass takes
+20–40 seconds and updates the operator report when complete. The Vercel
+nightly cron was retired June 2026 (it ran every morning regardless of
+whether the app was opened, burning tokens on quiet days).
+
+- **Signal-gated sweep.** The operator job reviews the book and runs a deep
+  per-account pass *only on the accounts that moved* since the last run (new
+  activity, or a health/at-risk signal). Accounts that didn't change are
+  skipped — cost and effort scale with what actually changed, not with
+  portfolio size. The per-account passes are capped per run.
 - **Materialized operator state.** For each worked account Pip writes a
   durable state object: a read of the situation, the risks, a **pre-drafted
   follow-up email** where one is warranted, proposed task/project moves, a
@@ -280,9 +285,9 @@ rather than a dashboard to interpret.
   stored, not regenerated on every screen open — surfaces read it instead of
   making their own model call.
 - **The operator report.** Those per-account reads roll up into one
-  prioritized morning report on the Home screen: the plan for the day, with the
+  prioritized report on the Home screen: the plan for the day, with the
   drafted follow-ups ready to review and send. It replaces the live daily brief
-  on days the loop ran ("here's what's happening" becomes "here's what's
+  on days the pass ran ("here's what's happening" becomes "here's what's
   happening, and I drafted the first pass of it").
 - **Surfaced across the app, one brain.** The same materialized state is read
   directly by every relevant surface — no extra model call when a screen opens:
@@ -292,12 +297,12 @@ rather than a dashboard to interpret.
   before a call; the **Gauge Pip card** shows proposed moves as a cross-account
   decision queue. Approving a proposed move creates the task; the proposal is
   then marked handled so it doesn't reappear.
-- **Propose, don't act.** Everything the loop produces is a draft the user
+- **Propose, don't act.** Everything the pass produces is a draft the user
   approves — nothing is created live and nothing is sent automatically. This
   keeps the data boundary clean: Pip never reaches outside Folios.
 - **Cost scales with change, not size.** The deep per-account pass only runs on
-  accounts that moved since the last run, capped per night, plus one portfolio
-  roll-up — so the nightly spend tracks what actually changed across the book.
+  accounts that moved since the last run, capped per pass, plus one portfolio
+  roll-up — so each run's spend tracks what actually changed across the book.
 
 ### The V2 brain — Pip's learning loop
 

@@ -168,13 +168,13 @@ export function DesktopLayout({
                   fontWeight: active ? 500 : 400,
                   fontSize: 13.5,
                   background: active
-                    ? (isGauge ? "rgba(91,143,212,0.1)" : "oklch(0.22 0.04 178 / 0.5)")
+                    ? (isGauge ? C.blueFaint : "oklch(0.22 0.04 178 / 0.5)")
                     : "transparent",
                   color: active
                     ? (isGauge ? C.blue : C.accent)
                     : C.textSoft,
                   border: "1px solid " + (active
-                    ? (isGauge ? "rgba(91,143,212,0.25)" : C.accentLine)
+                    ? (isGauge ? C.blueLine : C.accentLine)
                     : "transparent"),
                   textAlign: "left",
                 }}

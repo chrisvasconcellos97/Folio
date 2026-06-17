@@ -139,6 +139,7 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
             }}
           />
           <div
+            id="ws-popover"
             role="menu"
             style={{
               position: "fixed",
@@ -256,6 +257,7 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
                 }}
                 aria-label={item.isPip ? "Open Pip — your AI field analyst" : undefined}
                 aria-expanded={isWorkspaces ? wsOpen : undefined}
+                aria-controls={isWorkspaces ? "ws-popover" : undefined}
                 aria-haspopup={isWorkspaces ? "menu" : undefined}
               >
                 {item.isPip ? (

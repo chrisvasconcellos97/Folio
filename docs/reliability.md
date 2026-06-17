@@ -1,6 +1,6 @@
 # Folios — Reliability
 
-*Last updated: 2026-05-30*
+*Last updated: 2026-06-17*
 
 This document describes how Folios stays available, recovers from
 failure, and protects the user's work. Intended for technical
