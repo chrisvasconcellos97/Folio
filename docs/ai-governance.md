@@ -1,6 +1,6 @@
 # Folios — AI Governance
 
-*Last updated: 2026-06-10 (data line rule)*
+*Last updated: 2026-06-17 (operator now manual-trigger only; nightly cron retired)*
 
 This document describes how Folios uses AI (Pip) responsibly. It
 covers what Pip can and can't do, what guardrails are in place, how
@@ -53,7 +53,7 @@ Folios takes AI seriously. Pip is built on three principles:
 | Access data outside the user's own (or org-mates') scope | Enforced by Supabase RLS at the database layer |
 | Persist anything to other users' data | Same — RLS enforces user/org scope |
 | Speak for the user externally (Slack, email, etc.) | No external write integrations exist |
-| Auto-trigger on a server-side schedule | No cron jobs; all background passes run client-side when the user opens the app |
+| Auto-trigger on a server-side schedule | No cron jobs; the operator pass runs only when the user taps "Run Pip's pass" on Home — never on a timer |
 | Override user corrections | Corrections are immutable; Pip reads them as instructions |
 
 ---
@@ -175,12 +175,13 @@ efficiency where it doesn't:
   (`PIP_CHAT_MODEL`, `PIP_QUESTIONS_MODEL`, `PIP_DAILY_BRIEF_MODEL`,
   `PIP_PROFILE_MODEL`, `PIP_QBR_MODEL`) so the tier can be re-dialed
   without a code change.
-- **The Autonomous Operator loop** (`/api/operator-run`, the nightly
-  scheduled sweep) runs on Sonnet (`PIP_OPERATOR_MODEL` override). Its
-  cost is bounded structurally, not just by rate limit: deep per-account
-  passes run *only on accounts that changed* since the last run and are
-  capped per night, plus one portfolio roll-up call — so a night's spend
-  scales with what moved across the book, not with portfolio size.
+- **The Autonomous Operator pass** (`/api/operator-run`, manual trigger
+  only — the nightly cron was retired June 2026) runs on Sonnet
+  (`PIP_OPERATOR_MODEL` override). Its cost is bounded structurally, not
+  just by rate limit: deep per-account passes run *only on accounts that
+  changed* since the last run and are capped per pass, plus one portfolio
+  roll-up call — so each run's spend scales with what moved across the
+  book, not with portfolio size.
 - No Opus calls in production code.
 
 ### Prompt caching

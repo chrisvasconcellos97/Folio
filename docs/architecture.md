@@ -1,6 +1,6 @@
 # Folios — Architecture
 
-*Last updated: 2026-05-30*
+*Last updated: 2026-06-17*
 
 This document describes how Folios is built. Intended for engineering
 reviewers, technical due diligence, or anyone evaluating the system
