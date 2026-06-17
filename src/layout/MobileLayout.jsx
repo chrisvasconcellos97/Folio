@@ -259,7 +259,7 @@ export function MobileLayout({ view, setView, onAddAccount, onSignOut, onTour, o
                 aria-haspopup={isWorkspaces ? "menu" : undefined}
               >
                 {item.isPip ? (
-                  <span style={{ display: "flex", marginTop: -12 }}>
+                  <span style={{ display: "flex", marginTop: -2 }}>
                     <PipOrb size="lg" />
                   </span>
                 ) : (

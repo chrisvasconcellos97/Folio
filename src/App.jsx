@@ -1795,25 +1795,7 @@ export default function App() {
       {scheduleMeetingModal}
       {adHocFlowOverlay}
       {globalQuickTaskModal}
-      {/* Floating Pip (mobile) — hidden on home (home has its own centerpiece orb) and pip itself */}
-      {view !== "pip" && view !== "home" && (
-        <div
-          style={{
-            position: "fixed",
-            bottom: 90,
-            right: 20,
-            zIndex: 90,
-          }}
-        >
-          <PipOrb
-            size="lg"
-            sonar
-            className={pipTransition === "out" ? "pip-out" : pipTransition === "in" ? "pip-in" : ""}
-            onClick={function () { handleSetView("pip"); }}
-            style={{ cursor: "pointer" }}
-          />
-        </div>
-      )}
+      {/* Mobile floating Pip removed — Pip now lives in the bottom nav bar. */}
       {showOnboarding && (
         <Suspense fallback={null}><OnboardingTour onComplete={function () {
           localStorage.setItem("folio_onboarded_" + userId, "true");
