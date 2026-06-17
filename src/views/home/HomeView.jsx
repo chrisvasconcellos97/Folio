@@ -11,6 +11,7 @@ import { getNextOccurrence, formatTime } from "../../lib/cadenceUtils";
 import { useAccountSnapshots } from "../../hooks/useAccountSnapshots";
 import { useOperatorReport } from "../../hooks/useOperatorReport";
 import { OperatorHub } from "./OperatorHub";
+import { OperatorRunButton } from "./OperatorRunButton";
 import { generateCheckInQuestions } from "../../lib/checkIn";
 import { callPortfolioBriefPip } from "../../lib/pip";
 import { isProjectComplete } from "../../lib/gaugeStatus";
@@ -272,7 +273,7 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
   // report exists for today it becomes the head of Home and the live daily
   // brief is suppressed (so Pip isn't paid for twice). A null report (first
   // day, or a skipped idle weekend) falls back to the on-open daily brief.
-  var { report: operatorReport, drafts: operatorDrafts, loaded: operatorLoaded } = useOperatorReport(userId);
+  var { report: operatorReport, drafts: operatorDrafts, loaded: operatorLoaded, refetch: refetchOperator } = useOperatorReport(userId);
   // True when the operator produced something worth showing — drives the Home
   // dashboard (Pip read card + section cards) and suppresses the legacy summary.
   var operatorActive = !!(operatorReport && (operatorReport.report_prose || (Array.isArray(operatorReport.plan_items) && operatorReport.plan_items.length > 0)));
@@ -2012,6 +2013,27 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
               }}
             >↺ Replay</button>
           </div>
+        </div>
+      )}
+
+      {operatorLoaded && !operatorActive && (
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          gap: 12, flexWrap: "wrap",
+          padding: isMobile ? "12px 14px" : "14px 16px",
+          marginBottom: 12,
+          background: C.surface, border: "1px solid " + C.rule, borderRadius: 12,
+        }}>
+          <div style={{ fontSize: 13, color: C.textSub, lineHeight: 1.4, flex: 1, minWidth: 0 }}>
+            Pip hasn't worked your book today. Run his pass for a prioritized morning read.
+          </div>
+          <OperatorRunButton onDone={refetchOperator} hasReport={false} />
+        </div>
+      )}
+
+      {operatorActive && (
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+          <OperatorRunButton onDone={refetchOperator} hasReport={true} />
         </div>
       )}
 

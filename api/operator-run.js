@@ -602,15 +602,13 @@ async function gatherAndRun(admin, client, userId, acc, snapshot, userContext) {
 // ── handler ────────────────────────────────────────────────────────────
 
 export default async function handler(req, res) {
-  // Auth: require `Authorization: Bearer <CRON_SECRET>` header ONLY.
-  // The ?secret= query-param form has been removed — query params appear in
-  // Vercel access logs in plaintext, leaking the secret to log storage.
-  // Manual runs: use the Authorization header (e.g. curl -H "Authorization: Bearer …").
-  var secret = process.env.CRON_SECRET;
-  if (!secret) return res.status(500).json({ error: "CRON_SECRET not configured." });
+  // Auth: EITHER the cron secret (Bearer <CRON_SECRET>, runs all/any users) OR
+  // a valid Supabase user JWT (Bearer <access_token>), which scopes the run to
+  // that authenticated user only — this is what the in-app "Run Pip's pass"
+  // button uses, since the cron secret can't be exposed to the browser.
   var authHeader = req.headers.authorization || "";
   var bearer = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  if (bearer !== secret) return res.status(401).json({ error: "Unauthorized" });
+  if (!bearer) return res.status(401).json({ error: "Unauthorized" });
 
   if (!process.env.ANTHROPIC_API_KEY) return res.status(500).json({ error: "ANTHROPIC_API_KEY not configured." });
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return res.status(500).json({ error: "SUPABASE_SERVICE_ROLE_KEY not configured." });
@@ -618,20 +616,39 @@ export default async function handler(req, res) {
   var tz = process.env.OPERATOR_TZ || "America/New_York";
 
   try {
-    var client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     var admin = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-    // Distinct users with at least one account. Optional ?user= scopes a manual run.
-    var onlyUser = (req.query && req.query.user) || null;
+    // Decide identity. Cron secret → privileged (all users, or ?user=). Otherwise
+    // treat the bearer as a user JWT and scope strictly to that user.
+    var secret = process.env.CRON_SECRET;
+    var isCron = !!secret && bearer === secret;
+    var scopedUser = null;
+    if (!isCron) {
+      var authRes = await admin.auth.getUser(bearer);
+      if (authRes.error || !authRes.data || !authRes.data.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      scopedUser = authRes.data.user.id;
+    }
+
+    var client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+    // Which users to process. A user-JWT run is ALWAYS scoped to that user
+    // (the ?user= param is ignored for non-cron callers — no cross-user runs).
     var userIds = [];
-    if (onlyUser) {
-      userIds = [onlyUser];
+    if (scopedUser) {
+      userIds = [scopedUser];
     } else {
-      var uRes = await admin.from("folio_accounts").select("user_id").limit(50000);
-      var seen = {};
-      (uRes.data || []).forEach(function (r) {
-        if (r.user_id && !seen[r.user_id]) { seen[r.user_id] = true; userIds.push(r.user_id); }
-      });
+      var onlyUser = (req.query && req.query.user) || null;
+      if (onlyUser) {
+        userIds = [onlyUser];
+      } else {
+        var uRes = await admin.from("folio_accounts").select("user_id").limit(50000);
+        var seen = {};
+        (uRes.data || []).forEach(function (r) {
+          if (r.user_id && !seen[r.user_id]) { seen[r.user_id] = true; userIds.push(r.user_id); }
+        });
+      }
     }
     userIds = userIds.slice(0, MAX_USERS);
 
