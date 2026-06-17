@@ -66,7 +66,10 @@ export function DigestIngestModal({ accounts, userId, addMeeting, onClose }) {
     }
     setRows(out.rows.map(function (r) {
       // Matched rows start checked; unmatched need an account picked first.
-      return Object.assign({}, r, { checked: !!r.accountId });
+      // Already-done commitments ("sent"/"done") start UNchecked so the digest
+      // doesn't re-create a commitment for something already finished — the user
+      // can still tick it if they want it logged.
+      return Object.assign({}, r, { checked: !!r.accountId && !r.done });
     }));
     setUnparsed(out.unparsed);
     setStep("preview");
@@ -213,6 +216,7 @@ export function DigestIngestModal({ accounts, userId, addMeeting, onClose }) {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", marginBottom: 3 }}>
                         <KindBadge kind={r.kind} />
+                        {r.done && <span style={{ fontFamily: MONO, fontSize: 9.5, color: C.accent }}>✓ already done</span>}
                         {r.who && <span style={{ fontSize: 12, color: C.text, fontWeight: 600 }}>{r.who}</span>}
                         {(r.due || r.since || r.date) && (
                           <span style={{ fontFamily: MONO, fontSize: 9.5, color: C.textMuted }}>

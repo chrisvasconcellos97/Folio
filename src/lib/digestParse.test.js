@@ -60,4 +60,63 @@ describe("parseDigest", function () {
     var out = parseDigest(text, ACCOUNTS);
     expect(out.rows[0].since).toBe("2026-06-09");
   });
+
+  // ---- Parser v2: the friendly section-header format Sonnet actually emits ----
+  var FRIENDLY = [
+    { id: "d1", name: "Driven Brands" },
+    { id: "p1", name: "Pacific Best" },
+    { id: "c1", name: "Caliber" },
+  ];
+
+  it("parses the friendly section-header / dash-field format", function () {
+    var text = [
+      "Good, here's your recap for the day:",
+      "Things I said I would do:",
+      "Lindsay Klimek, Driven Brands - circle back with availability - promised same day (June 15)",
+      "Justine, Pacific Best - sent over the June IPR - done June 16",
+      "Things I'm waiting on:",
+      "Gordon Lemmey, Driven Brands - explanation for the QCAP issue - tagged June 15, no reply",
+      "Conversations that went quiet and need a nudge:",
+      "Caliber - Brandon followed up, no resolution - last touched June 15",
+      "Good conversations worth remembering:",
+      "Lindsay Klimek, Driven Brands - solid back-and-forth, wants a monthly cadence",
+    ].join("\n");
+    var out = parseDigest(text, FRIENDLY);
+
+    expect(out.rows.length).toBe(5);
+    expect(out.unparsed).toContain("Good, here's your recap for the day:");
+
+    var owe = out.rows.filter(function (r) { return r.kind === "owe"; });
+    expect(owe.length).toBe(2);
+    // "Person, Account" lead split correctly; natural date -> ISO (current year)
+    expect(owe[0]).toMatchObject({ accountId: "d1", who: "Lindsay Klimek" });
+    expect(owe[0].due).toBe(new Date().getFullYear() + "-06-15");
+    // "done"/"sent" detected
+    expect(owe[1]).toMatchObject({ accountId: "p1", who: "Justine", done: true });
+
+    var waiting = out.rows.find(function (r) { return r.kind === "waiting"; });
+    expect(waiting).toMatchObject({ accountId: "d1", who: "Gordon Lemmey" });
+    expect(waiting.since).toBe(new Date().getFullYear() + "-06-15");
+
+    // friendly QUIET: account-only lead, description must NOT become the person
+    var quiet = out.rows.find(function (r) { return r.kind === "quiet"; });
+    expect(quiet.accountId).toBe("c1");
+    expect(quiet.who).toBe(null);
+
+    var touch = out.rows.find(function (r) { return r.kind === "touch"; });
+    expect(touch).toMatchObject({ accountId: "d1", who: "Lindsay Klimek" });
+  });
+
+  it("does not mistake prose for a section header", function () {
+    // contains 'owe' substring (however) + 'would do' in a sentence, but it's long prose
+    var text = "However I would do this differently next time and we should power through the lower-priority items together as a team";
+    var out = parseDigest(text, FRIENDLY);
+    expect(out.rows.length).toBe(0);
+    expect(out.unparsed.length).toBe(1);
+  });
+
+  it("still parses strict bracket format unchanged", function () {
+    var out = parseDigest("[WAITING] Caliber | Brandon | the fix | since: 2026-06-15", FRIENDLY);
+    expect(out.rows[0]).toMatchObject({ kind: "waiting", accountId: "c1", who: "Brandon", since: "2026-06-15" });
+  });
 });

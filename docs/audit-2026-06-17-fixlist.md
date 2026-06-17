@@ -234,6 +234,9 @@ Contained REAL items landed via Patch batch2 (38 files):
 
 REMAINING (dedicated session): §3 Pip-context wiring (~11; data-line on remember_fact+compressCorrections DONE; owner_user_id ownership-awareness in generate-questions DONE; globalPeople→chat #1 bug NOW FIXED — App→PipView→buildContext→curateContext→renderContextProse 'PEOPLE YOU ALREADY KNOW'), §10 structural (buildAccountContext, dual-task-model, file splits, circular import), 4 JUDGMENT, + any §7 unbounded-query/memo items the batch deferred.
 
+### DIGEST PARSER v2 — ✅ BUILT 2026-06-17 (accepts friendly + strict; +3 tests)
+(original queue note below)
+
 ### DIGEST PARSER v2 (queued 2026-06-17) — accept the friendly format work-Claude actually emits
 Today's parser needs literal [OWE]/[WAITING]/[QUIET]/[TOUCH] + pipe fields. Sonnet-Low paraphrases into section headers + dashes instead. Loosen digestParse.js + DigestIngestModal preview to ALSO accept:
 - Section headers → kinds: "Things I said I would do"→OWE, "Things I'm waiting on"→WAITING, "Conversations that went quiet…"→QUIET, "Good conversations worth remembering"→TOUCH
