@@ -11,7 +11,7 @@ import { PipLoader } from "../../components/PipLoader";
 import { QuickTaskModal } from "../quicktasks/QuickTaskModal";
 import { Modal } from "../../components/Modal";
 import { AmberBtn, SecBtn } from "../../components/Buttons";
-import { computeAccountHealth, gatherSignals } from "../../lib/accountHealth";
+import { computeAccountHealth, gatherSignals, STATUS_LABELS } from "../../lib/accountHealth";
 import { HexSignature } from "../../lib/hexMotif";
 import { EmptyState } from "../../components/EmptyState";
 
@@ -32,7 +32,7 @@ function saveSearchHistory(query) {
 }
 
 var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red, new: C.textMuted };
-var STATUS_LABELS = { green: "Healthy", yellow: "Watching", red: "At Risk", new: "New" };
+// STATUS_LABELS imported from accountHealth.js (shared source of truth)
 // Tier accent colors — route through CSS vars so light theme can ship deeper
 // hues per the light-theme spec (warm ochre, deep rose, indigo).
 var TIER_COLORS   = { Major: "var(--c-tier-major)", Mid: "var(--c-tier-mid)", Growth: "var(--c-tier-growth)" };
@@ -1245,9 +1245,9 @@ export function AccountsView({ accounts, allAccounts, loading, onSelect, onAddAc
                         key={t}
                         onClick={function () { setTagFilter(active ? null : t); }}
                         style={{
-                          background: active ? "rgba(91,143,212,0.15)" : "transparent",
+                          background: active ? C.blueFaint : "transparent",
                           color: active ? C.blue : C.textMuted,
-                          border: "1px solid " + (active ? "rgba(91,143,212,0.35)" : C.rule),
+                          border: "1px solid " + (active ? C.blueLine : C.rule),
                           borderRadius: 999,
                           padding: "5px 12px",
                           fontFamily: MONO, fontSize: 11,

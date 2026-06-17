@@ -1,5 +1,6 @@
 import { C, glass } from "../../../lib/colors";
 import { AmberBtn } from "../../../components/Buttons";
+import { EmptyState } from "../../../components/EmptyState";
 
 var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red };
 var STATUS_LABELS = { green: "Healthy", yellow: "Watching", red: "At Risk" };
@@ -19,10 +20,11 @@ export function ShopsTab({ shops, onAddShop, onSelectShop }) {
       </div>
 
       {shops.length === 0 && (
-        <div style={{ textAlign: "center", padding: "40px 20px", color: C.textMuted, fontSize: 13 }}>
-          <div style={{ marginBottom: 12 }}>No shops added yet.</div>
-          <AmberBtn onClick={onAddShop} style={{ fontSize: 12 }}>+ Add First Shop</AmberBtn>
-        </div>
+        <EmptyState
+          title="No shops added yet."
+          cta={<AmberBtn onClick={onAddShop} style={{ fontSize: 12 }}>+ Add First Shop</AmberBtn>}
+          compact
+        />
       )}
 
       {shops.map(function (shop) {

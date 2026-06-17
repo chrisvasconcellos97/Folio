@@ -16,21 +16,15 @@
 import { useState, useMemo } from "react";
 import { C } from "../../lib/colors";
 import { InfoTip } from "../../components/InfoTip";
-import { projectMatchesAccount } from "../../lib/gaugeStatus";
+import { projectMatchesAccount, gaugeStatusLabel, gaugeStatusToken } from "../../lib/gaugeStatus";
 import { fmtShort } from "../../lib/dateUtils";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
 var INTER = "'Inter', system-ui, sans-serif";
 
-var STATUS_LABELS = {
-  draft:       "Draft",
-  planned:     "Planned",
-  in_progress: "In Progress",
-  blocked:     "Blocked",
-  complete:    "Complete",
-  on_hold:     "On Hold",
-};
+// STATUS_LABELS and status style lookup replaced by gaugeStatusLabel() /
+// gaugeStatusToken() from gaugeStatus.js — shared source of truth.
 
 var PRIORITY_COLORS = {
   high:   C.red,
@@ -167,7 +161,10 @@ export function LeaderProjectsView({ projects, accounts, members, userEmail, onO
   // Distinct counts for the summary line
   var totalAccts = useMemo(function () {
     var s = {};
-    rows.forEach(function (p) { if (p.account_id) s[p.account_id] = true; });
+    rows.forEach(function (p) {
+      if (p.account_id) s[p.account_id] = true;
+      if (Array.isArray(p.account_ids)) p.account_ids.forEach(function (id) { if (id) s[id] = true; });
+    });
     return Object.keys(s).length;
   }, [rows]);
 
@@ -266,8 +263,7 @@ export function LeaderProjectsView({ projects, accounts, members, userEmail, onO
           var steps       = countSteps(p.stages);
           var pct         = steps.total > 0 ? Math.round((steps.done / steps.total) * 100) : 0;
           var overdue     = p.status === "in_progress" && isOverdue(p.due_date);
-          var statusKey   = (p.status || "planned").split("_").map(function (w) { return w.charAt(0).toUpperCase() + w.slice(1); }).join("");
-          var statusStyle = C["status" + statusKey] || C.statusPlanned;
+          var statusStyle = gaugeStatusToken(p.status);
           var leftEdge    = PRIORITY_COLORS[p.priority];
           var lastDone    = lastStepCompletedAt(p.stages);
           var sinceMove   = daysSince(lastDone || p.start_date || p.created_at);
@@ -320,7 +316,7 @@ export function LeaderProjectsView({ projects, accounts, members, userEmail, onO
                       fontFamily: MONO, fontSize: 9.5, color: statusStyle.text,
                       whiteSpace: "nowrap",
                     }}>
-                      {STATUS_LABELS[p.status] || p.status}
+                      {gaugeStatusLabel(p.status)}
                     </div>
                     {isStuck && (
                       <div style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>

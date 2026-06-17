@@ -117,14 +117,18 @@ export function AddContactModal({ accountId, userId, onSave, onClose }) {
             return (
               <div
                 key={t.key}
+                role="button"
+                tabIndex={0}
+                aria-pressed={t.val}
                 onClick={function () { t.set(!t.val); }}
+                onKeyDown={function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); t.set(!t.val); } }}
                 style={{
                   display: "flex",
                   alignItems: "center",
                   gap: 10,
                   cursor: "pointer",
                   padding: "10px 14px",
-                  background: t.val ? "rgba(74,155,130,0.07)" : C.bgDark,
+                  background: t.val ? C.accentFaint : C.bgDark,
                   border: "1px solid " + (t.val ? t.color : C.border),
                   borderRadius: 10,
                   userSelect: "none",

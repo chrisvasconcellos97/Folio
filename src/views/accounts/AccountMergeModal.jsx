@@ -122,7 +122,10 @@ export function AccountMergeModal({ source, accounts, onConfirm, onClose }) {
       </div>
 
       {target && (
-        <div style={{
+        <div
+          role={confirming ? "alert" : undefined}
+          aria-live={confirming ? "assertive" : undefined}
+          style={{
           background: C.accentFaint, border: "1px solid " + C.accentLine,
           borderRadius: 8, padding: "10px 14px", marginBottom: 14,
           fontSize: 13, color: C.textSub, lineHeight: 1.5,

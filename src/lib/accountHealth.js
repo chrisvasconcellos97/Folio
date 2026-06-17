@@ -1,5 +1,10 @@
 import { projectMatchesAccount } from "./gaugeStatus";
 
+// Canonical display labels for computed health statuses. Exported so
+// AccountDetailHeader, AccountsView, and any other consumer share one
+// source of truth instead of each declaring their own copy.
+export var STATUS_LABELS = { green: "Healthy", yellow: "Watching", red: "At Risk", new: "New" };
+
 // Computes account health from signals. Tier-aware thresholds.
 // Returns { status: 'green'|'yellow'|'red'|'new', reason: string }.
 // Override (when set) supersedes everything.

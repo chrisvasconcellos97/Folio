@@ -10,6 +10,8 @@ var MONO = "'JetBrains Mono', ui-monospace, monospace";
 export function AccountDetailTabs({ tabs, activeTab, onChange, shopCount }) {
   return (
     <div
+      role="tablist"
+      aria-label="Account detail tabs"
       style={{
         display: "flex",
         gap: 0,
@@ -29,6 +31,8 @@ export function AccountDetailTabs({ tabs, activeTab, onChange, shopCount }) {
         return (
           <button
             key={t}
+            role="tab"
+            aria-selected={active}
             onClick={function () {
               var oldIdx = tabs.indexOf(activeTab);
               var newIdx = tabs.indexOf(t);

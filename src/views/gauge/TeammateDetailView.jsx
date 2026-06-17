@@ -83,10 +83,13 @@ export function TeammateDetailView({ userId, memberEmail, projects, accounts, on
     return rows;
   }, [projects, memberEmail]);
 
-  // Accounts they touch (across projects + stages).
+  // Accounts they touch (across projects + stages, including account_ids[]).
   var theirAccountIds = useMemo(function () {
     var s = {};
-    theirProjects.forEach(function (p) { if (p.account_id) s[p.account_id] = true; });
+    theirProjects.forEach(function (p) {
+      if (p.account_id) s[p.account_id] = true;
+      if (Array.isArray(p.account_ids)) p.account_ids.forEach(function (id) { if (id) s[id] = true; });
+    });
     return Object.keys(s);
   }, [theirProjects]);
 

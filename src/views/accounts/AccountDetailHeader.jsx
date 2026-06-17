@@ -17,12 +17,13 @@ import { ownerInitials, findOwner } from "../../lib/ownerLabel";
 import { useBreakpoint } from "../../hooks/useBreakpoint";
 import { useToneTrend } from "../../hooks/useToneTrend";
 import { InfoTip } from "../../components/InfoTip";
+import { STATUS_LABELS } from "../../lib/accountHealth";
 
 var MONO = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
 
 var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red, new: C.textMuted };
-var STATUS_LABELS = { green: "Healthy", yellow: "Watching", red: "At Risk", new: "New" };
+// STATUS_LABELS imported from accountHealth.js (shared source of truth)
 var TIER_COLORS   = { Major: C.blue, Mid: C.purple, Growth: C.green };
 
 export function AccountDetailHeader({
@@ -221,8 +222,8 @@ export function AccountDetailHeader({
             {toneTrend.trend === "cooling" && (
               <span style={{
                 fontFamily: MONO, fontSize: 9, letterSpacing: "0.07em",
-                textTransform: "uppercase", color: C.warning || C.statusWatching || C.yellow,
-                background: "rgba(251,191,36,0.10)", border: "1px solid rgba(251,191,36,0.25)",
+                textTransform: "uppercase", color: C.yellow,
+                background: C.yellowFaint, border: "1px solid " + C.yellow,
                 borderRadius: 999, padding: "2px 7px", userSelect: "none",
               }}>
                 Cooling ↘
