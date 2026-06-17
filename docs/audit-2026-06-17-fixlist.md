@@ -11,9 +11,9 @@ Check off `[x]` as we go. Work order suggestion: §1 → §2 → §3 → §4 →
 ## §1 — CORRECTNESS BUGS (wrong data / crashes / silent failures)
 
 - [x] (S,P0) `StandingBoardView.jsx:48-56` — commitTask now calls shared autoStatusPatch (mirrors commitStages). NOTE: autoStatusPatch returns null for is_standing projects (by design — ongoing boards don't auto-complete), but GaugeView:231 heal flips standing→complete with no isStanding guard → inconsistent. Left as-is; needs Chris's call on whether standing projects should ever auto-complete.
-- [ ] (M,P0) `api/leadership-readout.js:32-79` + `api/portfolio-brief.js:47-293` — main logic runs OUTSIDE try-catch → any throw = Vercel raw crash page, no JSON, folio_errors empty. Boss readout + daily brief break silently. Extend outer try-catch.
+- [x] leadership-readout: payload-processing now inside try-catch.  - [ ] (M,P0) `api/portfolio-brief.js:47-293` — STILL TODO: main logic outside try-catch (250-line wrap, do carefully).
 - [x] (S,P0) `api/ask-pip.js` — added `export const config = { maxDuration: 60 }` → 10s default kills 12-20s meeting Haiku → "Ask Pip on meeting" silently network-errors.
-- [ ] (M,P0) `cadenceUtils.js:65-83` — biweekly cadence w/ null anchor_date AND created_at → `new Date(undefined)` → NaN dates for ALL biweekly recurrence → corrupts reminders/calendar/Pip. Guard + fallback.
+- [x] (M,P0) `cadenceUtils.js:65-83` — biweekly null-anchor NaN guard added (falls back to `from`).
 - [ ] (S,P1) `useItems.js:38` — `.eq("done",false)` → ItemsTab "Closed" section permanently empty (completed tasks vanish). Parameterize / 2nd query on expand.
 - [x] (S,P1) `CommitmentsView.jsx:95` — now passes `acct.id` (was full OBJECT) vs HomeView's `(account.id)` → tap opens wrong account / crashes on .name. One-char.
 - [ ] (M,P1) `AdHocConversationFlow.jsx:164-173` — `discussedProjectIds`/`discussedItemIds` not forwarded into `previewPlan` → every ad-hoc summarize throws away Pip's project-routing signal.

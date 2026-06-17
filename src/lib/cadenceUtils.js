@@ -67,7 +67,10 @@ export function getNextOccurrence(cadence, fromDate) {
     var refStr = cadence.anchor_date
       ? cadence.anchor_date + 'T00:00:00'
       : cadence.created_at;
-    var ref = new Date(refStr);
+    // Guard: with no anchor_date AND no created_at, new Date(undefined) → NaN,
+    // which would corrupt every biweekly date downstream. Fall back to `from`.
+    var ref = refStr ? new Date(refStr) : new Date(from);
+    if (isNaN(ref.getTime())) ref = new Date(from);
     ref.setHours(0, 0, 0, 0);
     var current = from.getDay();
     var daysUntilNext = (target - current + 7) % 7;

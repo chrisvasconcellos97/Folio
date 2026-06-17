@@ -33,6 +33,7 @@ export default async function handler(req, res) {
   var { meetingSummary, actionItems, contactName, portfolioState, facts, profileProse } = req.body || {};
   if (!meetingSummary) return res.status(400).json({ error: "meetingSummary required" });
 
+  try {
   var bossName = contactName || "your manager";
 
   // Cap unbounded client-supplied arrays to prevent oversized payloads.
@@ -78,7 +79,6 @@ export default async function handler(req, res) {
     "Write the email to " + bossName + ".";
 
   var READOUT_MODEL = "claude-haiku-4-5-20251001";
-  try {
     // User-scoped client for usage logging (RLS requires auth.uid()).
     var userClient = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: "Bearer " + token } },
