@@ -128,7 +128,7 @@ export function useKokoroTTS() {
         }
 
         var rp = ctx.resume();
-        if (rp && rp.catch) rp.catch(function () {});
+        if (rp && rp.catch) rp.catch(function () { /* guard-ok: resume() rejects harmlessly if the context is already running */ });
       } catch (_) {}
     }
 

@@ -52,7 +52,7 @@ export function AdHocConversationFlow({
       .filter(function (a) { return a.parent_account_id === account.id; })
       .map(function (a) { return a.id; });
   }, [accounts, account.id]);
-  var { projects, updateProject } = useProjects(userId, account.id, orgId, childAccountIds);
+  var { projects, addProject, updateProject } = useProjects(userId, account.id, orgId, childAccountIds);
   var hintsApi       = usePipAssignmentHints(userId, account.id);
   var correctionsApi = usePipCorrections(userId, account.id);
   var glossaryApi    = useGlossary(userId, orgId, account.id);
@@ -273,6 +273,12 @@ export function AdHocConversationFlow({
           unknownPeople={previewPlan.unknownPeople || []}
           receipts={previewPlan.receipts || []}
           accountContacts={contacts || []}
+          onCreateProject={addProject ? function (acctId, data) {
+            return addProject(Object.assign({}, data, {
+              account_id: acctId,
+              status: "planned",
+            }));
+          } : undefined}
         />
       )}
     </>

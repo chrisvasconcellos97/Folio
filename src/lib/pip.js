@@ -874,7 +874,7 @@ export function summarizeDraftPip(payload, opts) {
     "  ],\n" +
     "  \"receipts\": [\"0-3 short strings naming stored knowledge you ACTUALLY used for this plan — a glossary term you applied, a person you recognized from the directory (and therefore did not flag as new), an update-calendar event you connected, a past correction you honored. Empty array if none. Never invent these.\"],\n" +
     "  \"plan\": [\n" +
-    "    { \"kind\": \"new_item\",    \"text\": \"...\", \"due_date\": \"YYYY-MM-DD or null\", \"suggested_assignee\": \"email or null\", \"target_account_id\": \"id from YOUR ACCOUNTS list, or null if this belongs to the current account\", \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim 1-3 line slice of the draft notes that triggered this row\", \"is_commitment\": true },\n" +
+    "    { \"kind\": \"new_item\",    \"text\": \"...\", \"due_date\": \"YYYY-MM-DD or null\", \"suggested_assignee\": \"email or null\", \"target_account_id\": \"id from YOUR ACCOUNTS list, or null if this belongs to the current account\", \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim 1-3 line slice of the draft notes that triggered this row\", \"is_commitment\": true, \"suggested_project_title\": \"OMIT unless this item is part of a coherent NEW multi-step initiative — see the project-suggestion rule\" },\n" +
     "    { \"kind\": \"update_item\", \"target_id\": \"I-...\", \"fields\": { \"due_date\": \"...\", \"text\": \"...\" }, \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim slice from notes\" },\n" +
     "    { \"kind\": \"close_item\",  \"target_id\": \"I-...\", \"reason\": \"...\", \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim slice from notes\" },\n" +
     "    { \"kind\": \"new_task\",    \"project_id\": \"uuid — MUST be a UUID from the Active Gauge projects list below; only use new_task when you can match to a known project id, otherwise use new_item\", \"title\": \"...\", \"due_date\": \"YYYY-MM-DD or null\", \"suggested_assignee\": \"email or null\", \"target_account_id\": \"id or null\", \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim slice from notes\", \"is_commitment\": false },\n" +
@@ -890,6 +890,13 @@ export function summarizeDraftPip(payload, opts) {
     "so the user can see your reasoning.\n" +
     "- For new_item vs new_task: pick new_task only when it clearly belongs to one of the listed " +
     "Gauge projects. Otherwise default to new_item.\n" +
+    "- SUGGESTING A NEW PROJECT (be conservative): if TWO OR MORE new_item rows clearly form one " +
+    "coherent, multi-step initiative that does NOT match any existing Gauge project (e.g. a rollout, " +
+    "an integration, an audit, a launch — something with several steps that will play out over time), " +
+    "set the SAME \"suggested_project_title\" (a short Title-Case name) on each of those rows so they can " +
+    "be grouped into a project. Only do this when it's genuinely a project — a handful of unrelated " +
+    "follow-ups is NOT a project. A single task is NEVER a project. When in doubt, omit the field. " +
+    "Most meetings should have NO suggested project.\n" +
     "- target_id MUST be the literal id including the I- or T- prefix from the lists below.\n" +
     "- project_id is the UUID from the project list (the value after `project_id ` in the task lines, " +
     "or the leading id of an active project).\n" +
@@ -1212,6 +1219,9 @@ function normalizePlanRow(r) {
       out.is_commitment = !!r.is_commitment;
       if (r.target_account_id && typeof r.target_account_id === "string" && r.target_account_id.trim()) {
         out.target_account_id = r.target_account_id.trim();
+      }
+      if (r.suggested_project_title && typeof r.suggested_project_title === "string" && r.suggested_project_title.trim()) {
+        out.suggested_project_title = r.suggested_project_title.trim();
       }
       return out;
     case "update_item":

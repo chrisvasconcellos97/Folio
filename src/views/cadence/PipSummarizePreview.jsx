@@ -142,6 +142,16 @@ export function PipSummarizePreview({
   var [sessionProjects, setSessionProjects] = useState([]);
   var [confidenceBannerDismissed, setConfidenceBannerDismissed] = useState(false);
   var [creatingProject, setCreatingProject] = useState({});  // { [idx]: true } while in-flight
+  // Progressive disclosure: rows render as a scannable one-liner by default;
+  // the full editing surface (assignee, due, account routing, project, source)
+  // is revealed per-row on demand. Keeps the review fast to skim instead of a
+  // wall of controls. { [idx]: true } when expanded.
+  var [expandedRows, setExpandedRows] = useState({});
+  function toggleExpand(idx) {
+    setExpandedRows(function (p) { var n = Object.assign({}, p); n[idx] = !n[idx]; return n; });
+  }
+  // "What Pip used" is reassurance, not a primary decision — collapsed by default.
+  var [showReceipts, setShowReceipts] = useState(false);
 
   function patch(idx, fields) {
     setTouched(true);
@@ -185,6 +195,53 @@ export function PipSummarizePreview({
     });
     return { changes: changes, news: news, skipped: skipped };
   }, [plan]);
+
+  // #3b — Pip's project suggestions. Rows Pip tagged with the same
+  // suggested_project_title (≥2) are a proposed new initiative. Surface a
+  // banner that, on accept, creates the Gauge project and files those rows
+  // under it (sets gaugeProjectId — the same routing the per-row picker uses).
+  var projectSuggestions = useMemo(function () {
+    if (!onCreateProject) return [];
+    var byTitle = {};
+    (plan || []).forEach(function (row, idx) {
+      if (row.kind !== "new_item" && row.kind !== "new_task") return;
+      var t = (row.suggested_project_title || "").trim();
+      if (!t) return;
+      if (!byTitle[t]) byTitle[t] = [];
+      byTitle[t].push(idx);
+    });
+    return Object.keys(byTitle)
+      .filter(function (t) { return byTitle[t].length >= 2; })
+      .map(function (t) { return { title: t, idxs: byTitle[t] }; });
+  }, [plan, onCreateProject]);
+
+  var [suggestedCreated, setSuggestedCreated]   = useState({}); // title -> true once created
+  var [creatingSuggested, setCreatingSuggested] = useState({}); // title -> true while in-flight
+
+  function createSuggestedProject(sug) {
+    if (creatingSuggested[sug.title] || suggestedCreated[sug.title]) return;
+    setCreatingSuggested(function (p) { return Object.assign({}, p, { [sug.title]: true }); });
+    Promise.resolve(onCreateProject(currentAccountId, { title: sug.title }))
+      .then(function (project) {
+        setCreatingSuggested(function (p) { var n = Object.assign({}, p); delete n[sug.title]; return n; });
+        if (project && project.id) {
+          setSessionProjects(function (prev) { return prev.concat([project]); });
+          setState(function (prev) {
+            var next = prev.slice();
+            sug.idxs.forEach(function (i) {
+              if (next[i]) next[i] = Object.assign({}, next[i], { gaugeProjectId: project.id, checked: true });
+            });
+            return next;
+          });
+          setSuggestedCreated(function (p) { return Object.assign({}, p, { [sug.title]: true }); });
+          showToast("Project created — " + sug.idxs.length + " items filed under it");
+        }
+      })
+      .catch(function () {
+        setCreatingSuggested(function (p) { var n = Object.assign({}, p); delete n[sug.title]; return n; });
+        showToast("Couldn't create project — try again");
+      });
+  }
 
   var anyChecked = useMemo(function () {
     var planChecked = state.some(function (s, idx) {
@@ -393,6 +450,31 @@ export function PipSummarizePreview({
     var excerptEdited = (s.excerpt || "") !== (s.initialExcerpt || "");
     var ctx = { existingItems: existingItems, activeProjects: activeProjects };
 
+    // Progressive disclosure. skip rows have nothing to edit — they stay a
+    // one-liner. Everything else collapses to a scannable summary + "Edit".
+    var expandable = row.kind !== "skip";
+    var expanded   = expandable && !!expandedRows[idx];
+    var primaryText = hasEditableTitle(row.kind)
+      ? (s.title || initialTitle(row) || "(no text)")
+      : rowLeader(row, ctx, s.gaugeProjectId);
+    // The at-a-glance meta chips shown under the task text when collapsed —
+    // only what's set, kept to a short scannable line.
+    var collapsedChips = [];
+    if (row.kind === "new_task") {
+      var ctxProj = findProject(activeProjects, s.gaugeProjectId);
+      collapsedChips.push(ctxProj ? ("⊞ " + ctxProj.title) : "Standalone task");
+    } else if (row.kind === "new_item") {
+      collapsedChips.push("Standalone task");
+    } else if (row.kind === "update_item" || row.kind === "update_task") {
+      collapsedChips.push("Edit to existing");
+    }
+    if (s.isCommitment) collapsedChips.push("✦ Commitment");
+    if (s.due_date) collapsedChips.push("Due " + fmtDate(s.due_date));
+    if ((row.kind === "new_item" || row.kind === "new_task") && s.targetAccountId && s.targetAccountId !== currentAccountId) {
+      var routedAcct = rosterLookup[s.targetAccountId];
+      collapsedChips.push("→ " + ((routedAcct && routedAcct.name) || "another account"));
+    }
+
     return (
       <div
         key={idx}
@@ -417,6 +499,36 @@ export function PipSummarizePreview({
           </div>
         )}
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+          {!expanded && (
+            <div
+              onClick={expandable ? function () { toggleExpand(idx); } : undefined}
+              role={expandable ? "button" : undefined}
+              tabIndex={expandable ? 0 : undefined}
+              onKeyDown={expandable ? function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleExpand(idx); } } : undefined}
+              style={{
+                display: "flex", flexDirection: "column", gap: 4,
+                cursor: expandable ? "pointer" : "default",
+              }}
+            >
+              <div style={{
+                fontSize: 15, color: C.text, lineHeight: 1.4, fontFamily: INTER,
+                textDecoration: row.kind === "close_item" ? "line-through" : "none",
+                textDecorationColor: C.textMuted,
+              }}>
+                {primaryText}
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 4, fontSize: 11, fontFamily: INTER }}>
+                {collapsedChips.length > 0 && (
+                  <span style={{ color: C.textMuted }}>{collapsedChips.join("   ·   ")}</span>
+                )}
+                {expandable && (
+                  <span style={{ color: C.accent, marginLeft: collapsedChips.length ? 6 : 0 }}>▸ Edit</span>
+                )}
+              </div>
+            </div>
+          )}
+          {expanded && (
+          <>
           <div style={{
             fontSize: 11, color: C.textMuted, fontFamily: MONO,
             textTransform: "uppercase", letterSpacing: "0.07em",
@@ -632,6 +744,19 @@ export function PipSummarizePreview({
             <div style={{ fontSize: 11, color: C.textMuted, fontFamily: INTER }}>
               Due → {fmtDate(row.fields.due_date)}
             </div>
+          )}
+          <button
+            type="button"
+            onClick={function () { toggleExpand(idx); }}
+            style={{
+              background: "none", border: "none", padding: 0,
+              color: C.textMuted, cursor: "pointer",
+              fontFamily: INTER, fontSize: 11, alignSelf: "flex-start",
+            }}
+          >
+            ▾ Done editing
+          </button>
+          </>
           )}
           {rowErrors[idx] && (
             <div style={{ fontSize: 11, color: C.red }}>{rowErrors[idx]}</div>
@@ -855,6 +980,43 @@ export function PipSummarizePreview({
           </div>
         )}
 
+        {projectSuggestions.filter(function (sug) { return !suggestedCreated[sug.title]; }).map(function (sug) {
+          return (
+            <div
+              key={sug.title}
+              style={{
+                marginTop: 10,
+                background: C.accentFaint, border: "1px solid " + C.accentLine,
+                borderRadius: 8, padding: "10px 12px",
+                display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap",
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: MONO, fontSize: 9, color: C.accent, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 3 }}>
+                  ✦ Pip suggests a project
+                </div>
+                <div style={{ fontSize: 13.5, color: C.text, fontFamily: INTER, lineHeight: 1.4 }}>
+                  <b>{sug.title}</b> — file these {sug.idxs.length} items under one project?
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={!!creatingSuggested[sug.title]}
+                onClick={function () { createSuggestedProject(sug); }}
+                style={{
+                  background: C.accentDeep, border: "none", borderRadius: 6,
+                  padding: "7px 14px", fontSize: 12, fontWeight: 700, color: C.bg,
+                  cursor: creatingSuggested[sug.title] ? "default" : "pointer",
+                  opacity: creatingSuggested[sug.title] ? 0.6 : 1,
+                  fontFamily: INTER, flexShrink: 0,
+                }}
+              >
+                {creatingSuggested[sug.title] ? "Creating…" : "Create & file"}
+              </button>
+            </div>
+          );
+        })}
+
         {grouped.news.length > 0 && (
           <div>
             <GroupHeader first={grouped.changes.length === 0}>New ({grouped.news.length})</GroupHeader>
@@ -953,24 +1115,33 @@ export function PipSummarizePreview({
         )}
 
         {Array.isArray(receipts) && receipts.length > 0 && (
-          <div style={{
-            marginTop: 10,
-            background: C.accentFaint, border: "1px solid " + C.accentLine,
-            borderRadius: 8, padding: "8px 12px",
-          }}>
-            <div style={{
-              fontFamily: MONO, fontSize: 9, color: C.accent,
-              letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 4,
-            }}>
-              ✦ What Pip used
-            </div>
-            {receipts.map(function (r, i) {
-              return (
-                <div key={i} style={{ fontFamily: INTER, fontSize: 11.5, color: C.textSoft, lineHeight: 1.5 }}>
-                  · {r}
-                </div>
-              );
-            })}
+          <div style={{ marginTop: 10 }}>
+            <button
+              type="button"
+              onClick={function () { setShowReceipts(function (v) { return !v; }); }}
+              style={{
+                background: "none", border: "none", padding: 0,
+                fontFamily: MONO, fontSize: 9, color: C.accent,
+                letterSpacing: "0.08em", textTransform: "uppercase", cursor: "pointer",
+              }}
+            >
+              {showReceipts ? "▾" : "▸"} ✦ What Pip used ({receipts.length})
+            </button>
+            {showReceipts && (
+              <div style={{
+                marginTop: 6,
+                background: C.accentFaint, border: "1px solid " + C.accentLine,
+                borderRadius: 8, padding: "8px 12px",
+              }}>
+                {receipts.map(function (r, i) {
+                  return (
+                    <div key={i} style={{ fontFamily: INTER, fontSize: 11.5, color: C.textSoft, lineHeight: 1.5 }}>
+                      · {r}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
