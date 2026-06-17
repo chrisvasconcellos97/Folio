@@ -63,6 +63,24 @@ export default async function handler(req, res) {
   // Build account-level flagged lines for at_risk/watching accounts
   var flaggedLines = [];
   atRisk.concat(watching).forEach(function (s) {
+    // Accounts the user doesn't own (e.g. MSO accounts they're only project-
+    // involved in): NEVER frame as at-risk / days-since-contact / outreach — that
+    // implies a relationship to manage that isn't theirs. Only surface genuine
+    // project work (overdue items, stuck projects); skip entirely if none.
+    if (s.not_mine === true) {
+      if (!(s.overdue_item_count > 0) && !(s.stuck_project_count > 0)) return;
+      var np = [(s.tier === "major" ? "[MAJOR] " : "") + s.account_name + " (NOT YOUR RELATIONSHIP — project work only)"];
+      if (s.overdue_item_count > 0) {
+        var nlabel = s.overdue_item_count + " overdue item" + (s.overdue_item_count > 1 ? "s" : "");
+        if (s.overdue_items && s.overdue_items.length > 0) {
+          nlabel += ": " + s.overdue_items.slice(0, 2).map(function (t) { return '"' + t + '"'; }).join(", ");
+        }
+        np.push(nlabel);
+      }
+      if (s.stuck_project_count > 0) np.push(s.stuck_project_count + " stuck project" + (s.stuck_project_count > 1 ? "s" : ""));
+      flaggedLines.push(np.join(" — "));
+      return;
+    }
     var parts = [];
     // Prefix tier badge for major accounts
     var accountLabel = (s.tier === "major" ? "[MAJOR] " : "") + s.account_name;
@@ -254,6 +272,7 @@ Voice rules:
 - "COOLING TONE" means the last few meetings had mixed or negative sentiment — treat this as an early warning, especially on Major accounts. Mention it without alarm.
 - "BLOCKER" in the relationship signals means someone is actively working against the deal or relationship — always surface a blocker if present.
 - "Champion" means an advocate — useful context when discussing next steps on that account.
+- "NOT YOUR RELATIONSHIP — project work only" on an account line means someone else owns that relationship (the user is only project-involved). NEVER suggest reaching out, following up, a cold-contact nudge, or treat its silence as a risk. Surface ONLY its concrete project work (overdue tasks, stuck projects). Do not open with it.
 - "Portfolio-wide themes" means the same topic came up across multiple accounts in recent meetings. This is a signal worth naming — e.g., "pricing came up on 4 accounts this month" is a portfolio pattern worth raising to management.
 
 Also return a "callouts" JSON array — one object per specific account or task worth a tap. Each object:

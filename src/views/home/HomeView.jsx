@@ -255,7 +255,7 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
   function refreshBrief() {
     if (briefLoading) return;
     var todayStr = new Date().toISOString().slice(0, 10);
-    try { localStorage.removeItem("folio_daily_brief_v10_" + userId + "_" + todayStr); } catch (_) { /* ignore */ }
+    try { localStorage.removeItem("folio_daily_brief_v11_" + userId + "_" + todayStr); } catch (_) { /* ignore */ }
     briefFiredRef.current = false;
     setDailyBrief("");
     setBriefCallouts([]);
@@ -307,7 +307,7 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
     // structured markdown; v7 flushed raw-JSON briefs.
     // Also scope the key to userId — a date-only key bled one user's brief into
     // another account on a shared device (every other cache is userId-scoped).
-    var cacheKey = "folio_daily_brief_v10_" + userId + "_" + todayStr;
+    var cacheKey = "folio_daily_brief_v11_" + userId + "_" + todayStr;
 
     // Check localStorage cache first — if we have a brief for today, use it.
     try {
@@ -403,11 +403,15 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
       var snapshotsWithDetails = (snapshots || []).map(function (s) {
         var acc = (accounts || []).find(function (a) { return a.id === s.account_id; });
         var isFlagged = s.health_status === "at_risk" || s.health_status === "watching";
+        // Ownership: a "not mine" account (owner is someone else) should never
+        // drive outreach/cold/at-risk urgency in the brief — only project work.
+        var notMine = !!(acc && acc.owner_user_id && userId && acc.owner_user_id !== userId);
         return Object.assign({}, s, {
           account_name: acc ? acc.name : "Unknown",
           overdue_items: (overdueByAccount[s.account_id] || []).slice(0, 3),
           tier: acc ? acc.tier : null,
           objective: (acc && isFlagged) ? (acc.objective || null) : null,
+          not_mine: notMine,
         });
       });
 
