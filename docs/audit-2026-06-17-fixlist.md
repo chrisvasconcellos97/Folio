@@ -106,11 +106,11 @@ Check off `[x]` as we go. Work order suggestion: §1 → §2 → §3 → §4 →
 
 ## §5 — THEME (light + Life mode breakage)
 
-- [ ] (S,P1) `index.html` — `--c-bg-pill-active` not defined in Life blocks → ModeToggle active segment wrong in Life. Add to both life blocks.
+- [x] (S,P1) `index.html` — `--c-bg-pill-active` not defined in Life blocks → ModeToggle active segment wrong in Life. Add to both life blocks.
 - [x] (M,P1) `ErrorBoundary.jsx:170,210` color "#fff" hardcoded → C.bg.
 - [x] (S,P1) `UserMenu.jsx:128` hardcoded #091712 → C.bg.
 - [x] (S,P2) `HexRingCanvas.jsx:53,117-118,126` hardcoded teal/rgba → read var(--c-accent) via getComputedStyle (won't re-skin Life/light).
-- [ ] (S,P2) `index.html` home-card-ring-glow keyframe hardcoded teal rgba → var(--c-accent-shadow/glow).
+- [x] (S,P2) `index.html` home-card-ring-glow keyframe hardcoded teal rgba → var(--c-accent-shadow/glow).
 - [x] (S,P2) `AccountDetailHeader.jsx:225` Cooling pill rgba(251,191,36) → token.
 - [x] (S,P2) `AccountsView.jsx:1248` tag filter rgba(91,143,212) → token.
 - [x] (S,P2) `MeetingsTab:387` rgba(0,0,0,0.2) dark smear on light → token.
@@ -119,7 +119,7 @@ Check off `[x]` as we go. Work order suggestion: §1 → §2 → §3 → §4 →
 - [ ] (S,P2) `DigestIngestModal:161` color C.bg on accentDeep bg → near-invisible in light → onAccent/white token.
 - [ ] (S,P2) `PipCatchUp` textarea C.bgDark → may be invisible in light → input token.
 - [x] (S,P2) `CommandPalette` raw rgba(0,0,0,0.6) → var(--c-overlay-shadow-strong); `Tooltip`/`ConnectionStatus` rgba shadows → overlay-shadow-soft.
-- [ ] (S,P3, BLOCKED) `AddAccountModal:34,577` raw purple — needs C.purpleFaint/purpleLine tokens (don't exist yet); add tokens first; `ProjectsTab:171` rgba border; `AddContactModal:127` → C.accentFaint; `DesktopLayout:171` gauge nav rgba → tokens.
+- [x] (S,P3, BLOCKED) `AddAccountModal:34,577` raw purple — needs C.purpleFaint/purpleLine tokens (don't exist yet); add tokens first; `ProjectsTab:171` rgba border; `AddContactModal:127` → C.accentFaint; `DesktopLayout:171` gauge nav rgba → tokens.
 - [ ] (S,P3) `index.html` Life blocks don't redefine --c-glass-*/--c-pip-card-*/--c-tier-*/--c-status-* → green glass on blue (latent → Life Phase 2 token audit).
 
 ## §6 — MOBILE / A11Y
@@ -140,7 +140,7 @@ Check off `[x]` as we go. Work order suggestion: §1 → §2 → §3 → §4 →
 - [x] (S,P2) `MarkdownText` `##`/`###` render as div not h2/h3 → flat outline.
 - [ ] (S,P2) verify CadenceTab inline add-contact + CadenceMeetingMode AddContactInline ≥16px (Batch 7 may have missed these distinct surfaces).
 - [ ] (S,P2) HistoryRow expand is div onClick — no role/tabIndex/onKeyDown (keyboard can't expand); verify BeforeYouStart uses <button>.
-- [ ] (S,P2) `MobileLayout` workspaces popover lacks id/aria-controls; no skip-to-content on mobile.
+- [x] (S,P2) `MobileLayout` workspaces popover lacks id/aria-controls; no skip-to-content on mobile.
 - [ ] (S,P3) AuthView success message lacks role=status/aria-live; CheckInCard receipts lack role=status/aria-live.
 - [x] (S,P3) Buttons: DangerBtn can't take type/aria-label (unify 4 button prop interfaces); LitPill sets disabled not aria-disabled; Glow renders <button disabled> for decorative text; AddToTasksButton/GaugeIcon missing aria.
 - [x] (S,P3) AddContactModal/EditContactModal toggle divs lack role/tabIndex/onKeyDown; Mine/Not-mine toggle needs aria-pressed; calendar day cells no role=gridcell.
@@ -178,7 +178,7 @@ Check off `[x]` as we go. Work order suggestion: §1 → §2 → §3 → §4 →
 
 ## §9 — DOCS
 
-- [ ] (M,P2) docs/ suite — operator described as "nightly cron" everywhere → "manual trigger" (product-overview.md, ai-governance.md +); regenerate PDFs (`npm run docs:pdf`).
+- [x] (M,P2) docs/ suite — operator described as "nightly cron" everywhere → "manual trigger" (product-overview.md, ai-governance.md +); regenerate PDFs (`npm run docs:pdf`).
 - [ ] (S,P2) document client-side WORK_CLAUDE_PROMPT in ai-governance.md; document `===PLAN===` two-phase delimiter as locked interface.
 - [ ] (S,P2) document merge re-parenting extensions in data-handling.md; document cadence/CalendarView scoping (intentional dual file).
 - [ ] (S,P2) CLAUDE.md — SportsCard documented-as-shipped but doesn't exist → move Shipped→Ripped; remove vestigial `folio_sports_cache_v1` from useAuth wipe.
