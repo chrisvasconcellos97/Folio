@@ -12,6 +12,7 @@ import { MarkdownText } from "../../components/MarkdownText";
 import { usePipFacts } from "../../hooks/usePipFacts";
 import { useUserProfile } from "../../hooks/useUserProfile";
 import { usePipUsage } from "../../hooks/usePipUsage";
+import { useFolioHealth, CORRECTION_TYPE_LABEL } from "../../hooks/useFolioHealth";
 import { useGlossary } from "../../hooks/useGlossary";
 import { useActivity } from "../../hooks/useActivity";
 import { useTheme } from "../../hooks/useTheme";
@@ -749,6 +750,119 @@ function PipUsageSection({ userId }) {
         </div>
       )}
       {showDetails && <PipUsageDetails userId={userId} onClose={function () { setShowDetails(false); }} />}
+    </Card>
+  );
+}
+
+// "Is Folios earning its keep?" — read-only rollup (feed / accuracy / cost).
+// Account stats are computed here from accounts already in memory; the hook
+// owns the DB reads. No writes, no Pip calls.
+function HealthStat({ label, value, sub, warn }) {
+  return (
+    <div>
+      <div style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 10, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 4 }}>
+        {label}
+      </div>
+      <div style={{ fontSize: 20, fontWeight: 600, color: warn ? C.yellow : C.text, fontVariantNumeric: "tabular-nums" }}>
+        {value}
+      </div>
+      {sub && <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2, lineHeight: 1.4 }}>{sub}</div>}
+    </div>
+  );
+}
+
+function FolioHealthSection({ userId, accounts }) {
+  var health = useFolioHealth(userId);
+  var h = health.data;
+
+  // Account feed stats — straight from the accounts already loaded.
+  var now = Date.now();
+  var d30ms = now - 30 * 24 * 60 * 60 * 1000;
+  var active = (accounts || []).filter(function (a) { return !a.is_inactive; });
+  var touched = 0;
+  active.forEach(function (a) {
+    var t = a.last_interaction_at ? new Date(a.last_interaction_at).getTime() : 0;
+    if (t >= d30ms) touched++;
+  });
+  var cold = active.length - touched;
+
+  function money(v) { return v < 1 ? "$" + v.toFixed(3) : "$" + v.toFixed(2); }
+
+  var verdict = null;
+  if (h) {
+    var topLabel = h.accuracy.topType ? (CORRECTION_TYPE_LABEL[h.accuracy.topType] || h.accuracy.topType) : null;
+    if (h.feed.days14 <= 3) {
+      verdict = "Running light — you've fed Pip " + h.feed.days14 + (h.feed.days14 === 1 ? " day" : " days") + " in the last two weeks. It's only as sharp as what you put in.";
+    } else if (h.accuracy.corr14 < h.accuracy.corrPrev14) {
+      verdict = "Earning its keep — you're feeding it regularly and Pip's needing fewer corrections than the fortnight before.";
+    } else if (h.accuracy.corr14 >= 4 && h.accuracy.corr14 > h.accuracy.corrPrev14) {
+      verdict = "Fed well, but Pip's been off more than usual" + (topLabel ? " — mostly " + topLabel : "") + ". Worth a look.";
+    } else {
+      verdict = "Steady — " + h.feed.days14 + " days fed, " + h.accuracy.corr14 + " corrections, " + money(h.cost.usd30) + " in 30 days.";
+    }
+  }
+
+  var corrTrend = h
+    ? (h.accuracy.corr14 === h.accuracy.corrPrev14 ? "same as prior 14d"
+      : h.accuracy.corr14 < h.accuracy.corrPrev14 ? "↓ from " + h.accuracy.corrPrev14
+      : "↑ from " + h.accuracy.corrPrev14)
+    : "";
+  var costTrend = h
+    ? (h.cost.thisWeekUsd > h.cost.prevWeekUsd ? "↑ vs last week" : h.cost.thisWeekUsd < h.cost.prevWeekUsd ? "↓ vs last week" : "flat vs last week")
+    : "";
+
+  return (
+    <Card>
+      <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 6 }}>Is Folios earning its keep?</div>
+      <div style={{ fontSize: 13, color: C.textSub, lineHeight: 1.6, marginBottom: 14 }}>
+        A read-only gut-check: are you feeding it, is Pip accurate, what's it costing. Nothing here is tracked or sent — it just reads what's already in your account.
+      </div>
+
+      {health.loading && !h && (
+        <div style={{ fontSize: 13, color: C.textMuted }}>Reading…</div>
+      )}
+
+      {h && (
+        <>
+          {verdict && (
+            <div style={{
+              fontSize: 13.5, color: C.text, lineHeight: 1.5, fontStyle: "italic",
+              background: C.accentFaint, border: "1px solid " + C.accentLine,
+              borderRadius: 8, padding: "10px 12px", marginBottom: 16,
+            }}>
+              {verdict}
+            </div>
+          )}
+
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "16px 28px", marginBottom: 4 }}>
+            <HealthStat
+              label="Feeding it"
+              value={h.feed.days14 + " / 14 days"}
+              sub={h.feed.meetings14 + " meetings logged · " + touched + " of " + active.length + " accounts touched in 30d" + (cold > 0 ? " · " + cold + " cold" : "")}
+            />
+            <HealthStat
+              label="Pip's accuracy"
+              value={h.accuracy.corr14 + " correction" + (h.accuracy.corr14 === 1 ? "" : "s")}
+              sub={"last 14d, " + corrTrend
+                + (h.accuracy.summarized30 ? " · across " + h.accuracy.summarized30 + " summarized meetings (30d)" : "")
+                + (h.accuracy.topType ? " · mostly " + (CORRECTION_TYPE_LABEL[h.accuracy.topType] || h.accuracy.topType) : "")}
+            />
+            <HealthStat
+              label="Cost"
+              value={money(h.cost.usd30)}
+              sub={"30 days · " + costTrend + (h.cost.top ? " · top: " + h.cost.top.endpoint + " " + money(h.cost.top.usd) : "")}
+            />
+          </div>
+
+          {h.canary.length > 0 && (
+            <div style={{ marginTop: 14, fontSize: 12, color: C.yellow, lineHeight: 1.5 }}>
+              {h.canary.map(function (c, i) {
+                return <div key={i}>⚠ {c.label} hasn't run in {c.days} days — a Pip surface may be stuck.</div>;
+              })}
+            </div>
+          )}
+        </>
+      )}
     </Card>
   );
 }
@@ -1696,6 +1810,7 @@ export function SettingsView({ userId, userMeta, orgId, role, members, accounts,
               Pip — AI assistant
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <FolioHealthSection userId={userId} accounts={accounts} />
               <PipPrefsSection userId={userId} />
               <PipUsageSection userId={userId} />
               <PipGlossarySection userId={userId} orgId={orgId} accounts={accounts} />
