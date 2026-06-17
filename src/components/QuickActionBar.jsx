@@ -79,7 +79,7 @@ export function QuickActionBar({ accounts, onAddAccount, onOpenConversation, onA
     border:       "1px solid " + C.rule,
     borderRadius: 6,
     padding:      "7px 10px",
-    fontSize:     13,
+    fontSize:     16,
     color:        C.text,
     fontFamily:   INTER,
     width:        "100%",

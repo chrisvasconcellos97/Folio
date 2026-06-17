@@ -2,7 +2,7 @@ export function Pill({ color, children, style, onClick }) {
   // `color` is a CSS-var token (e.g. "var(--c-yellow)"), so the old hexToRgb()
   // path returned "0,0,0" and every pill rendered a black tint. color-mix tints
   // directly off the token and re-themes correctly in light/dark.
-  var c = color || "var(--c-text-mute)";
+  var c = color || "var(--c-text-muted)";
   return (
     <span
       onClick={onClick}

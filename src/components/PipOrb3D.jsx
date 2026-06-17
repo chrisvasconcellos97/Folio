@@ -1,6 +1,6 @@
 // ─── PipOrb3D — 3D "Bold Hex" Pip renderer ───────────────────────────────────
 // Renders Pip's locked 3D form: two hex-tiled spheres inside a slowly turning
-// hexagonal ring, all breathing together on a 2.4s cycle.
+// hexagonal ring, all breathing together on a 4.8s cycle.
 //
 // Design locked by Chris (June 2026). All geometry driven by pip3dGeometry.js.
 // This component only renders what buildPipFrame() returns — no geometry here.

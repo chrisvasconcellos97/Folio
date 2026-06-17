@@ -86,7 +86,7 @@ export function useFolioHealth(userId) {
       var canary = [];
       if (lastSeen["operator-run"]) {
         var opDays = Math.floor((now - lastSeen["operator-run"]) / DAY_MS);
-        if (opDays >= 3) canary.push({ label: "Overnight operator run", days: opDays });
+        if (opDays >= 3) canary.push({ label: "Pip's operator pass", days: opDays });
       }
 
       // ── Accuracy (corrections) ──────────────────────────────────
