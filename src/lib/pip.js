@@ -571,7 +571,12 @@ export function callBriefMePip(payload) {
         return { name: c.name, title: c.title, email: c.email, is_poc: c.is_poc, relationship_role: c.relationship_role || null, relationship_note: c.relationship_note || null };
       }),
       activeProjects: activeProjects.map(function (p) {
-        return { title: p.title, status: p.status, due_date: p.due_date, status_updates: Array.isArray(p.status_updates) ? p.status_updates.slice(0, 3) : [] };
+        return {
+          title: p.title, status: p.status, due_date: p.due_date,
+          waiting_on: p.waiting_on || null, waiting_on_since: p.waiting_on_since || null,
+          assignee: p.assignee || null, requested_by: p.requested_by || null,
+          status_updates: Array.isArray(p.status_updates) ? p.status_updates.slice(0, 3) : [],
+        };
       }),
       healthSnapshots: Array.isArray(payload.healthSnapshots) ? payload.healthSnapshots : [],
     }],
@@ -1300,11 +1305,13 @@ export function callCadenceBriefPip(payload) {
     var bits = [];
     bits.push((p.status || "").replace("_", " "));
     if (p.due_date) bits.push("due " + p.due_date);
+    if (p.waiting_on) bits.push("waiting on " + p.waiting_on + (p.waiting_on_since ? " since " + p.waiting_on_since : ""));
     var owner = p._childAccountName ? " — for " + p._childAccountName : "";
     return "- " + (p.title || "Untitled") + " (" + bits.join(" · ") + ")" + owner;
   }).join("\n");
 
   var commitments = (openItems || []).filter(function (i) { return i.is_commitment; });
+  var waitingTasks = (openItems || []).filter(function (i) { return i.waiting_on; });
 
   // V2 brain correction context — prefer compressed lessons_learned when fresh.
   var lessonsLearned = pipAccountState && pipAccountState.lessons_learned ? pipAccountState.lessons_learned.trim() : "";
@@ -1333,6 +1340,9 @@ export function callCadenceBriefPip(payload) {
     "Commitments (promised deliverables): " + (commitments.length === 0 ? "none" : commitments.map(function (i) {
       var overdue = i.due_date && i.due_date < new Date().toISOString().slice(0, 10) ? " [OVERDUE]" : "";
       return (i.text || i.title || "—") + (i.due_date ? " due " + i.due_date : "") + overdue;
+    }).slice(0, 4).join("; ")) + "\n" +
+    "Waiting on others (they owe you): " + (waitingTasks.length === 0 ? "none" : waitingTasks.map(function (i) {
+      return (i.text || i.title || "—") + " — " + i.waiting_on + (i.waiting_on_since ? " since " + i.waiting_on_since : "");
     }).slice(0, 4).join("; ")) + "\n" +
     "Active Gauge projects on this account:\n" +
     (projectLines || "(none)") + "\n\n" +
