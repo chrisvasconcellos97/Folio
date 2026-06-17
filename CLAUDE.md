@@ -443,6 +443,31 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 ---
 
+## Session Handoff — June 17 2026 (AUDIT SESSION): Audit 2026-06-17 fixes (~77%) + Digest Parser v2 + task-unification scoped
+
+**⚠️ READ FIRST — WHERE THE WORK LIVES:** Everything from this session is on branch **`claude/app-audit-strategy-hhcrz2`** (pushed/durable, tip ~`6e7cb0c`), **NOT on `main`, NOT deployed.** This was deliberate — Chris asked to *save, not deploy* (Vercel preview builds were failing + emailing him; he's cost-sensitive). So the deploy-to-`main` rule was intentionally suspended this session: commits accumulate on the branch awaiting an explicit "ship it." **To deploy:** see "Shipping" below — do NOT assume `main` has any of this.
+
+**The work:** a fresh full audit (`docs/audit-2026-06-17.md`) → master tracker **`docs/audit-2026-06-17-fixlist.md`** (severity-ranked; a read-only verification sweep classified the remainder **72 REAL / 11 DONE / 3 FALSE / 4 JUDGMENT** — many "open" items were already fixed/stale). **~77% resolved (~121/156).** Built via worktree Patch agents (components/views/infra batches, cherry-picked + line-reviewed) + main-session §1/§3 fixes. Every change validated (build + 292 tests + check-guards) before commit.
+
+**Shipped this session (on the branch):**
+- **Mechanical tail:** theme tokens, a11y (Modal portal/role, Toast assertive, tablist, etc.), perf (prompt-caching on 3 endpoints, pip-state-refresh wave cap, useMeetings limits, ET offset fix), guards (Guard 5 hook-order + Guard 6 ISO-date), CI (lint **advisory** `|| true` — 66 pre-existing lint errors, don't hard-gate until cleared; `npm audit --omit=dev --audit-level=high` after form-data patch), docs.
+- **§1 correctness:** biweekly NaN guard, leadership-readout/portfolio-brief try-catch, useItems Closed filter, health-pill cadences+meetings, OperatorHub draftFor-by-id, etc.
+- **§3 Pip-brain (the high-value ones):** **globalPeople → chat** (the #1 "suggests people you already know" bug — App→PipView.buildContext→curateContext→renderContextProse "PEOPLE YOU ALREADY KNOW"); **data-line guards** on `remember_fact` + `compressCorrectionsPip` (never store revenue/volumes/rosters — generalize); **ownership awareness** (`owner_user_id` into generate-questions + pip-state-refresh → no relationship questions for not-mine accounts); **waiting_on parity** into cadence brief + Brief Me; **operator-read into summarize** (stops re-proposing already-flagged work).
+- **Digest Parser v2** (`src/lib/digestParse.js`) — accepts BOTH strict `[TAG]|pipe` AND the friendly section-header/dash format work-Claude actually emits (Person,Account split, natural dates, done-detection). +3 tests. This makes the **two-brain email/Teams handoff real**: paste work-Claude's daily digest → DigestIngestModal preview → files commitments (`folio_tasks` is_commitment), waiting-ons/quiet (`folio_tasks` waiting_on), touchpoints (`folio_meetings`, bumps last_interaction + feeds Pip).
+- **Prod DB:** `search_path` pinned on 4 trigger fns (applied via MCP + folded into schema.sql). **NOT done:** REVOKE EXECUTE on 6 SECURITY DEFINER helpers — verified it would BREAK RLS (all 6 used in live policies); low real risk; proper fix (move to private schema) documented in `supabase/security_hardening_20260617.sql`. **Pending (dashboard):** enable leaked-password protection.
+
+**THE BIG DECISION — task-model unification (Chris chose FULL UNIFICATION):** NOT executed — scoped only. Read live data: 174 objects in `gauge_projects.stages`, only 9 mirrored to `folio_tasks` (V3 backfill never finished). **Landmine:** `stages` is overloaded — **148 nested workflow STEPS** (`sub_stages`, `is_external`, `external_contact_*`, `blocked_reason`) + ~20 flat tasks; `folio_tasks` lacks those columns. A naive explode loses structure. Full staged plan + field mapping + risk controls in **`supabase/task_unification_plan.md`**. **This is the #1 next-session job** — fresh context, start-to-finish (backup → add columns → backfill+verify → switch ~10 readers → switch writers → parity-check). It also fixes the remaining gauge/stages §3 items (TeammateDetailView assignees, gaugeFields person bug) for free.
+
+**Two-brain digest (work-Claude side):** wrote Chris a Claude *Project* instruction set for his work-Claude — framed as personal daily note-taking (NOT obviously Folios), data-line clean (no numbers), outputs the friendly digest format. He's standing it up; Parser v2 (above) is the matched Folios side. Tested against his real output (screenshot) — format + data-line held.
+
+**Vercel preview failures:** GitHub Actions CI is GREEN on every push (confirmed via MCP) — the failed-deploy emails are **Vercel preview builds only**, failing for a Vercel-side reason (env/config) that local `vite build` doesn't hit. NOT diagnosed (need one failed build log). Production untouched.
+
+**Shipping (when Chris says):** (1) grab ONE failed Vercel build log → fix the prod-deploy blocker first; (2) fast-forward `main` to the branch → one Vercel production deploy. Until then nothing here is live.
+
+**Next sessions, in order:** (1) **task unification** (from the plan); (2) mop-up low-priority §3/§4 (merge re-parenting of suggestion.account_id + contact_aliases; chat health-snapshots) — can ride with #1; (3) ship to main after the build-log fix. Chris's two toggles: Vercel previews off + leaked-password on.
+
+---
+
 ## Session Handoff — June 17 2026: Summarize UX + Pip orb everywhere + operator goes manual + iOS TTS
 
 **Where things stand:** production (`folioshq.com`) is current through `e3cdd63` on `main` and live. No schema migrations this session — all code-only. The arc, shipped in several pushes:
