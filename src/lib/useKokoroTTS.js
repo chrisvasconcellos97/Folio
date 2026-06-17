@@ -68,6 +68,18 @@ export function useKokoroTTS() {
   var keepAliveRef   = useRef(null);   // looping silent source so iOS doesn't auto-suspend it
   var sourceRef      = useRef(null);   // current playing BufferSource
   var voicesRef      = useRef([]);
+  // Once Kokoro inference fails/times out (it hangs on iOS), skip it for the
+  // rest of the session — no more 15s waits per call; go straight to the
+  // system voice. Desktop never trips this (Kokoro succeeds there).
+  var kokoroFailedRef = useRef(false);
+
+  // Fallback voice that also drives `speaking` true→false, so the orb animates
+  // AND callers watching `speaking` (e.g. the Start-My-Day brief auto-advance)
+  // get the same edge they get from the Kokoro path.
+  function fallbackSpeak(clean) {
+    setSpeaking(true);
+    speakWithSystemVoice(clean, function () { setSpeaking(false); });
+  }
 
   useEffect(function () {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
@@ -165,8 +177,9 @@ export function useKokoroTTS() {
     var clean = stripMarkdown(text);
     if (!clean) return;
 
-    if (stateRef.current === "error") {
-      speakWithSystemVoice(clean, function () { setSpeaking(false); });
+    // Kokoro already failed this session (hangs on iOS) — skip the 15s wait.
+    if (kokoroFailedRef.current || stateRef.current === "error") {
+      fallbackSpeak(clean);
       return;
     }
 
@@ -184,14 +197,14 @@ export function useKokoroTTS() {
       } catch (e) {
         stateRef.current = "error";
         setModelState("error");
-        speakWithSystemVoice(clean, function () { setSpeaking(false); });
+        fallbackSpeak(clean);
         return;
       }
     }
 
     var ctx = getCtx();
     if (!ctx) {
-      speakWithSystemVoice(clean, function () { setSpeaking(false); });
+      fallbackSpeak(clean);
       return;
     }
 
@@ -238,7 +251,8 @@ export function useKokoroTTS() {
       setSpeaking(true);
     } catch (e) {
       console.error("[KokoroTTS] speak failed:", e);
-      speakWithSystemVoice(clean, function () { setSpeaking(false); });
+      kokoroFailedRef.current = true;   // stop retrying Kokoro this session
+      fallbackSpeak(clean);
     }
   }
 

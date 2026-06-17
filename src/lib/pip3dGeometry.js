@@ -103,9 +103,9 @@ export var PIP_SPEC = Object.freeze({
   // Speaking "zigzag" — when state==="speaking" the ring radius ripples at a
   // high spatial frequency, like a waveform reacting to a voice. Idle passes
   // speakAmp 0, leaving the geometry byte-identical, so the drift lock holds.
-  speakingRingAmp:   0.10,   // fraction of ring radius the zigzag swings
-  speakingRingFreq:  7,      // ripples around the ring (spatial frequency)
-  speakingRingSpeed: 9,      // how fast the zigzag travels (temporal)
+  speakingRingAmp:   0.03,   // fraction of ring radius the zigzag swings (subtle)
+  speakingRingFreq:  11,     // ripples around the ring — higher = tighter/finer
+  speakingRingSpeed: 5,      // how fast the zigzag travels (calmer, not "dancing")
 });
 
 // ── Pure rotation helpers ─────────────────────────────────────────────────────
