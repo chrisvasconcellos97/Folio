@@ -384,7 +384,7 @@ export function MeetingsTab({ meetings, accountName, accountId, userId, openItem
                     <CopyBtn text={m.pip_email} />
                   </div>
                 </div>
-                <div style={{ background: "rgba(0,0,0,0.2)", border: "1px solid " + C.border, borderRadius: 8, padding: "10px 12px", fontSize: 14, color: C.textSub, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
+                <div style={{ background: C.bg, border: "1px solid " + C.border, borderRadius: 8, padding: "10px 12px", fontSize: 14, color: C.textSub, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
                   {m.pip_email}
                 </div>
               </div>

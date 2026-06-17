@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { C, glass } from "../../../lib/colors";
 import { GaugeIcon } from "../../../components/GaugeIcon";
+import { EmptyState } from "../../../components/EmptyState";
 import { PipInsightCard } from "../../../components/PipInsightCard";
 import { ProjectModal } from "../../gauge/ProjectModal";
 import { pickV } from "../../../lib/metricsUtils";
@@ -153,9 +154,10 @@ export function ProjectsTab({ projects, accounts, accountId, userId, addProject,
       </div>
 
       {projects.length === 0 && (
-        <div style={{ textAlign: "center", padding: "36px 20px", color: C.textMuted, fontSize: 13, border: "1px dashed " + C.border, borderRadius: 12 }}>
-          No projects tracked yet.
-        </div>
+        <EmptyState
+          title="No projects tracked yet."
+          compact
+        />
       )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
@@ -168,7 +170,7 @@ export function ProjectsTab({ projects, accounts, accountId, userId, addProject,
               key={p.id}
               onClick={function () { setEditing(p); }}
               style={Object.assign({}, glass, {
-                border: "1px solid " + (blocked ? C.statusBlocked.border : p.status === "in_progress" ? GB_BDR : "rgba(255,255,255,0.06)"),
+                border: "1px solid " + (blocked ? C.statusBlocked.border : p.status === "in_progress" ? GB_BDR : "var(--c-glass-border)"),
                 borderLeft: blocked ? "3px solid " + C.statusBlocked.text : undefined,
                 borderRadius: 10,
                 padding: "11px 13px",

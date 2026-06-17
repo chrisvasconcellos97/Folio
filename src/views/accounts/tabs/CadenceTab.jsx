@@ -3,6 +3,7 @@ import { C, glass } from "../../../lib/colors";
 import { fmtShort } from "../../../lib/dateUtils";
 import { showToast } from "../../../components/Toast";
 import { AmberBtn, SecBtn, DangerBtn } from "../../../components/Buttons";
+import { EmptyState } from "../../../components/EmptyState";
 import { PipInsightCard } from "../../../components/PipInsightCard";
 import { SetCadenceModal } from "../../cadence/SetCadenceModal";
 import { getNextOccurrence, getFrequencyLabel, formatTime, daysUntil, formatDateFull } from "../../../lib/cadenceUtils";
@@ -214,14 +215,12 @@ export function CadenceTab({ account, cadences, items, meetings, contacts, onAdd
         </div>
 
         {cadences.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '32px 0 20px' }}>
-            <div style={{ fontSize: 28, marginBottom: 8, opacity: 0.35 }}>↻</div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 6 }}>No schedules yet</div>
-            <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 18 }}>
-              Add a meeting cadence or a recurring task for this account.
-            </div>
-            <AmberBtn onClick={function () { setEditingCad(null); setPrefillValues(null); setShowModal(true); }}>Add Cadence</AmberBtn>
-          </div>
+          <EmptyState
+            title="No schedules yet"
+            subtitle="Add a meeting cadence or a recurring task for this account."
+            cta={<AmberBtn onClick={function () { setEditingCad(null); setPrefillValues(null); setShowModal(true); }}>Add Cadence</AmberBtn>}
+            compact
+          />
         )}
 
         {meetingCadences.map(function (c) {

@@ -617,7 +617,7 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
       {/* Cold key contact alert */}
       {coldKeyContacts.length > 0 && (
         <div style={{
-          background: "rgba(204,140,0,0.08)", border: "1px solid rgba(204,140,0,0.25)",
+          background: C.yellowFaint, border: "1px solid " + C.yellow,
           borderRadius: 8, padding: "10px 14px", marginBottom: 0,
           display: "flex", alignItems: "flex-start", gap: 10,
         }}>

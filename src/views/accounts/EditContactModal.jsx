@@ -113,7 +113,11 @@ export function EditContactModal({ contact, onSave, onClose }) {
           return (
             <div
               key={row.title}
+              role="button"
+              tabIndex={0}
+              aria-pressed={on}
               onClick={function () { row.setter(!on); }}
+              onKeyDown={function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); row.setter(!on); } }}
               style={{
                 display: "flex",
                 alignItems: "center",

@@ -6,6 +6,7 @@ import { AmberBtn, SecBtn, DangerBtn } from "../../../components/Buttons";
 import { Mark } from "../../../components/Mark";
 import { showToast } from "../../../components/Toast";
 import { AddUpdateModal } from "../AddUpdateModal";
+import { EmptyState } from "../../../components/EmptyState";
 import {
   UPDATE_TYPE_LABELS, UPDATE_TYPE_COLORS,
   IMPACT_LABELS,
@@ -100,14 +101,12 @@ export function UpdatesTab({ account, updates, orgMembers, contacts, addUpdate, 
       </div>
 
       {(!updates || updates.length === 0) && (
-        <div style={{ textAlign: "center", padding: "40px 20px", color: C.textMuted, fontSize: 13 }}>
-          <div style={{ marginBottom: 12 }}>
-            No updates logged yet. Log the next change — catalog push, pricing tweak, integration — so you have a paper trail.
-          </div>
-          <AmberBtn onClick={function () { setShowModal(true); }} style={{ fontSize: 12 }}>
-            + Log first update
-          </AmberBtn>
-        </div>
+        <EmptyState
+          title="No updates logged yet."
+          subtitle="Log the next change — catalog push, pricing tweak, integration — so you have a paper trail."
+          cta={<AmberBtn onClick={function () { setShowModal(true); }} style={{ fontSize: 12 }}>+ Log first update</AmberBtn>}
+          compact
+        />
       )}
 
       {groups.map(function (group, gi) {

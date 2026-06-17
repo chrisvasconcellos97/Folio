@@ -16,6 +16,7 @@ import { C } from "../../lib/colors";
 import { fmtShort } from "../../lib/dateUtils";
 import { resolveAssignee } from "../../lib/ownerLabel";
 import { Modal } from "../../components/Modal";
+import { EmptyState } from "../../components/EmptyState";
 var AddItemModal = lazy(function () { return import("../accounts/AddItemModal").then(function (m) { return { default: m.AddItemModal }; }); });
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
@@ -295,11 +296,11 @@ export function FlatTaskQueue({ tasks, accounts, projects, members, userId, user
 
       {/* Task cards */}
       {filtered.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "48px 16px", color: C.textMuted, fontSize: 13 }}>
-          {subFilter === "mine" ? "Nothing assigned to you right now."
-          : subFilter === "open" ? "Nothing open. Either you're caught up, or nothing has been captured yet."
-          : "No tasks here."}
-        </div>
+        <EmptyState
+          title={subFilter === "mine" ? "Nothing assigned to you right now." : subFilter === "open" ? "Nothing open." : "No tasks here."}
+          subtitle={subFilter === "open" ? "Either you're caught up, or nothing has been captured yet." : undefined}
+          compact
+        />
       ) : grouped ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           {grouped.map(function (g) {
