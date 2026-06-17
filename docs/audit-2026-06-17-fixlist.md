@@ -195,3 +195,28 @@ Check off `[x]` as we go. Work order suggestion: §1 → §2 → §3 → §4 →
 
 ### Quick-win cluster to start (all S, low-risk, high-felt):
 StandingBoardView complete-flip · ask-pip maxDuration · useItems Closed · CommitmentsView arg · accountHealth date · CadenceHub clipboard catch · heroLine count · the §5 hardcoded-color swaps · the stale-cron doc/comment cleanup.
+
+---
+
+## ✅ VERIFIED SWEEP — 2026-06-17 (read-only agent, each item checked against live code)
+
+Counts of items still open at sweep time: **REAL 72 · DONE 11 · FALSE 3 · JUDGMENT 4.**
+
+**FALSE / DONE (stop revisiting these):**
+- FALSE — DigestIngestModal:91 (insertTask uses correct `title` column)
+- FALSE — folio_contacts RLS already `(select auth.uid())` (efficient form)
+- FALSE — relationship_note already wired (pip.js:272, pipContext:394, ContactsTab:393)
+- DONE — CadenceHub multi-dept roster dedup (seen[c.id] present)
+- DONE — CadenceHub:479/750 email leaks (now via ownerLabel)
+- DONE — AdHoc routing signal (forwarded L141-142 + CMM L568)
+- DONE — HistoryRow keyboard a11y; digestParse test; pipPlanApply test; ci lint/audit steps
+- DONE — useAccountSnapshots realtime present (var fetch shadow cosmetic)
+
+**JUDGMENT (need a decision / runtime check):** CalendarView dual-"due" custom-field; project_notes→summarize runtime trace; members_self_accept rebuild-only; CadenceTab/inline add-contact ≥16px visual check.
+
+**TOP REAL by severity (the fix order):**
+P0: (1) portfolio-brief.js handler outside try-catch; (2) App.jsx:875 share-target hijack guard; (3) circular import CadenceMeetingMode↔CadenceHub.
+P1: (4) PipView buildContext missing globalPeople [the "suggests known people" bug]; (5) buildContext missing healthSnapshots/promiseStats; (6) useItems Closed filter; (7) health-pill vs sparkline (gatherSignals missing cadences+meetings); (8) summarize missing operator state; (9) api/pip.js 5 endpoints missing cache_control [cost]; (10) pip-state-refresh 50-call concurrency cap.
+P2: (11) OperatorHub draftFor string-match; (12) logActivity no-op for solo; (13) followup-question uncapped/no-rate-limit; (14) merge doesn't re-parent suggestion/alias account_id; (15) useMeetings select(*) no limit.
+
+Full per-item REAL list lives in the sweep result (session record). §3 (Pip-wiring, ~16 real) + §10 (structural: buildAccountContext, dual-task-model, file splits) are the heavy reserved-for-a-session work.
