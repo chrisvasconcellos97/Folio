@@ -60,11 +60,14 @@ export function SecondaryCTA({ onClick, children, style, disabled, type, title, 
   );
 }
 
-export function SecBtn({ onClick, children, style, disabled }) {
+export function SecBtn({ onClick, children, style, disabled, type, title, ariaLabel }) {
   return (
     <button
+      type={type || "button"}
       onClick={onClick}
       disabled={disabled}
+      title={title}
+      aria-label={ariaLabel}
       style={Object.assign({}, btnBase, {
         background: C.bgCardAlt,
         color: C.textSub,
@@ -77,14 +80,19 @@ export function SecBtn({ onClick, children, style, disabled }) {
   );
 }
 
-export function DangerBtn({ onClick, children, style }) {
+export function DangerBtn({ onClick, children, style, disabled, type, title, ariaLabel }) {
   return (
     <button
+      type={type || "button"}
       onClick={onClick}
+      disabled={disabled}
+      title={title}
+      aria-label={ariaLabel}
       style={Object.assign({}, btnBase, {
         background: C.redFaint,
         color: C.red,
         border: "1px solid " + C.redLine,
+        opacity: disabled ? 0.5 : 1,
       }, style || {})}
     >
       {children}

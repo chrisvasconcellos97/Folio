@@ -8,6 +8,7 @@ export function CommandPalette({ accounts, contacts, userId, onSelectAccount, on
   var [contentResults, setContentResults] = useState([]);
   var inputRef = useRef(null);
   var searchTimerRef = useRef(null);
+  var listRef = useRef(null);
 
   useEffect(function() { if (inputRef.current) inputRef.current.focus(); }, []);
 
@@ -118,9 +119,25 @@ export function CommandPalette({ accounts, contacts, userId, onSelectAccount, on
 
   useEffect(function() { setIdx(0); }, [query]);
 
+  function scrollActiveIntoView(newIdx) {
+    if (!listRef.current) return;
+    var el = listRef.current.querySelector("#command-palette-item-" + newIdx);
+    if (el) el.scrollIntoView({ block: "nearest" });
+  }
+
   function handleKey(e) {
-    if (e.key === "ArrowDown") { e.preventDefault(); setIdx(function(i) { return Math.min(i + 1, results.length - 1); }); }
-    if (e.key === "ArrowUp")   { e.preventDefault(); setIdx(function(i) { return Math.max(i - 1, 0); }); }
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      var next = Math.min(idx + 1, results.length - 1);
+      setIdx(next);
+      scrollActiveIntoView(next);
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      var prev = Math.max(idx - 1, 0);
+      setIdx(prev);
+      scrollActiveIntoView(prev);
+    }
     if (e.key === "Enter" && results[idx]) { results[idx].action(); onClose(); }
     if (e.key === "Escape") { onClose(); }
   }
@@ -162,7 +179,7 @@ export function CommandPalette({ accounts, contacts, userId, onSelectAccount, on
             }}
           />
         </div>
-        <div id="command-palette-results" role="listbox" aria-label="Search results" style={{ maxHeight: 320, overflowY: "auto" }}>
+        <div ref={listRef} id="command-palette-results" role="listbox" aria-label="Search results" style={{ maxHeight: 320, overflowY: "auto" }}>
           {results.length === 0 && (
             <div style={{ padding: "20px 16px", color: C.textMuted, fontSize: 13, textAlign: "center" }}>No results</div>
           )}

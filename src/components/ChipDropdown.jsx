@@ -14,6 +14,20 @@ export function ChipDropdown({ label, options, value, values, onSelect, multi, p
     if (!multi) setOpen(false);
   }
 
+  function handleKeyDown(e) {
+    if (!open) {
+      if (e.key === "Enter" || e.key === " " || e.key === "ArrowDown") {
+        e.preventDefault();
+        setOpen(true);
+      }
+      return;
+    }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      setOpen(false);
+    }
+  }
+
   var displayLabel = multi
     ? (selected.length > 0 ? selected.join(", ") : (placeholder || label))
     : (selected || placeholder || label);
@@ -23,6 +37,9 @@ export function ChipDropdown({ label, options, value, values, onSelect, multi, p
       <button
         type="button"
         onClick={function () { setOpen(function (v) { return !v; }); }}
+        onKeyDown={handleKeyDown}
+        aria-haspopup="listbox"
+        aria-expanded={open}
         style={{
           background: C.bgCard,
           border: "1px solid " + C.border,
@@ -52,28 +69,34 @@ export function ChipDropdown({ label, options, value, values, onSelect, multi, p
             onClick={function () { setOpen(false); }}
             style={{ position: "fixed", inset: 0, zIndex: 99 }}
           />
-          <div style={{
-            position: "absolute",
-            top: "calc(100% + 4px)",
-            left: 0,
-            right: 0,
-            background: C.bgDropdown,
-            border: "1px solid " + C.border,
-            borderRadius: 10,
-            padding: 6,
-            zIndex: 100,
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 6,
-            maxHeight: 200,
-            overflowY: "auto",
-          }}>
+          <div
+            role="listbox"
+            aria-label={label}
+            aria-multiselectable={multi ? "true" : undefined}
+            style={{
+              position: "absolute",
+              top: "calc(100% + 4px)",
+              left: 0,
+              right: 0,
+              background: C.bgDropdown,
+              border: "1px solid " + C.border,
+              borderRadius: 10,
+              padding: 6,
+              zIndex: 100,
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 6,
+              maxHeight: 200,
+              overflowY: "auto",
+            }}>
             {options.map(function (opt) {
               var sel = isSelected(opt);
               return (
                 <button
                   key={opt}
                   type="button"
+                  role="option"
+                  aria-selected={sel}
                   onClick={function () { handleSelect(opt); }}
                   style={{
                     background: sel ? C.accentLine : C.accentFaint,

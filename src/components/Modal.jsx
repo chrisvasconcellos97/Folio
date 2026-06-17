@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useId } from "react";
+import { createPortal } from "react-dom";
 import { C } from "../lib/colors";
 import { useBreakpoint } from "../hooks/useBreakpoint";
 
@@ -14,6 +15,14 @@ export function Modal({ title, onClose, children, width }) {
   useEffect(function () { onCloseRef.current = onClose; }, [onClose]);
   var isDesktop = useBreakpoint();
   var isMobile = !isDesktop;
+  var titleId = useId();
+
+  // Body scroll-lock while modal is open
+  useEffect(function () {
+    var prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return function () { document.body.style.overflow = prev; };
+  }, []);
 
   useEffect(function () {
     var trigger = document.activeElement;
@@ -50,7 +59,7 @@ export function Modal({ title, onClose, children, width }) {
     if (e.target === e.currentTarget) onCloseRef.current();
   }
 
-  return (
+  return createPortal(
     <div
       className="fade-in"
       onClick={handleBackdrop}
@@ -67,6 +76,9 @@ export function Modal({ title, onClose, children, width }) {
     >
       <div
         ref={innerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
         className="fade-in modal-sheet"
         style={{
           background: C.bgCard,
@@ -89,7 +101,7 @@ export function Modal({ title, onClose, children, width }) {
             marginBottom: 20,
           }}
         >
-          <div style={{ fontSize: 16, fontWeight: 600, color: C.text }}>
+          <div id={titleId} style={{ fontSize: 16, fontWeight: 600, color: C.text }}>
             {title}
           </div>
           <button
@@ -116,6 +128,7 @@ export function Modal({ title, onClose, children, width }) {
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

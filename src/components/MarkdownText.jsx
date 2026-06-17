@@ -104,7 +104,7 @@ export function MarkdownText({ text, style, linkify }) {
       {blocks.map(function (b, idx) {
         if (b.t === "h2") {
           return (
-            <div
+            <h2
               key={idx}
               style={{
                 display: "flex",
@@ -113,27 +113,27 @@ export function MarkdownText({ text, style, linkify }) {
                 fontWeight: 700,
                 marginTop: idx ? 14 : 0,
                 marginBottom: 6,
+                margin: idx ? "14px 0 6px" : "0 0 6px",
               }}
             >
               {renderInline(b.v, "h2-" + idx, linkify)}
-            </div>
+            </h2>
           );
         }
         if (b.t === "h3") {
           return (
-            <div
+            <h3
               key={idx}
               style={{
                 display: "flex",
                 alignItems: "center",
                 fontSize: "1em",
                 fontWeight: 700,
-                marginTop: idx ? 10 : 0,
-                marginBottom: 4,
+                margin: idx ? "10px 0 4px" : "0 0 4px",
               }}
             >
               {renderInline(b.v, "h3-" + idx, linkify)}
-            </div>
+            </h3>
           );
         }
         if (b.t === "ul") {

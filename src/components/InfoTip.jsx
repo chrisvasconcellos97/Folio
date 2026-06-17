@@ -5,6 +5,7 @@ export function InfoTip({ text, position }) {
   // position: "above" (default) | "below"
   var [open, setOpen] = useState(false);
   var ref = useRef(null);
+  var tooltipId = useRef("infotip-" + Math.floor(Math.random() * 1e9)).current;
 
   // Close on outside click/tap
   useEffect(function () {
@@ -32,6 +33,8 @@ export function InfoTip({ text, position }) {
         onMouseEnter={function () { setOpen(true); }}
         onMouseLeave={function () { setOpen(false); }}
         onClick={function (e) { e.stopPropagation(); setOpen(function (o) { return !o; }); }}
+        aria-label="More info"
+        aria-describedby={open ? tooltipId : undefined}
         style={{
           background: "none", border: "none", padding: "0 2px",
           cursor: "pointer", color: C.textFaint,
@@ -40,21 +43,23 @@ export function InfoTip({ text, position }) {
           WebkitTapHighlightColor: "transparent",
           touchAction: "manipulation",
         }}
-        aria-label="More info"
       >ⓘ</button>
       {open && (
-        <div style={{
-          position: "absolute",
-          [pos === "below" ? "top" : "bottom"]: "calc(100% + 6px)",
-          left: "50%", transform: "translateX(-50%)",
-          background: C.surface, border: "1px solid " + C.rule,
-          borderRadius: 8, padding: "8px 10px",
-          width: 210, fontSize: 11, color: C.textSoft,
-          lineHeight: 1.5, zIndex: 300,
-          boxShadow: "0 4px 16px var(--c-overlay-shadow, rgba(0,0,0,0.35))",
-          whiteSpace: "normal", textAlign: "left",
-          pointerEvents: "none",
-        }}>
+        <div
+          id={tooltipId}
+          role="tooltip"
+          style={{
+            position: "absolute",
+            [pos === "below" ? "top" : "bottom"]: "calc(100% + 6px)",
+            left: "50%", transform: "translateX(-50%)",
+            background: C.surface, border: "1px solid " + C.rule,
+            borderRadius: 8, padding: "8px 10px",
+            width: 210, fontSize: 11, color: C.textSoft,
+            lineHeight: 1.5, zIndex: 300,
+            boxShadow: "0 4px 16px var(--c-overlay-shadow-soft)",
+            whiteSpace: "normal", textAlign: "left",
+            pointerEvents: "none",
+          }}>
           {text}
           <div style={{
             position: "absolute",

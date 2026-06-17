@@ -43,8 +43,10 @@ export function AccountPicker({ accounts, value, onChange, placeholder, allowNon
     return selectedAccount ? typeOf(selectedAccount) : "account";
   });
 
-  var inputRef    = useRef(null);
-  var containerRef = useRef(null);
+  var inputRef      = useRef(null);
+  var containerRef  = useRef(null);
+  var listboxIdRef  = useRef("account-picker-lb-" + Math.floor(Math.random() * 1e9));
+  var listboxId     = listboxIdRef.current;
 
   // Close on outside click
   useEffect(function () {
@@ -152,7 +154,6 @@ export function AccountPicker({ accounts, value, onChange, placeholder, allowNon
             alignItems: "center",
             justifyContent: "space-between",
             gap: 8,
-            outline: "none",
           }}
         >
           <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
@@ -160,14 +161,19 @@ export function AccountPicker({ accounts, value, onChange, placeholder, allowNon
           </span>
           <span style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
             {selectedAccount && (
-              <span
+              <button
+                type="button"
                 onClick={clearSelection}
-                role="button"
                 aria-label="Clear selection"
-                style={{ fontSize: 13, color: C.textMuted, lineHeight: 1, padding: "0 2px", cursor: "pointer" }}
+                style={{
+                  background: "none", border: "none",
+                  fontSize: 13, color: C.textMuted, lineHeight: 1,
+                  padding: "0 2px", cursor: "pointer",
+                  display: "inline-flex", alignItems: "center",
+                }}
               >
                 ×
-              </span>
+              </button>
             )}
             <span style={{ opacity: 0.4, fontSize: 10 }}>▼</span>
           </span>
@@ -224,6 +230,8 @@ export function AccountPicker({ accounts, value, onChange, placeholder, allowNon
         aria-label="Search accounts"
         aria-haspopup="listbox"
         aria-expanded="true"
+        aria-controls={listboxId}
+        aria-activedescendant={focused >= 0 ? listboxId + "-opt-" + focused : undefined}
         style={{
           width: "100%",
           boxSizing: "border-box",
@@ -240,6 +248,7 @@ export function AccountPicker({ accounts, value, onChange, placeholder, allowNon
 
       {/* Dropdown list */}
       <div
+        id={listboxId}
         role="listbox"
         style={{
           position: "absolute",
@@ -259,6 +268,7 @@ export function AccountPicker({ accounts, value, onChange, placeholder, allowNon
         {/* None option */}
         {allowNone && (
           <div
+            id={listboxId + "-opt-0"}
             role="option"
             aria-selected={!value}
             onClick={function () { selectAccount(null); }}
@@ -290,6 +300,7 @@ export function AccountPicker({ accounts, value, onChange, placeholder, allowNon
           return (
             <div
               key={a.id}
+              id={listboxId + "-opt-" + listIdx}
               role="option"
               aria-selected={isSelected}
               onClick={function () { selectAccount(a.id); }}

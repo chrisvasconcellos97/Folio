@@ -10,7 +10,6 @@ export function ErrorBanner({ message, onRetry }) {
   return (
     <div
       role="alert"
-      aria-live="polite"
       style={{
         background: C.redFaint,
         border: "1px solid " + C.redLine,

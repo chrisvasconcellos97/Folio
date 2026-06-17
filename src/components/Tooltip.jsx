@@ -57,7 +57,7 @@ export function FirstRunTooltip({ id, text, children }) {
             background: C.bgCardAlt, border: "1px solid " + C.accentLine,
             borderRadius: 8, padding: "8px 12px", width: 200,
             fontSize: 11, color: C.textSub, lineHeight: 1.5,
-            zIndex: 200, cursor: "pointer", boxShadow: "0 4px 16px rgba(0,0,0,0.3)",
+            zIndex: 200, cursor: "pointer", boxShadow: "0 4px 16px var(--c-overlay-shadow-soft)",
             whiteSpace: "normal", textAlign: "center",
           }}
         >
