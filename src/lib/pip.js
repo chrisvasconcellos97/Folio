@@ -1490,6 +1490,7 @@ export function compressCorrectionsPip(payload) {
     userName + " prefers \"build integration\" wording over \"obtain API documentation\"'). " +
     "If existing lessons are provided, incorporate them — don't lose prior insight. " +
     "If there are no clear patterns, return an empty string. " +
+    "NEVER record quantitative company/business data (revenue, transaction volumes, customer/shop counts, shop lists or rosters, pricing, contract terms) — generalize any such figure qualitatively (e.g. 'high-volume account') rather than storing the number. " +
     "Output ONLY the paragraph, no preamble, no markdown.\n\n" +
     "Account: " + accountName + "\n" +
     (existingLessons ? "Existing lessons:\n" + existingLessons + "\n\n" : "") +

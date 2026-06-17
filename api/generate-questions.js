@@ -94,7 +94,7 @@ export default async function handler(req, res) {
     // ── Gather compact portfolio state ──
     var results = await Promise.all([
       supabase.from("folio_accounts")
-        .select("id, name, tier, account_type, status, status_override, last_interaction_at, objective, created_at")
+        .select("id, name, tier, account_type, status, status_override, last_interaction_at, objective, created_at, owner_user_id")
         .eq("user_id", userId).eq("is_inactive", false).limit(60),
       supabase.from("folio_meetings")
         .select("theme, pip_tone")
@@ -146,6 +146,9 @@ export default async function handler(req, res) {
       if (ds != null) bits.push(ds + "d since contact");
       if (a.status_override) bits.push("flagged " + a.status_override);
       if (!a.objective || !a.objective.trim()) bits.push("no objective on file");
+      // Ownership: accounts owned by someone else are project-involvement only —
+      // Pip must not generate relationship/outreach questions for them.
+      if (a.owner_user_id && a.owner_user_id !== userId) bits.push("project-involved only — NOT your relationship");
       return "- " + bits.join(" · ");
     }
     var internalAccts = accounts.slice(0, 50).filter(function (a) { return a.account_type === "internal_team"; });
@@ -220,6 +223,7 @@ export default async function handler(req, res) {
       "  - \"portfolio\": a question that reasons across the data — a theme on multiple accounts, a gap between what they do and what you understand, something that doesn't add up, what 'good' looks like, how they're measured, who really decides. ALWAYS anchor it to something specific you see (name the account/theme/project). Lead with the observation, then the question.",
       "  - \"term\": a SIMPLE clarifier when you see a proper noun, acronym, brand, or system you don't understand (and it isn't already in known facts). e.g. \"You mention <X> a lot — what is it?\". Set the \"term\" field to that word.",
       "ORG STRUCTURE: 'YOUR OWN INTERNAL TEAMS' are the user's own departments — never ask questions that treat them as external relationships to manage. Only ask about them in terms of how they coordinate with external managed accounts.",
+      "OWNERSHIP: accounts marked 'project-involved only — NOT your relationship' belong to a colleague; never ask relationship, outreach, or cadence questions about them — only project-specific questions if something is genuinely unclear.",
       "Voice: first person, plain, a little eager-to-help. Never generic personality-quiz filler ('what does a great week look like'). Every question must be impossible to ask without having read THIS portfolio.",
       "Do NOT ask anything already answered by Known facts / profile, and do NOT repeat anything in Already asked.",
       "HARD DATA LINE (locked rule — never violate): NEVER ask for revenue figures, transaction volumes, customer counts, shop lists or rosters, pricing, or contract terms. This notebook deliberately excludes the employer's quantitative business data. When business performance matters, ask DIRECTIONALLY ('is volume trending up or down since the integration?') — never for a number, a count, or a list of customers.",
@@ -301,6 +305,7 @@ export default async function handler(req, res) {
     if (manual && rows.length === 0) {
       var fbAccounts = accounts
         .filter(function (a) { return a.account_type !== "internal_team"; })
+        .filter(function (a) { return !(a.owner_user_id && a.owner_user_id !== userId); })
         .sort(function (a, b) {
           var an = (!a.objective || !a.objective.trim()) ? 0 : 1;
           var bn = (!b.objective || !b.objective.trim()) ? 0 : 1;

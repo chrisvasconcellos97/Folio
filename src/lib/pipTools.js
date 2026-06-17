@@ -178,7 +178,7 @@ export var PIP_TOOLS = [
   // ---- Memory --------------------------------------------------------
   {
     name: "remember_fact",
-    description: "Save a stable preference or fact about the user for future calls. Use sparingly — only for things worth remembering forever (preferred reply style, territory, naming preferences, etc.). Not for ephemeral notes.",
+    description: "Save a stable preference or fact about the user for future calls. Use sparingly — only for things worth remembering forever (preferred reply style, territory, naming preferences, etc.). Not for ephemeral notes. NEVER store quantitative company/business data (revenue, transaction volumes, customer/shop counts, shop lists or rosters, pricing, contract terms) — if such a number comes up, generalize it qualitatively (e.g. 'high-volume supplier, volume healthy') rather than recording the figure.",
     input_schema: {
       type: "object",
       properties: {

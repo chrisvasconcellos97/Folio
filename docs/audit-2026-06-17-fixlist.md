@@ -232,4 +232,4 @@ Contained REAL items landed via Patch batch2 (38 files):
 - §2 code: search_history user-scoped, App share-target guard, onAddContacts catch, SUMMARIZE injection line, followup cap, detect/followup rate limits
 - §4: isMine helper, METHOD_LABEL dedup, completion-task via hook, ContactsTab PipInsightCard, AddContactModal is_primary, EVERGREEN removed
 
-REMAINING (dedicated session): §3 Pip-context wiring (~15; globalPeople→chat #1 bug NOW FIXED — App→PipView→buildContext→curateContext→renderContextProse 'PEOPLE YOU ALREADY KNOW'), §10 structural (buildAccountContext, dual-task-model, file splits, circular import), 4 JUDGMENT, + any §7 unbounded-query/memo items the batch deferred.
+REMAINING (dedicated session): §3 Pip-context wiring (~11; data-line on remember_fact+compressCorrections DONE; owner_user_id ownership-awareness in generate-questions DONE; globalPeople→chat #1 bug NOW FIXED — App→PipView→buildContext→curateContext→renderContextProse 'PEOPLE YOU ALREADY KNOW'), §10 structural (buildAccountContext, dual-task-model, file splits, circular import), 4 JUDGMENT, + any §7 unbounded-query/memo items the batch deferred.
