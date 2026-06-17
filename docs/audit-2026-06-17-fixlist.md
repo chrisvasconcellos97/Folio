@@ -85,19 +85,19 @@ Check off `[x]` as we go. Work order suggestion: §1 → §2 → §3 → §4 →
 ## §4 — COHERENCE / FRANKENSTEIN (shared helpers, de-dup)
 
 - [ ] (L,P1) **Single `isMine(account, userId)` helper** applied everywhere — HomeView:875 burningRows + :952 aheadRows + StatusBanner cold + generate-questions + pip-state-refresh all ignore owner_user_id → "not mine" MSO accounts reappear as fires/nudges. (item-38 finish)
-- [ ] (M,P1) `LeaderProjectsView.jsx:26-33` local STATUS_LABELS + C["status"+key] string-concat → use gaugeStatusLabel()/gaugeStatusToken() (boss-facing view).
+- [x] (M,P1) `LeaderProjectsView.jsx:26-33` local STATUS_LABELS + C["status"+key] string-concat → use gaugeStatusLabel()/gaugeStatusToken() (boss-facing view).
 - [x] (S,P1) `ItemsTab.jsx:255` recipient now via resolveAssignee(members) (email-leak fix).
-- [ ] (S,P1) `FlatTaskQueue` email.split("@")[0] for initials → resolveAssignee.
+- [x] (S,P1) `FlatTaskQueue` email.split("@")[0] for initials → resolveAssignee.
 - [ ] (P1) verify `CadenceHub:479` verbatim assignee_email + `:750` split("@") still fixed (Batch 2 claimed [x]) → else ownerLabel.
 - [ ] (S,P1) METHOD_LABEL duplicated AdHocConversationFlow + StartConversationModal → extract shared.
-- [ ] (S,P2) STATUS_LABELS dup AccountDetailHeader:25 + AccountsView:34 → export from accountHealth.js; unify green/yellow/red vs healthy/watching/at_risk vocab.
+- [x] (S,P2) STATUS_LABELS dup AccountDetailHeader:25 + AccountsView:34 → export from accountHealth.js; unify green/yellow/red vs healthy/watching/at_risk vocab.
 - [x] (S,P2) `OverviewTab:792` sub-account "Watch" → "Watching".
-- [ ] (M,P2) 4 tabs use bespoke empty-state divs not shared EmptyState (ShopsTab/UpdatesTab/ProjectsTab/CadenceTab); also FlatTaskQueue.
+- [x] (M,P2) 4 tabs use bespoke empty-state divs not shared EmptyState (ShopsTab/UpdatesTab/ProjectsTab/CadenceTab); also FlatTaskQueue.
 - [ ] (M,P2) `ProjectsTab:122-132,241` + `MeetingsTab` completion task inserts via raw supabase, ProjectModal missing userId/members → no touchAccount/logActivity/source/pip_created_at.
 - [ ] (S,P2) `ContactsTab:277` builds insight without PipInsightCard wrapper (loses hex/collapse).
 - [ ] (M,P2) `folio_merge_accounts` — re-parent `folio_pip_questions.suggestion.account_id` (+ folio_contact_aliases.account_id) → else post-merge drip writes to dead account.
 - [ ] (S,P2) merge deletes source pip_account_state but never refreshes target → stale card. touchAccount(target) or toast.
-- [ ] (M,P2) LeaderProjectsView + TeammateDetailView count accounts via account_id only → use projectMatchesAccount (account_ids[]).
+- [x] (M,P2) LeaderProjectsView + TeammateDetailView count accounts via account_id only → use projectMatchesAccount (account_ids[]).
 - [ ] (M,P2) DUAL TASK MODEL — pipPlanApply writes stages; MyQueueView reads stages; FlatTaskQueue/TeammateDetailView read folio_tasks → no single complete view. (see §10 — needs a decision)
 - [ ] (S,P2) EditContactModal has is_primary toggle, AddContactModal doesn't → parity.
 - [ ] (S,P3) AddItemModal title "Add Open Item" vs "Open Items" vs "Edit Task" naming.
@@ -111,15 +111,15 @@ Check off `[x]` as we go. Work order suggestion: §1 → §2 → §3 → §4 →
 - [x] (S,P1) `UserMenu.jsx:128` hardcoded #091712 → C.bg.
 - [x] (S,P2) `HexRingCanvas.jsx:53,117-118,126` hardcoded teal/rgba → read var(--c-accent) via getComputedStyle (won't re-skin Life/light).
 - [ ] (S,P2) `index.html` home-card-ring-glow keyframe hardcoded teal rgba → var(--c-accent-shadow/glow).
-- [ ] (S,P2) `AccountDetailHeader.jsx:225` Cooling pill rgba(251,191,36) → token.
-- [ ] (S,P2) `AccountsView.jsx:1248` tag filter rgba(91,143,212) → token.
-- [ ] (S,P2) `MeetingsTab:387` rgba(0,0,0,0.2) dark smear on light → token.
+- [x] (S,P2) `AccountDetailHeader.jsx:225` Cooling pill rgba(251,191,36) → token.
+- [x] (S,P2) `AccountsView.jsx:1248` tag filter rgba(91,143,212) → token.
+- [x] (S,P2) `MeetingsTab:387` rgba(0,0,0,0.2) dark smear on light → token.
 - [ ] (S,P2) `MeetingsTab:339` →Gauge btn hardcoded blue → statusPlanned token.
-- [ ] (S,P2) `OverviewTab:620` cold-contact alert rgba(204,140,0) → token.
+- [x] (S,P2) `OverviewTab:620` cold-contact alert rgba(204,140,0) → token.
 - [ ] (S,P2) `DigestIngestModal:161` color C.bg on accentDeep bg → near-invisible in light → onAccent/white token.
 - [ ] (S,P2) `PipCatchUp` textarea C.bgDark → may be invisible in light → input token.
 - [x] (S,P2) `CommandPalette` raw rgba(0,0,0,0.6) → var(--c-overlay-shadow-strong); `Tooltip`/`ConnectionStatus` rgba shadows → overlay-shadow-soft.
-- [ ] (S,P3) `AddAccountModal:34,577` raw purple; `ProjectsTab:171` rgba border; `AddContactModal:127` → C.accentFaint; `DesktopLayout:171` gauge nav rgba → tokens.
+- [ ] (S,P3, BLOCKED) `AddAccountModal:34,577` raw purple — needs C.purpleFaint/purpleLine tokens (don't exist yet); add tokens first; `ProjectsTab:171` rgba border; `AddContactModal:127` → C.accentFaint; `DesktopLayout:171` gauge nav rgba → tokens.
 - [ ] (S,P3) `index.html` Life blocks don't redefine --c-glass-*/--c-pip-card-*/--c-tier-*/--c-status-* → green glass on blue (latent → Life Phase 2 token audit).
 
 ## §6 — MOBILE / A11Y
@@ -134,7 +134,7 @@ Check off `[x]` as we go. Work order suggestion: §1 → §2 → §3 → §4 →
 - [x] (S,P2) `InfoTip`/`Tooltip` — no role=tooltip + aria-describedby (content invisible to screen readers).
 - [x] (S,P2) `ErrorBanner` — has BOTH role=alert AND aria-live=polite (polite wins → not assertive). Remove the polite.
 - [ ] (S,P2) `AccountDetailTabs` — no role=tablist/tab/aria-selected.
-- [ ] (S,P2) `AccountMergeModal` "ARE YOU SURE" div → role=alert.
+- [x] (S,P2) `AccountMergeModal` "ARE YOU SURE" div → role=alert.
 - [x] (S,P2) `AccountPicker` clear-× span → real button + aria-label; add aria-activedescendant on keyboard nav.
 - [x] (S,P2) `CommandPalette` — no scroll-into-view for keyboard-focused option.
 - [x] (S,P2) `MarkdownText` `##`/`###` render as div not h2/h3 → flat outline.
@@ -143,7 +143,7 @@ Check off `[x]` as we go. Work order suggestion: §1 → §2 → §3 → §4 →
 - [ ] (S,P2) `MobileLayout` workspaces popover lacks id/aria-controls; no skip-to-content on mobile.
 - [ ] (S,P3) AuthView success message lacks role=status/aria-live; CheckInCard receipts lack role=status/aria-live.
 - [x] (S,P3) Buttons: DangerBtn can't take type/aria-label (unify 4 button prop interfaces); LitPill sets disabled not aria-disabled; Glow renders <button disabled> for decorative text; AddToTasksButton/GaugeIcon missing aria.
-- [ ] (S,P3) AddContactModal/EditContactModal toggle divs lack role/tabIndex/onKeyDown; Mine/Not-mine toggle needs aria-pressed; calendar day cells no role=gridcell.
+- [x] (S,P3) AddContactModal/EditContactModal toggle divs lack role/tabIndex/onKeyDown; Mine/Not-mine toggle needs aria-pressed; calendar day cells no role=gridcell.
 - [x] (S,P3) HexRingCanvas — no prefers-reduced-motion guard (WCAG 2.3.3).
 - [ ] (S,P3) HexSignature off-spec: HomeView:2010 cells={2}→{3}; AuthView:310 peak=0.28/cell=5 → canonical.
 
