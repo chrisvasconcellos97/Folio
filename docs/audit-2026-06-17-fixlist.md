@@ -25,7 +25,7 @@ Check off `[x]` as we go. Work order suggestion: §1 → §2 → §3 → §4 →
 - [x] (S,P1) `CadenceHub:2314` — added `.catch` + error toast → silent copy failure (spinner clears, nothing copied). Add catch+toast.
 - [ ] (M,P1) `CadenceHub:1338-1347` — multi-dept roster merge has NO dedup → contact in 2 depts appears twice in Pip payload (double-weight / "add known person"). Dedup by id.
 - [ ] (M,P1) Circular import `CadenceMeetingMode.jsx:7` ↔ `CadenceHub.jsx:11` (HubProjectCard/PipBriefPanel/OpenItemRow) → extract 3 shared comps.
-- [ ] (S,P2) `AccountDetail.jsx:228` — todayISO UTC not ET → use etToday.
+- [x] (S,P2) `AccountDetail.jsx:228` — todayISO now ET-anchored (Intl, matches accountSnapshots) → fixes pill-vs-sparkline disagreement too.
 - [x] (S,P2) `HomeView:975-980` — heroLine now uses `wordCommitments.length` not `wordCommitments.length` → orb says "3 promises due" while check-in handles 2.
 - [ ] (M,P2) `HomeView:304,257` — brief cache key UTC vs snapshots ET → 8pm-midnight caches stale under "tomorrow" key → next morning brief stale. Use ET date.
 - [ ] (S,P2) `HomeView:615` — brief effect missing `accounts` in dep array → brief never rebuilds if accounts load after guard passes.
@@ -86,12 +86,12 @@ Check off `[x]` as we go. Work order suggestion: §1 → §2 → §3 → §4 →
 
 - [ ] (L,P1) **Single `isMine(account, userId)` helper** applied everywhere — HomeView:875 burningRows + :952 aheadRows + StatusBanner cold + generate-questions + pip-state-refresh all ignore owner_user_id → "not mine" MSO accounts reappear as fires/nudges. (item-38 finish)
 - [ ] (M,P1) `LeaderProjectsView.jsx:26-33` local STATUS_LABELS + C["status"+key] string-concat → use gaugeStatusLabel()/gaugeStatusToken() (boss-facing view).
-- [ ] (S,P1) `ItemsTab.jsx:255` recipient.split("@")[0] email leak → ownerLabel().
+- [x] (S,P1) `ItemsTab.jsx:255` recipient now via resolveAssignee(members) (email-leak fix).
 - [ ] (S,P1) `FlatTaskQueue` email.split("@")[0] for initials → resolveAssignee.
 - [ ] (P1) verify `CadenceHub:479` verbatim assignee_email + `:750` split("@") still fixed (Batch 2 claimed [x]) → else ownerLabel.
 - [ ] (S,P1) METHOD_LABEL duplicated AdHocConversationFlow + StartConversationModal → extract shared.
 - [ ] (S,P2) STATUS_LABELS dup AccountDetailHeader:25 + AccountsView:34 → export from accountHealth.js; unify green/yellow/red vs healthy/watching/at_risk vocab.
-- [ ] (S,P2) `OverviewTab:793` sub-account "Watch" → "Watching".
+- [x] (S,P2) `OverviewTab:792` sub-account "Watch" → "Watching".
 - [ ] (M,P2) 4 tabs use bespoke empty-state divs not shared EmptyState (ShopsTab/UpdatesTab/ProjectsTab/CadenceTab); also FlatTaskQueue.
 - [ ] (M,P2) `ProjectsTab:122-132,241` + `MeetingsTab` completion task inserts via raw supabase, ProjectModal missing userId/members → no touchAccount/logActivity/source/pip_created_at.
 - [ ] (S,P2) `ContactsTab:277` builds insight without PipInsightCard wrapper (loses hex/collapse).

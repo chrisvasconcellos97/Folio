@@ -225,7 +225,9 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
   var openCount = items.filter(function (i) { return !i.done; }).length;
 
   // Compute Pip health for this account (used by header pill + override modal).
-  var todayISO   = new Date().toISOString().slice(0, 10);
+  // ET-anchored (matches accountSnapshots) so the header health pill agrees
+  // with the snapshot-driven sparkline instead of flipping a day early after 8pm ET.
+  var todayISO   = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   var healthSignals = gatherSignals(account, items, projects, todayISO);
   var computedHealth = computeAccountHealth(account, healthSignals);
 

@@ -789,7 +789,7 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
                       )}
                       {sub.status && (
                         <span style={{ fontSize: 10, color: STATUS_COLORS[sub.status] || C.textMuted }}>
-                          {{ green: 'Healthy', yellow: 'Watch', red: 'At Risk' }[sub.status] || sub.status}
+                          {{ green: 'Healthy', yellow: 'Watching', red: 'At Risk' }[sub.status] || sub.status}
                         </span>
                       )}
                     </div>

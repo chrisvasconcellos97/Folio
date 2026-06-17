@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { C, glass } from "../../../lib/colors";
 import { fmtShort, fmtMedium } from "../../../lib/dateUtils";
+import { resolveAssignee } from "../../../lib/ownerLabel";
 import { EmptyState } from "../../../components/EmptyState";
 
 var IT_SERIF = "'Fraunces', Georgia, serif";
@@ -252,7 +253,7 @@ export function ItemsTab({ items, taskCadences, accountId, userId, userEmail, on
                       <div style={{ fontFamily: IT_MONO, fontSize: 10, color: C.textMuted, letterSpacing: "0.04em" }}>{"Owner: " + item.owner}</div>
                     )}
                     {item.recipient && (
-                      <div style={{ fontFamily: IT_MONO, fontSize: 10, color: C.textMuted, letterSpacing: "0.04em" }}>{"For: " + (item.recipient.includes("@") ? item.recipient.split("@")[0] : item.recipient)}</div>
+                      <div style={{ fontFamily: IT_MONO, fontSize: 10, color: C.textMuted, letterSpacing: "0.04em" }}>{"For: " + resolveAssignee(item.recipient, members)}</div>
                     )}
                   </div>
                 </div>
