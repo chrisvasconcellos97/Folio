@@ -22,7 +22,7 @@ begin
   new.updated_at = now();
   return new;
 end;
-$$ language plpgsql;
+$$ language plpgsql set search_path = '';  -- pinned (security advisor 0011)
 
 -- ──────────────────────────────────────────────────────────────────────
 -- Accounts
@@ -261,7 +261,7 @@ create index if not exists folio_tasks_open_idx          on folio_tasks (user_id
 create index if not exists folio_tasks_commitment_idx    on folio_tasks (user_id, is_commitment) where is_commitment = true;
 
 create or replace function folio_tasks_touch_updated_at()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql set search_path = '' as $$
 begin
   new.updated_at := now();
   return new;
