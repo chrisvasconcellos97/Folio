@@ -1265,6 +1265,7 @@ export default function App() {
       meetings={meetings}
       items={allItems}
       contacts={allContacts}
+      globalPeople={globalPeople}
       tasks={tasks}
       addTask={addTask}
       updateTask={updateTask}

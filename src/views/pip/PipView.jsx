@@ -372,6 +372,9 @@ export function PipView(props) {
             account: acct ? acct.name : null,
           };
         }),
+      // Global people directory (all accounts' contacts + internal team) so chat
+      // Pip recognizes known people instead of suggesting them as new contacts.
+      globalPeople: props.globalPeople || [],
       userId: userId || null,
     };
   }

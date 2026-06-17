@@ -101,6 +101,7 @@ export function curateContext(raw, message, focusedAccountIds, opts) {
       upcomingTaskCadences: raw.upcomingTaskCadences || [],
       activeGaugeProjects: raw.activeGaugeProjects || [],
       recentDeliveries: raw.recentDeliveries || [],
+      globalPeople: raw.globalPeople || [],
       userId: raw.userId || null,
     };
   }
@@ -125,6 +126,7 @@ export function curateContext(raw, message, focusedAccountIds, opts) {
     upcomingTaskCadences: raw.upcomingTaskCadences || [],
     activeGaugeProjects: raw.activeGaugeProjects || [],
     recentDeliveries: raw.recentDeliveries || [],
+    globalPeople: raw.globalPeople || [],
     userId: raw.userId || null,
   };
 }
@@ -514,6 +516,16 @@ export function renderContextProse(curated) {
   var myDept = (curated.accounts || []).find(function (a) { return a.is_my_department; });
   if (myDept) {
     sections.push("MY TEAM: " + myDept.name + " — the user's own department. Internal meetings and team members here are the user's direct colleagues, not customers.");
+  }
+
+  // People directory — everyone the user already knows (all accounts + internal
+  // team). Lets chat Pip recognize a named person instead of suggesting them as
+  // a brand-new contact (the #1 reported failure).
+  if (Array.isArray(curated.globalPeople) && curated.globalPeople.length) {
+    var pplLines = curated.globalPeople.slice(0, 400).map(function (p) {
+      return "- " + [p.name, p.account, p.title].filter(Boolean).join(" · ");
+    });
+    sections.push("PEOPLE YOU ALREADY KNOW (all accounts + internal team — do NOT treat these as new contacts):\n" + pplLines.join("\n"));
   }
 
   if (curated.mode === "list") {
