@@ -844,6 +844,21 @@ export function summarizeDraftPip(payload, opts) {
       (rawCorrLines || "(no prior corrections — first time on this account)") + "\n\n";
   }
 
+  // Pip's own overnight operator read on this account — so a fresh summary
+  // doesn't re-propose work Pip already flagged/drafted (the "re-suggests
+  // already-flagged work" complaint). Qualitative only.
+  var opSituation = pipAccountState && pipAccountState.operator_situation ? String(pipAccountState.operator_situation).trim() : "";
+  var opRisks     = pipAccountState && Array.isArray(pipAccountState.operator_risks) ? pipAccountState.operator_risks : [];
+  var operatorBlock = "";
+  if (opSituation || opRisks.length) {
+    operatorBlock = "── PIP'S RECENT READ ON THIS ACCOUNT (already surfaced — don't re-propose these as brand-new) ──\n" +
+      (opSituation ? opSituation + "\n" : "") +
+      (opRisks.length
+        ? "Already-flagged open risks: " + opRisks.slice(0, 6).map(function (r) { return typeof r === "string" ? r : (r && r.text ? r.text : ""); }).filter(Boolean).join("; ") + "\n"
+        : "") +
+      "\n";
+  }
+
   // ── Structured content blocks with cache breakpoints ────────────────────
   //
   // Block layout for stacked caching (up to 4 breakpoints):
@@ -975,7 +990,8 @@ export function summarizeDraftPip(payload, opts) {
     renderRecentUpdatesBlock(recentUpdates) +
     renderCommitmentsInBlock(openItems, todayISOForCommitments) +
     renderPromiseLogBlock(promiseStats) +
-    correctionBlock;
+    correctionBlock +
+    operatorBlock;
 
   // BP4 — meeting history + existing items + tasks + projects + hints (changes per meeting session)
   var bp4Text =
