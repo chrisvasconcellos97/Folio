@@ -16,7 +16,7 @@ Check off `[x]` as we go. Work order suggestion: §1 → §2 → §3 → §4 →
 - [x] (M,P0) `cadenceUtils.js:65-83` — biweekly null-anchor NaN guard added (falls back to `from`).
 - [ ] (S,P1) `useItems.js:38` — `.eq("done",false)` → ItemsTab "Closed" section permanently empty (completed tasks vanish). Parameterize / 2nd query on expand.
 - [x] (S,P1) `CommitmentsView.jsx:95` — now passes `acct.id` (was full OBJECT) vs HomeView's `(account.id)` → tap opens wrong account / crashes on .name. One-char.
-- [ ] (M,P1) `AdHocConversationFlow.jsx:164-173` — `discussedProjectIds`/`discussedItemIds` not forwarded into `previewPlan` → every ad-hoc summarize throws away Pip's project-routing signal.
+- [x] (M,P1) `AdHocConversationFlow.jsx` — STALE: handleSummarize already forwards discussedProjectIds/ItemIds (L141-142); CadenceMeetingMode passes them at L568. Already wired. — `discussedProjectIds`/`discussedItemIds` not forwarded into `previewPlan` → every ad-hoc summarize throws away Pip's project-routing signal.
 - [x] (S,P1) `pipPlanApply.js:118-130` — FIXED: is_commitment now carried on staged taskEntry. — new_task Gauge-staging path drops `is_commitment` → commitment tasks routed to a project never reach "Your word"/nudges/ledger.
 - [x] (S,P1) `pip.js:1238-1248` — FALSE POSITIVE: new_task is always project-bound (rejects no project_id); suggested_project_title is for standalone new_item grouping only. Not applicable. — `normalizePlanRow` new_task branch drops `suggested_project_title` → "Pip suggests a project" banner never fires for task rows.
 - [ ] (M,P1) `DigestIngestModal.jsx:91` — OWE rows call `insertTask({title:...})` but column is `text` → verify useTasks.insertTask shape; possible silent null-text task.
