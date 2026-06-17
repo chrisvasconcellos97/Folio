@@ -48,6 +48,8 @@ export default async function handler(req, res) {
 
   if (isRateLimited(user.id)) return res.status(429).json({ error: "rate_limited" });
 
+  try {
+
   var MAX_ARRAY = 200; // payload size cap — guard against unbounded client arrays
   var { snapshots, projects, overdueTasks, commitmentsDue, commitmentsOverdue, todayCadences, coldAccounts, looseEnds, healthDeltas, relationshipSignals, toneSignals, anomalySignals, leadershipTasks, portfolioThemes, recentUpdates, facts, profileProse } = req.body || {};
   snapshots = (snapshots || []).slice(0, MAX_ARRAY);
@@ -339,5 +341,10 @@ Return ONLY valid JSON: { "brief": "...", "callouts": [...] }`;
   } catch (e) {
     console.error("[portfolio-brief]", e);
     return res.status(500).json({ error: e.message });
+  }
+
+  } catch (outerErr) {
+    console.error("[portfolio-brief] unexpected", outerErr);
+    return res.status(500).json({ error: outerErr.message || "Internal error" });
   }
 }

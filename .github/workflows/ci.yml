@@ -16,6 +16,8 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - run: npm run lint
+      - run: npm audit --omit=dev --audit-level=high
       - run: node scripts/test-api-imports.js
       - run: node scripts/check-guards.js
       - run: npm run test

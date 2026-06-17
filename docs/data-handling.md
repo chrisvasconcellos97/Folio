@@ -1,6 +1,6 @@
 # Folios — Data Handling
 
-*Last updated: 2026-06-10 (corporate data line + digest handoff)*
+*Last updated: 2026-06-17 (merge re-parenting detail)*
 
 This document inventories what data Folios stores, where it lives,
 who can access it, and what crosses the boundary to third-party AI
@@ -203,7 +203,17 @@ own service-role credentials.
   users — preserves history but excludes from active surfaces.
 - **Account merge** (post-acquisition workflow) re-parents all child
   rows from the source account to the target, then marks the source
-  inactive.
+  inactive. The `folio_merge_accounts` Postgres function atomically
+  re-parents: meetings (`folio_meetings`), contacts (`folio_contacts`),
+  tasks (`folio_tasks`), items (`folio_items`), updates
+  (`folio_account_updates`), Gauge projects (`gauge_projects`),
+  cadences (`folio_cadences`), snapshots (`folio_account_snapshots`),
+  correction log (`pip_correction_log`), assignment hints
+  (`pip_assignment_hints`), promise log (`pip_promise_log`),
+  and array columns (`folio_meetings.account_ids`,
+  `folio_cadences.account_ids`) via `array_replace`. After re-parenting,
+  the source account's `is_inactive` flag is set and `merged_into_account_id`
+  is recorded.
 - **User deletion** triggers a cascade through all `folio_*` tables
   via the foreign-key `on delete cascade` rules.
 

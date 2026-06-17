@@ -166,8 +166,10 @@ export default async function handler(req, res) {
     var response = await client.messages.create({
       model:      MODEL,
       max_tokens: 2048, // 2048 (was 1024): QBR on Sonnet writes fuller sections; avoid truncating the JSON
-      system:     SYSTEM_PROMPT,
+      // cache_control on the static system prompt so repeated QBR calls hit the cache.
+      system:     [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
       messages:   [{ role: "user", content: contextStr }],
+      betas:      ["prompt-caching-2024-07-31"],
     });
     logPipUsage(userClient, user.id, "business-review", "qbr", MODEL, response.usage);
 

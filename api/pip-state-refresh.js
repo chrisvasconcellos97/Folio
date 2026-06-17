@@ -290,7 +290,12 @@ export default async function handler(req, res) {
       });
     });
 
-    await Promise.all(calls);
+    // Run in waves of 4 to avoid saturating the Anthropic rate limit when a
+    // batch is large (MAX_BATCH = 50). Operator-run uses the same wave pattern.
+    var ACCOUNT_CONCURRENCY = 4;
+    for (var wi = 0; wi < calls.length; wi += ACCOUNT_CONCURRENCY) {
+      await Promise.all(calls.slice(wi, wi + ACCOUNT_CONCURRENCY));
+    }
 
     return res.status(200).json({ ok: true, refreshed: accts.length });
   } catch (err) {

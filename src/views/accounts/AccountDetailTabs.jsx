@@ -10,6 +10,8 @@ var MONO = "'JetBrains Mono', ui-monospace, monospace";
 export function AccountDetailTabs({ tabs, activeTab, onChange, shopCount }) {
   return (
     <div
+      role="tablist"
+      aria-label="Account detail sections"
       style={{
         display: "flex",
         gap: 0,
@@ -26,9 +28,14 @@ export function AccountDetailTabs({ tabs, activeTab, onChange, shopCount }) {
       {tabs.map(function (t) {
         var isGauge = t === "projects";
         var active  = activeTab === t;
+        var label   = isGauge ? "Gauge" : t === "shops" ? "Shops" : t.charAt(0).toUpperCase() + t.slice(1);
         return (
           <button
             key={t}
+            role="tab"
+            aria-selected={active}
+            aria-controls={"tab-panel-" + t}
+            id={"tab-" + t}
             onClick={function () {
               var oldIdx = tabs.indexOf(activeTab);
               var newIdx = tabs.indexOf(t);
@@ -53,9 +60,9 @@ export function AccountDetailTabs({ tabs, activeTab, onChange, shopCount }) {
               marginBottom: -1,
             }}
           >
-            {isGauge ? "Gauge" : t === "shops" ? (
+            {t === "shops" ? (
               <span>
-                Shops
+                {label}
                 {shopCount > 0 && (
                   <span style={{
                     marginLeft: 5,
@@ -66,7 +73,7 @@ export function AccountDetailTabs({ tabs, activeTab, onChange, shopCount }) {
                   </span>
                 )}
               </span>
-            ) : t.charAt(0).toUpperCase() + t.slice(1)}
+            ) : label}
           </button>
         );
       })}

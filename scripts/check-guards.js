@@ -270,6 +270,77 @@ function guard4_mobileInputFloor() {
   return violations;
 }
 
+// ─── Guard 5: no hooks below authLoading return ──────────────────────────────
+// In App.jsx, all useState / useEffect / useMemo / useRef calls must appear
+// ABOVE the `if (authLoading)` early-return line (React Hook Order Rule).
+// Only checks App.jsx since that's where the early return lives.
+
+function guard5_hookOrderAppJsx() {
+  var violations = [];
+  var appJsx = join(ROOT, "src", "App.jsx");
+  if (!existsSync(appJsx)) return violations;
+
+  var lines = readLines(appJsx);
+  // Find the line index of the authLoading early return
+  var earlyReturnIdx = -1;
+  for (var i = 0; i < lines.length; i++) {
+    if (/if\s*\(\s*authLoading\s*\)/.test(lines[i])) {
+      earlyReturnIdx = i;
+      break;
+    }
+  }
+  if (earlyReturnIdx === -1) return violations; // not found, can't check
+
+  // Check all lines AFTER the early return for hook declarations
+  var HOOK_RE = /\b(useState|useEffect|useMemo|useRef|useCallback)\s*[(<(]/;
+  for (var j = earlyReturnIdx + 1; j < lines.length; j++) {
+    var line = lines[j];
+    var trimmed = line.trim();
+    // Skip comments
+    if (trimmed.startsWith("//") || trimmed.startsWith("*") || trimmed.startsWith("/*")) continue;
+    if (HOOK_RE.test(line)) {
+      violations.push(relPath(appJsx) + ":" + (j + 1) +
+        " — guard-5 hook call below authLoading early return (React Hook Order Rule: all hooks must be above the early return)");
+    }
+  }
+  return violations;
+}
+
+// ─── Guard 6: no bare new Date("YYYY-MM-DD") ─────────────────────────────────
+// Bare `new Date("YYYY-MM-DD")` parses in UTC, so it renders a day early in
+// ET. Use `new Date("YYYY-MM-DD" + "T00:00:00")` or a dateUtils helper instead.
+// Allowlisted by `// eslint-ok: utc-date-ok` on the same or previous line.
+//
+// Only scans src/**/*.{js,jsx} (not api/ — server-side date-at-midnight is fine).
+
+function guard6_noBareIsoDate() {
+  var violations = [];
+  var files = walkFiles(join(ROOT, "src"), [".js", ".jsx"]);
+
+  // Pattern: new Date("YYYY-MM-DD") where the string is ONLY a date (no T, no time)
+  // Allow strings that have a T time component or a trailing Z.
+  var BARE_DATE_RE = /new\s+Date\(\s*["'`]\d{4}-\d{2}-\d{2}["'`]\s*\)/g;
+
+  for (var filePath of files) {
+    var lines = readLines(filePath);
+    lines.forEach(function (line, idx) {
+      var lineNo = idx + 1;
+      var trimmed = line.trim();
+      if (trimmed.startsWith("//") || trimmed.startsWith("*") || trimmed.startsWith("/*")) return;
+      // Check allowlist
+      var prevLine = idx > 0 ? lines[idx - 1] : "";
+      if (line.includes("eslint-ok: utc-date-ok") || prevLine.includes("eslint-ok: utc-date-ok")) return;
+
+      BARE_DATE_RE.lastIndex = 0;
+      if (BARE_DATE_RE.test(line)) {
+        violations.push(relPath(filePath) + ":" + lineNo +
+          " — guard-6 bare new Date(\"YYYY-MM-DD\") renders a day early in ET; append \"T00:00:00\" or use a dateUtils helper");
+      }
+    });
+  }
+  return violations;
+}
+
 // ─── run all guards ───────────────────────────────────────────────────────────
 
 console.log("Running check-guards.js...\n");
@@ -278,6 +349,8 @@ var g1 = guard1_noSilentDeath();
 var g2 = guard2_noDateFormatDrift();
 var g3 = guard3_nounmeteredPipEndpoint();
 var g4 = guard4_mobileInputFloor();
+var g5 = guard5_hookOrderAppJsx();
+var g6 = guard6_noBareIsoDate();
 
 function printGuard(name, violations) {
   if (violations.length === 0) {
@@ -292,8 +365,10 @@ printGuard("Guard 1 (no silent death)", g1);
 printGuard("Guard 2 (no date-format drift)", g2);
 printGuard("Guard 3 (no unmetered Pip endpoint)", g3);
 printGuard("Guard 4 (mobile input floor)", g4);
+printGuard("Guard 5 (hook order in App.jsx)", g5);
+printGuard("Guard 6 (no bare ISO date)", g6);
 
-var total = g1.length + g2.length + g3.length + g4.length;
+var total = g1.length + g2.length + g3.length + g4.length + g5.length + g6.length;
 console.log("");
 if (total > 0) {
   console.error("check-guards: " + total + " violation(s) found. Fix them before merging.");

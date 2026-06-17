@@ -34,8 +34,10 @@ export function useItems(userId, accountId, orgId) {
       .select("*")
       .eq("user_id", userId)
       .is("project_id", null)   // loose action items only — not Gauge project tasks
-      .eq("done", false)
-      .order("created_at", { ascending: false });
+      // No done filter — ItemsTab shows both open and closed sections.
+      // Per-account queries are bounded by accountId; global queries use allItems from App.
+      .order("created_at", { ascending: false })
+      .limit(200);
     if (accountId) query = query.eq("account_id", accountId);
     query.then(function (result) {
       setLoading(false);

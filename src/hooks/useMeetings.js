@@ -21,7 +21,9 @@ export function useMeetings(userId, accountId, orgId) {
       .eq("user_id", userId)
       .order("meeting_date", { ascending: false });
     if (accountId) {
-      query = query.eq("account_id", accountId);
+      // Per-account: cap at 150 most-recent; the account page doesn't paginate
+      // and Pip only reads the last 3-5 for summaries anyway.
+      query = query.eq("account_id", accountId).limit(150);
     } else {
       query = query.limit(300);
     }

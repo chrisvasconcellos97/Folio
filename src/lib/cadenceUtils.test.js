@@ -15,7 +15,7 @@ describe("getFrequencyLabel", function () {
 
 describe("getNextOccurrence", function () {
   it("returns next Monday from a Wednesday", function () {
-    var wednesday = new Date("2026-05-27"); // Wednesday
+    var wednesday = new Date("2026-05-27T00:00:00"); // Wednesday
     var cadence = { frequency: "weekly", day_of_week: 1 }; // Monday
     var next = getNextOccurrence(cadence, wednesday);
     expect(next.getDay()).toBe(1);
@@ -30,16 +30,16 @@ describe("getNextOccurrence", function () {
 describe("getOccurrencesInRange", function () {
   it("finds weekly occurrences in a month", function () {
     var cadence = { frequency: "weekly", day_of_week: 1 }; // Mondays
-    var start = new Date("2026-05-01");
-    var end   = new Date("2026-05-31");
+    var start = new Date("2026-05-01T00:00:00");
+    var end   = new Date("2026-05-31T00:00:00");
     var results = getOccurrencesInRange(cadence, start, end);
     expect(results.length).toBe(4); // May 2026 has 4 Mondays: 4,11,18,25
     results.forEach(function (d) { expect(d.getDay()).toBe(1); });
   });
   it("returns empty array when no occurrences in range", function () {
     var cadence = { frequency: "weekly", day_of_week: 1 };
-    var start = new Date("2026-05-05"); // Tuesday
-    var end   = new Date("2026-05-06"); // Wednesday
+    var start = new Date("2026-05-05T00:00:00"); // Tuesday
+    var end   = new Date("2026-05-06T00:00:00"); // Wednesday
     var results = getOccurrencesInRange(cadence, start, end);
     expect(results.length).toBe(0);
   });

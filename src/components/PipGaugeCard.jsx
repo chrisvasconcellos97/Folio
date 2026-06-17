@@ -119,7 +119,9 @@ export function PipGaugeCard({ projects, accountsById, handlers, operatorMoves }
   active.forEach(function (p) {
     (p.stages || []).forEach(function (s) {
       if (!s || s.completed_at) return;
-      var who = (s.assignee || s.assignee_email || "").trim();
+      // Use assignee_email as the canonical key so the same person isn't counted twice
+      // if one row has s.assignee set and another only has s.assignee_email.
+      var who = (s.assignee_email || s.assignee || "").trim();
       if (!who) return;
       loadCounts[who] = (loadCounts[who] || 0) + 1;
     });

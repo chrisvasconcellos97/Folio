@@ -1,4 +1,5 @@
 import { createPortal } from "react-dom";
+import { useEffect } from "react";
 import { C } from "../../lib/colors";
 import { PipMark } from "../../components/PipMark";
 import { HexPulse } from "../../lib/hexMotif";
@@ -16,13 +17,26 @@ var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 // transient reading surface; every action waits for the real plan modal.
 export function SummarizeStreamingOverlay({ summary }) {
   var hasText = Boolean(summary && summary.trim());
+
+  // Trap focus (there's no button, but screen readers need a resting point)
+  useEffect(function () {
+    var prev = document.activeElement;
+    return function () { prev && prev.focus && prev.focus(); };
+  }, []);
+
   var node = (
-    <div style={{
-      position: "fixed", inset: 0, zIndex: 10000,
-      background: "var(--c-overlay-shadow, rgba(0,0,0,0.5))",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      padding: 16,
-    }}>
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Pip is summarizing your meeting"
+      aria-live="polite"
+      style={{
+        position: "fixed", inset: 0, zIndex: 10000,
+        background: "var(--c-overlay-shadow, rgba(0,0,0,0.5))",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: 16,
+      }}
+    >
       <div style={{
         width: "100%", maxWidth: 620, maxHeight: "80vh", overflowY: "auto",
         background: C.surface2, border: "1px solid " + C.rule,
@@ -36,7 +50,9 @@ export function SummarizeStreamingOverlay({ summary }) {
           background: C.accentGlow, border: "1px solid " + C.accentLine, borderRadius: 8,
         }}>
           <PipMark size={8} color={C.accent} glow pulse />
-          <HexPulse style={{ marginLeft: 4 }} />
+          {!window.matchMedia("(prefers-reduced-motion: reduce)").matches && (
+            <HexPulse style={{ marginLeft: 4 }} />
+          )}
           <div style={{ fontSize: 12, color: C.textSub, fontFamily: INTER }}>
             {hasText ? "Recap first — the structured plan follows in a moment." : "Reading your notes…"}
           </div>
@@ -63,4 +79,5 @@ export function SummarizeStreamingOverlay({ summary }) {
   );
   if (typeof document === "undefined") return null;
   return createPortal(node, document.body);
+
 }

@@ -4,6 +4,7 @@ import { fmtShort } from "../../../lib/dateUtils";
 import { showToast } from "../../../components/Toast";
 import { AmberBtn, SecBtn, DangerBtn } from "../../../components/Buttons";
 import { PipInsightCard } from "../../../components/PipInsightCard";
+import { MarkdownText } from "../../../components/MarkdownText";
 import { SetCadenceModal } from "../../cadence/SetCadenceModal";
 import { getNextOccurrence, getFrequencyLabel, formatTime, daysUntil, formatDateFull } from "../../../lib/cadenceUtils";
 import { pickV } from "../../../lib/metricsUtils";
@@ -165,10 +166,11 @@ function CadenceCard({ cad, today, confirmDeleteId, setConfirmDeleteId, onDelete
 }
 
 export function CadenceTab({ account, cadences, items, meetings, contacts, onAddCadence, onUpdateCadence, onDeleteCadence, onAddItem, onCloseItem, onLogMeeting, onDeleteMeeting, prefill, onPrefillHandled, onOpenHub }) {
-  var [showModal,       setShowModal]       = useState(false);
-  var [editingCad,      setEditingCad]      = useState(null);
-  var [prefillValues,   setPrefillValues]   = useState(null);
-  var [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  var [showModal,             setShowModal]             = useState(false);
+  var [editingCad,            setEditingCad]            = useState(null);
+  var [prefillValues,         setPrefillValues]         = useState(null);
+  var [confirmDeleteId,       setConfirmDeleteId]       = useState(null);
+  var [confirmDeleteMeetingId, setConfirmDeleteMeetingId] = useState(null);
 
   useEffect(function () {
     if (!prefill) return;
@@ -288,10 +290,17 @@ export function CadenceTab({ account, cadences, items, meetings, contacts, onAdd
                       <div style={{ fontSize: 12, color: C.text, marginTop: 4, lineHeight: 1.4 }}>{m.notes}</div>
                     )}
                     {m.pip_summary && (
-                      <div style={{ fontSize: 11, color: C.textMuted, marginTop: 6, fontStyle: 'italic', lineHeight: 1.4 }}>{m.pip_summary}</div>
+                      <MarkdownText text={m.pip_summary} style={{ fontSize: 11, color: C.textMuted, marginTop: 6, lineHeight: 1.4 }} />
                     )}
                   </div>
-                  <button onClick={function () { onDeleteMeeting(m.id); }} aria-label="Delete meeting" title="Delete meeting" style={{ background: 'none', border: 'none', color: C.textMuted, cursor: 'pointer', fontSize: 16, padding: '0 0 0 10px', flexShrink: 0, minWidth: 32, minHeight: 32 }}>×</button>
+                  {confirmDeleteMeetingId === m.id ? (
+                    <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' }}>
+                      <button onClick={function () { onDeleteMeeting(m.id); setConfirmDeleteMeetingId(null); }} style={{ background: C.redFaint, border: '1px solid ' + C.red, color: C.red, borderRadius: 6, padding: '3px 8px', cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>Delete</button>
+                      <button onClick={function () { setConfirmDeleteMeetingId(null); }} style={{ background: 'none', border: '1px solid ' + C.rule, color: C.textMuted, borderRadius: 6, padding: '3px 8px', cursor: 'pointer', fontSize: 11 }}>Cancel</button>
+                    </div>
+                  ) : (
+                    <button onClick={function () { setConfirmDeleteMeetingId(m.id); }} aria-label="Delete meeting" title="Delete meeting" style={{ background: 'none', border: 'none', color: C.textMuted, cursor: 'pointer', fontSize: 16, padding: '0 0 0 10px', flexShrink: 0, minWidth: 32, minHeight: 32 }}>×</button>
+                  )}
                 </div>
               </div>
             );

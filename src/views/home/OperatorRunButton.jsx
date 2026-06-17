@@ -18,14 +18,32 @@ export function OperatorRunButton({ onDone, hasReport }) {
     supabase.auth.getSession().then(function (s) {
       var token = s && s.data && s.data.session && s.data.session.access_token;
       if (!token) { setRunning(false); showToast("Session expired — reload and try again", "warning"); return null; }
-      return fetch("/api/operator-run", { method: "GET", headers: { Authorization: "Bearer " + token } })
-        .then(function (r) { return r.ok; })
-        .then(function (ok) {
+      var controller = new AbortController();
+      var timeoutId = setTimeout(function () { controller.abort(); }, 90000);
+      return fetch("/api/operator-run", {
+        method: "GET",
+        headers: { Authorization: "Bearer " + token },
+        signal: controller.signal,
+      }).then(function (r) {
+        clearTimeout(timeoutId);
+        if (!r.ok) {
+          return r.json().catch(function () { return null; }).then(function (body) {
+            setRunning(false);
+            var detail = body && body.error ? body.error : "Pip couldn't finish the pass — try again";
+            showToast(detail, "warning");
+          });
+        }
+        return r.json().catch(function () { return null; }).then(function () {
           setRunning(false);
-          if (!ok) { showToast("Pip couldn't finish the pass — try again", "warning"); return; }
           showToast("Pip's read is ready ✦", "success");
           if (onDone) onDone();
         });
+      }).catch(function (err) {
+        clearTimeout(timeoutId);
+        setRunning(false);
+        var msg = err && err.name === "AbortError" ? "Pip's pass timed out — try again" : "Pip couldn't finish the pass — try again";
+        showToast(msg, "warning");
+      });
     }).catch(function () {
       setRunning(false);
       showToast("Pip couldn't finish the pass — try again", "warning");

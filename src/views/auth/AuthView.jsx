@@ -282,6 +282,8 @@ export function AuthView({ onSignIn, onSignUp }) {
 
             {success && (
               <div
+                role="status"
+                aria-live="polite"
                 style={{
                   background: C.accentFaint,
                   border: "1px solid " + C.accentLine,
@@ -305,9 +307,9 @@ export function AuthView({ onSignIn, onSignUp }) {
             </AmberBtn>
           </form>
 
-          {/* Hex signature — ties the card into Pip's visual language */}
+          {/* Hex signature — ties the card into Pip's visual language (3-cell @0.13 = user-content canonical) */}
           <div style={{ position: "absolute", bottom: 12, right: 14, opacity: 0.7 }}>
-            <HexSignature cells={3} peak={0.28} cell={5} />
+            <HexSignature cells={3} peak={0.13} />
           </div>
         </div>
       </div>{/* end glass card */}

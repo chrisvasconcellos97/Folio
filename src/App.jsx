@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, lazy, Suspense } from "react";
 import { supabase } from "./lib/supabase";
 import { touchAccount } from "./lib/touchAccount";
+import { logSilentFailure } from "./lib/logSilentFailure.js";
 import { useAuth } from "./hooks/useAuth";
 import { useBreakpoint } from "./hooks/useBreakpoint";
 import { useAccounts } from "./hooks/useAccounts";
@@ -874,6 +875,11 @@ export default function App() {
   // the URL so it doesn't reset on re-renders. Cleared when user navigates away.
   var [isShareTarget, setIsShareTarget] = useState(function () {
     try {
+      // The PWA share target manifest specifies action="/share-target" — only
+      // activate share-target mode when the pathname matches. Without this guard,
+      // any page with title/text/url query params would trigger the share-target
+      // UI (e.g., OAuth callbacks or deep links with these common param names).
+      if (window.location.pathname !== "/share-target") return false;
       var p = new URLSearchParams(window.location.search);
       return !!(p.get("title") || p.get("text") || p.get("url"));
     } catch (e) { return false; }
@@ -1076,6 +1082,7 @@ export default function App() {
         hasCadences={cadences.length > 0}
         items={allItems}
         meetings={meetings}
+        cadences={cadences}
         contacts={allContacts}
         onColdClick={function() { setBannerFilter("cold");    handleSetView("accounts"); }}
         onOverdueClick={function() { setBannerFilter("overdue"); handleSetView("accounts"); }}
@@ -1431,7 +1438,9 @@ export default function App() {
         return Promise.all(contacts.map(function (c) {
           return supabase
             .from("folio_contacts")
-            .insert([{ user_id: userId, account_id: accountId, name: c.name.trim(), nickname: c.nickname || null, title: c.role || null, email: c.email || null, is_leader: !!c.is_leader, is_poc: !!c.is_poc }]);
+            .insert([{ user_id: userId, account_id: accountId, name: c.name.trim(), nickname: c.nickname || null, title: c.role || null, email: c.email || null, is_leader: !!c.is_leader, is_poc: !!c.is_poc }])
+            .then(function (r) { if (r.error) throw r.error; })
+            .catch(function (err) { logSilentFailure("App.onAddContacts", err, { accountId }); });
         }));
       }}
       onClose={function () { setShowAddAccount(false); setEditingAccount(null); setAddAccountDefaultType(null); }}

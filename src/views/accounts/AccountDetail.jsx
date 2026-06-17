@@ -226,7 +226,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
 
   // Compute Pip health for this account (used by header pill + override modal).
   var todayISO   = new Date().toISOString().slice(0, 10);
-  var healthSignals = gatherSignals(account, items, projects, todayISO);
+  var healthSignals = gatherSignals(account, items, projects, todayISO, cadences, meetings);
   var computedHealth = computeAccountHealth(account, healthSignals);
 
   function handleSaveHealthOverride(data) {
@@ -622,6 +622,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
           userId={userId}
           openItems={items}
           addItem={function (data) { return addItem(Object.assign({ account_id: account.id }, data)); }}
+          addProject={addProject}
           onLogMeeting={function () { setMeetingModal(true); }}
           onDelete={deleteMeeting}
           onAddMeeting={addMeeting}

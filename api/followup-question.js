@@ -17,6 +17,18 @@ export const config = { maxDuration: 30 };
 
 var FOLLOWUP_MODEL = process.env.PIP_FOLLOWUP_MODEL || "claude-haiku-4-5-20251001";
 
+var rateLimitMap = new Map();
+var WINDOW_MS    = 60 * 1000;
+var MAX_REQUESTS = 10;
+function isRateLimited(userId) {
+  var now = Date.now();
+  var timestamps = (rateLimitMap.get(userId) || []).filter(function (t) { return now - t < WINDOW_MS; });
+  if (timestamps.length >= MAX_REQUESTS) return true;
+  timestamps.push(now);
+  rateLimitMap.set(userId, timestamps);
+  return false;
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed." });
 
@@ -41,6 +53,8 @@ export default async function handler(req, res) {
     var userRes = await supabase.auth.getUser(token);
     if (!userRes.data || !userRes.data.user) return res.status(401).json({ error: "Unauthorized." });
     var userId = userRes.data.user.id;
+
+    if (isRateLimited(userId)) return res.status(429).json({ error: "rate_limited" });
 
     var { questionId, questionText, answerText, questionSource } = req.body || {};
 
@@ -75,7 +89,7 @@ No explanation, no prose, no code fences.`;
       system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
       messages: [{
         role: "user",
-        content: "ORIGINAL QUESTION: " + questionText + "\n\nUSER'S ANSWER: " + answerText,
+        content: "ORIGINAL QUESTION: " + questionText + "\n\nUSER'S ANSWER: " + String(answerText).slice(0, 4000),
       }],
     });
 
