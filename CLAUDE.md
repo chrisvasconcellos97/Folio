@@ -105,11 +105,11 @@ This rule applies to me (Claude) AND to Patch when spawned for batch builds.
 Pip's visual form is **frozen**. Chris approved the "Bold Hex" 3D design (two hex-lattice spheres over glowing cores — head bright, tail 0.42 — inside a twisted hex-tiled torus ring, one 4.8s breath clock driving every hexagon). The contract:
 
 1. **Single source of truth:** `src/lib/pip3dGeometry.js` holds the frozen `PIP_SPEC` constants and pure geometry; `src/components/PipOrb3D.jsx` renders it; every surface gets Pip through `PipOrb` (`src/components/PipMark.jsx`). **Never draw Pip inline anywhere.**
-2. **Sizes `xs`/`sm`/`md` keep the classic two-circle orb** (hexes mush below ~32px); `lg`/`xl`/`xxl` render the 3D form. Don't change the cutoff without Chris.
+2. **Sizes `xs`/`sm` keep the classic two-circle orb** (≤22px — hexes mush); **`md`/`lg`/`xl`/`xxl` render the 3D form.** (Cutoff lowered md→3D on June 17 2026 at Chris's explicit request — "replace the new orb everywhere the old one is." `md` = 32px is the floor; the remaining classic marks are the tiny ≤22px inline glyphs next to labels + per-message dots.) Don't change the cutoff further without Chris.
 3. **The drift alarm:** `src/lib/pip3dGeometry.test.js` snapshots a fixed frame of the geometry. If it fails, someone changed Pip — that requires Chris's EXPLICIT approval, in his words, in the session. Never "fix" the test by updating the hash to make CI green; that is the exact failure mode this rule exists to prevent.
 4. **Colors come only from accent tokens** (`--accent`, `--accent-hi`, `--accent-deep`) so dark/light themes and Life-mode orange re-skin automatically. No hardcoded Pip colors.
 5. **Visual ground truth** is `mockups/pip-hex-ring-final.html` (Bold Hex variant). Disputes about how Pip should look are settled by that file, not memory.
-6. State behavior is locked too: idle ×1, thinking ×2.2, alert ×1.6 time-scale, speaking = glow pulse. New Pip states need Chris's sign-off.
+6. State behavior is locked too: idle ×1, thinking ×2.2, alert ×1.6 time-scale, speaking = glow pulse **+ ring "zigzag"** (the ring radius ripples at high frequency — `PIP_SPEC.speakingRingAmp/Freq/Speed`, threaded through `buildPipFrame(t, speakAmp)`; idle passes speakAmp 0 so the drift lock is untouched). Added June 17 2026 at Chris's request. New Pip states need Chris's sign-off.
 
 History: Pip's look used to live in scattered CSS and drifted a little every session until Chris locked it here. (Full build spec: Pending Updates item 44.)
 

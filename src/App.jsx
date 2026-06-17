@@ -1199,6 +1199,7 @@ export default function App() {
               setView(target);
             }
           },
+          onOpenPip: function () { handleSetView("pip"); },
           onOpenConversation: function () { setShowStartConv(true); },
           onOpenQuickTask: function () { setShowGlobalQuickTask(true); },
           onStartInterview: function () { setShowInterview(true); },
@@ -1694,8 +1695,8 @@ export default function App() {
         {scheduleMeetingModal}
         {adHocFlowOverlay}
         {globalQuickTaskModal}
-        {/* Floating Pip (desktop) */}
-        {view !== "pip" && (
+        {/* Floating Pip (desktop) — hidden on home (home has its own centerpiece orb) and pip itself */}
+        {view !== "pip" && view !== "home" && (
           <div
             style={{
               position: "fixed",

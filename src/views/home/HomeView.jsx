@@ -175,6 +175,7 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
   var onOpenAccountTab       = handlers.onOpenAccountTab;
   var onOpenCadenceHub       = handlers.onOpenCadenceHub;
   var onOpenConversation     = handlers.onOpenConversation;
+  var onOpenPip              = handlers.onOpenPip;
   var onOpenQuickTask        = handlers.onOpenQuickTask;
   var onStartInterview       = handlers.onStartInterview;
   var onDismissOnboardingCard = handlers.onDismissOnboardingCard;
@@ -1490,7 +1491,13 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
         padding: isMobile ? (operatorActive ? "16px 16px 18px" : "22px 16px 26px") : "32px 32px 36px",
       }}>
         <HexField />
-        <PipOrb size="xxl" heartbeat state={briefPhase === "playing" ? "speaking" : undefined} />
+        <PipOrb
+          size="xxl"
+          heartbeat
+          state={briefPhase === "playing" ? "speaking" : undefined}
+          onClick={onOpenPip}
+          style={onOpenPip ? { cursor: "pointer" } : undefined}
+        />
         <div style={{
           fontFamily: MONO, fontSize: 10, fontWeight: 700,
           textTransform: "uppercase", letterSpacing: "0.12em",

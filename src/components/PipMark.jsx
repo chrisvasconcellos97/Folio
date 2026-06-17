@@ -8,14 +8,15 @@
 // extra className and style props passed through
 //
 // Size → renderer:
-//   lg / xl / xxl  → PipOrb3D (hex-lattice 3D, locked Bold Hex design)
-//   xs / sm / md   → classic two-circle SVG (hexes mush at small sizes — locked decision)
+//   md / lg / xl / xxl  → PipOrb3D (hex-lattice 3D, locked Bold Hex design)
+//   xs / sm             → classic two-circle SVG (≤22px — hexes mush; these are
+//                         the tiny inline marks next to labels / per-message dots)
 
 import { memo } from "react";
 import { usePipState } from "../lib/pipState";
 import { PipOrb3D } from "./PipOrb3D";
 
-var SIZE_3D = new Set(["lg", "xl", "xxl"]);
+var SIZE_3D = new Set(["md", "lg", "xl", "xxl"]);
 
 export function PipOrb({ size = "lg", sonar = false, heartbeat = false, isStatic = false, state, className = "", style, onClick }) {
   var ctx = usePipState();

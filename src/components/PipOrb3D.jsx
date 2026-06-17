@@ -335,7 +335,10 @@ export function PipOrb3D({ state, isStatic }) {
       var liveState = stateRef.current || "idle";
       var scale = PIP_SPEC.stateTimeScale[liveState] || 1;
       scaledTimeRef.current += dt * scale;
-      var frame = buildPipFrame(scaledTimeRef.current);
+      // Speaking → ripple the ring like a waveform; idle keeps speakAmp 0 so the
+      // frozen geometry is untouched.
+      var speakAmp = liveState === "speaking" ? PIP_SPEC.speakingRingAmp : 0;
+      var frame = buildPipFrame(scaledTimeRef.current, speakAmp);
       applyFrame(refs.current, frame, liveState, simTime);
     }
 

@@ -100,6 +100,12 @@ export var PIP_SPEC = Object.freeze({
   speakingGlowMin: 0.55,
   speakingGlowMax: 1.0,
   speakingGlowPeriod: 0.42,
+  // Speaking "zigzag" — when state==="speaking" the ring radius ripples at a
+  // high spatial frequency, like a waveform reacting to a voice. Idle passes
+  // speakAmp 0, leaving the geometry byte-identical, so the drift lock holds.
+  speakingRingAmp:   0.10,   // fraction of ring radius the zigzag swings
+  speakingRingFreq:  7,      // ripples around the ring (spatial frequency)
+  speakingRingSpeed: 9,      // how fast the zigzag travels (temporal)
 });
 
 // ── Pure rotation helpers ─────────────────────────────────────────────────────
@@ -151,15 +157,18 @@ function zbucket(z) {
 
 // ── Torus surface with organic twist ─────────────────────────────────────────
 // Ported verbatim from the mockup's surf() inside makeHexRing
-function surf(u, v, R, rt, t, warp, wob) {
+function surf(u, v, R, rt, t, warp, wob, speakAmp) {
   var Ru = R * (1 + 0.055 * Math.sin(2 * u - t * 0.33));
+  // Speaking zigzag: a fast, high-frequency radius ripple. Zero when idle, so
+  // the frozen geometry (and the drift test) is untouched.
+  if (speakAmp) Ru *= 1 + speakAmp * Math.sin(PIP_SPEC.speakingRingFreq * u + t * PIP_SPEC.speakingRingSpeed);
   var zw = warp * Math.sin(2 * u + 0.9 - t * 0.41) + wob * Math.sin(3 * u + t * 0.27);
   var cw = Ru + rt * Math.cos(v);
   return [cw * Math.cos(u), cw * Math.sin(u), rt * Math.sin(v) + zw];
 }
 
 // ── Build per-frame path data for one ring ────────────────────────────────────
-function buildRingPaths(t, breath, bs) {
+function buildRingPaths(t, breath, bs, speakAmp) {
   var cfg = PIP_SPEC.ring;
   var R  = cfg.R  * (0.97 + 0.05 * breath);
   var rt = cfg.rt * (0.92 + 0.12 * breath);
@@ -175,7 +184,7 @@ function buildRingPaths(t, breath, bs) {
     var uOff = (j % 2) * 0.5 * du;
     for (var i = 0; i < cfg.nu; i++) {
       var uC = i * du + uOff + spin;
-      var pc = rotXY(surf(uC, vC, R, rt, t, cfg.warp, cfg.wob), ca, sa, cb, sb);
+      var pc = rotXY(surf(uC, vC, R, rt, t, cfg.warp, cfg.wob, speakAmp), ca, sa, cb, sb);
       var z = pc[2] / zn;
       var b = zbucket(z);
       var seg = "";
@@ -183,7 +192,7 @@ function buildRingPaths(t, breath, bs) {
         var ang = k * TAU / 6 + TAU / 12;
         var u2 = uC + hru * Math.cos(ang) * bs;
         var v2 = vC + hrv * Math.sin(ang) * bs;
-        var pt = rotXY(surf(u2, v2, R, rt, t, cfg.warp, cfg.wob), ca, sa, cb, sb);
+        var pt = rotXY(surf(u2, v2, R, rt, t, cfg.warp, cfg.wob, speakAmp), ca, sa, cb, sb);
         var pf = PIP_SPEC.FP / (PIP_SPEC.FP - pt[2]);
         seg += (k === 0 ? "M" : "L") + (pt[0] * pf).toFixed(1) + " " + (-pt[1] * pf).toFixed(1);
       }
@@ -228,7 +237,7 @@ function getTailPts() { if (!_tailPts) _tailPts = fibSphere(PIP_SPEC.sphereTail.
 // ── Main entry point: build one frame ────────────────────────────────────────
 // Returns a plain serializable object with all per-frame data.
 // The renderer updates SVG attributes from this without touching geometry logic.
-export function buildPipFrame(t) {
+export function buildPipFrame(t, speakAmp) {
   var breath = 0.5 - 0.5 * Math.cos(TAU * t / PIP_SPEC.breathPeriod);
   var bs = 0.55 + 0.56 * breath;   // ONE hex scale for every hexagon in the figure
   var sphereScale = 1 + 0.08 * breath;
@@ -245,7 +254,7 @@ export function buildPipFrame(t) {
     sphereScale: sphereScale,
     coreOpacity: coreOpacity,
     outerGlowOpacity: outerGlowOpacity,
-    ringPaths:   buildRingPaths(mt, breath, bs),
+    ringPaths:   buildRingPaths(mt, breath, bs, speakAmp || 0),
     headPaths:   buildSpherePaths(mt, breath, bs, PIP_SPEC.sphereHead, getHeadPts()),
     headCoreR:   (PIP_SPEC.sphereHead.r * (0.97 + 0.06 * breath) * 0.92).toFixed(1),
     tailPaths:   buildSpherePaths(mt, breath, bs, PIP_SPEC.sphereTail, getTailPts()),
