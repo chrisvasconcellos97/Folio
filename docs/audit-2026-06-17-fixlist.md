@@ -107,9 +107,9 @@ Check off `[x]` as we go. Work order suggestion: §1 → §2 → §3 → §4 →
 ## §5 — THEME (light + Life mode breakage)
 
 - [ ] (S,P1) `index.html` — `--c-bg-pill-active` not defined in Life blocks → ModeToggle active segment wrong in Life. Add to both life blocks.
-- [ ] (M,P1) `ErrorBoundary.jsx:170,210` color "#fff" hardcoded → C.bg.
-- [ ] (S,P1) `UserMenu.jsx:128` hardcoded #091712 → C.bg.
-- [ ] (S,P2) `HexRingCanvas.jsx:53,117-118,126` hardcoded teal/rgba → read var(--c-accent) via getComputedStyle (won't re-skin Life/light).
+- [x] (M,P1) `ErrorBoundary.jsx:170,210` color "#fff" hardcoded → C.bg.
+- [x] (S,P1) `UserMenu.jsx:128` hardcoded #091712 → C.bg.
+- [x] (S,P2) `HexRingCanvas.jsx:53,117-118,126` hardcoded teal/rgba → read var(--c-accent) via getComputedStyle (won't re-skin Life/light).
 - [ ] (S,P2) `index.html` home-card-ring-glow keyframe hardcoded teal rgba → var(--c-accent-shadow/glow).
 - [ ] (S,P2) `AccountDetailHeader.jsx:225` Cooling pill rgba(251,191,36) → token.
 - [ ] (S,P2) `AccountsView.jsx:1248` tag filter rgba(91,143,212) → token.
@@ -118,33 +118,33 @@ Check off `[x]` as we go. Work order suggestion: §1 → §2 → §3 → §4 →
 - [ ] (S,P2) `OverviewTab:620` cold-contact alert rgba(204,140,0) → token.
 - [ ] (S,P2) `DigestIngestModal:161` color C.bg on accentDeep bg → near-invisible in light → onAccent/white token.
 - [ ] (S,P2) `PipCatchUp` textarea C.bgDark → may be invisible in light → input token.
-- [ ] (S,P2) `CommandPalette` raw rgba(0,0,0,0.6) → var(--c-overlay-shadow-strong); `Tooltip`/`ConnectionStatus` rgba shadows → overlay-shadow-soft.
+- [x] (S,P2) `CommandPalette` raw rgba(0,0,0,0.6) → var(--c-overlay-shadow-strong); `Tooltip`/`ConnectionStatus` rgba shadows → overlay-shadow-soft.
 - [ ] (S,P3) `AddAccountModal:34,577` raw purple; `ProjectsTab:171` rgba border; `AddContactModal:127` → C.accentFaint; `DesktopLayout:171` gauge nav rgba → tokens.
 - [ ] (S,P3) `index.html` Life blocks don't redefine --c-glass-*/--c-pip-card-*/--c-tier-*/--c-status-* → green glass on blue (latent → Life Phase 2 token audit).
 
 ## §6 — MOBILE / A11Y
 
-- [ ] (M,P1) `Modal.jsx` — no role="dialog"/aria-modal/aria-labelledby + no body scroll-lock + not portaled. Most-used overlay (14+ callers).
-- [ ] (S,P1) `AccountPicker.jsx:156,232` — inline `outline:"none"` suppresses global :focus-visible → most-used picker has zero keyboard focus indicator.
-- [ ] (M,P1) `Toast.jsx` — error toasts use role=status/aria-live=polite not role=alert/assertive → failures may never be announced. Two-container.
+- [x] (M,P1) `Modal.jsx` — no role="dialog"/aria-modal/aria-labelledby + no body scroll-lock + not portaled. Most-used overlay (14+ callers).
+- [x] (S,P1) `AccountPicker.jsx:156,232` — inline `outline:"none"` suppresses global :focus-visible → most-used picker has zero keyboard focus indicator.
+- [x] (M,P1) `Toast.jsx` — error toasts use role=status/aria-live=polite not role=alert/assertive → failures may never be announced. Two-container.
 - [ ] (S,P2) `PersonPicker` fontSize:12 wrapper in summarize preview → iOS zoom risk → 16px.
 - [ ] (M,P2) `SummarizeStreamingOverlay` no role=dialog/aria/ESC/reduced-motion + no error/hang recovery → user stuck behind overlay.
-- [ ] (M,P2) `ChipDropdown` — no aria-haspopup/expanded/listbox/option + no arrow-key nav.
-- [ ] (M,P2) `UserMenu` dropdown — no role=menu/menuitem + no arrow-key nav.
-- [ ] (S,P2) `InfoTip`/`Tooltip` — no role=tooltip + aria-describedby (content invisible to screen readers).
-- [ ] (S,P2) `ErrorBanner` — has BOTH role=alert AND aria-live=polite (polite wins → not assertive). Remove the polite.
+- [x] (M,P2) `ChipDropdown` — no aria-haspopup/expanded/listbox/option + no arrow-key nav.
+- [x] (M,P2) `UserMenu` dropdown — no role=menu/menuitem + no arrow-key nav.
+- [x] (S,P2) `InfoTip`/`Tooltip` — no role=tooltip + aria-describedby (content invisible to screen readers).
+- [x] (S,P2) `ErrorBanner` — has BOTH role=alert AND aria-live=polite (polite wins → not assertive). Remove the polite.
 - [ ] (S,P2) `AccountDetailTabs` — no role=tablist/tab/aria-selected.
 - [ ] (S,P2) `AccountMergeModal` "ARE YOU SURE" div → role=alert.
-- [ ] (S,P2) `AccountPicker` clear-× span → real button + aria-label; add aria-activedescendant on keyboard nav.
-- [ ] (S,P2) `CommandPalette` — no scroll-into-view for keyboard-focused option.
-- [ ] (S,P2) `MarkdownText` `##`/`###` render as div not h2/h3 → flat outline.
+- [x] (S,P2) `AccountPicker` clear-× span → real button + aria-label; add aria-activedescendant on keyboard nav.
+- [x] (S,P2) `CommandPalette` — no scroll-into-view for keyboard-focused option.
+- [x] (S,P2) `MarkdownText` `##`/`###` render as div not h2/h3 → flat outline.
 - [ ] (S,P2) verify CadenceTab inline add-contact + CadenceMeetingMode AddContactInline ≥16px (Batch 7 may have missed these distinct surfaces).
 - [ ] (S,P2) HistoryRow expand is div onClick — no role/tabIndex/onKeyDown (keyboard can't expand); verify BeforeYouStart uses <button>.
 - [ ] (S,P2) `MobileLayout` workspaces popover lacks id/aria-controls; no skip-to-content on mobile.
 - [ ] (S,P3) AuthView success message lacks role=status/aria-live; CheckInCard receipts lack role=status/aria-live.
-- [ ] (S,P3) Buttons: DangerBtn can't take type/aria-label (unify 4 button prop interfaces); LitPill sets disabled not aria-disabled; Glow renders <button disabled> for decorative text; AddToTasksButton/GaugeIcon missing aria.
+- [x] (S,P3) Buttons: DangerBtn can't take type/aria-label (unify 4 button prop interfaces); LitPill sets disabled not aria-disabled; Glow renders <button disabled> for decorative text; AddToTasksButton/GaugeIcon missing aria.
 - [ ] (S,P3) AddContactModal/EditContactModal toggle divs lack role/tabIndex/onKeyDown; Mine/Not-mine toggle needs aria-pressed; calendar day cells no role=gridcell.
-- [ ] (S,P3) HexRingCanvas — no prefers-reduced-motion guard (WCAG 2.3.3).
+- [x] (S,P3) HexRingCanvas — no prefers-reduced-motion guard (WCAG 2.3.3).
 - [ ] (S,P3) HexSignature off-spec: HomeView:2010 cells={2}→{3}; AuthView:310 peak=0.28/cell=5 → canonical.
 
 ## §7 — PERFORMANCE / COST
