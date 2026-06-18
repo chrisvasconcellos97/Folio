@@ -48,7 +48,12 @@ export function PersonPicker({ value, onChange, members, contacts, accounts, acc
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accts]);
 
-  // Ordered groups: account contacts first, then My Team, then others by workspace.
+  // Ordered groups, each tagged with a scope so the dropdown can default to the
+  // relevant people (this account's contacts + My Team) and hide the rest behind
+  // a "Show all contacts…" expander:
+  //   scope "primary" — the task/project's account contacts (one group per account)
+  //   scope "team"    — My Team (org members)
+  //   scope "other"   — every remaining contact, grouped by their account
   var groups = useMemo(function () {
     var out = [];
     var used = {};
@@ -58,11 +63,11 @@ export function PersonPicker({ value, onChange, members, contacts, accounts, acc
       seenAcct[aid] = true;
       var list = cons.filter(function (c) { return c.account_id === aid; });
       if (list.length) {
-        out.push({ label: acctName[aid] || "Account", contacts: list });
+        out.push({ label: acctName[aid] || "Account", contacts: list, scope: "primary" });
         list.forEach(function (c) { used[c.id] = true; });
       }
     });
-    if (mems.length) out.push({ label: "My Team", members: mems });
+    if (mems.length) out.push({ label: "My Team", members: mems, scope: "team" });
     var remaining = cons.filter(function (c) { return !used[c.id]; });
     var byAcct = {};
     remaining.forEach(function (c) {
@@ -71,7 +76,7 @@ export function PersonPicker({ value, onChange, members, contacts, accounts, acc
     });
     Object.keys(byAcct)
       .sort(function (a, b) { return (acctName[a] || "ZZ").localeCompare(acctName[b] || "ZZ"); })
-      .forEach(function (k) { out.push({ label: acctName[k] || "Other", contacts: byAcct[k] }); });
+      .forEach(function (k) { out.push({ label: acctName[k] || "Other", contacts: byAcct[k], scope: "other" }); });
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cons, mems, primaryKey, acctName]);
@@ -87,14 +92,41 @@ export function PersonPicker({ value, onChange, members, contacts, accounts, acc
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mems, cons]);
 
+  // Values that live in the default (scoped) view: this account's contacts + My Team.
+  // A selected value outside this set forces the full list open so it stays visible.
+  var scopedKnown = useMemo(function () {
+    var k = {};
+    mems.forEach(function (m) {
+      if (m.email) k[m.email] = true;
+      if (m.invited_email) k[m.invited_email] = true;
+    });
+    groups.forEach(function (g) {
+      if (g.scope === "primary" && g.contacts) g.contacts.forEach(function (c) { k[valueOf(c)] = true; });
+    });
+    return k;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groups, mems]);
+
+  var hasOther = groups.some(function (g) { return g.scope === "other"; });
+  // Only scope when there's a defined account context AND people to hide; an
+  // account-less picker (no primaryIds) shows everyone, exactly as before.
+  var canScope = primaryIds.length > 0 && hasOther;
+  var valueIsOther = Boolean(value) && known[value] && !scopedKnown[value];
+
   var hasOptions = groups.length > 0;
   var valueKnown = !value || known[value];
   var [manual, setManual] = useState((Boolean(value) && !valueKnown) || !hasOptions);
+  var [showAll, setShowAll] = useState(false);
 
   useEffect(function () {
     if (value && !known[value] && !manual) setManual(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
+
+  var effectiveShowAll = showAll || valueIsOther;
+  var renderGroups = (!canScope || effectiveShowAll)
+    ? groups
+    : groups.filter(function (g) { return g.scope !== "other"; });
 
   if (manual) {
     return (
@@ -126,13 +158,14 @@ export function PersonPicker({ value, onChange, members, contacts, accounts, acc
     <SelectField
       value={value || ""}
       onChange={function (e) {
+        if (e.target.value === "__showall__") { setShowAll(true); return; }
         if (e.target.value === "__other__") { setManual(true); onChange(null); return; }
         onChange(e.target.value || null);
       }}
       style={style}
     >
       <option value="">{noneLabel || "Unassigned"}</option>
-      {groups.map(function (g, gi) {
+      {renderGroups.map(function (g, gi) {
         return (
           <optgroup key={gi} label={g.label}>
             {g.members
@@ -145,6 +178,7 @@ export function PersonPicker({ value, onChange, members, contacts, accounts, acc
           </optgroup>
         );
       })}
+      {canScope && !effectiveShowAll && <option value="__showall__">⋯ Show all contacts…</option>}
       <option value="__other__">✎ Someone else…</option>
     </SelectField>
   );
