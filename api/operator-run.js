@@ -30,6 +30,10 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
 import { logPipUsage, overDailySpendCap } from "./_pipUsage.js";
+// F1 — the ONE shared per-account context renderer (pure module, no supabase),
+// so the operator's "what Pip knows about this account" can never drift from
+// chat / summarize again. .js extension is required for the serverless bundle.
+import { renderAccountContext } from "../src/lib/accountContext.js";
 
 // Give the function a real time budget — it does several model calls. 60s is
 // valid on every Vercel plan; with the per-account passes parallelized below
@@ -58,124 +62,39 @@ function safeJsonParse(raw) {
   try { return JSON.parse(s); } catch (_) { return null; }
 }
 
-function excerpt(s, n) {
-  if (!s) return "";
-  s = String(s).replace(/\s+/g, " ").trim();
-  return s.length > n ? s.slice(0, n) + "…" : s;
-}
-
-// Build the compact per-account context block the deep pass reasons over.
-// All caps below are token-trims, not signal cuts — signal-bearing fields
-// (commitments, champions/blockers, waiting_on) are sorted to the front before
-// the slice so they survive the cap.
-function renderAccountContext(acc, meetings, tasks, contacts, projects, updates, stateRow, snapshot, userId) {
-  var lines = [];
-  lines.push("ACCOUNT: " + acc.name + (acc.tier ? " (" + acc.tier + " tier)" : ""));
-  // Item 38 — ownership signal: tell Pip when this user is project-involved
-  // only (not the relationship owner) so it skips outreach/follow-up nudges.
-  if (acc.owner_user_id && userId && acc.owner_user_id !== userId) {
-    lines.push("RELATIONSHIP_OWNER: NO — this account is managed by someone else; this user is project-involved only");
-  }
-  if (acc.objective) lines.push("Their goal: " + excerpt(acc.objective, 200));
-  if (Array.isArray(acc.systems) && acc.systems.length) {
-    lines.push("Systems they use: " + acc.systems.map(function (s) { return typeof s === "string" ? s : (s && s.name) || ""; }).filter(Boolean).join(", "));
-  }
-  if (snapshot) {
-    lines.push("Health: " + (snapshot.health_status || "?") +
-      (snapshot.days_since_contact != null ? " · " + snapshot.days_since_contact + "d since contact" : "") +
-      (snapshot.overdue_item_count ? " · " + snapshot.overdue_item_count + " overdue" : ""));
-  }
-
-  if ((contacts || []).length) {
-    // Sort: primary first, then champions/blockers, then the rest — so the cap
-    // of 6 never drops a signal-bearing contact.
-    var sortedContacts = (contacts || []).slice().sort(function (a, b) {
-      function rank(c) {
-        if (c.is_primary) return 0;
-        if (c.relationship_role === "champion" || c.relationship_role === "blocker") return 1;
-        return 2;
-      }
-      return rank(a) - rank(b);
-    });
-    lines.push("\nCONTACTS:");
-    sortedContacts.slice(0, 6).forEach(function (c) {
-      var tag = [];
-      if (c.is_primary) tag.push("primary");
-      if (c.relationship_role === "champion") tag.push("CHAMPION");
-      if (c.relationship_role === "blocker") tag.push("BLOCKER");
-      lines.push("- " + c.name + (c.title ? " (" + c.title + ")" : "") + (tag.length ? " [" + tag.join(", ") + "]" : ""));
-    });
-  }
-
-  if ((meetings || []).length) {
-    lines.push("\nRECENT MEETINGS (newest first):");
-    meetings.slice(0, 3).forEach(function (m) {
-      var when = m.meeting_date || (m.created_at ? m.created_at.slice(0, 10) : "");
-      lines.push("- " + when + (m.title ? " · " + m.title : "") + (m.pip_tone ? " · tone: " + m.pip_tone : ""));
-      if (m.pip_summary) lines.push("  " + excerpt(m.pip_summary, 160));
-    });
-  }
-
-  var open = (tasks || []).filter(function (t) { return !t.done && t.status !== "complete"; });
-  if (open.length) {
-    // Sort: commitments first, then overdue (has due_date in the past), then
-    // waiting_on, then the rest — so the cap of 8 keeps the signal-bearing tasks.
-    var today = new Date().toISOString().slice(0, 10);
-    open.sort(function (a, b) {
-      function rank(t) {
-        if (t.is_commitment) return 0;
-        if (t.due_date && t.due_date < today) return 1;
-        if (t.waiting_on) return 2;
-        return 3;
-      }
-      return rank(a) - rank(b);
-    });
-    lines.push("\nOPEN TASKS:");
-    open.slice(0, 8).forEach(function (t) {
-      var bits = [t.title || "(untitled)"];
-      if (t.due_date) bits.push("due " + t.due_date);
-      if (t.is_commitment) bits.push("✦ COMMITMENT");
-      if (t.assignee_email) bits.push("→ " + t.assignee_email);
-      if (t.waiting_on) bits.push("⏳ WAITING ON " + t.waiting_on + (t.waiting_on_since ? " (since " + t.waiting_on_since + ")" : ""));
-      lines.push("- " + bits.join(" · "));
-    });
-  }
-
-  if ((projects || []).length) {
-    lines.push("\nACTIVE GAUGE PROJECTS:");
-    projects.slice(0, 6).forEach(function (p) {
-      var latest = Array.isArray(p.status_updates) && p.status_updates.length ? p.status_updates[0] : null;
-      lines.push("- " + (p.title || "(untitled)") + " · " + (p.status || "?") +
-        (latest ? " · latest: \"" + excerpt(latest.body, 120) + "\"" : "") +
-        (p.waiting_on ? " · ⏳ WAITING ON " + p.waiting_on + (p.waiting_on_since ? " (since " + p.waiting_on_since + ")" : "") : ""));
-      // Open tasks INSIDE the project. Project work lives in folio_tasks now
-      // (task-model unification) — hydrated onto p.tasks below. Without this
-      // the operator was blind to everything happening inside a project.
-      var openStages = Array.isArray(p.tasks)
-        ? p.tasks.filter(function (t) { return t && !t.done; })
-        : [];
-      openStages.slice(0, 5).forEach(function (t) {
-        var tb = ["  · " + (t.title || t.text || "(untitled task)")];
-        if (t.due_date) tb.push("due " + t.due_date);
-        if (t.assignee || t.assignee_email) tb.push("→ " + (t.assignee || t.assignee_email));
-        lines.push("  " + tb.join(" · "));
-      });
-    });
-  }
-
-  if ((updates || []).length) {
-    lines.push("\nRECENT ACCOUNT UPDATES:");
-    updates.slice(0, 2).forEach(function (u) {
-      lines.push("- " + (u.update_date || "") + " · " + (u.update_type || "") + ": " + excerpt(u.title || u.description, 120));
-    });
-  }
-
-  if (stateRow) {
-    if (stateRow.lessons_learned) lines.push("\nLESSONS PIP HAS LEARNED ON THIS ACCOUNT:\n" + excerpt(stateRow.lessons_learned, 300));
-    if (stateRow.operator_situation) lines.push("\nWHAT PIP SAID LAST RUN (for the 'since last run' delta):\n" + excerpt(stateRow.operator_situation, 300));
-  }
-
-  return lines.join("\n");
+// Map the operator's raw DB rows into the shared account-context bundle and
+// render via the ONE builder (src/lib/accountContext.js, surface:"operator").
+// The per-surface preset in that module encodes the operator's intentional
+// trimming (cap 8 tasks / 3 meetings / 6 contacts, inline ✦/⏳ markers, no
+// dedicated commitments/relationships/health-trend sections); the descriptive
+// fields can no longer drift from chat / summarize.
+function buildOperatorAccountContext(acc, meetings, tasks, contacts, projects, updates, stateRow, snapshot, userId) {
+  var operatorAccount = {
+    id:            acc.id,
+    name:          acc.name,
+    account_type:  acc.account_type,
+    tier:          acc.tier,
+    owner_user_id: acc.owner_user_id,
+    objective:     acc.objective,
+    systems:       acc.systems,
+    snapshot:      snapshot,            // single snapshot row → metrics line
+    meetings: (meetings || []).map(function (m) {
+      return {
+        date:    m.meeting_date || (m.created_at ? m.created_at.slice(0, 10) : ""),
+        title:   m.title,
+        summary: m.pip_summary,
+        tone:    m.pip_tone,
+      };
+    }),
+    openItems:     tasks || [],         // folio_tasks rows (done/status filtered in builder)
+    contacts:      contacts || [],
+    activeProjects: projects || [],     // each already hydrated with .tasks
+    recentUpdates: updates || [],
+    operator: stateRow
+      ? { situation: stateRow.operator_situation, lessons_learned: stateRow.lessons_learned }
+      : null,
+  };
+  return renderAccountContext(operatorAccount, { surface: "operator", userId: userId });
 }
 
 var ACCOUNT_SYSTEM = `You are Pip, an account manager's autonomous chief of staff working the book overnight. You've been handed one account's full context. Do the FIRST DRAFT of the work a sharp AM would do before their day starts.
@@ -589,7 +508,7 @@ async function gatherAndRun(admin, client, userId, acc, snapshot, userContext) {
   var sRes = await admin.from("folio_pip_account_state")
     .select("lessons_learned,operator_situation").eq("account_id", acc.id).maybeSingle();
 
-  var ctxText = renderAccountContext(
+  var ctxText = buildOperatorAccountContext(
     acc, mRes.data || [], tRes.data || [], cRes.data || [],
     projects, uRes.data || [], sRes.data || null, snapshot, userId
   );

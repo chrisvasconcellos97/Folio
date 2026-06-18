@@ -169,6 +169,7 @@ describe("buildAccountContext — operator surface", function () {
     expect(text).toMatch(/RELATIONSHIP_OWNER: NO/);
     expect(text).toMatch(/Account Intel: Grow shop coverage/);
     expect(text).toMatch(/Systems\/tools they use: Fuse5/);
+    expect(text).toMatch(/Tier: Major/); // tier preserved even w/o a status line
   });
   it("emits open tasks WITH inline ✦ commitment + waiting markers (no dedicated sections)", function () {
     expect(text).toMatch(/Send CAPA cert docs.*✦ commitment/);

@@ -161,15 +161,19 @@ function statusSection(a, o) {
   var bits = [];
   var status = a.status || "—";
   var health = a.health || "—";
-  // Only emit the status line when there's at least one real signal — operator
-  // accounts (which don't fetch status/health/last_interaction) get nothing.
+  var isCustomerType = a.account_type !== "internal_team" && a.account_type !== "partner";
+  // Only emit the full status line when there's a real signal. Operator accounts
+  // don't fetch status/health/last_interaction — but still surface their tier so
+  // it isn't dropped (the legacy operator renderer carried tier in the header).
   var hasSignal = a.status || a.health || a.last_interaction_at;
-  if (!hasSignal) return "";
+  if (!hasSignal) {
+    if (a.tier && isCustomerType) return "Tier: " + a.tier;
+    return "";
+  }
   var last = a.last_interaction_at ? fmtDate(a.last_interaction_at) : "never";
   var ds = daysSince(a.last_interaction_at);
   var dsStr = ds == null ? "" : " (" + ds + "d ago)";
   var line = "Status: " + status + " · Health: " + health + " · Last contact: " + last + dsStr;
-  var isCustomerType = a.account_type !== "internal_team" && a.account_type !== "partner";
   if (a.tier && isCustomerType) line += " · Tier: " + a.tier;
   bits.push(line);
   return bits.join("\n");
