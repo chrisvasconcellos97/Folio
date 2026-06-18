@@ -5,6 +5,7 @@ import { logError } from "./errorLog";
 import { timed } from "./net";
 import { pipBusyStart, pipBusyEnd } from "./pipBusy";
 import { showToast } from "../components/Toast";
+import { renderAccountContext } from "./accountContext.js";
 
 var PROXY_URL    = import.meta.env.VITE_PIP_PROXY_URL || "/api/pip";
 var ASK_PIP_URL  = "/api/ask-pip";
@@ -106,19 +107,6 @@ function fetchWithAuthRetry(url, body) {
         });
       });
   });
-}
-
-// Renders recent account update-calendar entries so Pip can cross-reference
-// what changed (new pricing, integrations, events) against what was discussed.
-function renderRecentUpdatesBlock(updates) {
-  if (!Array.isArray(updates) || updates.length === 0) return "";
-  var lines = updates.slice(0, 6).map(function (u) {
-    var bits = [(u.update_date || ""), (u.update_type || ""), (u.title || "")];
-    if (u.owner) bits.push("owner: " + u.owner);
-    if (u.observed_impact) bits.push("impact: " + String(u.observed_impact).slice(0, 80));
-    return "- " + bits.filter(Boolean).join(" · ");
-  }).join("\n");
-  return "── RECENT ACCOUNT UPDATES (update calendar) ──\n" + lines + "\n\n";
 }
 
 // Global people directory — everyone the user already knows, across all
@@ -277,23 +265,6 @@ function renderContactsBlock(contacts) {
   return out;
 }
 
-// Renders recent meeting history (with Pip summaries) for summarize prompts.
-function renderMeetingHistoryBlock(meetings) {
-  if (!Array.isArray(meetings) || meetings.length === 0) return "";
-  var recent = meetings.slice(0, 5);
-  var lines = recent.map(function (m) {
-    var head = "- " + (m.date || m.meeting_date || "?") + " — \"" + (m.title || m.pip_short_title || "Meeting") + "\"";
-    if (m.attendees && m.attendees.length) head += " · attendees: " + m.attendees.join(", ");
-    if (m.method) head += " · via " + m.method;
-    var body = (m.pip_summary || m.notes || "").slice(0, 220);
-    var row = head + (body ? "\n  " + body : "");
-    if (m.theme) row += "\n  Theme: " + m.theme;
-    if (m.tone)  row += "\n  Tone: " + m.tone;
-    return row;
-  });
-  return "── RECENT MEETING HISTORY ──\n" + lines.join("\n") + "\n\n";
-}
-
 // Renders the cadence schedule block for summarize prompts.
 function renderCadenceScheduleBlock(cadence) {
   if (!cadence) return "";
@@ -340,82 +311,6 @@ function renderAccountSystemsBlock(systems) {
       return "- " + (s.name || "") + (s.note ? ": " + s.note : "");
     }).filter(function (l) { return l.length > 2; }).join("\n") +
     "\n\n";
-}
-
-// Renders a one-line health trend string from snapshot rows (for summarize context).
-// snapshots — array of folio_account_snapshots rows already filtered to this account.
-function renderHealthTrendBlock(snapshots) {
-  if (!Array.isArray(snapshots) || snapshots.length < 3) return "";
-  var sorted = snapshots.slice().sort(function (a, b) {
-    return (a.snapshot_date || "") > (b.snapshot_date || "") ? 1 : -1;
-  });
-  var statuses = sorted.map(function (s) { return s.health_status || "unknown"; });
-  var first = statuses[0];
-  if (statuses.every(function (s) { return s === first; })) return "";
-  return "HEALTH TREND (last " + statuses.length + " snapshots): " + statuses.join(" → ") + "\n\n";
-}
-
-// Renders snapshot numeric metrics (latest snapshot row) for summarize context.
-function renderSnapshotMetricsBlock(healthSnapshots) {
-  if (!Array.isArray(healthSnapshots) || healthSnapshots.length === 0) return "";
-  var latestSnap = healthSnapshots.slice().sort(function (x, y) {
-    return (x.snapshot_date || "") > (y.snapshot_date || "") ? -1 : 1;
-  })[0];
-  if (!latestSnap) return "";
-  var snapParts = [];
-  if (latestSnap.health_score != null)       snapParts.push("Score: " + Math.round(latestSnap.health_score));
-  if (latestSnap.days_since_contact != null) snapParts.push("Days since contact: " + latestSnap.days_since_contact);
-  if (latestSnap.open_item_count != null)    snapParts.push("Open items: " + latestSnap.open_item_count);
-  if (latestSnap.overdue_item_count != null)  snapParts.push("Overdue: " + latestSnap.overdue_item_count);
-  if (latestSnap.active_project_count != null) snapParts.push("Active projects: " + latestSnap.active_project_count);
-  if (!snapParts.length) return "";
-  return "Account metrics: " + snapParts.join(" · ") + "\n\n";
-}
-
-// Renders the serviced states block for system prompts.
-function renderServicedStatesBlock(servicedStates) {
-  if (!Array.isArray(servicedStates) || servicedStates.length === 0) return "";
-  var ss = servicedStates;
-  var ssStr = ss.length >= 48
-    ? "National (" + ss.length + " states)"
-    : ss.length + " states: " + ss.slice(0, 10).join(", ") + (ss.length > 10 ? "…" : "");
-  return "Serviced states: " + ssStr + "\n\n";
-}
-
-// Renders a delivery track record block from pip_promise_log stats.
-// promiseStats — { avgDays, recentItems } from usePipPromiseLog, or null.
-function renderPromiseLogBlock(promiseStats) {
-  if (!promiseStats || !promiseStats.avgDays || promiseStats.avgDays <= 0) return "";
-  var lines = ["DELIVERY TRACK RECORD (this account):"];
-  lines.push("- Average days to close a commitment: ~" + promiseStats.avgDays + "d");
-  var recent = Array.isArray(promiseStats.recentItems) ? promiseStats.recentItems : [];
-  if (recent.length > 0) {
-    var closes = recent.slice(0, 5).map(function (r) {
-      return '"' + (r.item_text || "—").slice(0, 60) + '" (' + (r.days_to_complete != null ? r.days_to_complete + "d" : "?") + ')';
-    });
-    lines.push("- Recent closes: " + closes.join(", "));
-  }
-  return lines.join("\n") + "\n\n";
-}
-
-// Renders the commitments sub-section for bp3 — tells Pip which items are already
-// standing promises so it doesn't duplicate them in the plan.
-// openItems — folio_tasks rows (with .text/.title, .due_date, .is_commitment, .owner).
-// todayISO — "YYYY-MM-DD" string for overdue detection.
-function renderCommitmentsInBlock(openItems, todayISO) {
-  if (!Array.isArray(openItems) || openItems.length === 0) return "";
-  var commitments = openItems.filter(function (i) { return i.is_commitment; });
-  if (commitments.length === 0) return "";
-  var lines = ["── STANDING COMMITMENTS ON THIS ACCOUNT (promises already made — avoid duplicating) ──"];
-  commitments.slice(0, 5).forEach(function (c) {
-    var label = c.text || c.title || "—";
-    var due = c.due_date || c.due || null;
-    var isOverdue = due && todayISO && due < todayISO;
-    var duePart = due ? " (due " + due + (isOverdue ? " — OVERDUE" : "") + ")" : "";
-    var ownerPart = (c.owner || c.assignee_email) ? " · owner: " + (c.owner || c.assignee_email) : "";
-    lines.push("- " + label + duePart + ownerPart);
-  });
-  return lines.join("\n") + "\n\n";
 }
 
 // Re-export so callers (PipView) can short-circuit deterministic answers.
@@ -846,20 +741,8 @@ export function summarizeDraftPip(payload, opts) {
       (rawCorrLines || "(no prior corrections — first time on this account)") + "\n\n";
   }
 
-  // Pip's own overnight operator read on this account — so a fresh summary
-  // doesn't re-propose work Pip already flagged/drafted (the "re-suggests
-  // already-flagged work" complaint). Qualitative only.
-  var opSituation = pipAccountState && pipAccountState.operator_situation ? String(pipAccountState.operator_situation).trim() : "";
-  var opRisks     = pipAccountState && Array.isArray(pipAccountState.operator_risks) ? pipAccountState.operator_risks : [];
-  var operatorBlock = "";
-  if (opSituation || opRisks.length) {
-    operatorBlock = "── PIP'S RECENT READ ON THIS ACCOUNT (already surfaced — don't re-propose these as brand-new) ──\n" +
-      (opSituation ? opSituation + "\n" : "") +
-      (opRisks.length
-        ? "Already-flagged open risks: " + opRisks.slice(0, 6).map(function (r) { return typeof r === "string" ? r : (r && r.text ? r.text : ""); }).filter(Boolean).join("; ") + "\n"
-        : "") +
-      "\n";
-  }
+  // (Pip's overnight operator read — "already surfaced, don't re-propose" — is
+  // now emitted by the shared account-context builder under surface:"summarize".)
 
   // ── Structured content blocks with cache breakpoints ────────────────────
   //
@@ -974,34 +857,56 @@ export function summarizeDraftPip(payload, opts) {
   // BP2 — user profile + pip facts + glossary + org members (stable per user, changes infrequently)
   var bp2Text = renderUserProfileBlock(payload.profileProse || null) + renderPipFactsBlock(facts) + renderGlossaryBlock(glossary) + "Org members (valid assignee emails):\n" + memberLines;
 
-  // BP3 — account roster + objective + contacts + cadence + learned patterns (stable per account)
-  // ET-anchored "today" so the overdue threshold aligns with the operator-run date convention.
-  var todayISOForCommitments = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" })).toISOString().slice(0, 10);
-  var ownershipNote = "";
-  if (payload.ownerUserId && payload.userId && payload.ownerUserId !== payload.userId) {
-    ownershipNote = "NOTE: This account is not assigned to you (owned by another team member). When summarizing, mention who is responsible and avoid assuming you have taken action on it.\n\n";
-  }
+  // BP3 — account roster + the shared per-account context + cadence + corrections
+  // (stable per account). The DESCRIPTIVE account context — objective, systems,
+  // serviced states, contacts + relationships, meeting history, commitments,
+  // recent updates, health trend/metrics, promise log, ownership, and Pip's
+  // "already surfaced — don't re-propose" operator read — is now rendered by the
+  // ONE shared builder (src/lib/accountContext.js, surface:"summarize"), so it
+  // can never drift from chat / operator again. Summarize-specific blocks stay
+  // caller-side: the routing roster, the internal/person meeting framing, the
+  // global people directory, the cadence schedule, and the correction read-back.
+  var summarizeAccount = {
+    id:              payload.accountId || null,
+    name:            payload.accountName || "—",
+    account_type:    accountType,
+    owner_user_id:   payload.ownerUserId || null,
+    objective:       accountObjective,
+    systems:         accountSystems,
+    serviced_states: servicedStates,
+    meetings: meetingHistory.map(function (mh) {
+      return {
+        date:      mh.meeting_date || mh.date,
+        title:     mh.title || mh.pip_short_title,
+        summary:   mh.pip_summary,
+        notes:     mh.notes,
+        attendees: mh.attendees,
+        method:    mh.method,
+        theme:     mh.theme,
+        tone:      mh.tone,
+      };
+    }),
+    openItems:       openItems,        // commitments section filters is_commitment
+    contacts:        contacts,
+    recentUpdates:   recentUpdates,
+    healthSnapshots: healthSnapshots,
+    promiseStats:    promiseStats,
+    operator: pipAccountState
+      ? { situation: pipAccountState.operator_situation, risks: pipAccountState.operator_risks }
+      : null,
+  };
   var bp3Text =
-    ownershipNote +
     renderAccountRosterBlock(accountRoster, payload.accountId || null) +
     (isPersonCadence ? renderPersonCadenceBlock(contactName) : (accountType === "internal_team" ? renderInternalMeetingBlock() : "")) +
-    renderServicedStatesBlock(servicedStates) +
-    renderAccountObjectiveBlock(accountObjective) +
-    renderAccountSystemsBlock(accountSystems) +
-    renderHealthTrendBlock(healthSnapshots) +
-    renderSnapshotMetricsBlock(healthSnapshots) +
-    renderContactsBlock(contacts) +
+    renderAccountContext(summarizeAccount, { surface: "summarize", userId: payload.userId || null }) + "\n\n" +
     renderPeopleDirectoryBlock(globalPeople) +
     renderCadenceScheduleBlock(cadence) +
-    renderRecentUpdatesBlock(recentUpdates) +
-    renderCommitmentsInBlock(openItems, todayISOForCommitments) +
-    renderPromiseLogBlock(promiseStats) +
-    correctionBlock +
-    operatorBlock;
+    correctionBlock;
 
-  // BP4 — meeting history + existing items + tasks + projects + hints (changes per meeting session)
+  // BP4 — existing items + tasks + projects + hints (changes per meeting session).
+  // (Meeting history moved into the shared account context above — it's
+  // account-stable, so it belongs in the per-account cache layer.)
   var bp4Text =
-    renderMeetingHistoryBlock(meetingHistory) +
     "Existing open items on this account:\n" + itemLines + "\n\n" +
     "Existing in-flight Gauge tasks on this account (incl. child accounts):\n" + taskBlock + "\n\n" +
     "Active Gauge projects (use these ids for project_id):\n" +
