@@ -5,6 +5,22 @@ import { projectMatchesAccount } from "./gaugeStatus";
 // source of truth instead of each declaring their own copy.
 export var STATUS_LABELS = { green: "Healthy", yellow: "Watching", red: "At Risk", new: "New" };
 
+// Ownership predicate (item 38) — an account is "mine to manage" unless it's
+// explicitly owned by someone else (owner_user_id set AND != me). Accounts with
+// no owner set are treated as mine. ONE shared copy so every surface that
+// suppresses relationship nudges (cold/warm/fires/anomalies) for not-mine (e.g.
+// MSO) accounts agrees — was duplicated inline across HomeView (App Coherence
+// Rule). For not-mine accounts only project-level work should surface, never
+// outreach/cold-contact/at-risk urgency.
+export function isMine(account, userId) {
+  if (!account) return false;
+  if (!account.owner_user_id || !userId) return true;
+  return account.owner_user_id === userId;
+}
+export function notMyRelationship(account, userId) {
+  return !isMine(account, userId);
+}
+
 // Computes account health from signals. Tier-aware thresholds.
 // Returns { status: 'green'|'yellow'|'red'|'new', reason: string }.
 // Override (when set) supersedes everything.

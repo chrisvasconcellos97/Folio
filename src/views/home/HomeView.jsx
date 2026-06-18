@@ -15,6 +15,7 @@ import { OperatorRunButton } from "./OperatorRunButton";
 import { generateCheckInQuestions } from "../../lib/checkIn";
 import { callPortfolioBriefPip } from "../../lib/pip";
 import { isProjectComplete } from "../../lib/gaugeStatus";
+import { notMyRelationship } from "../../lib/accountHealth";
 import { suggestionLabel } from "../pip/PipCatchUp";
 import { showToast } from "../../components/Toast";
 import { HexField, HexSignature } from "../../lib/hexMotif";
@@ -405,7 +406,7 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
         var isFlagged = s.health_status === "at_risk" || s.health_status === "watching";
         // Ownership: a "not mine" account (owner is someone else) should never
         // drive outreach/cold/at-risk urgency in the brief — only project work.
-        var notMine = !!(acc && acc.owner_user_id && userId && acc.owner_user_id !== userId);
+        var notMine = !!acc && notMyRelationship(acc, userId);
         return Object.assign({}, s, {
           account_name: acc ? acc.name : "Unknown",
           overdue_items: (overdueByAccount[s.account_id] || []).slice(0, 3),
@@ -437,7 +438,7 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
       // Item 38: exclude accounts owned by someone else (relationship-owner distinction).
       var coldAccounts = (accounts || []).filter(function (a) {
         if (a.is_inactive) return false;
-        if (a.owner_user_id && userId && a.owner_user_id !== userId) return false; // not my relationship
+        if (notMyRelationship(a, userId)) return false; // not my relationship
         var snap = (snapshots || []).find(function (s) { return s.account_id === a.id; });
         if (!snap) return false;
         return snap.days_since_contact !== null && snap.days_since_contact >= 30 &&
@@ -549,7 +550,7 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
       (accounts || []).forEach(function (a) {
         if (a.is_inactive) return;
         // Item 38: skip off-cadence nudges for accounts owned by someone else.
-        if (a.owner_user_id && userId && a.owner_user_id !== userId) return;
+        if (notMyRelationship(a, userId)) return;
         var dates = (meetings || [])
           .filter(function (m) { return m.account_id === a.id && m.meeting_date && m.status !== "scheduled"; })
           .map(function (m) { return m.meeting_date; })
@@ -876,7 +877,7 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
       if (a.is_inactive) return;
       // Only surface cold nudges for accounts I own — not-mine accounts are
       // someone else's relationship to manage (item 38 ownership distinction).
-      if (a.owner_user_id && userId && a.owner_user_id !== userId) return;
+      if (notMyRelationship(a, userId)) return;
       var last = a.last_interaction_at ? new Date(a.last_interaction_at).getTime() : 0;
       if (!last) return;
       var daysCold = Math.floor((Date.now() - last) / 86400000);
@@ -954,6 +955,9 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
 
     (accounts || []).forEach(function (a) {
       if (a.is_inactive || a.tier !== "Growth") return;
+      // Don't nudge me to "stay warm" on an account that isn't my relationship
+      // (item 38) — that's outreach urgency, suppressed for not-mine accounts.
+      if (notMyRelationship(a, userId)) return;
       var last = a.last_interaction_at ? new Date(a.last_interaction_at).getTime() : 0;
       if (!last) return;
       var daysCold = Math.floor((Date.now() - last) / 86400000);
@@ -970,7 +974,7 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
 
     rows.sort(function (x, y) { return x.sortKey - y.sortKey; });
     return rows.slice(0, 5);
-  }, [cadences, meetings, accounts, accountById]);
+  }, [cadences, meetings, accounts, accountById, userId]);
 
   // Hero line stays SHORT and accurate — Pip's at-a-glance read. The detailed,
   // Pip-voiced headline lives in the operator report card below, so we don't
