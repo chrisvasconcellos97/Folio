@@ -1,6 +1,6 @@
 # Folios — Data Handling
 
-*Last updated: 2026-06-17 (merge re-parenting detail)*
+*Last updated: 2026-06-18 (merge re-parents suggestion.account_id; alias note)*
 
 This document inventories what data Folios stores, where it lives,
 who can access it, and what crosses the boundary to third-party AI
@@ -210,10 +210,14 @@ own service-role credentials.
   cadences (`folio_cadences`), snapshots (`folio_account_snapshots`),
   correction log (`pip_correction_log`), assignment hints
   (`pip_assignment_hints`), promise log (`pip_promise_log`),
-  and array columns (`folio_meetings.account_ids`,
-  `folio_cadences.account_ids`) via `array_replace`. After re-parenting,
-  the source account's `is_inactive` flag is set and `merged_into_account_id`
-  is recorded.
+  the account reference embedded in drip-question suggestions
+  (`folio_pip_questions.suggestion` jsonb — both `account_id` and the
+  display `account_name`), and array columns (`folio_meetings.account_ids`,
+  `folio_cadences.account_ids`) via `array_replace`. Contact aliases
+  (`folio_contact_aliases`) need no re-parenting — they key on `contact_id`,
+  and contact rows are themselves re-parented, so aliases follow their
+  contact automatically. After re-parenting, the source account's
+  `is_inactive` flag is set and `merged_into_account_id` is recorded.
 - **User deletion** triggers a cascade through all `folio_*` tables
   via the foreign-key `on delete cascade` rules.
 

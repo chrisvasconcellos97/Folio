@@ -17,6 +17,8 @@ import { routeToolCall, planToolCalls, describeToolCall, classifyTool, CONFIRM_T
 // (CONFIRM_THRESHOLD re-export below; routeToolCall still used by executeTools.)
 import { usePipFacts } from "../../hooks/usePipFacts";
 import { usePipAccountState, findStaleAccountIds } from "../../hooks/usePipAccountState";
+import { useAccountSnapshots } from "../../hooks/useAccountSnapshots";
+import { usePipPromiseStats } from "../../hooks/usePipPromiseStats";
 import { useGlossary } from "../../hooks/useGlossary";
 import { HexPulse } from "../../lib/hexMotif";
 import { usePipState } from "../../lib/pipState";
@@ -71,6 +73,8 @@ export function PipView(props) {
 
   var pipFacts        = usePipFacts(userId);
   var pipAcctState    = usePipAccountState(userId);
+  var snapshotsApi    = useAccountSnapshots(userId);
+  var promiseStatsMap = usePipPromiseStats(userId);
   var glossaryApi     = useGlossary(userId, null, null);
   var recentThemes    = useRecentThemes(userId);
   var userProfileApi  = useUserProfile(userId);
@@ -194,6 +198,15 @@ export function PipView(props) {
         cachedStateMap[s.account_id] = s.state_prose;
       }
     });
+    // Health-trend snapshots (last ~8 days) grouped per account, so chat Pip can
+    // read each focused account's health trajectory + latest metrics — these are
+    // rendered by pipContext.renderAccountFull (healthSnapshots) but were never
+    // populated here (parity wire).
+    var snapshotsByAccount = {};
+    (snapshotsApi.snapshotHistory || []).forEach(function (s) {
+      if (!s.account_id) return;
+      (snapshotsByAccount[s.account_id] || (snapshotsByAccount[s.account_id] = [])).push(s);
+    });
     return {
       accounts: accounts.map(function (a) {
         var acctMeetings = allMeetings.filter(function (m) { return m.account_id === a.id && m.status !== "scheduled"; })
@@ -240,7 +253,28 @@ export function PipView(props) {
           .map(function (c) { return { name: c.name, title: c.title, email: c.email, phone: c.phone, is_poc: c.is_poc, is_primary: c.is_primary || false, is_leader: c.is_leader || false, relationship_role: c.relationship_role || null, relationship_note: c.relationship_note || null }; });
         var acctProjects = (projects || [])
           .filter(function (p) { return projectMatchesAccount(p, a.id) && p.status !== "complete" && p.status !== "on_hold"; })
-          .map(function (p) { return { title: p.title, status: p.status, due_date: p.due_date, status_updates: Array.isArray(p.status_updates) ? p.status_updates.slice(0, 3) : [] }; });
+          .map(function (p) {
+            return {
+              title:            p.title,
+              status:           p.status,
+              due_date:         p.due_date,
+              status_updates:   Array.isArray(p.status_updates) ? p.status_updates.slice(0, 3) : [],
+              // Who-has-ball + ownership (rendered by renderAccountFull, was unpopulated).
+              assignee:         p.assignee || null,
+              requested_by:     p.requested_by || null,
+              waiting_on:       p.waiting_on || null,
+              waiting_on_since: p.waiting_on_since || null,
+              // Hydrated folio_tasks (stage-shaped) so Pip sees who owns each task.
+              tasks: Array.isArray(p.tasks) ? p.tasks.map(function (t) {
+                return {
+                  title:          t.title || t.text || null,
+                  assignee_email: t.assignee_email || null,
+                  recipient:      t.recipient || null,
+                  completed_at:   t.completed_at || null,
+                };
+              }) : [],
+            };
+          });
         var acctUpdates = allUpdates
           .filter(function (u) { return u.account_id === a.id; })
           .slice(0, 6)
@@ -285,6 +319,8 @@ export function PipView(props) {
           contacts:       acctContacts,
           activeProjects:  acctProjects,
           recentUpdates:   acctUpdates,
+          healthSnapshots: snapshotsByAccount[a.id] || [],
+          promiseStats:    promiseStatsMap[a.id] || null,
           cachedState:     cachedStateMap[a.id] || null,
           portfolioThemes: recentThemes,
           // Operator fields — Pip's overnight read on this account

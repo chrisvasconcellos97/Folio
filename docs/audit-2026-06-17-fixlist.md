@@ -65,7 +65,7 @@ Check off `[x]` as we go. Work order suggestion: §1 → §2 → §3 → §4 →
 ## §3 — PIP WIRING / PARITY (FEED — non-architectural)
 
 - [ ] (M,P1/#1) Chat blind to global People Directory — `globalPeople` passed to PipView but unused; wire → buildContext → renderContextProse (THE #1 "suggests known people as new" fix).
-- [ ] (M,P1) `PipView.jsx:241-243` + `pipContext.js:406-468` — dead memory in chat: healthSnapshots, promiseStats, project waiting_on/assignee/requested_by rendered but never populated by buildContext.
+- [x] (M,P1) `PipView.jsx:241-243` + `pipContext.js:406-468` — dead memory in chat: healthSnapshots, promiseStats, project waiting_on/assignee/requested_by rendered but never populated by buildContext. FIXED: buildContext now populates per-account `healthSnapshots` (grouped from useAccountSnapshots.snapshotHistory), `promiseStats` (new global usePipPromiseStats hook → account map), and enriches activeProjects with assignee/requested_by/waiting_on/waiting_on_since + hydrated `tasks`. Runtime path traced: buildContext→askPip→api/pip.js curateContext(focused passes full account objects)→renderAccountFull reads exactly these fields. Verified field-name parity (snapshot_date/health_status/health_score; promiseStats.avgDays/recentItems).
 - [ ] (M,P1) `pip.js:724+` summarizeDraftPip — operator state (situation/risks/draft) absent → Pip re-suggests already-flagged work. Pass operatorState into bp3Text.
 - [ ] (M,P1) `pip.js:529-601` callBriefMePip — Brief Me missing healthSnapshots + recentUpdates + project waiting_on/assignee.
 - [ ] (M,P1) `AdHocConversationFlow.jsx:110-155` — ad-hoc summarize omits healthSnapshots/promiseStats/cadence that CadenceHub passes → worse plans on reactive meetings.
@@ -95,7 +95,7 @@ Check off `[x]` as we go. Work order suggestion: §1 → §2 → §3 → §4 →
 - [x] (M,P2) 4 tabs use bespoke empty-state divs not shared EmptyState (ShopsTab/UpdatesTab/ProjectsTab/CadenceTab); also FlatTaskQueue.
 - [ ] (M,P2) `ProjectsTab:122-132,241` + `MeetingsTab` completion task inserts via raw supabase, ProjectModal missing userId/members → no touchAccount/logActivity/source/pip_created_at.
 - [ ] (S,P2) `ContactsTab:277` builds insight without PipInsightCard wrapper (loses hex/collapse).
-- [ ] (M,P2) `folio_merge_accounts` — re-parent `folio_pip_questions.suggestion.account_id` (+ folio_contact_aliases.account_id) → else post-merge drip writes to dead account.
+- [x] (M,P2) `folio_merge_accounts` — re-parent `folio_pip_questions.suggestion.account_id` (+ folio_contact_aliases.account_id) → else post-merge drip writes to dead account. FIXED: merge fn now rewrites `suggestion.account_id` + `account_name` (jsonb_set) where it points at the source. Applied to prod via MCP + folded into schema.sql + docs/data-handling.md. NOTE: `folio_contact_aliases` has NO account_id column (verified vs prod) — it keys on contact_id and contacts are re-parented by row, so aliases follow automatically; nothing to do there (documented).
 - [ ] (S,P2) merge deletes source pip_account_state but never refreshes target → stale card. touchAccount(target) or toast.
 - [x] (M,P2) LeaderProjectsView + TeammateDetailView count accounts via account_id only → use projectMatchesAccount (account_ids[]).
 - [x] (M,P2) DUAL TASK MODEL — RESOLVED via full task-model unification (see §10): folio_tasks is canonical; pipPlanApply + MyQueueView + every reader/writer now use folio_tasks. gauge_projects.stages frozen as backup.

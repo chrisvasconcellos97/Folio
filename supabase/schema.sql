@@ -1064,6 +1064,21 @@ begin
   update pip_promise_log          set account_id = target_id where account_id = source_id;
   get diagnostics bumped = row_count; moved := moved + bumped;
 
+  -- Re-parent the account reference embedded in drip-question suggestions
+  -- (jsonb { type, account_id, account_name }). Without this, a structured
+  -- suggestion ("save objective to <account>") created before the merge would
+  -- apply to the now-dead source account. Update the display name too so the
+  -- suggestion stays coherent. (folio_contact_aliases needs no re-parent — it
+  -- keys on contact_id, and folio_contacts rows are re-parented above, so
+  -- aliases follow their contact automatically.)
+  update folio_pip_questions
+     set suggestion = jsonb_set(
+           jsonb_set(suggestion, '{account_id}',   to_jsonb(target_id::text)),
+           '{account_name}', to_jsonb(coalesce(target_row.name, '')))
+   where suggestion is not null
+     and suggestion->>'account_id' = source_id::text;
+  get diagnostics bumped = row_count; moved := moved + bumped;
+
   -- Fix multi-account array columns on meetings and cadences
   update folio_meetings
      set account_ids = array_replace(account_ids, source_id, target_id)
