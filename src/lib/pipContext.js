@@ -60,12 +60,6 @@ function resolveMentionedAccounts(accounts, messageText) {
   return matches;
 }
 
-// Cap an array to N items.
-function take(arr, n) {
-  if (!Array.isArray(arr)) return [];
-  return arr.length <= n ? arr : arr.slice(0, n);
-}
-
 // Pick a compact subset of the raw context based on the user message and
 // optional focusedAccountIds. If focused accounts are given, those win.
 // Otherwise resolve via substring match. If nothing matches, return a
