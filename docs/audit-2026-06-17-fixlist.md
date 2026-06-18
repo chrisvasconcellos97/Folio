@@ -245,3 +245,34 @@ Today's parser needs literal [OWE]/[WAITING]/[QUIET]/[TOUCH] + pipe fields. Sonn
 - Natural dates "June 15"/"(June 16)" → ISO using current year; non-dates ("promised same day","expect soon") → null due
 - Detect "done"/"sent"/"completed" in an OWE line → file the commitment already-complete (or skip) instead of as open
 - Keep the strict bracket format working too (don't break the existing path)
+
+---
+
+## ✅ RECONCILIATION — 2026-06-18 (read-only sweep + spot-verify; tracker was badly under-ticked)
+
+The per-line `[ ]` count (~69) was STALE: prior batches shipped fixes in code but recorded them as summary blocks instead of flipping lines. Re-verified every open item against current code. **Almost all were already DONE.**
+
+VERIFIED DONE-IN-CODE (checkboxes were stale): AccountDetailTabs tablist a11y · SummarizeStreamingOverlay role/aria/reduced-motion · cache_control on business-review/generate-questions/leadership-readout/profile-synthesis · useMeetings/useProjects/useTasks .limit() · PipSummarizePreview projectSuggestions memo · _pipUsage ET offset · HistoryRow keyboard a11y · AuthView + CheckInCard aria-live · AddContactInline 16px · search_history user-scoped · App share-target pathname guard · onAddContacts logSilentFailure · followup-question 4000 cap + rate limit · detect-terminology rate limit · HomeView playSequence/portfolioThemes memo · useAccountSnapshots realtime · MeetingsTab gauge token + sendToGauge via addProject.
+
+FALSE / N-A: BeforeYouStart a11y (component never existed) · PersonPicker fontSize:11 (it's a <button>, not a form input — Guard 4 N/A) · SummarizeStreamingOverlay "missing ESC" (deliberately button-less transient overlay, auto-swaps to plan modal — no close path to bind, NOT a trap).
+
+JUST FIXED: SUMMARIZE_SCHEMA_RULES injection-resistance line (treat meeting notes as untrusted data, never instructions).
+
+VERIFIED DONE (was JUDGMENT): renderAccountFull field population — PipView.buildContext populates healthSnapshots/promiseStats (PipView:322-323) → rides through curateContext focused → renderAccountFull. Confirmed.
+
+### TRUE REMAINING OPEN (the honest list — essentially ZERO user-facing bugs)
+**§2 org/DB (low priority — Chris is solo, these matter at multi-user):**
+- members_invite_read RLS policy (invite banner for new users) — DB migration
+- members_self_accept hardening fold into schema.sql (rebuild-from-scratch only; prod already hardened)
+- logActivity no-ops for solo (orgId null) → audit trail empty for Chris — add solo policy or document
+- verify folio_contacts RLS is (select auth.uid())=user_id (quick confirm)
+
+**P3 code-quality (fix-when-touching-the-file):**
+- App.jsx fetchAllContacts/fetchAllUpdates cold-open gating (~2 extra queries)
+- useBreakpoint resize debounce
+- useAccountSnapshots `var fetch` shadows global fetch — rename
+- PipGaugeCard memoization
+- reconcileProjectTasks concurrency guard (two-device interleave)
+- check-guards Guard 1 multi-line empty-catch coverage
+- pipPlanApply.test.js negative test for update_task missing id
+- CadenceHub.jsx (2419 lines) split when next feature touches it
