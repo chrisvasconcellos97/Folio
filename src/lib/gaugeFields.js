@@ -57,7 +57,7 @@ export function keyFromLabel(label) {
 }
 
 // Format a custom field value for display in a queue row / inline pill.
-export function formatFieldValue(field, val, members) {
+export function formatFieldValue(field, val, members, contacts) {
   if (val === null || val === undefined || val === "") return null;
   if (field.type === "checkbox") return val ? "✓" : null;
   if (field.type === "date") {
@@ -67,6 +67,13 @@ export function formatFieldValue(field, val, members) {
     if (members) {
       var m = members.find(function (x) { return (x.email || "") === val; });
       if (m) return m.full_name || m.email || val;
+    }
+    // Person fields can hold account contacts too (PersonPicker stores a
+    // contact's name by default, or its email). Resolve so a contact never
+    // shows as a raw email chip on a card.
+    if (contacts) {
+      var c = contacts.find(function (x) { return (x.email || "") === val || (x.name || "") === val; });
+      if (c) return c.name || c.email || val;
     }
     return val;
   }

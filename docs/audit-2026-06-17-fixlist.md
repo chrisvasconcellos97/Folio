@@ -71,7 +71,7 @@ Check off `[x]` as we go. Work order suggestion: §1 → §2 → §3 → §4 →
 - [ ] (M,P1) `AdHocConversationFlow.jsx:110-155` — ad-hoc summarize omits healthSnapshots/promiseStats/cadence that CadenceHub passes → worse plans on reactive meetings.
 - [ ] (M,P1) CadenceHub BeforeYouStart — pre-meeting check-in answers ("they left MSO program") never fed into summarize. Pass as PRE_MEETING_NOTE.
 - [ ] (M,P1) verify project_notes (per-project blocks) actually reach summarize payload via onSummarize chain (item 41 unverified).
-- [ ] (M,P1) `TeammateDetailView` per-stage assignees shown in UI but NOT sent to Pip → "what's on Dana's plate" unanswerable. Emit stage assignees in pipContext.
+- [x] (M,P1) `TeammateDetailView` per-stage assignees shown in UI but NOT sent to Pip → "what's on Dana's plate" unanswerable. Emit stage assignees in pipContext. FIXED via the chat-parity wire above: renderAccountFull already renders `p.tasks[].assignee_email`, and buildContext now populates `activeProjects[].tasks` (hydrated folio_tasks post-unification) — so per-task assignees now reach Pip chat.
 - [ ] (S,P2) waiting_on/waiting_on_since not in SUMMARIZE_SCHEMA_RULES → add.
 - [ ] (S,P2) cadence brief callCadenceBriefPip missing waiting_on tasks → "blocked on admin 12d" not in pre-call read.
 - [ ] (S,P2) `api/generate-questions.js` — no owner_user_id in select → drip questions for not-mine (MSO) accounts (item-38 suppression missing here).
@@ -79,8 +79,8 @@ Check off `[x]` as we go. Work order suggestion: §1 → §2 → §3 → §4 →
 - [ ] (S,P2) relationship_note (why champion/blocker) never rendered in Overview NOR fed to pipContext renderContactsBlock.
 - [ ] (S,P2) `remember_fact` tool description doesn't forbid quantitative business data (data-line). Add.
 - [ ] (S,P2) compressCorrectionsPip prompt lacks data-line generalization → "$2M" could embed in lessons_learned. Add.
-- [ ] (S,P3) pip.js summarize emits only latest status_update vs chat's latest+2 (parity).
-- [ ] (S,P3) gaugeFields formatFieldValue person-type resolves members only not contacts → raw email chip on cards.
+- [x] (S,P3) pip.js summarize emits only latest status_update vs chat's latest+2 (parity). FIXED: bp4Text now emits latest + prior 2 pulses inline (matches renderAccountFull).
+- [x] (S,P3) gaugeFields formatFieldValue person-type resolves members only not contacts → raw email chip on cards. FIXED: formatFieldValue now takes a `contacts` arg and resolves a person value against account contacts (by email or name) after members; both call sites (StandingBoardView, MyQueueView) pass `contacts`.
 
 ## §4 — COHERENCE / FRANKENSTEIN (shared helpers, de-dup)
 

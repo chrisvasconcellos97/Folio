@@ -1002,8 +1002,12 @@ export function summarizeDraftPip(payload, opts) {
     (activeProjects.length
       ? activeProjects.map(function (p) {
           var l = "- " + p.id + " · " + (p.title || "Untitled");
-          var latest = Array.isArray(p.status_updates) && p.status_updates[0];
-          if (latest && latest.body) l += " · latest: \"" + String(latest.body).slice(0, 100) + "\"";
+          // Parity with chat (renderAccountFull): latest + prior two pulses for
+          // momentum sense, not just the latest.
+          var ups = Array.isArray(p.status_updates) ? p.status_updates.slice(0, 3) : [];
+          ups.forEach(function (u, i) {
+            if (u && u.body) l += " · " + (i === 0 ? "latest" : "prior") + ": \"" + String(u.body).slice(0, 100) + "\"";
+          });
           if (p.waiting_on) l += " · WAITING ON: " + p.waiting_on + (p.waiting_on_since ? " (since " + p.waiting_on_since + ")" : "");
           return l;
         }).join("\n")

@@ -201,7 +201,7 @@ function openNew(forStatus) {
                     {/* Inline custom-field readouts */}
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                       {inlineFields.map(function (f) {
-                        var disp = formatFieldValue(f, cf[f.key], members);
+                        var disp = formatFieldValue(f, cf[f.key], members, contacts);
                         if (!disp) return null;
                         return (
                           <span
