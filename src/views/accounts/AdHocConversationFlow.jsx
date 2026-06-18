@@ -9,6 +9,8 @@ import { useGlossary } from "../../hooks/useGlossary";
 import { useUserProfile } from "../../hooks/useUserProfile";
 import { usePipFacts } from "../../hooks/usePipFacts";
 import { useAccountUpdates } from "../../hooks/useAccountUpdates";
+import { useAccountSnapshots } from "../../hooks/useAccountSnapshots";
+import { usePipPromiseLog } from "../../hooks/usePipPromiseLog";
 import { summarizeDraftPip } from "../../lib/pip";
 import { SummarizeStreamingOverlay } from "../cadence/SummarizeStreamingOverlay";
 import { applyPipPlan } from "../../lib/pipPlanApply";
@@ -54,6 +56,11 @@ export function AdHocConversationFlow({
   var profileProse   = userProfileApi.profile && userProfileApi.profile.profile_prose ? userProfileApi.profile.profile_prose : null;
   var pipFactsApi    = usePipFacts(userId);
   var updatesApi     = useAccountUpdates(userId, account.id);
+  // Parity with CadenceHub summarize — give ad-hoc (reactive) meetings the same
+  // health-snapshot metrics + delivery track record so plans are as good as
+  // cadence ones. (Ad-hoc has no cadence by definition, so no cadence is passed.)
+  var snapshotsApi   = useAccountSnapshots(userId);
+  var promiseLog     = usePipPromiseLog(userId, account.id);
 
   var accountRoster = useMemo(function () {
     var glossaryEntries = glossaryApi.entries || [];
@@ -131,6 +138,8 @@ export function AdHocConversationFlow({
       facts:               pipFactsApi.activeFactStrings || [],
       servicedStates:      account.serviced_states || null,
       recentUpdates:       (updatesApi.updates || []).slice(0, 6),
+      healthSnapshots:     (snapshotsApi.snapshots || []).filter(function (s) { return s.account_id === account.id; }),
+      promiseStats:        promiseLog || null,
       globalPeople:        globalPeople || [],
       discussedProjectIds: discussedProjectIds || [],
       discussedItemIds:    discussedItemIds    || [],

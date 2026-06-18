@@ -12,6 +12,7 @@ import { useContacts } from "../../hooks/useContacts";
 import { useCadences, usePersonCadences } from "../../hooks/useCadences";
 import { useProjects } from "../../hooks/useProjects";
 import { useAccountUpdates } from "../../hooks/useAccountUpdates";
+import { useAccountSnapshots } from "../../hooks/useAccountSnapshots";
 import { callBriefMePip } from "../../lib/pip";
 import { BusinessReviewModal } from "./BusinessReviewModal";
 import { PipMemoryPanel } from "./PipMemoryPanel";
@@ -185,6 +186,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
   var { cadences: personCadencesAll, addCadence: addPersonCadence, refetch: refetchPersonCadences } = useCadences(userId);
   var { projects, addProject, updateProject, deleteProject, error: projectsError, refetch: refetchProjects } = useProjects(userId, account.id, orgId, childAccountIds);
   var { updates, addUpdate, updateUpdate, deleteUpdate, error: updatesError, refetch: refetchUpdates } = useAccountUpdates(userId, account.id, orgId);
+  var briefSnapshotsApi = useAccountSnapshots(userId);
   var contactAliasesApi = useContactAliases(orgId || null, userId);
 
   // Filter person cadences to those whose contact_id belongs to this account's contacts
@@ -405,7 +407,16 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
         .map(function(i) { return { title: i.text.replace("✓ Delivered: ", ""), date: i.closed_at ? fmtMedium(i.closed_at) : null }; }),
       activeProjects: (projects || [])
         .filter(function(p) { return p.status === "in_progress" || p.status === "blocked"; })
-        .map(function(p) { return { title: p.title, status: p.status, due_date: p.due_date }; }),
+        .map(function(p) { return {
+          title: p.title, status: p.status, due_date: p.due_date,
+          // who-has-ball + ownership + momentum (rendered by renderAccountFull,
+          // were stripped by the old title/status/due-only map).
+          waiting_on: p.waiting_on || null, waiting_on_since: p.waiting_on_since || null,
+          assignee: p.assignee || null, requested_by: p.requested_by || null,
+          status_updates: Array.isArray(p.status_updates) ? p.status_updates.slice(0, 3) : [],
+        }; }),
+      recentUpdates:    (updates || []).slice(0, 6),
+      healthSnapshots:  (briefSnapshotsApi.snapshots || []).filter(function (s) { return s.account_id === account.id; }),
       accountObjective: account.objective || "",
       glossary:         glossaryApi.entries,
       facts:            pipFactsApi.activeFactStrings || [],

@@ -536,6 +536,7 @@ export function callBriefMePip(payload) {
   var activeProjects = payload.activeProjects || [];
   var accountObjective = (payload.accountObjective != null ? payload.accountObjective : account.objective) || "";
   var glossary = Array.isArray(payload.glossary) ? payload.glossary : [];
+  var recentUpdates = Array.isArray(payload.recentUpdates) ? payload.recentUpdates : [];
 
   var context = {
     accounts: [{
@@ -579,6 +580,7 @@ export function callBriefMePip(payload) {
         };
       }),
       healthSnapshots: Array.isArray(payload.healthSnapshots) ? payload.healthSnapshots : [],
+      recentUpdates:   recentUpdates,
     }],
     recentDeliveries: recentDeliveries,
   };
