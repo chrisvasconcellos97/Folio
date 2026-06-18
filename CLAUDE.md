@@ -443,6 +443,31 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 ---
 
+## Session Handoff — June 18 2026 (F1): ONE shared buildAccountContext() — the tri-renderer drift cured (branch, NOT deployed)
+
+**⚠️ WHERE IT LIVES:** branch **`claude/app-audit-strategy-hhcrz2-4ix1ho`** (pushed, 5 commits), **NOT `main`, NOT deployed.** Chris asked to build on the branch and NOT ship until he tests it himself — the deploy-to-`main` rule was explicitly suspended for this session at his instruction. He fast-forwards `main` after testing. No DB changes, no migrations pending.
+
+**DONE — F1, the audit's #1 recommendation ("THE ONE THING", X6).** Pip's "what I know about this account" used to be rendered by THREE independent functions that drifted apart — the root cause of the whole "Pip knows X in chat but not in summaries" bug class. F1 collapses them into ONE shared builder so adding a field reaches every surface by construction.
+
+**The build (one surface per commit, each gated with `vite build` + `vitest` + `check-guards` + `test-api-imports`):**
+- **NEW `src/lib/accountContext.js`** — pure module (NO supabase/React/fetch, so chat+summarize client AND operator-run server all import it). Exports `buildAccountContext(account, opts)` → structured `{sections:[{key,text,spaced}]}` and `renderAccountContext(account, opts)` → prose. `account` = merged per-account bundle (scalars + nested arrays). `opts.surface` ∈ `chat|brief|summarize|operator` selects a preset in a single **`SURFACE_DEFAULTS`** map — the intentional per-surface omissions + depth now live in ONE reviewable place (parity rule: wire a field to both, but surface-appropriate trimming stays explicit).
+- **Routed all three:** chat/brief (`pipContext.renderContextProse` → builder, deleted `renderAccountFull` + 5 helpers + the `computeContactEngagement` import) · summarize (`pip.js summarizeDraftPip` bp3 → builder, deleted 7 render helpers; **cache breakpoints preserved** — BP1 static rules untouched, account context stays the BP3 per-account cached layer, meeting history moved BP4→BP3 since it's account-stable; summarize-specific blocks stay caller-side: routing roster, internal/person framing, people directory, cadence schedule, correction read-back, BP4 working set with I-/T-/project ids) · operator-run (`api/operator-run.js` now imports the shared module — traded the "self-contained, no src/lib imports" property for the parity guarantee; `.js`-extension chain + api-imports bundle test verified; deleted the local renderer + orphaned `excerpt()`).
+- **Drift lock:** **`src/lib/accountContext.test.js`** (25 tests) — feeds ONE fixed bundle, asserts each surface emits every field it needs AND cross-checks parity-class fields (ownership, waiting_on, promise log, operator read, systems) reach >1 surface. A future edit that drops a field from one path fails CI.
+
+**PRESERVED, not rebuilt — last session's parity fixes** (they're now FIELDS in the shared builder, asserted by the parity tests): globalPeople→chat, operator-state→summarize, waiting_on→briefs, health/promise into chat, ownership awareness, data-line guards.
+
+**F4 (cache) within scope:** static system blocks left byte-stable; builder output is the per-account cached tail. No speculative `cache_control` changes (would risk behavior without a live test).
+
+**Validation:** `vite build` ✓ · **323 tests** (298 baseline + 25 new) ✓ · `check-guards` ✓ · `test-api-imports` ✓ (confirms operator-run's new `../src/lib/accountContext.js` import resolves in the serverless bundle). Runtime chains verified statically: api/pip.js → pipContext → accountContext → contactEngagement, all `.js`-clean. **Caveat (Sanity-Pass Rule): green build ≠ proof the model behaves identically** — Chris should sanity-check a chat recall, a meeting summarize, and (if triggered) an operator run; they should read the same as before, just from one source now.
+
+**Commits:** `244533f` (module + test) · `d1b08c5` (chat) · `a5239e4` (summarize) · `3ae2bf0` (operator) · `6376e6a` (cleanup + tick F1 in `docs/audit-2026-06-17-fixlist.md`).
+
+**NOT this session (still open in `docs/audit-2026-06-17-fixlist.md`):** F2 (persist structured context into `folio_pip_account_state`) · F3 (event-driven recompute, 70–90% cost cut) · F5 (real agent loop / tool_result round-trip) · F6 (pgvector semantic recall) · scoped PersonPicker DROPDOWN · Recent-Deliveries sentinel-row refactor. The new `buildAccountContext`'s structured-object output is the foundation F2 builds on.
+
+**To ship (when Chris says, after testing):** fast-forward `main` to the branch → one Vercel production deploy.
+
+---
+
 ## Session Handoff — June 18 2026 (LATE): DEPLOYED TO PROD + triplication bug fixed + F1 plan written
 
 **⚠️ STATE CHANGE: everything is now LIVE on `main` / `folioshq.com` (tip `afddbda`).** Prior handoffs said "branch, not deployed" — that's stale. Chris said ship; `main` was fast-forwarded from the branch (clean, 0 divergence) and the Vercel **production** build went GREEN (the failing previews were preview-only, never a prod blocker). Branch `claude/app-audit-strategy-hhcrz2` is level with `main`.
