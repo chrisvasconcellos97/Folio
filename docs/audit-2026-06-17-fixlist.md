@@ -288,3 +288,15 @@ WANT: scope it like the AccountPicker workspace tabs but for PEOPLE —
 - If the project is tied to an account, auto-select that account's workspace and show ONLY its contacts (fast assign + recipient).
 - Workspace switcher to reach other contacts only when needed.
 Shared component used in ~10 places (TaskDetailPanel, ProjectModal ×5, PipSummarizePreview, etc.) — change must preserve every caller's stored-value convention + free-text escape hatch. Contained but needs care; verify all callers after.
+
+### 🔴 PROD BUG FIXED — 2026-06-18: project task create→edit→complete TRIPLICATED
+Chris's smoke test caught it (I had wrongly called the smoke test "passed"). Creating a task
+then editing/completing it inserted NEW rows instead of updating in place → "test" + "testing"
++ "testing(done)". Root cause: reconcileProjectTasks diffed `nextStages` against the possibly-
+stale `project.tasks` prop while the editor built `next` from its own optimistic localStages →
+every edit looked "new" → re-insert. FIX: reconcile now diffs against the editor's OWN
+pre-mutation view (currentStages arg), returns nextStages with real ids filled in (existing +
+DB-generated), and ProjectStageEditor.commitStages adopts those ids so the next edit matches by
+id → updates in place. +5 unit tests (projectTaskWrites.test.js) locking edit→update, complete→
+update, no-dup, no-spurious-delete. NOTE: existing duplicate rows from before the fix must be
+deleted manually; this prevents future duplication.

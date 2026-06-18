@@ -19,10 +19,10 @@ var inFlightByProject = {};
 // Reconcile a full stage-shaped array against the project's current
 // folio_tasks (project.tasks): update matched rows (by id, position = idx),
 // insert new ones, delete removed. Returns a Promise of all writes.
-export function reconcileProjectTasks(userId, project, nextStages) {
+export function reconcileProjectTasks(userId, project, nextStages, currentStages) {
   if (!userId || !project || !project.id) return Promise.resolve();
   var pid = project.id;
-  function run() { return doReconcile(userId, project, nextStages, firstStatusColumn(project)); }
+  function run() { return doReconcile(userId, project, nextStages, firstStatusColumn(project), currentStages); }
   var prev = inFlightByProject[pid] || Promise.resolve();
   // Run after any prior reconcile for this project, success OR failure.
   var next = prev.then(run, run);
@@ -32,26 +32,40 @@ export function reconcileProjectTasks(userId, project, nextStages) {
   return next;
 }
 
-function doReconcile(userId, project, nextStages, firstStatus) {
-  var current = (project && project.tasks) || [];
+// Diff `nextStages` against `currentStages` — the editor's OWN pre-mutation view,
+// NOT project.tasks (which can be stale via realtime lag). The triplication bug
+// came from `next` being built off the editor's optimistic state while reconcile
+// diffed against a stale/empty project.tasks → every edit looked "new" and
+// re-inserted. Falls back to project.tasks for callers that build next from it
+// (HubProjectCard). Returns nextStages with real ids filled in (existing for
+// updates, DB-generated for inserts) so the editor adopts them and the NEXT edit
+// matches by id → updates in place instead of inserting a duplicate.
+function doReconcile(userId, project, nextStages, firstStatus, currentStages) {
+  var current = currentStages || (project && project.tasks) || [];
   var byId = {};
-  current.forEach(function (t) { if (t.id) byId[t.id] = t; });
+  current.forEach(function (t) { if (t && t.id) byId[t.id] = t; });
   var keptIds = {};
+  var resolved = new Array((nextStages || []).length);
   var ops = [];
   (nextStages || []).forEach(function (s, idx) {
     var fields = stageToTaskFields(s, idx, firstStatus);
     if (s.id && byId[s.id]) {
       keptIds[s.id] = true;
+      resolved[idx] = s; // already carries its real id
       ops.push(updateTask(userId, s.id, fields));
     } else {
-      ops.push(insertTask(userId, Object.assign(
-        { project_id: project.id, account_id: s.account_id || project.account_id || null },
-        fields
-      )));
+      ops.push(
+        insertTask(userId, Object.assign(
+          { project_id: project.id, account_id: s.account_id || project.account_id || null },
+          fields
+        )).then(function (row) {
+          resolved[idx] = Object.assign({}, s, { id: (row && row.id) ? row.id : s.id });
+        })
+      );
     }
   });
   current.forEach(function (t) {
-    if (t.id && !keptIds[t.id]) ops.push(deleteTask(userId, t.id));
+    if (t && t.id && !keptIds[t.id]) ops.push(deleteTask(userId, t.id));
   });
-  return Promise.all(ops);
+  return Promise.all(ops).then(function () { return resolved; });
 }

@@ -87,10 +87,17 @@ export function ProjectStageEditor({ project, userId, onUpdate, accounts, member
   // full next-array (optimistic + simple), and this reconciles it to
   // folio_tasks inserts/updates/deletes, then auto-flips project status.
   function commitStages(next) {
+    var prevStages = stages; // the editor's pre-mutation view `next` was built from
     setLocalStages(next); // optimistic until the folio_tasks realtime re-hydrates project.tasks
     var sp = autoStatusPatch(next, project.status, project.is_standing);
     if (sp) onUpdate(project.id, sp);
-    return reconcileProjectTasks(userId, project, next);
+    // Diff against prevStages (NOT the possibly-stale project.tasks) so an edit
+    // matches the existing row by id → updates in place. Then adopt the real ids
+    // the reconcile resolved (esp. for just-inserted rows) so the NEXT mutation
+    // matches too instead of inserting a duplicate (the triplication bug).
+    return reconcileProjectTasks(userId, project, next, prevStages).then(function (resolved) {
+      if (resolved && resolved.length === next.length) setLocalStages(resolved);
+    });
   }
 
   function toggleStageComplete(idx) {
