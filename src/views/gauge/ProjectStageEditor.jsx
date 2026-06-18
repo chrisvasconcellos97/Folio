@@ -4,6 +4,7 @@ import { TaskDetailPanel } from "./TaskDetailPanel";
 import { TaskEntityDetector } from "../../components/TaskEntityDetector";
 import { useEntityDetection } from "../../hooks/useEntityDetection";
 import { autoStatusPatch } from "../../lib/gaugeStatus";
+import { reconcileProjectTasks } from "../../lib/projectTaskWrites";
 import { fmtShort, fmtMedium } from "../../lib/dateUtils";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
@@ -64,7 +65,7 @@ function SubStageIcon({ sub, onClick }) {
   );
 }
 
-export function ProjectStageEditor({ project, onUpdate, accounts, members, contacts, aliases, userEmail, logCorrection }) {
+export function ProjectStageEditor({ project, userId, onUpdate, accounts, members, contacts, aliases, userEmail, logCorrection }) {
   var [expanded, setExpanded] = useState({});
   var [newStageTitle, setNewStageTitle] = useState("");
   var [addingSub, setAddingSub] = useState({}); // { stageIdx: "title text" }
@@ -77,18 +78,19 @@ export function ProjectStageEditor({ project, onUpdate, accounts, members, conta
   // Optimistic local stages — applied immediately on mutations, cleared when DB confirms via prop update.
   var [localStages, setLocalStages] = useState(null);
   var entitySuggestion = useEntityDetection(newStageTitle, contacts || [], aliases || [], accounts || []);
-  useEffect(function () { setLocalStages(null); }, [project.stages]);
+  useEffect(function () { setLocalStages(null); }, [project.tasks]);
 
-  var stages = localStages !== null ? localStages : (project.stages || []);
+  var stages = localStages !== null ? localStages : (project.tasks || []);
   var hasSchema = (project.custom_field_schema || []).length > 0;
 
+  // Project tasks live in folio_tasks now. The handlers below still build the
+  // full next-array (optimistic + simple), and this reconciles it to
+  // folio_tasks inserts/updates/deletes, then auto-flips project status.
   function commitStages(next) {
-    // Auto-flip project status when all stages are complete / any stage is
-    // unchecked. Shared helper so every completion path agrees.
-    var payload = { stages: next };
+    setLocalStages(next); // optimistic until the folio_tasks realtime re-hydrates project.tasks
     var sp = autoStatusPatch(next, project.status, project.is_standing);
-    if (sp) Object.assign(payload, sp);
-    return onUpdate(project.id, payload);
+    if (sp) onUpdate(project.id, sp);
+    return reconcileProjectTasks(userId, project, next);
   }
 
   function toggleStageComplete(idx) {
@@ -188,8 +190,8 @@ export function ProjectStageEditor({ project, onUpdate, accounts, members, conta
     var patch = suggestion.type === "account"
       ? { account_id: suggestion.account.id }
       : (kind === "recipient" ? { recipient: contactVal } : { assignee_email: contactVal });
-    // Read from the optimistic `stages` (localStages ?? project.stages), not
-    // project.stages directly, or unsaved stage edits get discarded.
+    // Read from the optimistic `stages` (localStages ?? project.tasks), not
+    // project.tasks directly, or unsaved task edits get discarded.
     var next = (stages || []).map(function (s, i) { return i === idx ? Object.assign({}, s, patch) : s; });
     setLocalStages(next); // optimistic — detail panel sees it immediately
     commitStages(next);

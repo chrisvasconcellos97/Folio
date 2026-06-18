@@ -40,6 +40,18 @@ export function gaugeStatusToken(status) {
   return c ? c.token : C.statusPlanned;
 }
 
+// The kanban column a brand-new task should land in — the project's first
+// configured status column, or "intake" by default.
+export function firstStatusColumn(project) {
+  var cols = project && project.task_status_columns;
+  if (Array.isArray(cols) && cols.length) {
+    var first = cols[0];
+    if (typeof first === "string") return first;
+    if (first && first.id) return first.id;
+  }
+  return "intake";
+}
+
 // A project belongs to an account if it's the primary account_id OR the
 // account appears in the multi-account account_ids array. Used everywhere a
 // project is filtered to a single account so multi-account projects surface

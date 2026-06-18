@@ -12,6 +12,9 @@ import { pickV } from "../../../lib/metricsUtils";
 import { getNextOccurrence, getFrequencyLabel, daysUntil, formatDateFull } from "../../../lib/cadenceUtils";
 import { showToast } from "../../../components/Toast";
 import { AddItemModal } from "../AddItemModal";
+import { insertTask } from "../../../hooks/useTasks";
+import { nextSortOrder } from "../../../lib/projectTasks";
+import { firstStatusColumn } from "../../../lib/gaugeStatus";
 import { Modal } from "../../../components/Modal";
 import { ProjectModal } from "../../gauge/ProjectModal";
 
@@ -97,16 +100,18 @@ export function ItemsTab({ items, taskCadences, accountId, userId, userEmail, on
   function addTaskToProject(projectId, item) {
     var project = (projects || []).find(function (p) { return p.id === projectId; });
     if (!project) return;
-    var newEntry = {
-      id: (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).slice(2),
-      title: item.text,
-      status: "planned",
-      assignee: item.owner || null,
-      due_date: item.due_date || null,
-      is_commitment: item.is_commitment || false,
-    };
-    var updatedStages = (project.stages || []).concat([newEntry]);
-    onUpdateProject(projectId, { stages: updatedStages }).then(function () {
+    // Project work lives in folio_tasks now — add a project-bound task.
+    insertTask(userId, {
+      project_id:     projectId,
+      account_id:     project.account_id || accountId || null,
+      title:          item.text,
+      status:         "planned",
+      task_status:    firstStatusColumn(project),
+      assignee_email: item.owner || null,
+      due_date:       item.due_date || null,
+      is_commitment:  item.is_commitment || false,
+      sort_order:     nextSortOrder(project.tasks),
+    }).then(function () {
       showToast("Added to " + project.title);
     }).catch(function (err) {
       showToast(err.message || "Couldn't add to project", "error");

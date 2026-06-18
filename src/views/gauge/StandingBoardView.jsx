@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { C } from "../../lib/colors";
 import { taskStatusLabel, formatFieldValue } from "../../lib/gaugeFields";
-import { autoStatusPatch } from "../../lib/gaugeStatus";
+import { autoStatusPatch, firstStatusColumn } from "../../lib/gaugeStatus";
+import { insertTask, updateTask, deleteTask } from "../../hooks/useTasks";
+import { stageToTaskFields, nextSortOrder } from "../../lib/projectTasks";
 import { TaskDetailPanel } from "./TaskDetailPanel";
 import { useBreakpoint } from "../../hooks/useBreakpoint";
 import { resolveAssignee } from "../../lib/ownerLabel";
@@ -15,11 +17,11 @@ var INTER = "'Inter', system-ui, sans-serif";
 // their full_name or email-local-part. Otherwise the stored value is
 // already a display-ready contact name — return it as-is.
 // Standing project board — columns from project.task_status_columns,
-// cards from project.stages. Uses the same TaskDetailPanel for create
+// cards from project.tasks (folio_tasks). Uses the same TaskDetailPanel for create
 // and edit. Tasks group into a "done" lane (or whichever the last column
 // is) when completed_at is set, so the kanban and the done flag stay
 // consistent visually.
-export function StandingBoardView({ project, accounts, members, contacts, aliases, userEmail, onUpdate, logCorrection }) {
+export function StandingBoardView({ project, accounts, members, contacts, aliases, userId, userEmail, onUpdate, logCorrection }) {
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
   var [panelTask, setPanelTask]   = useState(null);   // task object or null
@@ -28,7 +30,7 @@ export function StandingBoardView({ project, accounts, members, contacts, aliase
   var [presetStatus, setPresetStatus] = useState(null); // status when adding from a column
 
   var columns = project.task_status_columns || ["intake", "in_progress", "done"];
-  var tasks   = project.stages || [];
+  var tasks   = project.tasks || [];
 
   var lastCol = columns[columns.length - 1];
 
@@ -46,25 +48,39 @@ export function StandingBoardView({ project, accounts, members, contacts, aliase
     return buckets;
   }
 
-  function commitTask(newTask, taskIndex) {
-    var nextTasks;
-    if (taskIndex == null) {
-      var withCol = Object.assign({}, newTask, { task_status: newTask.task_status || presetStatus || columns[0] });
-      nextTasks = tasks.concat([withCol]);
-    } else {
-      nextTasks = tasks.map(function (t, i) { return i === taskIndex ? newTask : t; });
-    }
-    // Auto-flip project status when the last card completes / one re-opens —
-    // same shared helper commitStages uses, so every completion path agrees.
-    var payload = { stages: nextTasks };
-    var sp = autoStatusPatch(nextTasks, project.status, project.is_standing);
-    if (sp) Object.assign(payload, sp);
-    return onUpdate(project.id, payload);
+  // Project tasks are folio_tasks rows now. Re-evaluate project status from the
+  // simulated post-write set (no-ops for standing projects — autoStatusPatch
+  // returns null when is_standing — but kept correct for any non-standing use).
+  function syncStatus(simulated) {
+    var sp = autoStatusPatch(simulated, project.status, project.is_standing);
+    if (sp) onUpdate(project.id, sp);
   }
 
-  function deleteTask(taskIndex) {
-    var nextTasks = tasks.filter(function (_, i) { return i !== taskIndex; });
-    return onUpdate(project.id, { stages: nextTasks });
+  function commitTask(newTask) {
+    var firstStatus = firstStatusColumn(project);
+    if (panelTask && panelTask.id) {
+      var merged = Object.assign({}, panelTask, newTask);
+      var order = (typeof panelTask.sort_order === "number") ? panelTask.sort_order : 0;
+      return updateTask(userId, panelTask.id, stageToTaskFields(merged, order, firstStatus))
+        .then(function () {
+          syncStatus(tasks.map(function (t) { return t.id === panelTask.id ? merged : t; }));
+        });
+    }
+    var withCol = Object.assign({}, newTask, { task_status: newTask.task_status || presetStatus || columns[0] });
+    var ins = stageToTaskFields(withCol, nextSortOrder(tasks), firstStatus);
+    ins.project_id = project.id;
+    ins.account_id = withCol.account_id || project.account_id || null;
+    return insertTask(userId, ins).then(function () {
+      syncStatus(tasks.concat([withCol]));
+    });
+  }
+
+  function removeTask() {
+    if (!panelTask || !panelTask.id) return Promise.resolve();
+    var id = panelTask.id;
+    return deleteTask(userId, id).then(function () {
+      syncStatus(tasks.filter(function (t) { return t.id !== id; }));
+    });
   }
 
 function openNew(forStatus) {
@@ -252,7 +268,7 @@ function openNew(forStatus) {
           userEmail={userEmail}
           logCorrection={logCorrection}
           onSave={commitTask}
-          onDelete={deleteTask}
+          onDelete={removeTask}
           onClose={function () { setPanelOpen(false); setPanelTask(null); setPanelIndex(null); setPresetStatus(null); }}
         />
       )}

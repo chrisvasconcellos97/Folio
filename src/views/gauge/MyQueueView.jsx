@@ -2,6 +2,9 @@ import { useState, useMemo } from "react";
 import { C } from "../../lib/colors";
 import { formatFieldValue, taskStatusLabel } from "../../lib/gaugeFields";
 import { TaskDetailPanel } from "./TaskDetailPanel";
+import { insertTask, updateTask, deleteTask } from "../../hooks/useTasks";
+import { stageToTaskFields, nextSortOrder } from "../../lib/projectTasks";
+import { firstStatusColumn } from "../../lib/gaugeStatus";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 var SERIF = "'Fraunces', Georgia, serif";
@@ -29,7 +32,7 @@ var SUBFILTERS = [
   { id: "all",      label: "All"      },
 ];
 
-export function MyQueueView({ projects, accounts, members, contacts, aliases, userEmail, onUpdate, onOpenProject, logCorrection }) {
+export function MyQueueView({ projects, accounts, members, contacts, aliases, userId, userEmail, onUpdate, onOpenProject, logCorrection }) {
   var [subFilter, setSubFilter] = useState("live");
   var [groupByProject, setGroupBy] = useState(false);
   var [panelOpen, setPanelOpen] = useState(false);
@@ -43,7 +46,7 @@ export function MyQueueView({ projects, accounts, members, contacts, aliases, us
     var lower = (userEmail || "").toLowerCase();
     var out = [];
     (projects || []).forEach(function (p) {
-      (p.stages || []).forEach(function (t, idx) {
+      (p.tasks || []).forEach(function (t, idx) {
         if (!t.assignee_email) return;
         if (t.assignee_email.toLowerCase() !== lower) return;
         if (t.completed_at) return;  // queue is for live work; finished tasks drop off
@@ -80,16 +83,26 @@ export function MyQueueView({ projects, accounts, members, contacts, aliases, us
     setPanelOpen(true);
   }
 
-  function commitTask(newTask, taskIndex) {
+  function commitTask(newTask) {
+    // Project tasks are folio_tasks rows now. Edit the existing row (panelTask
+    // carries its id); insert if it's somehow new. Merge over panelTask so
+    // fields the panel doesn't edit (completed_at, sub_stages) are preserved.
     var p = panelProject;
-    var nextTasks = (p.stages || []).map(function (t, i) { return i === taskIndex ? newTask : t; });
-    return onUpdate(p.id, { stages: nextTasks });
+    var firstStatus = firstStatusColumn(p);
+    if (panelTask && panelTask.id) {
+      var merged = Object.assign({}, panelTask, newTask);
+      var order = (typeof panelTask.sort_order === "number") ? panelTask.sort_order : 0;
+      return updateTask(userId, panelTask.id, stageToTaskFields(merged, order, firstStatus));
+    }
+    var ins = stageToTaskFields(newTask, nextSortOrder(p.tasks), firstStatus);
+    ins.project_id = p.id;
+    ins.account_id = p.account_id || null;
+    return insertTask(userId, ins);
   }
 
-  function deleteTask(taskIndex) {
-    var p = panelProject;
-    var nextTasks = (p.stages || []).filter(function (_, i) { return i !== taskIndex; });
-    return onUpdate(p.id, { stages: nextTasks });
+  function removeTask() {
+    if (!panelTask || !panelTask.id) return Promise.resolve();
+    return deleteTask(userId, panelTask.id);
   }
 
   function renderRow(row) {
@@ -316,7 +329,7 @@ export function MyQueueView({ projects, accounts, members, contacts, aliases, us
           userEmail={userEmail}
           logCorrection={logCorrection}
           onSave={commitTask}
-          onDelete={deleteTask}
+          onDelete={removeTask}
           onClose={function () { setPanelOpen(false); setPanelTask(null); setPanelIndex(null); setPanelProject(null); }}
         />
       )}

@@ -8,6 +8,11 @@ vi.mock("../hooks/usePipAssignmentHints", function () {
     },
   };
 });
+// projectTasks.js (imported for nextSortOrder) pulls in the supabase client,
+// which needs env at import — stub it so the module loads in test env.
+vi.mock("../lib/supabase", function () {
+  return { supabase: { from: function () { return {}; } } };
+});
 
 import { applyPipPlan } from "./pipPlanApply";
 
@@ -67,42 +72,47 @@ describe("applyPipPlan — new_item", function () {
 // ── new_task routing ───────────────────────────────────────────────────
 
 describe("applyPipPlan — new_task", function () {
-  it("falls back to addItem when project_id is missing", async function () {
+  // Task-model unification: project tasks are folio_tasks rows now, so every
+  // new_task routes through addItem (with project_id when project-bound).
+  it("addItem loose task when project_id is missing", async function () {
     var ctx = makeCtx();
     var selected = [{ idx: 0, row: { kind: "new_task", title: "Update slides", project_id: null, due_date: null, assignee: null, recipient: null, is_commitment: false, target_account_id: null } }];
     var result = await applyPipPlan(selected, ctx);
     expect(result.errors).toEqual({});
     expect(ctx.addItem).toHaveBeenCalledOnce();
     expect(ctx.updateProject).not.toHaveBeenCalled();
+    expect(ctx.addItem.mock.calls[0][0].project_id).toBe(null);
   });
 
-  it("falls back to addItem when project_id is not in activeProjects", async function () {
-    var ctx = makeCtx({ activeProjects: [{ id: "proj-999", stages: [], task_status_columns: [] }] });
-    var selected = [{ idx: 0, row: { kind: "new_task", title: "Task for wrong project", project_id: "proj-404", due_date: null, assignee: null, recipient: null, is_commitment: false, target_account_id: null } }];
-    var result = await applyPipPlan(selected, ctx);
-    expect(result.errors).toEqual({});
-    expect(ctx.addItem).toHaveBeenCalledOnce();
-  });
-
-  it("calls updateProject when project_id matches activeProjects", async function () {
-    var project = { id: "proj-1", stages: [], task_status_columns: ["intake", "in_progress"] };
+  it("addItem with project_id + task_status + sort_order when project-bound", async function () {
+    var project = { id: "proj-1", tasks: [], task_status_columns: ["intake", "in_progress"] };
     var ctx = makeCtx({ activeProjects: [project] });
     var selected = [{ idx: 0, row: { kind: "new_task", title: "Real task", project_id: "proj-1", due_date: null, assignee: null, recipient: null, is_commitment: false, target_account_id: null } }];
     var result = await applyPipPlan(selected, ctx);
     expect(result.errors).toEqual({});
-    expect(ctx.updateProject).toHaveBeenCalledOnce();
-    var [pid, patch] = ctx.updateProject.mock.calls[0];
-    expect(pid).toBe("proj-1");
-    expect(patch.stages.length).toBe(1);
-    expect(patch.stages[0].title).toBe("Real task");
+    expect(ctx.updateProject).not.toHaveBeenCalled();
+    expect(ctx.addItem).toHaveBeenCalledOnce();
+    var call = ctx.addItem.mock.calls[0][0];
+    expect(call.text).toBe("Real task");
+    expect(call.project_id).toBe("proj-1");
+    expect(call.task_status).toBe("intake");
+    expect(call.sort_order).toBe(0);
   });
 
-  it("preserves is_commitment on fallback new_task→addItem", async function () {
+  it("preserves is_commitment on new_task→addItem", async function () {
     var ctx = makeCtx();
     var selected = [{ idx: 0, row: { kind: "new_task", title: "Big commitment", project_id: null, due_date: null, assignee: null, recipient: null, is_commitment: true, target_account_id: null } }];
     await applyPipPlan(selected, ctx);
     var call = ctx.addItem.mock.calls[0][0];
     expect(call.is_commitment).toBe(true);
+  });
+
+  it("update_task routes to updateItem by task_id", async function () {
+    var ctx = makeCtx();
+    var selected = [{ idx: 0, row: { kind: "update_task", task_id: "task-9", project_id: "proj-1", fields: { title: "Renamed" } } }];
+    var result = await applyPipPlan(selected, ctx);
+    expect(result.errors).toEqual({});
+    expect(ctx.updateItem).toHaveBeenCalledWith("task-9", { title: "Renamed" });
   });
 });
 
@@ -133,8 +143,8 @@ describe("applyPipPlan — update_item", function () {
 // ── batching — multiple new_task on same project ───────────────────────
 
 describe("applyPipPlan — multiple tasks on same project", function () {
-  it("batches into a single updateProject call", async function () {
-    var project = { id: "proj-1", stages: [], task_status_columns: ["intake"] };
+  it("inserts each as a folio_task with increasing sort_order", async function () {
+    var project = { id: "proj-1", tasks: [], task_status_columns: ["intake"] };
     var ctx = makeCtx({ activeProjects: [project] });
     var selected = [
       { idx: 0, row: { kind: "new_task", title: "Task A", project_id: "proj-1", due_date: null, assignee: null, recipient: null, is_commitment: false, target_account_id: null } },
@@ -142,8 +152,9 @@ describe("applyPipPlan — multiple tasks on same project", function () {
     ];
     var result = await applyPipPlan(selected, ctx);
     expect(result.errors).toEqual({});
-    expect(ctx.updateProject).toHaveBeenCalledOnce();
-    var [, patch] = ctx.updateProject.mock.calls[0];
-    expect(patch.stages.length).toBe(2);
+    expect(ctx.addItem).toHaveBeenCalledTimes(2);
+    expect(ctx.updateProject).not.toHaveBeenCalled();
+    var orders = ctx.addItem.mock.calls.map(function (c) { return c[0].sort_order; }).sort();
+    expect(orders).toEqual([0, 1]);
   });
 });

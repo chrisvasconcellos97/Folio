@@ -183,26 +183,23 @@ export function GaugeView({
     // status must satisfy the folio_tasks check constraint
     // (planned|in_progress|blocked|complete) — "open" would violate it and
     // silently fail the un-complete.
-    updateTask(userId, task.id, { done: newDone, status: newDone ? "complete" : "planned" })
+    var nowIso = new Date().toISOString();
+    updateTask(userId, task.id, { done: newDone, status: newDone ? "complete" : "planned", closed_at: newDone ? nowIso : null })
       .then(function () { refetchTasks(); })
       .catch(function (err) { logSilentFailure("GaugeView/updateTask-done", err); });
-    // Dual-store bridge: if this task mirrors a project stage, keep the stage's
-    // completed_at in sync so the board/progress bar reflects the same state.
-    if (task.project_id && typeof task.parent_step_index === "number") {
+    // Re-evaluate the project's status from its folio_tasks: completing the
+    // last task must flip the project to complete (and un-completing one
+    // reverts it), same as the discrete editor — else the project burns forever.
+    if (task.project_id) {
       var proj = (projects || []).find(function (p) { return p.id === task.project_id; });
-      if (proj && Array.isArray(proj.stages) && proj.stages[task.parent_step_index]) {
-        var nextStages = proj.stages.map(function (s, i) {
-          return i === task.parent_step_index
-            ? Object.assign({}, s, { completed_at: newDone ? new Date().toISOString() : null })
-            : s;
+      if (proj && !proj.is_standing) {
+        var simulated = (proj.tasks || []).map(function (t) {
+          return t.id === task.id
+            ? Object.assign({}, t, { completed_at: newDone ? (t.completed_at || nowIso) : null })
+            : t;
         });
-        // Re-evaluate project status: completing the last task here must flip
-        // the project to complete (and un-completing one reverts it), same as
-        // the discrete editor does. Without this the project burns forever.
-        var projPatch = { stages: nextStages };
-        var sp = autoStatusPatch(nextStages, proj.status, proj.is_standing);
-        if (sp) Object.assign(projPatch, sp);
-        updateProject(proj.id, projPatch).catch(function (err) { logSilentFailure("GaugeView/updateProject-stages-sync", err); });
+        var sp = autoStatusPatch(simulated, proj.status, proj.is_standing);
+        if (sp) updateProject(proj.id, sp).catch(function (err) { logSilentFailure("GaugeView/updateProject-status-sync", err); });
       }
     }
   }
@@ -977,6 +974,7 @@ export function GaugeView({
           members={members}
           contacts={contacts}
           aliases={aliases}
+          userId={userId}
           userEmail={userEmail}
           onUpdate={updateProject}
           logCorrection={logCorrection}
@@ -1388,6 +1386,7 @@ export function GaugeView({
                     members={members}
                     contacts={contacts}
                     aliases={aliases}
+                    userId={userId}
                     userEmail={userEmail}
                     onUpdate={updateProject}
                     logCorrection={logCorrection}
@@ -1395,6 +1394,7 @@ export function GaugeView({
                 ) : (
                   <ProjectStageEditor
                     project={p}
+                    userId={userId}
                     onUpdate={updateProject}
                     accounts={accounts}
                     members={members}

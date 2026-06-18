@@ -1,13 +1,19 @@
 import { taskPattern } from "../hooks/usePipAssignmentHints";
+import { nextSortOrder } from "./projectTasks";
+import { firstStatusColumn } from "./gaugeStatus";
 
-function firstStatusColumn(project) {
-  var cols = project && project.task_status_columns;
-  if (Array.isArray(cols) && cols.length) {
-    var first = cols[0];
-    if (typeof first === "string") return first;
-    if (first && first.id) return first.id;
+// Translate a stage-shaped update patch to folio_tasks columns. The only
+// non-trivial mapping is completed_at -> done/closed_at/status.
+function mapTaskUpdateFields(fields) {
+  var out = Object.assign({}, fields || {});
+  if ("completed_at" in out) {
+    var done = !!out.completed_at;
+    out.done = done;
+    out.closed_at = out.completed_at || null;
+    out.status = done ? "complete" : "planned";
+    delete out.completed_at;
   }
-  return "intake";
+  return out;
 }
 
 /**
@@ -26,25 +32,22 @@ export function applyPipPlan(selected, ctx) {
   var addItem        = ctx.addItem;
   var updateItem     = ctx.updateItem;
   var closeItem      = ctx.closeItem;
-  var updateProject  = ctx.updateProject;
   var addHint        = ctx.addHint;
   var accountId      = ctx.accountId;
   var cadenceId      = ctx.cadenceId || null;   // provenance for leadership tasks (person/internal cadences)
   var meetingId      = ctx.meetingId || null;
   var activeProjects = ctx.activeProjects || [];
 
-  // Snapshot projects so multiple new_task / update_task rows on the same
-  // project accumulate into one updateProject call (faster + idempotent).
-  var projectStaging = {};
-  function ensureStage(projectId) {
-    if (projectStaging[projectId]) return projectStaging[projectId];
-    var p = activeProjects.find(function (pp) { return pp.id === projectId; });
-    if (!p) return null;
-    projectStaging[projectId] = {
-      project: p,
-      stages: Array.isArray(p.stages) ? p.stages.slice() : [],
-    };
-    return projectStaging[projectId];
+  // Task-model unification: project tasks are folio_tasks rows (project_id set),
+  // created via addItem like loose items. Track a per-project append counter so
+  // multiple new_task rows in one apply get increasing sort_order.
+  var appendCounters = {};
+  function nextOrderFor(projectId) {
+    if (!(projectId in appendCounters)) {
+      var p = activeProjects.find(function (pp) { return pp.id === projectId; });
+      appendCounters[projectId] = nextSortOrder(p && p.tasks);
+    }
+    return appendCounters[projectId]++;
   }
 
   var promises = selected.map(function (entry) {
@@ -92,60 +95,41 @@ export function applyPipPlan(selected, ctx) {
           .catch(function (e) { fail(e && e.message ? e.message : "Close failed"); });
 
       case "new_task": {
-        var newStage = ensureStage(row.project_id);
-        if (!newStage) {
-          var fallbackAcct = row.target_account_id || accountId || null;
-          var fbStampedAt = !row._userAdded ? new Date().toISOString() : null;
-          var fbPayload = {
-            text:              row.title,
-            due_date:          row.due_date || null,
-            owner:             row.assignee || null,
-            recipient:         row.recipient || null,
-            account_id:        fallbackAcct,
-            cadence_id:        (cadenceId && !fallbackAcct) ? cadenceId : null,
-            source_meeting_id: meetingId,
-            is_commitment:     row.is_commitment || false,
-          };
-          if (fbStampedAt) fbPayload.pip_created_at = fbStampedAt;
-          return addItem(fbPayload).catch(function (e) { fail(e && e.message ? e.message : "Add failed"); });
-        }
-        var newTaskId = (typeof crypto !== "undefined" && crypto.randomUUID)
-          ? crypto.randomUUID()
-          : ("t-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8));
-        var pipCreatedAt = new Date().toISOString();
+        // A project task is a folio_tasks row with project_id set. When the
+        // project is known we stamp its first kanban column + an appended
+        // sort_order so it lands at the end of the board; otherwise it's a
+        // loose task (project_id null).
+        var proj = activeProjects.find(function (pp) { return pp.id === row.project_id; });
         var taskAcct = row.target_account_id || accountId || null;
-        var firstStatus = firstStatusColumn(newStage.project);
-        var taskEntry = {
-          id:                newTaskId,
-          title:             row.title,
+        var ntStampedAt = !row._userAdded ? new Date().toISOString() : null;
+        var ntPayload = {
+          text:              row.title,
           due_date:          row.due_date || null,
-          assignee:          row.assignee || null,
+          owner:             row.assignee || null,
           recipient:         row.recipient || null,
-          task_status:       firstStatus,
           account_id:        taskAcct,
+          project_id:        row.project_id || null,
           source_meeting_id: meetingId,
-          created_at:        pipCreatedAt,
           is_commitment:     row.is_commitment || false,
-          custom_fields:     {},
         };
-        if (!row._userAdded) taskEntry.pip_created_at = pipCreatedAt;
-        newStage.stages.push(taskEntry);
-        // Defer the actual updateProject call until after all rows have
-        // mutated the snapshot — see flushStages below.
-        return maybeLearnHint(row.title);
+        if (row.project_id) {
+          ntPayload.task_status = firstStatusColumn(proj);
+          ntPayload.sort_order  = nextOrderFor(row.project_id);
+        } else {
+          // Account-less loose task born from a person/internal cadence = leadership task.
+          ntPayload.cadence_id = (cadenceId && !taskAcct) ? cadenceId : null;
+        }
+        if (ntStampedAt) ntPayload.pip_created_at = ntStampedAt;
+        return addItem(ntPayload)
+          .then(function () { return maybeLearnHint(row.title); })
+          .catch(function (e) { fail(e && e.message ? e.message : "Add failed"); });
       }
 
       case "update_task": {
-        var upStage = ensureStage(row.project_id);
-        if (!upStage) { fail("Project not found"); return Promise.resolve(); }
-        var i = upStage.stages.findIndex(function (t) { return t && t.id === row.task_id; });
-        if (i < 0) {
-          console.warn("[pipPlanApply] update_task: task_id", row.task_id, "not found in project", row.project_id, "— row skipped");
-          fail("Task not found in project");
-          return Promise.resolve();
-        }
-        upStage.stages[i] = Object.assign({}, upStage.stages[i], row.fields);
-        return Promise.resolve();
+        if (!row.task_id) { fail("Task not found in project"); return Promise.resolve(); }
+        // Project tasks are folio_tasks rows now — update by id directly.
+        return updateItem(row.task_id, mapTaskUpdateFields(row.fields))
+          .catch(function (e) { fail(e && e.message ? e.message : "Update failed"); });
       }
 
       default:
@@ -154,23 +138,6 @@ export function applyPipPlan(selected, ctx) {
   });
 
   return Promise.all(promises).then(function () {
-    // Flush staged project mutations.
-    var projectIds = Object.keys(projectStaging);
-    var flushPromises = projectIds.map(function (pid) {
-      var entry = projectStaging[pid];
-      return updateProject(pid, { stages: entry.stages })
-        .catch(function (e) {
-          // Mark every row that touched this project so the user sees the
-          // failure rather than getting a silent miss.
-          selected.forEach(function (s) {
-            if (s.row.kind === "new_task" || s.row.kind === "update_task") {
-              if (s.row.project_id === pid) errors[s.idx] = e && e.message ? e.message : "Project update failed";
-            }
-          });
-        });
-    });
-    return Promise.all(flushPromises);
-  }).then(function () {
     return { errors: errors };
   });
 }

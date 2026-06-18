@@ -12,6 +12,9 @@ import { supabase } from "../../lib/supabase";
 import { showToast } from "../../components/Toast";
 import { defaultCustomFieldSchema, DEFAULT_TASK_STATUS_COLUMNS } from "../../lib/gaugeFields";
 import { CustomFieldSchemaEditor } from "./CustomFieldSchemaEditor";
+import { insertTask, updateTask, deleteTask } from "../../hooks/useTasks";
+import { stageToTaskFields } from "../../lib/projectTasks";
+import { firstStatusColumn } from "../../lib/gaugeStatus";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 
@@ -29,19 +32,25 @@ var PRIORITY_OPTS = [
   { value: "low",    label: "Low"    },
 ];
 
-// Normalize stages from existing data — handle old format gracefully
+// Normalize stages from existing data — handle old format gracefully.
+// Preserves `id` (the folio_task id, when editing an existing project's tasks)
+// so the save reconcile can update vs. insert vs. delete correctly.
 function normalizeStages(stages) {
   if (!stages || stages.length === 0) return [];
   return stages.map(function (s) {
     return {
+      id:                   s.id || null,
       title:                s.title || "",
       completed_at:         s.completed_at || null,
       assignee_email:       s.assignee_email || null,
+      recipient:            s.recipient || null,
       due_date:             s.due_date || null,
+      task_status:          s.task_status || null,
+      custom_fields:        s.custom_fields || {},
       is_external:          s.is_external || false,
       external_contact_id:  s.external_contact_id || null,
       external_contact_name: s.external_contact_name || null,
-      blocked_reason:       s.blocked_reason || null,
+      blocked_reason:       (s.blocked_reason === undefined ? null : s.blocked_reason),
       sub_stages:           (s.sub_stages || []).map(function (sub) {
         return {
           title:          sub.title || "",
@@ -90,10 +99,12 @@ export function ProjectModal({
   var [waitingOn, setWaitingOn]     = useState(existing ? existing.waiting_on || "" : "");
   var [requestedBy, setRequestedBy] = useState(existing ? existing.requested_by || "" : "");
   var [blockedReason, setBlockedReason] = useState(existing ? existing.blocked_reason || "" : "");
+  // Task-model unification: a project's tasks live in folio_tasks, hydrated
+  // onto existing.tasks. Seed the editor from there (template stages for new).
   var [stages, setStages]           = useState(
     prefillTemplate
       ? normalizeStages(prefillTemplate.stages)
-      : normalizeStages(existing ? existing.stages : [])
+      : normalizeStages(existing ? existing.tasks : [])
   );
   var [isStanding, setIsStanding]   = useState(
     existing ? !!existing.is_standing
@@ -160,15 +171,16 @@ export function ProjectModal({
       assignee:      assigneeEmail || null,
       requested_by:  requestedBy || null,
       blocked_reason: null,
-      stages,
       is_standing:   isStanding,
       custom_field_schema: customFieldSchema,
       task_status_columns: taskStatusColumns,
       total_duration_days: (!isNaN(durDraft) && durDraft > 0) ? durDraft : null,
-    }).then(function () {
-      setSaving(false);
-      showToast("Draft saved");
-      onClose();
+    }).then(function (saved) {
+      return syncTasks(saved || existing).then(function () {
+        setSaving(false);
+        showToast("Draft saved");
+        onClose();
+      });
     }).catch(function () {
       setSaving(false);
       showToast("Couldn't save draft", "error");
@@ -333,6 +345,32 @@ export function ProjectModal({
     });
   }
 
+  // Reconcile the editor's stage list against folio_tasks after the project
+  // row is saved: update kept tasks (by id), insert new ones, delete removed.
+  function syncTasks(project) {
+    if (!project || !project.id || !userId) return Promise.resolve();
+    var firstStatus = firstStatusColumn({ task_status_columns: taskStatusColumns });
+    var originals = (existing && Array.isArray(existing.tasks)) ? existing.tasks : [];
+    var keptIds = {};
+    var ops = [];
+    stages.forEach(function (s, idx) {
+      var fields = stageToTaskFields(s, idx, firstStatus);
+      if (s.id) {
+        keptIds[s.id] = true;
+        ops.push(updateTask(userId, s.id, fields));
+      } else {
+        ops.push(insertTask(userId, Object.assign(
+          { project_id: project.id, account_id: project.account_id || accountIds[0] || null },
+          fields
+        )));
+      }
+    });
+    originals.forEach(function (t) {
+      if (t.id && !keptIds[t.id]) ops.push(deleteTask(userId, t.id));
+    });
+    return Promise.all(ops);
+  }
+
   // --- Save & Template ---
 
   function handleSave() {
@@ -360,14 +398,16 @@ export function ProjectModal({
         ? ((existing && existing.waiting_on === waitingOn.trim() && existing.waiting_on_since) || new Date().toISOString().slice(0, 10))
         : null,
       blocked_reason: status === "blocked" ? blockedReason.trim() : null,
-      stages,
       is_standing:   isStanding,
       custom_field_schema: customFieldSchema,
       task_status_columns: taskStatusColumns,
       total_duration_days: (!isNaN(durSave) && durSave > 0) ? durSave : null,
-    }).then(function () {
-      setSaving(false);
-      onClose();
+    }).then(function (saved) {
+      // Project tasks live in folio_tasks now — sync them after the row saves.
+      return syncTasks(saved || existing).then(function () {
+        setSaving(false);
+        onClose();
+      });
     }).catch(function () {
       setSaving(false);
     });

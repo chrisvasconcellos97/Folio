@@ -27,6 +27,7 @@ import { applyPipPlan } from "../../lib/pipPlanApply";
 import { updateTask, insertTask } from "../../hooks/useTasks";
 import { ownerLabel } from "../../lib/ownerLabel";
 import { autoStatusPatch } from "../../lib/gaugeStatus";
+import { reconcileProjectTasks } from "../../lib/projectTaskWrites";
 import { fmtShort, fmtMedium } from "../../lib/dateUtils";
 
 var INTER = "'Inter', system-ui, sans-serif";
@@ -916,21 +917,19 @@ export function HubProjectCard({ project, accounts, members, userEmail, onUpdate
   var statusColor  = isPlanning ? C.yellow : C.accent;
   var statusKey    = (project.status || "planned").split("_").map(function(w) { return w.charAt(0).toUpperCase() + w.slice(1); }).join("");
   var statusStyle  = C["status" + statusKey] || C.statusPlanned;
-  var tasks        = project.stages || [];
+  var tasks        = project.tasks || [];
   var doneCount    = tasks.filter(function (t) { return t.completed_at; }).length;
 
-  // Meeting-hub task edits operate on the project's `stages` jsonb (the store
-  // the list reads), NOT folio_tasks — writing the whole array back via
-  // onUpdateProject, exactly like ProjectStageEditor. Completion is tracked by
-  // `completed_at`; autoStatusPatch flips project status when all/none done.
+  // Meeting-hub task edits operate on the project's folio_tasks (the canonical
+  // store, hydrated onto project.tasks). Build the full next-array, reconcile
+  // it to folio_tasks, and auto-flip project status (autoStatusPatch).
   function persistStages(nextStages) {
-    var payload = { stages: nextStages };
     var sp = autoStatusPatch(nextStages, project.status, project.is_standing);
-    if (sp) Object.assign(payload, sp);
-    return onUpdateProject(project.id, payload);
+    if (sp) onUpdateProject(project.id, sp);
+    return reconcileProjectTasks(userId, project, nextStages);
   }
   function updateStageAt(idx, fields) {
-    var next = (project.stages || []).map(function (s, i) {
+    var next = (project.tasks || []).map(function (s, i) {
       if (i !== idx) return s;
       var patch = Object.assign({}, s);
       if (Object.prototype.hasOwnProperty.call(fields, "done")) {
@@ -953,7 +952,7 @@ export function HubProjectCard({ project, accounts, members, userEmail, onUpdate
       assignee_email: payload.assignee_email || null,
       due_date:       payload.due_date || null,
     };
-    return persistStages((project.stages || []).concat([newStage]));
+    return persistStages((project.tasks || []).concat([newStage]));
   }
 
   return (
@@ -1199,12 +1198,14 @@ export function HubProjectCard({ project, accounts, members, userEmail, onUpdate
                   members={members}
                   contacts={contacts}
                   aliases={[]}
+                  userId={userId}
                   userEmail={userEmail}
                   onUpdate={onUpdateProject}
                 />
               ) : (
                 <ProjectStageEditor
                   project={project}
+                  userId={userId}
                   onUpdate={onUpdateProject}
                   accounts={accounts}
                   members={members}

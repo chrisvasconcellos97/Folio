@@ -60,6 +60,31 @@ export function fetchProjectTasks(projectIds) {
     .then(function (r) { return r.error ? [] : (r.data || []); });
 }
 
+// Map a stage-shaped object (from a stages editor) to folio_tasks columns.
+// `idx` becomes sort_order so editor order is preserved. Pure — no I/O.
+export function stageToTaskFields(s, idx, firstStatus) {
+  var done = !!s.completed_at;
+  return {
+    title:                 s.title || "",
+    assignee_email:        s.assignee_email || null,
+    recipient:             s.recipient || null,
+    due_date:              s.due_date || null,
+    is_external:           !!s.is_external,
+    external_contact_id:   s.external_contact_id || null,
+    external_contact_name: s.external_contact_name || null,
+    // null = not blocked; "" or text = blocked (mirrors stage semantics)
+    blocked_reason:        (s.blocked_reason === undefined ? null : s.blocked_reason),
+    sub_stages:            s.sub_stages || [],
+    task_status:           s.task_status || firstStatus,
+    custom_fields:         s.custom_fields || {},
+    is_commitment:         !!s.is_commitment,
+    status:                done ? "complete" : (s.blocked_reason != null ? "blocked" : "planned"),
+    done:                  done,
+    closed_at:             done ? (s.closed_at || s.completed_at || new Date().toISOString()) : null,
+    sort_order:            idx,
+  };
+}
+
 // Next sort_order for appending a task to a project (max + 1).
 export function nextSortOrder(tasks) {
   var max = -1;
