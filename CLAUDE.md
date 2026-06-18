@@ -443,6 +443,24 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 ---
 
+## Session Handoff — June 18 2026: TASK-MODEL UNIFICATION SHIPPED (to the branch, not deployed)
+
+**⚠️ WHERE IT LIVES:** branch **`claude/app-audit-strategy-hhcrz2`** (tip after this session), **NOT `main`, NOT deployed.** Chris is saving, not deploying — he'll fast-forward `main` himself later. (Note: a session config pointed at a different `claude/task-model-unification-*` branch; that branch was a stale older state with none of the audit work, so the work correctly continued on `claude/app-audit-strategy-hhcrz2` per Chris's explicit instruction.)
+
+**DONE — full task-model unification (the #1 next-session job from the audit handoff below).** `folio_tasks` is now the single canonical task store; `gauge_projects.stages` is a **frozen read-only backup** (kept, NOT dropped — reversible). Executed in 6 validated, separately-committed stages exactly per `supabase/task_unification_plan.md`:
+1. **Backup** — `gauge_stages_backup_20260617` (36 projects / 174 objects) via MCP.
+2. **Columns** — added to `folio_tasks`: `is_external, external_contact_id(uuid), external_contact_name, blocked_reason, sub_stages(jsonb), sort_order` (+ index). Chose **sub_stages as a jsonb column** (all live sub_stages were empty — lowest risk, preserves the editor).
+3. **Backfill** — exploded all 174 stage objects → folio_tasks (idempotent dedup on `(project_id, lower(title))`; the 9 pre-existing project-linked rows had zero title overlap). **Verified row-for-row against prod: per-project task-count parity = 0 mismatch, per-project done-count parity = 0 mismatch, all 5 real due dates captured.** Applied via 3 MCP migrations + folded into `schema.sql` + `supabase/task_unification.sql`.
+4. **Readers → folio_tasks** — new `src/lib/projectTasks.js` hydrates each project with an ordered, **stage-compatible** `.tasks` array (aliases `completed_at`=`closed_at`-when-done, so reader edits were near-pure `.stages`→`.tasks` swaps). Hydration sites: `useProjects` (+ folio_tasks realtime), `accountSnapshots`, `OverviewTab`, `api/operator-run`, `api/business-review`. operator-run's loose-items query now excludes project tasks (migrated tasks carry account_id → would double-list).
+5. **Writers → folio_tasks** — new `src/lib/projectTaskWrites.js#reconcileProjectTasks` (diffs a stage array → folio_tasks insert/update/delete by id, sort_order=position). Routed through it: `ProjectStageEditor.commitStages`, `CadenceHub` HubProjectCard, `StandingBoardView`, `MyQueueView`, `ProjectModal` save. `pipPlanApply` new_task→`addItem(project_id)` / update_task→`updateItem` by id. `ItemsTab` escalate→`insertTask`. `GaugeView` toggle: dropped the stale stages-sync bridge, recompute status from tasks. Shared `firstStatusColumn` + `stageToTaskFields` helpers; `userId` threaded to the editors.
+6. **Parity + docs** — verified (above); `docs/upgrades.md` entry, fixlist §4/§10 ticked, `schema.sql` header updated, PDFs regenerated.
+
+**Gates green at every stage:** `vite build`, **292 tests** (pipPlanApply + gaugeStatus tests rewritten to the new contract), `check-guards` (6), `test-api-imports`. Commits: `99640fd` (S1-3 DB) · `9907400` (S4 readers) · `56a8b75` (S5 writers) · `ed04090` (S6 docs/parity).
+
+**Notes for whoever deploys / continues:** (a) `gauge_templates.stages` is UNCHANGED — templates legitimately keep stage-array blueprints; ProjectModal seeds a new project's task editor from a template's stages then creates folio_tasks on save. (b) The stress-bot project create/edit/complete cycle (plan risk-control) was NOT run — needs Chris to trigger the GitHub Action; recommended before/after deploy. (c) All 35 stage-bearing projects are discrete (no standing projects had migrated tasks), so the kanban `task_status`-bucketing path is untested on real migrated data. (d) Remaining low-priority §3/§4 fixlist items can now mop up (some §3 gauge/stages items — TeammateDetailView assignees, gaugeFields person-chip — were fixed for free by the unification).
+
+---
+
 ## Session Handoff — June 17 2026 (AUDIT SESSION): Audit 2026-06-17 fixes (~77%) + Digest Parser v2 + task-unification scoped
 
 **⚠️ READ FIRST — WHERE THE WORK LIVES:** Everything from this session is on branch **`claude/app-audit-strategy-hhcrz2`** (pushed/durable, tip ~`6e7cb0c`), **NOT on `main`, NOT deployed.** This was deliberate — Chris asked to *save, not deploy* (Vercel preview builds were failing + emailing him; he's cost-sensitive). So the deploy-to-`main` rule was intentionally suspended this session: commits accumulate on the branch awaiting an explicit "ship it." **To deploy:** see "Shipping" below — do NOT assume `main` has any of this.
