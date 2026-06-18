@@ -1,6 +1,24 @@
 # Folios — Upgrade Log
 
-*Last updated: 2026-06-10 (Pip 3D "Bold Hex" visual form; Work/Life mode, mobile Home hub, split-screen meeting mode)*
+*Last updated: 2026-06-18 (Task-model unification — folio_tasks is now the single home for all task work)*
+
+---
+
+## 2026-06-18 — One home for tasks: folio_tasks is now canonical
+
+**What I built:** Folios had two places that stored "tasks." Loose action items lived in one table (`folio_tasks`); the steps and to-dos *inside* a Gauge project lived in a different place — a list embedded on the project itself (`gauge_projects.stages`). Two stores meant the kanban board and the flat task queue could quietly disagree, and an edit made in one view might not show in another. I merged them: **every task — loose or inside a project — now lives in `folio_tasks`, the single source of truth.** The old embedded list is kept untouched as a frozen backup, but nothing reads or writes it anymore.
+
+**Problem it solves:** The split was the root of a whole class of "my edit didn't stick" / "this view shows different tasks than that view" confusion, and it forced every new Pip feature to be wired into two places. One store kills that drift permanently.
+
+**What changed:**
+- **The data:** all 174 project tasks/steps were copied out of the embedded lists into `folio_tasks`, with their completion, assignees, due dates, external-contact flags, blocked reasons, and ordering preserved exactly. Verified row-for-row: per-project task counts and completed-counts match the backup with zero discrepancies. `folio_tasks` gained the columns it needed to hold everything the old format did (external-contact fields, blocked reason, sub-steps, ordering).
+- **The reading:** every screen that shows project work — the Gauge board, the account Projects tab, Home's "in flight" cards, the leader rollup, the calendar, and everything Pip reads for briefs and summaries — now reads tasks from `folio_tasks` (projects get their tasks attached automatically when loaded).
+- **The writing:** every place you edit project work — the project checklist editor, the kanban board, the meeting-hub task list, the project builder, "escalate an item to a project," and Pip's summarize-and-file flow — now writes to `folio_tasks`.
+- The old embedded `stages` list is frozen as a read-only backup (not deleted), so nothing is lost and the change is reversible.
+
+**What you see today:** Nothing looks different — that's the point. Your projects, tasks, checkmarks, assignees, and progress bars are all exactly where they were. Under the hood they now come from one place, so the board, the queue, the account view, and Pip can never disagree about what's on a project again.
+
+**Why it matters:** A single task store is the foundation for everything task-related getting more reliable. "Who's holding the ball," commitment tracking, the team request queue, and Pip's read of project work all get simpler and more trustworthy because there's exactly one answer to "what tasks does this project have."
 
 Plain-English log of major upgrades shipped to Folios. Date, time, and
 a short explanation written in terms anyone can read — not technical

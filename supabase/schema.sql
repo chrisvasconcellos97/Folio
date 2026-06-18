@@ -222,8 +222,9 @@ create policy "Users manage own items"
 
 -- ──────────────────────────────────────────────────────────────────────
 -- Gauge V3 — folio_tasks (unified items + tasks home)
--- Phase 1: table + indexes + RLS, dual-write from Pip plan apply.
--- Eventually replaces folio_items and gauge_projects.stages[].
+-- THE canonical task store (June 2026 task-model unification): all loose
+-- action items AND all project work live here. gauge_projects.stages is a
+-- frozen read-only backup, no longer read or written. See task_unification.sql.
 -- ──────────────────────────────────────────────────────────────────────
 create table if not exists folio_tasks (
   id                  uuid primary key default gen_random_uuid(),

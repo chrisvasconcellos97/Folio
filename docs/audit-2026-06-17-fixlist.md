@@ -98,7 +98,7 @@ Check off `[x]` as we go. Work order suggestion: §1 → §2 → §3 → §4 →
 - [ ] (M,P2) `folio_merge_accounts` — re-parent `folio_pip_questions.suggestion.account_id` (+ folio_contact_aliases.account_id) → else post-merge drip writes to dead account.
 - [ ] (S,P2) merge deletes source pip_account_state but never refreshes target → stale card. touchAccount(target) or toast.
 - [x] (M,P2) LeaderProjectsView + TeammateDetailView count accounts via account_id only → use projectMatchesAccount (account_ids[]).
-- [ ] (M,P2) DUAL TASK MODEL — pipPlanApply writes stages; MyQueueView reads stages; FlatTaskQueue/TeammateDetailView read folio_tasks → no single complete view. (see §10 — needs a decision)
+- [x] (M,P2) DUAL TASK MODEL — RESOLVED via full task-model unification (see §10): folio_tasks is canonical; pipPlanApply + MyQueueView + every reader/writer now use folio_tasks. gauge_projects.stages frozen as backup.
 - [ ] (S,P2) EditContactModal has is_primary toggle, AddContactModal doesn't → parity.
 - [ ] (S,P3) AddItemModal title "Add Open Item" vs "Open Items" vs "Edit Task" naming.
 - [ ] (S,P3) `OverviewTab:679` "Recent Deliveries" filters by "✓ Delivered:" string prefix → use source flag.
@@ -186,7 +186,7 @@ Check off `[x]` as we go. Work order suggestion: §1 → §2 → §3 → §4 →
 ## §10 — BIGGER / STRUCTURAL (architecture — may exceed 2h; decide scope)
 
 - [ ] (L) **THE ONE THING** — single `buildAccountContext()` layer feeding chat/brief/summarize/operator (kills the parity-drift bug class permanently). ~week. See X6.
-- [ ] (L) Resolve dual task-model: pick canonical store (folio_tasks) or read both everywhere; heal effect for Pip-staged tasks. (§4 dup)
+- [x] (L) Resolve dual task-model: **DONE 2026-06-18** — full unification to folio_tasks (Chris chose this). 174 stage objects migrated + verified (per-project count + done-count parity, 0 mismatch); ~6 new folio_tasks columns; ~14 readers switched (project.tasks hydration in useProjects/accountSnapshots/OverviewTab/operator-run/business-review); ~8 writers switched (reconcileProjectTasks). gauge_projects.stages frozen as read-only backup (NOT dropped). 3 staged DB migrations via MCP + folded into schema.sql + supabase/task_unification.sql. See supabase/task_unification_plan.md.
 - [ ] (L) File splits (all >1500 lines): SettingsView (1835, extract sections/), CadenceHub (2416), HomeView (2405 → HomeBriefHub + useHomeSignals), pip.js (1580).
 - [ ] (M) Event-driven recompute generalized (item 48 levers): pip-state-refresh gating, conditional output fields, on-demand draft emails, skip roll-up on quiet nights.
 - [ ] (L, future) Pip agent loop (tool_result round-trip, chat only); pgvector semantic recall (Pip summaries only). X6 F5/F6.
