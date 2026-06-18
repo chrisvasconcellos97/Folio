@@ -276,3 +276,7 @@ VERIFIED DONE (was JUDGMENT): renderAccountFull field population — PipView.bui
 - check-guards Guard 1 multi-line empty-catch coverage
 - pipPlanApply.test.js negative test for update_task missing id
 - CadenceHub.jsx (2419 lines) split when next feature touches it
+
+### P3 POLISH BATCH — 2026-06-18 (done inline)
+DONE: useBreakpoint resize debounce (100ms) · useAccountSnapshots `var fetch`→`fetchSnapshots` (no global shadow) · reconcileProjectTasks per-project serialization guard (same-client interleave) · check-guards Guard 1 now catches multi-line empty catches (dedup + comment-safe) · pipPlanApply.test.js negative test for update_task missing id (293 tests).
+WON'T-DO (risk/value or solo-irrelevant): PipGaugeCard memo (~80-line wrap for one card, risk>value) · HomeView playSequence hardcoded-6 (stable, cosmetic) · §2 members_invite_read / logActivity-solo / members_self_accept fold (multi-user only — Chris is solo) · CadenceHub split (structural, defer to a feature touch).

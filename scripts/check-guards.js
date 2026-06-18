@@ -78,6 +78,7 @@ function guard1_noSilentDeath() {
   for (var filePath of files) {
     var content = readFileSync(filePath, "utf8");
     var lines = content.split("\n");
+    var flagged = {}; // lineNo -> true, dedupe across the two passes
 
     // Single-line check: search each line
     lines.forEach(function (line, idx) {
@@ -94,6 +95,7 @@ function guard1_noSilentDeath() {
         // If body has NO non-whitespace content → it's empty.
         // If body contains "guard-ok" → it's allowlisted.
         if (body.trim() === "") {
+          flagged[lineNo] = true;
           violations.push(relPath(filePath) + ":" + lineNo +
             " — guard-1 empty .catch() body (add logSilentFailure or /* guard-ok: reason */)");
         }
@@ -101,6 +103,27 @@ function guard1_noSilentDeath() {
         if (SINGLE_LINE.lastIndex === m.index) SINGLE_LINE.lastIndex++;
       }
     });
+
+    // Multi-line check: the [^}]* class spans newlines, so running the same
+    // pattern over the WHOLE file catches empty catches whose braces are on
+    // different lines (e.g. `.catch(function () {\n})`). Dedupe against the
+    // single-line pass, and skip matches that start on a comment line so
+    // commented-out code isn't flagged.
+    var MULTI = new RegExp(SINGLE_LINE.source, "g");
+    var mm;
+    while ((mm = MULTI.exec(content)) !== null) {
+      var mbody = mm[1] || "";
+      if (mbody.trim() === "") {
+        var lineNo2 = content.slice(0, mm.index).split("\n").length;
+        var startLine = (lines[lineNo2 - 1] || "").trim();
+        if (!flagged[lineNo2] && !startLine.startsWith("//") && !startLine.startsWith("*")) {
+          flagged[lineNo2] = true;
+          violations.push(relPath(filePath) + ":" + lineNo2 +
+            " — guard-1 empty .catch() body (add logSilentFailure or /* guard-ok: reason */)");
+        }
+      }
+      if (MULTI.lastIndex === mm.index) MULTI.lastIndex++;
+    }
   }
 
   return violations;

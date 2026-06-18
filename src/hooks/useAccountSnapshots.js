@@ -11,7 +11,7 @@ export function useAccountSnapshots(userId) {
   var [snapshotHistory, setSnapshotHistory] = useState([]);
   var [loading, setLoading]                 = useState(false);
 
-  var fetch = useCallback(function () {
+  var fetchSnapshots = useCallback(function () {
     if (!userId) return;
     setLoading(true);
     var today        = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
@@ -30,12 +30,12 @@ export function useAccountSnapshots(userId) {
       });
   }, [userId]);
 
-  useEffect(function () { fetch(); }, [fetch]);
+  useEffect(function () { fetchSnapshots(); }, [fetchSnapshots]);
 
   // Phase 8 — multi-device realtime sync. When snapshots are written (by
   // computeAndSaveSnapshots on any device) the read hook on device B picks
   // them up automatically instead of staying stale all session.
-  useRealtimeSync("folio_account_snapshots", userId, fetch);
+  useRealtimeSync("folio_account_snapshots", userId, fetchSnapshots);
 
-  return { snapshots: snapshots, snapshotHistory: snapshotHistory, loading: loading, refetch: fetch };
+  return { snapshots: snapshots, snapshotHistory: snapshotHistory, loading: loading, refetch: fetchSnapshots };
 }

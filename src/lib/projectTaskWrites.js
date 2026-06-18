@@ -9,12 +9,30 @@ import { insertTask, updateTask, deleteTask } from "../hooks/useTasks";
 import { firstStatusColumn } from "./gaugeStatus";
 import { stageToTaskFields } from "./projectTasks";
 
+// Per-project serialization: chains reconciles for the same project on this
+// client so two rapid saves (or a save while a prior one is mid-flight) can't
+// interleave their insert/update/delete ops against stale state. NOTE: this
+// guards SAME-client overlap only; true two-device concurrency would need a
+// server-side lock (out of scope — documented for a future pass).
+var inFlightByProject = {};
+
 // Reconcile a full stage-shaped array against the project's current
 // folio_tasks (project.tasks): update matched rows (by id, position = idx),
 // insert new ones, delete removed. Returns a Promise of all writes.
 export function reconcileProjectTasks(userId, project, nextStages) {
   if (!userId || !project || !project.id) return Promise.resolve();
-  var firstStatus = firstStatusColumn(project);
+  var pid = project.id;
+  function run() { return doReconcile(userId, project, nextStages, firstStatusColumn(project)); }
+  var prev = inFlightByProject[pid] || Promise.resolve();
+  // Run after any prior reconcile for this project, success OR failure.
+  var next = prev.then(run, run);
+  inFlightByProject[pid] = next.finally(function () {
+    if (inFlightByProject[pid] === next) delete inFlightByProject[pid];
+  });
+  return next;
+}
+
+function doReconcile(userId, project, nextStages, firstStatus) {
   var current = (project && project.tasks) || [];
   var byId = {};
   current.forEach(function (t) { if (t.id) byId[t.id] = t; });

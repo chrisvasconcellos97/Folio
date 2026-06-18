@@ -11,11 +11,19 @@ export function useBreakpoint() {
     typeof window !== "undefined" ? window.innerWidth >= DESKTOP_BREAKPOINT_PX : true
   );
   useEffect(function () {
+    var t = null;
     function handleResize() {
-      setIsDesktop(window.innerWidth >= DESKTOP_BREAKPOINT_PX);
+      // Debounce — resize fires on every pixel; recompute at most every 100ms.
+      if (t) clearTimeout(t);
+      t = setTimeout(function () {
+        setIsDesktop(window.innerWidth >= DESKTOP_BREAKPOINT_PX);
+      }, 100);
     }
     window.addEventListener("resize", handleResize);
-    return function () { window.removeEventListener("resize", handleResize); };
+    return function () {
+      if (t) clearTimeout(t);
+      window.removeEventListener("resize", handleResize);
+    };
   }, []);
   return isDesktop;
 }

@@ -114,6 +114,14 @@ describe("applyPipPlan — new_task", function () {
     expect(result.errors).toEqual({});
     expect(ctx.updateItem).toHaveBeenCalledWith("task-9", { title: "Renamed" });
   });
+
+  it("update_task with no task_id records an error and does NOT call updateItem (no silent no-op)", async function () {
+    var ctx = makeCtx();
+    var selected = [{ idx: 0, row: { kind: "update_task", task_id: null, project_id: "proj-1", fields: { title: "Orphan" } } }];
+    var result = await applyPipPlan(selected, ctx);
+    expect(result.errors[0]).toBeTruthy();
+    expect(ctx.updateItem).not.toHaveBeenCalled();
+  });
 });
 
 // ── close_item routing ─────────────────────────────────────────────────
