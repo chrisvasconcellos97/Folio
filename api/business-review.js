@@ -89,7 +89,10 @@ function buildContext(body) {
   if (projects.length) {
     lines.push("GAUGE PROJECTS (OEC commitments/deliverables):");
     projects.forEach(function (p) {
-      var stages   = Array.isArray(p.stages) ? p.stages : [];
+      // Project work lives in folio_tasks now (task-model unification); the
+      // client sends hydrated projects with `.tasks`. Fall back to `.stages`
+      // for any legacy payload.
+      var stages   = Array.isArray(p.tasks) ? p.tasks : (Array.isArray(p.stages) ? p.stages : []);
       var total    = stages.length;
       var done     = stages.filter(function (s) { return s.completed_at || s.done; }).length;
       var line = "- " + (p.title || "Untitled") + " [" + (p.status || "unknown") + "]";

@@ -90,29 +90,36 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
   useEffect(function () {
     if (!account || !account.id) return;
     var cancelled = false;
-    var q = supabase
+    // Project work lives in folio_tasks now (task-model unification). Find this
+    // account's projects, then their external, still-open tasks.
+    var pq = supabase
       .from("gauge_projects")
-      .select("id, title, stages, account_id, account_ids")
+      .select("id, title, account_id, account_ids")
       .or("account_id.eq." + account.id + ",account_ids.cs.{" + account.id + "}");
-    if (userId) q = q.eq("user_id", userId);
-    q.then(function (result) {
+    if (userId) pq = pq.eq("user_id", userId);
+    pq.then(function (presult) {
         if (cancelled) return;
-        if (result.error || !result.data) { setExternalStages([]); return; }
-        var rows = [];
-        result.data.forEach(function (proj) {
-          var stages = proj.stages || [];
-          stages.forEach(function (s) {
-            if (s.is_external && !s.completed_at) {
-              rows.push({
-                stageTitle:    s.title,
-                projectTitle:  proj.title,
-                contactName:   s.external_contact_name || null,
-                projectId:     proj.id,
-              });
-            }
+        if (presult.error || !presult.data || presult.data.length === 0) { setExternalStages([]); return; }
+        var titleById = {};
+        var ids = presult.data.map(function (p) { titleById[p.id] = p.title; return p.id; });
+        supabase
+          .from("folio_tasks")
+          .select("title, project_id, external_contact_name, is_external, done")
+          .in("project_id", ids)
+          .eq("is_external", true)
+          .eq("done", false)
+          .then(function (tresult) {
+            if (cancelled) return;
+            if (tresult.error || !tresult.data) { setExternalStages([]); return; }
+            setExternalStages(tresult.data.map(function (s) {
+              return {
+                stageTitle:   s.title,
+                projectTitle: titleById[s.project_id] || "",
+                contactName:  s.external_contact_name || null,
+                projectId:    s.project_id,
+              };
+            }));
           });
-        });
-        setExternalStages(rows);
       });
     return function () { cancelled = true; };
   }, [account.id, userId]);

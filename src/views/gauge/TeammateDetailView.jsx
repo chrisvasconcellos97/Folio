@@ -51,7 +51,7 @@ export function TeammateDetailView({ userId, memberEmail, projects, accounts, on
     (projects || []).forEach(function (p) {
       var matches = false;
       if (p.assignee && p.assignee === memberEmail) matches = true;
-      (p.stages || []).forEach(function (s) {
+      (p.tasks || []).forEach(function (s) {
         if (s.assignee_email === memberEmail) matches = true;
       });
       if (matches && !seen[p.id]) { seen[p.id] = true; out.push(p); }
@@ -63,7 +63,7 @@ export function TeammateDetailView({ userId, memberEmail, projects, accounts, on
   var theirStages = useMemo(function () {
     var rows = [];
     (projects || []).forEach(function (p) {
-      (p.stages || []).forEach(function (s, i) {
+      (p.tasks || []).forEach(function (s, i) {
         if (s.assignee_email === memberEmail && !s.completed_at) {
           rows.push({
             stage: s, index: i,
@@ -197,8 +197,8 @@ export function TeammateDetailView({ userId, memberEmail, projects, accounts, on
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {theirProjects.map(function (p) {
               var acct  = p.account_id ? accountsById[p.account_id] : null;
-              var total = (p.stages || []).length;
-              var done  = (p.stages || []).filter(function (s) { return s.completed_at; }).length;
+              var total = (p.tasks || []).length;
+              var done  = (p.tasks || []).filter(function (s) { return s.completed_at; }).length;
               var pct   = total > 0 ? Math.round((done / total) * 100) : 0;
               return (
                 <div key={p.id} style={cardStyle(false)}>

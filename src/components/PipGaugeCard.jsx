@@ -76,7 +76,7 @@ export function PipGaugeCard({ projects, accountsById, handlers, operatorMoves }
   // Recent activity — last 5 completed stages across active+complete projects.
   var recent = [];
   prjs.forEach(function (p) {
-    (p.stages || []).forEach(function (s) {
+    (p.tasks || []).forEach(function (s) {
       if (!s || !s.completed_at) return;
       recent.push({
         projectId:   p.id,
@@ -117,7 +117,7 @@ export function PipGaugeCard({ projects, accountsById, handlers, operatorMoves }
   // Team load — open stages per assignee across active projects
   var loadCounts = {};
   active.forEach(function (p) {
-    (p.stages || []).forEach(function (s) {
+    (p.tasks || []).forEach(function (s) {
       if (!s || s.completed_at) return;
       // Use assignee_email as the canonical key so the same person isn't counted twice
       // if one row has s.assignee set and another only has s.assignee_email.

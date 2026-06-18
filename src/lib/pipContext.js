@@ -416,7 +416,7 @@ function renderAccountFull(a, userId) {
         lines.push("    " + (i === 0 ? "latest" : "prior") + " (" + (u.at ? String(u.at).slice(0, 10) : "?") + "): " + trunc(u.body, 140));
       });
       // Surface task assignees so Pip knows who owns what
-      var tasks = Array.isArray(p.stages) ? p.stages.filter(function(t) { return !t.completed_at; }).slice(0, 5) : [];
+      var tasks = Array.isArray(p.tasks) ? p.tasks.filter(function(t) { return !t.completed_at; }).slice(0, 5) : [];
       tasks.forEach(function(t) {
         var tLine = "    task: " + (t.title || t.text || "—");
         if (t.assignee_email) tLine += " — assigned: " + normalizePerson(t.assignee_email);
@@ -625,7 +625,7 @@ export function buildPortfolioState(accounts, snapshots, projects) {
   var sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
   var stuck    = (projects || []).filter(function (p) {
     if (p.status !== "in_progress") return false;
-    var stages = p.stages || [];
+    var stages = p.tasks || [];
     return !stages.some(function (s) { return s.completed_at && s.completed_at > sevenDaysAgo; });
   });
 

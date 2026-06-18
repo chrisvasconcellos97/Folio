@@ -4,30 +4,32 @@ import { allTasksComplete, isProjectComplete, autoStatusPatch } from "./gaugeSta
 var done = { completed_at: "2026-06-01T00:00:00Z" };
 var open = { completed_at: null };
 
+// Task-model unification: project work lives in folio_tasks, hydrated onto
+// project.tasks (stage-shaped, carrying a completed_at alias).
 describe("allTasksComplete", function () {
-  it("is true when every stage is completed", function () {
-    expect(allTasksComplete({ stages: [done, done] })).toBe(true);
+  it("is true when every task is completed", function () {
+    expect(allTasksComplete({ tasks: [done, done] })).toBe(true);
   });
-  it("is false when any stage is open", function () {
-    expect(allTasksComplete({ stages: [done, open] })).toBe(false);
+  it("is false when any task is open", function () {
+    expect(allTasksComplete({ tasks: [done, open] })).toBe(false);
   });
-  it("is false with no stages (nothing to complete)", function () {
-    expect(allTasksComplete({ stages: [] })).toBe(false);
+  it("is false with no tasks (nothing to complete)", function () {
+    expect(allTasksComplete({ tasks: [] })).toBe(false);
   });
   it("never auto-completes a standing project", function () {
-    expect(allTasksComplete({ is_standing: true, stages: [done, done] })).toBe(false);
+    expect(allTasksComplete({ is_standing: true, tasks: [done, done] })).toBe(false);
   });
 });
 
 describe("isProjectComplete", function () {
   it("respects an explicit complete status", function () {
-    expect(isProjectComplete({ status: "complete", stages: [open] })).toBe(true);
+    expect(isProjectComplete({ status: "complete", tasks: [open] })).toBe(true);
   });
   it("treats all-tasks-done as complete even when status lags (the bug)", function () {
-    expect(isProjectComplete({ status: "in_progress", stages: [done, done] })).toBe(true);
+    expect(isProjectComplete({ status: "in_progress", tasks: [done, done] })).toBe(true);
   });
   it("is false when work remains", function () {
-    expect(isProjectComplete({ status: "in_progress", stages: [done, open] })).toBe(false);
+    expect(isProjectComplete({ status: "in_progress", tasks: [done, open] })).toBe(false);
   });
 });
 

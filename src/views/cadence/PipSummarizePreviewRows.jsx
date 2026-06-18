@@ -22,8 +22,8 @@ export function fmtDate(d) {
 export function findItem(items, id)        { return (items || []).find(function (i) { return i.id === id; }); }
 export function findProject(projects, id)  { return (projects || []).find(function (p) { return p.id === id; }); }
 export function findTask(project, taskId)  {
-  if (!project || !Array.isArray(project.stages)) return null;
-  return project.stages.find(function (t) { return t.id === taskId; });
+  if (!project || !Array.isArray(project.tasks)) return null;
+  return project.tasks.find(function (t) { return t.id === taskId; });
 }
 
 // Initial title surfaced in the editable input. update_item rows expose the

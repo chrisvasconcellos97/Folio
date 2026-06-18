@@ -7,6 +7,7 @@
 import { supabase } from "./supabase";
 import { computeAccountHealth, gatherSignals } from "./accountHealth";
 import { projectMatchesAccount } from "./gaugeStatus";
+import { attachTasksToProjects } from "./projectTasks";
 
 var STORAGE_KEY_PREFIX = "folio_snapshots_computed_";
 
@@ -65,10 +66,13 @@ export async function computeAndSaveSnapshots(userId) {
     // Fetch everything we need in parallel.
     // Meetings capped at 300 — gatherSignals only needs recency signals;
     // the global useMeetings hook caps at the same value.
-    var [accR, itemR, projR, cadR, meetR] = await Promise.all([
+    var [accR, itemR, projR, projTaskR, cadR, meetR] = await Promise.all([
       supabase.from("folio_accounts").select("*").eq("user_id", userId).eq("is_inactive", false),
       supabase.from("folio_tasks").select("id, account_id, done, due_date").eq("user_id", userId).is("project_id", null).limit(500),
-      supabase.from("gauge_projects").select("id, account_id, status, stages").eq("user_id", userId).limit(500),
+      supabase.from("gauge_projects").select("id, account_id, account_ids, status").eq("user_id", userId).limit(500),
+      // Project work lives in folio_tasks now (task-model unification) — fetch
+      // it to hydrate project.tasks for the stuck-detection check below.
+      supabase.from("folio_tasks").select("id, project_id, done, closed_at, updated_at, sort_order, created_at").eq("user_id", userId).not("project_id", "is", null).limit(2000),
       supabase.from("folio_cadences").select("id, account_id, frequency, created_at").eq("user_id", userId).limit(200),
       supabase.from("folio_meetings").select("id, cadence_id, meeting_date, created_at, status").eq("user_id", userId).order("meeting_date", { ascending: false }).limit(300),
     ]);
@@ -77,7 +81,7 @@ export async function computeAndSaveSnapshots(userId) {
 
     var accounts  = accR.data  || [];
     var items     = itemR.data || [];
-    var projects  = projR.data || [];
+    var projects  = attachTasksToProjects(projR.data || [], projTaskR.data || []);
     var cadences  = cadR.data  || [];
     var meetings  = meetR.data || [];
     var today     = etToday();
@@ -110,7 +114,7 @@ export async function computeAndSaveSnapshots(userId) {
       // Stuck = in_progress project where no stage completed in last 7 days
       var stuckProjects = acctProjects.filter(function (p) {
         if (p.status !== "in_progress") return false;
-        var stages = p.stages || [];
+        var stages = p.tasks || [];
         var hasRecentProgress = stages.some(function (s) {
           return s.completed_at && s.completed_at > sevenDaysAgo;
         });

@@ -160,7 +160,7 @@ function buildEvents({ meetings, cadences, items, projects, quickTasks, accounts
     // ── Gauge tasks due ──────────────────────────────────────────────────
     (projects || []).forEach(function (p) {
       var acct = accountById[p.account_id] || null;
-      (p.stages || []).forEach(function (task) {
+      (p.tasks || []).forEach(function (task) {
         if (task.status === "complete" || !task.due_date) return;
         var cf = task.custom_fields || {};
         var dueKey = Object.keys(cf).find(function (k) { return k.toLowerCase().includes("due"); });

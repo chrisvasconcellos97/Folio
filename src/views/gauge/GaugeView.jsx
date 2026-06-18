@@ -227,7 +227,7 @@ export function GaugeView({
     healedRef.current = true;
     projects.forEach(function (p) {
       if (p.is_standing || p.status === "complete" || p.status === "draft") return;
-      var st = p.stages || [];
+      var st = p.tasks || [];
       if (st.length > 0 && st.every(function (s) { return !!s.completed_at; })) {
         updateProject(p.id, { status: "complete" }).catch(function (err) { logSilentFailure("GaugeView/heal-project-complete", err); });
       }
@@ -278,7 +278,7 @@ export function GaugeView({
       byScope = bySearch.filter(function (p) {
         if (userEmail && p.assignee && p.assignee.toLowerCase() === userEmail.toLowerCase()) return true;
         if (p.scope === "personal" && p.user_id === userId) return true;
-        var stages = p.stages || [];
+        var stages = p.tasks || [];
         return stages.some(function (s) {
           return s.assignee_email && userEmail && s.assignee_email.toLowerCase() === userEmail.toLowerCase();
         });
@@ -893,7 +893,7 @@ export function GaugeView({
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             {ownedAccountProjects.map(function (p) {
-              var steps = countSteps(p.stages);
+              var steps = countSteps(p.tasks);
               var pct   = steps.total > 0 ? Math.round((steps.done / steps.total) * 100) : 0;
               var acct  = p.account_id ? accountsById[p.account_id] : null;
               var statusKey = p.status.split("_").map(function(w) { return w.charAt(0).toUpperCase() + w.slice(1); }).join("");
@@ -1033,9 +1033,9 @@ export function GaugeView({
           var overdue     = p.status === "in_progress" && isOverdue(p.due_date);
           var dueSoon     = p.due_date && !overdue && p.status !== "complete" && p.status !== "draft" &&
                             (new Date(p.due_date + "T00:00:00").getTime() - new Date(new Date().toDateString()).getTime()) <= 7 * 86400000;
-          var steps       = countSteps(p.stages);
+          var steps       = countSteps(p.tasks);
           var pct         = steps.total > 0 ? Math.round((steps.done / steps.total) * 100) : 0;
-          var extCount    = countExternal(p.stages || []);
+          var extCount    = countExternal(p.tasks || []);
           var acctDisplay = (p.account_ids && p.account_ids.length > 0)
             ? getAccountNames(p.account_ids)
             : getAccountName(p.account_id);

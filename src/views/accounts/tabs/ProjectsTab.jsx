@@ -164,7 +164,7 @@ export function ProjectsTab({ projects, accounts, accountId, userId, addProject,
         {ordered.map(function (p) {
           var dimmed   = p.status === "complete";
           var blocked  = p.status === "blocked";
-          var extCount = countExternal(p.stages || []);
+          var extCount = countExternal(p.tasks || []);
           return (
             <div
               key={p.id}

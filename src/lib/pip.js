@@ -703,7 +703,7 @@ export function callAskPip(payload) {
  * @param {string} payload.cadenceLabel      - cadence label for context
  * @param {string} [payload.accountId]       - the account id (for hints)
  * @param {Array}  [payload.existingItems]   - open folio_tasks on the account (action items)
- * @param {Array}  [payload.activeProjects]  - gauge projects (with .stages tasks)
+ * @param {Array}  [payload.activeProjects]  - gauge projects (hydrated with .tasks)
  * @param {Array}  [payload.orgMembers]      - org members (for assignee options)
  * @param {Array}  [payload.assignmentHints] - learned hints rows
  * @param {string} [payload.accountObjective]  - account context / notes for Pip
@@ -790,7 +790,7 @@ export function summarizeDraftPip(payload, opts) {
 
   var taskLines = [];
   activeProjects.forEach(function (p) {
-    var stages = Array.isArray(p.stages) ? p.stages : [];
+    var stages = Array.isArray(p.tasks) ? p.tasks : [];
     stages.forEach(function (t) {
       if (t && !t.completed_at) {
         var title = t.title || t.text || "(untitled)";

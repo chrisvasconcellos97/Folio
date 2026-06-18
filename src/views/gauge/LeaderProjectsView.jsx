@@ -116,7 +116,7 @@ export function LeaderProjectsView({ projects, accounts, members, userEmail, onO
     if (stuckOnly) {
       list = list.filter(function (p) {
         if (p.status !== "in_progress") return false;
-        var last = lastStepCompletedAt(p.stages);
+        var last = lastStepCompletedAt(p.tasks);
         // Fall back to work-age (start_date/created_at), NOT updated_at — a
         // notes autosave bumps updated_at and would reset the stuck clock,
         // masking genuinely stalled projects.
@@ -136,14 +136,14 @@ export function LeaderProjectsView({ projects, accounts, members, userEmail, onO
         return 0;
       }
       if (sort === "progress") {
-        var sa = countSteps(a.stages), sb = countSteps(b.stages);
+        var sa = countSteps(a.tasks), sb = countSteps(b.tasks);
         var pa = sa.total > 0 ? sa.done / sa.total : 0;
         var pb = sb.total > 0 ? sb.done / sb.total : 0;
         return pa - pb;
       }
       if (sort === "stuck") {
-        var la = daysSince(lastStepCompletedAt(a.stages) || a.start_date || a.created_at);
-        var lb = daysSince(lastStepCompletedAt(b.stages) || b.start_date || b.created_at);
+        var la = daysSince(lastStepCompletedAt(a.tasks) || a.start_date || a.created_at);
+        var lb = daysSince(lastStepCompletedAt(b.tasks) || b.start_date || b.created_at);
         return (lb || 0) - (la || 0);
       }
       return 0;
@@ -260,12 +260,12 @@ export function LeaderProjectsView({ projects, accounts, members, userEmail, onO
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {rows.map(function (p) {
           var acct        = p.account_id ? accountsById[p.account_id] : null;
-          var steps       = countSteps(p.stages);
+          var steps       = countSteps(p.tasks);
           var pct         = steps.total > 0 ? Math.round((steps.done / steps.total) * 100) : 0;
           var overdue     = p.status === "in_progress" && isOverdue(p.due_date);
           var statusStyle = gaugeStatusToken(p.status);
           var leftEdge    = PRIORITY_COLORS[p.priority];
-          var lastDone    = lastStepCompletedAt(p.stages);
+          var lastDone    = lastStepCompletedAt(p.tasks);
           var sinceMove   = daysSince(lastDone || p.start_date || p.created_at);
           var isStuck     = p.status === "in_progress" && sinceMove !== null && sinceMove > 7;
           var isOpen      = !!expanded[p.id];
@@ -411,13 +411,13 @@ export function LeaderProjectsView({ projects, accounts, members, userEmail, onO
               {/* Expanded — stages list */}
               {isOpen && (
                 <div style={{ borderTop: "1px solid " + C.rule, padding: "10px 14px 12px 14px" }}>
-                  {(p.stages || []).length === 0 ? (
+                  {(p.tasks || []).length === 0 ? (
                     <div style={{ fontFamily: INTER, fontSize: 12, color: C.textMuted, padding: "8px 0" }}>
                       No stages defined.
                     </div>
                   ) : (
                     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      {p.stages.map(function (s, i) {
+                      {p.tasks.map(function (s, i) {
                         var done = !!s.completed_at;
                         var sOverdue = !done && isOverdue(s.due_date);
                         return (

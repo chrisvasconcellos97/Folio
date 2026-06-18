@@ -55,7 +55,7 @@ export function projectMatchesAccount(p, accountId) {
 // Standing projects are ongoing by nature and never auto-complete.
 export function allTasksComplete(project) {
   if (!project || project.is_standing) return false;
-  var stages = project.stages || [];
+  var stages = project.tasks || [];
   if (stages.length === 0) return false;
   return stages.every(function (s) { return !!s.completed_at; });
 }

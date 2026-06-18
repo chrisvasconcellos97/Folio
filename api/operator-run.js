@@ -148,11 +148,11 @@ function renderAccountContext(acc, meetings, tasks, contacts, projects, updates,
       lines.push("- " + (p.title || "(untitled)") + " · " + (p.status || "?") +
         (latest ? " · latest: \"" + excerpt(latest.body, 120) + "\"" : "") +
         (p.waiting_on ? " · ⏳ WAITING ON " + p.waiting_on + (p.waiting_on_since ? " (since " + p.waiting_on_since + ")" : "") : ""));
-      // Open tasks INSIDE the project (gauge_projects.stages — the canonical
-      // store for project tasks; folio_tasks holds mostly loose items). Without
-      // this the operator was blind to everything happening inside a project.
-      var openStages = Array.isArray(p.stages)
-        ? p.stages.filter(function (t) { return t && !t.completed_at; })
+      // Open tasks INSIDE the project. Project work lives in folio_tasks now
+      // (task-model unification) — hydrated onto p.tasks below. Without this
+      // the operator was blind to everything happening inside a project.
+      var openStages = Array.isArray(p.tasks)
+        ? p.tasks.filter(function (t) { return t && !t.done; })
         : [];
       openStages.slice(0, 5).forEach(function (t) {
         var tb = ["  · " + (t.title || t.text || "(untitled task)")];
@@ -557,15 +557,32 @@ async function gatherAndRun(admin, client, userId, acc, snapshot, userContext) {
   var mRes = await admin.from("folio_meetings")
     .select("title,meeting_date,created_at,pip_summary,pip_tone")
     .eq("account_id", acc.id).order("meeting_date", { ascending: false }).limit(5);
+  // Loose action items only (project_id IS NULL) — project work is listed
+  // under its project below, so excluding it here avoids double-listing now
+  // that migrated project tasks carry account_id.
   var tRes = await admin.from("folio_tasks")
     .select("title,due_date,is_commitment,assignee_email,done,status,waiting_on,waiting_on_since")
-    .eq("account_id", acc.id).limit(40);
+    .eq("account_id", acc.id).is("project_id", null).limit(40);
   var cRes = await admin.from("folio_contacts")
     .select("name,title,is_primary,relationship_role")
     .eq("account_id", acc.id).limit(20);
   var pRes = await admin.from("gauge_projects")
-    .select("title,status,status_updates,account_id,account_ids,waiting_on,waiting_on_since,stages")
+    .select("id,title,status,status_updates,account_id,account_ids,waiting_on,waiting_on_since")
     .or("account_id.eq." + acc.id + ",account_ids.cs.{" + acc.id + "}").limit(20);
+  // Project work lives in folio_tasks (task-model unification) — fetch the
+  // open tasks for these projects and hydrate onto p.tasks.
+  var projects = pRes.data || [];
+  if (projects.length) {
+    var ptRes = await admin.from("folio_tasks")
+      .select("project_id,title,due_date,assignee_email,done")
+      .in("project_id", projects.map(function (p) { return p.id; }))
+      .eq("done", false).limit(400);
+    var byProj = {};
+    (ptRes.data || []).forEach(function (t) {
+      (byProj[t.project_id] || (byProj[t.project_id] = [])).push(t);
+    });
+    projects = projects.map(function (p) { return Object.assign({}, p, { tasks: byProj[p.id] || [] }); });
+  }
   var uRes = await admin.from("folio_account_updates")
     .select("update_date,update_type,title,description")
     .eq("account_id", acc.id).order("update_date", { ascending: false }).limit(3);
@@ -574,7 +591,7 @@ async function gatherAndRun(admin, client, userId, acc, snapshot, userContext) {
 
   var ctxText = renderAccountContext(
     acc, mRes.data || [], tRes.data || [], cRes.data || [],
-    pRes.data || [], uRes.data || [], sRes.data || null, snapshot, userId
+    projects, uRes.data || [], sRes.data || null, snapshot, userId
   );
 
   // userContext is passed to runAccountPass as a CACHED system block (billed once

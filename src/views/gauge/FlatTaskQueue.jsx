@@ -67,7 +67,7 @@ export function FlatTaskQueue({ tasks, accounts, projects, members, userId, user
     var m = {};
     (projects || []).forEach(function (p) {
       if (p.is_standing) return;
-      m[p.id] = (p.stages || []).length;
+      m[p.id] = (p.tasks || []).length;
     });
     return m;
   }, [projects]);

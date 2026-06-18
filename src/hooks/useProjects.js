@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { logActivity } from "../lib/activity";
 import { useRealtimeSync } from "./useRealtimeSync";
+import { fetchProjectTasks, attachTasksToProjects } from "../lib/projectTasks";
 
 export function useProjects(userId, accountId, orgId, extraAccountIds) {
   var [projects, setProjects]   = useState([]);
@@ -30,13 +31,20 @@ export function useProjects(userId, accountId, orgId, extraAccountIds) {
       query = query.or("account_id.in.(" + ids.join(",") + "),account_ids.ov.{" + ids.join(",") + "}");
     }
     query.then(function (result) {
-      setLoading(false);
       if (result.error) {
+        setLoading(false);
         setError(result.error.message);
-      } else {
-        setError(null);
-        setProjects(result.data || []);
+        return;
       }
+      var projs = result.data || [];
+      // Task-model unification: project work lives in folio_tasks. Hydrate
+      // each project with its ordered, stage-shaped `.tasks` so every reader
+      // sees the canonical store (gauge_projects.stages is a frozen backup).
+      fetchProjectTasks(projs.map(function (p) { return p.id; })).then(function (taskRows) {
+        setLoading(false);
+        setError(null);
+        setProjects(attachTasksToProjects(projs, taskRows));
+      });
     });
   }, [userId, accountId, extrasKey]);
 
@@ -60,6 +68,9 @@ export function useProjects(userId, accountId, orgId, extraAccountIds) {
 
   // Phase 8 — multi-device realtime sync. See useRealtimeSync.js.
   useRealtimeSync("gauge_projects", userId, fetch);
+  // Task-model unification — folio_tasks now holds project work, so a task
+  // edit must re-hydrate the projects (the `.tasks` arrays).
+  useRealtimeSync("folio_tasks", userId, fetch);
 
   function addProject(data) {
     return supabase

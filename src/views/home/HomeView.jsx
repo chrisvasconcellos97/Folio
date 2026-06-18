@@ -419,7 +419,7 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
       var activeProjects = (projects || []).filter(function (p) {
         return p.status === "in_progress";
       }).map(function (p) {
-        var stages = p.stages || [];
+        var stages = p.tasks || [];
         var hasRecent = stages.some(function (s) { return s.completed_at && s.completed_at > sevenDaysAgo; });
         var acc = (accounts || []).find(function (a) { return a.id === p.account_id; });
         return Object.assign({}, p, {
@@ -1178,7 +1178,7 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
     return (projects || []).filter(function (p) {
       return p.status === "in_progress" && !isProjectComplete(p);
     }).map(function (p) {
-      var stages = p.stages || [];
+      var stages = p.tasks || [];
       var hasRecent = stages.some(function (s) { return s.completed_at && s.completed_at > sevenDaysAgoISO; });
       return Object.assign({}, p, { is_stuck: !hasRecent });
     });
