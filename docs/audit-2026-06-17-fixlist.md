@@ -280,3 +280,11 @@ VERIFIED DONE (was JUDGMENT): renderAccountFull field population — PipView.bui
 ### P3 POLISH BATCH — 2026-06-18 (done inline)
 DONE: useBreakpoint resize debounce (100ms) · useAccountSnapshots `var fetch`→`fetchSnapshots` (no global shadow) · reconcileProjectTasks per-project serialization guard (same-client interleave) · check-guards Guard 1 now catches multi-line empty catches (dedup + comment-safe) · pipPlanApply.test.js negative test for update_task missing id (293 tests).
 WON'T-DO (risk/value or solo-irrelevant): PipGaugeCard memo (~80-line wrap for one card, risk>value) · HomeView playSequence hardcoded-6 (stable, cosmetic) · §2 members_invite_read / logActivity-solo / members_self_accept fold (multi-user only — Chris is solo) · CadenceHub split (structural, defer to a feature touch).
+
+### QUEUED ENHANCEMENT — 2026-06-18 (Chris): workspace-SCOPED person picker for project tasks
+Today PersonPicker is workspace-GROUPED (account contacts surface first, then team, then everyone else in one flat dropdown) — accountIds IS passed by ProjectModal + TaskDetailPanel, so the account's people are on top, but the whole contact list is still shown → feels like "all my contacts."
+WANT: scope it like the AccountPicker workspace tabs but for PEOPLE —
+- Options = workspaces (Accounts/Departments/Partners) + "Myself", not a flat everyone-list.
+- If the project is tied to an account, auto-select that account's workspace and show ONLY its contacts (fast assign + recipient).
+- Workspace switcher to reach other contacts only when needed.
+Shared component used in ~10 places (TaskDetailPanel, ProjectModal ×5, PipSummarizePreview, etc.) — change must preserve every caller's stored-value convention + free-text escape hatch. Contained but needs care; verify all callers after.
