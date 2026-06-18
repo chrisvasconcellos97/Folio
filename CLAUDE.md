@@ -443,6 +443,29 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 ---
 
+## Session Handoff — June 18 2026 (PM): §3/§4 audit mop-up COMPLETE (branch, not deployed)
+
+**⚠️ WHERE IT LIVES:** branch **`claude/app-audit-strategy-hhcrz2`** (tip `686d2a4` after this session), **NOT `main`, NOT deployed.** Same posture as the unification handoff below — Chris fast-forwards `main` himself on the deploy pass. 5 commits this session, every one gated green (`vite build` · **292 tests** · `check-guards` (6) · `test-api-imports`).
+
+**DONE — the last ~20% of the 2026-06-17 audit: §3 (Pip wiring/parity) and §4 (coherence) are now BOTH 0-open in `docs/audit-2026-06-17-fixlist.md`.** Real fixes + verified-stale ticks + reasoned deferrals. Commits: `bbf5e79` · `8d947c0` · `c42aa1d` · `75b000d` · `686d2a4`.
+
+**Real code fixes shipped:**
+- **Chat-context parity (the §3 dead-memory wire):** `PipView.buildContext` now populates per-account `healthSnapshots` (grouped from `useAccountSnapshots.snapshotHistory`), `promiseStats` (NEW `src/hooks/usePipPromiseStats.js` → global account→stats map), and enriches `activeProjects` with `assignee`/`requested_by`/`waiting_on`/`waiting_on_since` + hydrated folio_tasks `tasks`. These were rendered by `pipContext.renderAccountFull` but never populated — traced end-to-end (buildContext→askPip→`api/pip.js` curateContext[focused]→renderAccountFull). This also satisfied the TeammateDetailView-assignees→Pip item for free.
+- **Merge re-parent (data integrity):** `folio_merge_accounts` now rewrites `folio_pip_questions.suggestion.account_id`+`account_name` (jsonb) → drip suggestions created pre-merge no longer apply to the dead source. **Applied to prod via MCP migration `merge_reparent_pip_question_suggestion_account` + folded into `schema.sql` + `docs/data-handling.md`.** (`folio_contact_aliases` has NO `account_id` — verified vs prod; keys on contact_id, follows its re-parented contact. Nothing to do, documented.)
+- **Brief Me + ad-hoc summarize parity:** Brief Me (`AccountDetail`→`callBriefMePip`) was caller-stripped to title/status/due on projects + omitted healthSnapshots/recentUpdates → now passes all three (added `useAccountSnapshots` to AccountDetail; projects carry waiting_on/assignee/requested_by/status_updates; pip.js brief account obj now includes recentUpdates). Ad-hoc summarize (`AdHocConversationFlow`) added `useAccountSnapshots`+`usePipPromiseLog` → reactive meetings now get cadence-quality plans.
+- **`gaugeFields.formatFieldValue`** resolves account contacts (not just org members) → no raw-email chips on Gauge cards. **summarize status_update** parity (latest+2, matching chat).
+- **Shared `isMine`/`notMyRelationship`** (in `accountHealth.js`) — unified HomeView's 4 inline owner checks + plugged the real remaining leak: aheadRows "stay warm" loop nudged outreach on not-mine (MSO) accounts (item-38 finish; `userId` added to that memo's deps).
+
+**Verified-stale (ticked, were done in June-17 but unchecked):** globalPeople→chat (#1 bug), operator-state→summarize, generate-questions ownership, remember_fact + compressCorrections data-line guards, project_notes→summarize, cadence-brief waiting_on, relationship_note wiring, METHOD_LABEL shared, CadenceHub email leaks, AddContactModal is_primary, ContactsTab PipInsightCard.
+
+**Annotated [~] / won't-do (NOT silently skipped — read the fixlist notes):** (a) ProjectsTab/MeetingsTab raw "✓ Delivered:" inserts + OverviewTab Recent-Deliveries string-prefix = ONE paired sentinel-row data-model debt → coordinated refactor (delivered flag/source column + both readers), not a safe mop-up; `insertTask` is itself a thin wrapper so it wouldn't deliver the benefit. (b) AddItemModal "Open Item"/"Task" naming → needs Chris's canonical vocabulary. (c) BeforeYouStart→PRE_MEETING_NOTE = N/A on this branch (its check-in is deterministic yes/no with direct DB actions, no free-text note). (d) waiting_on in SUMMARIZE_SCHEMA_RULES = needs apply-path support (would let Pip emit a field pipPlanApply drops). (e) pip-state-refresh multi-account-projects edge (account_ids not OR-queried) = the dept/ownership framing half is done; the query+grouping edge is open. (f) EVERGREEN_QUESTIONS = won't-do (not exported; load-bearing for purgeEvergreenQuestions).
+
+**No Patch agents spawned** — did the mechanical items inline in the main session to avoid an extra failed Vercel preview-build email on a separate agent branch. Only normal `hhcrz2` pushes hit Vercel.
+
+**Deploy sequence (unchanged, when Chris says):** (1) Chris flips Vercel preview-deploys OFF + enables Supabase leaked-password protection; (2) Claude grabs ONE failed Vercel build log → fix the prod-deploy blocker (CI is green; failure is Vercel-side, undiagnosed); (3) Chris fast-forwards `main` → deploy; (4) THEN run the stress-bot once against complete production (it only tests live prod — last step, not before deploy). Do NOT drop `gauge_projects.stages` (it's the unification backup).
+
+---
+
 ## Session Handoff — June 18 2026: TASK-MODEL UNIFICATION SHIPPED (to the branch, not deployed)
 
 **⚠️ WHERE IT LIVES:** branch **`claude/app-audit-strategy-hhcrz2`** (tip after this session), **NOT `main`, NOT deployed.** Chris is saving, not deploying — he'll fast-forward `main` himself later. (Note: a session config pointed at a different `claude/task-model-unification-*` branch; that branch was a stale older state with none of the audit work, so the work correctly continued on `claude/app-audit-strategy-hhcrz2` per Chris's explicit instruction.)
