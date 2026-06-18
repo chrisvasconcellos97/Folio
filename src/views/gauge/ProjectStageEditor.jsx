@@ -450,7 +450,17 @@ export function ProjectStageEditor({ project, userId, onUpdate, accounts, member
         var suggestedEmail = entitySuggestion && entitySuggestion.contact
           ? (entitySuggestion.contact.email || entitySuggestion.contact.name || null)
           : null;
-        var visibleContacts = (contacts || []).slice(0, 5);
+        // Scope quick-assign chips to THIS project's account (Chris's request) —
+        // not a flat slice of every contact. Only fall back to all contacts when
+        // the project isn't tied to any account.
+        var projAcctIds = [];
+        if (project.account_id) projAcctIds.push(project.account_id);
+        if (Array.isArray(project.account_ids)) {
+          project.account_ids.forEach(function (a) { if (a && projAcctIds.indexOf(a) === -1) projAcctIds.push(a); });
+        }
+        var visibleContacts = projAcctIds.length
+          ? (contacts || []).filter(function (c) { return c.account_id && projAcctIds.indexOf(c.account_id) !== -1; }).slice(0, 6)
+          : (contacts || []).slice(0, 5);
         return (
           <div style={{
             marginTop: 6, padding: "10px 10px 8px",
