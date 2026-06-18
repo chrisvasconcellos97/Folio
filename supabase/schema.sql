@@ -1271,6 +1271,23 @@ alter table gauge_projects
   add column if not exists waiting_on text,
   add column if not exists waiting_on_since date;
 
+-- ──────────────────────────────────────────────────────────────────────
+-- Task-model unification (June 2026) — folio_tasks is now the single
+-- canonical task store; gauge_projects.stages is retired as a write target
+-- (kept as a frozen read-only backup). These columns let a folio_task carry
+-- every field a gauge stage object held, so project work lives in folio_tasks.
+-- See supabase/task_unification.sql + supabase/task_unification_plan.md.
+-- ──────────────────────────────────────────────────────────────────────
+alter table folio_tasks
+  add column if not exists is_external           boolean not null default false,
+  add column if not exists external_contact_id   uuid,      -- references a contact; no FK (provenance, survives contact delete)
+  add column if not exists external_contact_name text,
+  add column if not exists blocked_reason        text,      -- non-null => task/stage is blocked
+  add column if not exists sub_stages            jsonb not null default '[]'::jsonb,  -- nested checklist [{title, completed_at}]
+  add column if not exists sort_order            integer;   -- preserves stage order within a project (drag-reorder)
+create index if not exists folio_tasks_project_order_idx
+  on folio_tasks (project_id, sort_order) where project_id is not null;
+
 -- Tone resurrection (Batch 2, June 2026) — pip_tone on folio_accounts so
 -- Cooling/Warming trend pills can fire. Written at summarize time.
 alter table folio_accounts
