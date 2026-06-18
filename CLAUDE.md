@@ -443,6 +443,23 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 ---
 
+## Session Handoff — June 18 2026 (LATE): DEPLOYED TO PROD + triplication bug fixed + F1 plan written
+
+**⚠️ STATE CHANGE: everything is now LIVE on `main` / `folioshq.com` (tip `afddbda`).** Prior handoffs said "branch, not deployed" — that's stale. Chris said ship; `main` was fast-forwarded from the branch (clean, 0 divergence) and the Vercel **production** build went GREEN (the failing previews were preview-only, never a prod blocker). Branch `claude/app-audit-strategy-hhcrz2` is level with `main`.
+
+**Shipped this session (all live):**
+- **🔴 PROD BUG found + fixed — project task create→edit→complete TRIPLICATED.** Chris's smoke test caught it (I'd wrongly called the smoke test "passed"). `reconcileProjectTasks` diffed `nextStages` against the possibly-stale `project.tasks` while the editor built `next` from its own optimistic state → every edit looked "new" → re-insert. FIX (`src/lib/projectTaskWrites.js` + `ProjectStageEditor.commitStages`): diff against the editor's OWN pre-mutation view (`currentStages` arg), return the array with real ids (existing + DB-generated), commitStages adopts them so the next edit matches by id. +5 tests (`projectTaskWrites.test.js`). **NOTE: pre-existing duplicate rows must be deleted by hand; the fix only prevents new dups.**
+- **Quick-assign chips scoped** — `ProjectStageEditor` quick-assign card showed the first 5 of ALL contacts; now scopes to the project's account contacts (+ Myself), falls back to all only for account-less projects. (Partial of the queued workspace-scoped PersonPicker DROPDOWN, still queued.)
+- **P3 polish batch (5):** useBreakpoint debounce, useAccountSnapshots `var fetch` rename, reconcile per-project serialization, check-guards Guard 1 multi-line, pipPlanApply negative test. + summarize injection-resistance line.
+- **Tracker reconciled** — the fixlist `[ ]` count was stale (~69 shown, ~12 truly open); a read-only sweep + spot-verify confirmed most were already-done-but-unticked. Reconciliation block at the bottom of `docs/audit-2026-06-17-fixlist.md` is the source of truth, NOT the inline checkboxes.
+- **Stress-bot run** (run #8 on prod): green except known bot-calibration noise (stale Add-Account selector cascade + an orphan-scenario that doesn't account for soft-delete — verified false against live FK rules). No real app failures.
+
+**🎯 THE #1 RECOMMENDED NEXT JOB — F1 architecture refactor.** The audit's X6 review names it "THE ONE THING": Pip's account context is rendered by THREE drifting functions (`pipContext.renderAccountFull` / `pip.js` summarize blocks / `operator-run.renderAccountContext`) — the root cause of the whole "built but not wired" parity class. This session's Pip fixes were all manual patches to the symptoms; F1 is the structural cure (one shared `buildAccountContext()`). **Full step-by-step spec: `docs/pip-architecture-f1-plan.md`.** Do F4 cache wins alongside. ~1 week, its own session, work on the branch + don't deploy until Chris tests.
+
+**Still open (lower priority):** the rest of the X6 FORM sequence (F2 persist context · F3 event-driven recompute · F5 agent loop · F6 pgvector semantic recall); workspace-scoped PersonPicker DROPDOWN; Recent-Deliveries sentinel-row refactor; solo-irrelevant §2 org/DB; Chris's two dashboard toggles (Vercel previews off, leaked-password on). All in `docs/audit-2026-06-17-fixlist.md`.
+
+---
+
 ## Session Handoff — June 18 2026 (PM): §3/§4 audit mop-up COMPLETE (branch, not deployed)
 
 **⚠️ WHERE IT LIVES:** branch **`claude/app-audit-strategy-hhcrz2`** (tip `686d2a4` after this session), **NOT `main`, NOT deployed.** Same posture as the unification handoff below — Chris fast-forwards `main` himself on the deploy pass. 5 commits this session, every one gated green (`vite build` · **292 tests** · `check-guards` (6) · `test-api-imports`).
