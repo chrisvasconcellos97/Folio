@@ -520,7 +520,31 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 **Sanity-Pass caveat (green build ≠ proof — the model↔tool round-trip isn't unit-testable, only the control logic is). Chris's live spot-check before FF:** (1) multi-step: *"what's stalled, and draft a nudge for the worst one"* → should call `find_open_work` then answer with a draft in one turn; (2) deep read: ask about an account NOT in context → should `lookup_account` instead of asking you to narrow; (3) no regression: normal chat + an action ("mark the CAPA item done" — still shows the confirm card) behave exactly as today. If anything misbehaves: `PIP_AGENT_LOOP=off` in Vercel (instant kill).
 
-**Still open (X6 FORM):** F6 = pgvector semantic recall (built, on `claude/f6-pgvector-recall-jh2yjc`, needs `OPENAI_API_KEY`). F1/F2/F3/F5 done.
+**Still open (X6 FORM):** F6 = pgvector semantic recall — now SHIPPED to `main` (see F6 handoff below); needs `OPENAI_API_KEY` in Vercel to activate. F1/F2/F3/F5/F6 all done.
+
+---
+
+## Session Handoff — June 19 2026 (F6): pgvector semantic recall — Pip recalls by MEANING (SHIPPED June 19)
+
+**⚠️ STATE CHANGE — F6 is LIVE on `main` / `folioshq.com` (shipped June 19 alongside F5 + the Monday pack).** Chris said "push all to main"; the F6 branch was rebased onto main (docs-only conflicts resolved), gates re-run green, pushed. **INERT until `OPENAI_API_KEY` is added to Vercel** — degrades cleanly to recency-only context, no errors. The `folio_embeddings` table + `match_folio_embeddings` RPC + `vector` extension were already applied to prod (additive).
+
+**DONE — F6, the last memory-architecture step.** Pip's per-account context used to only show the *latest* N meetings by date; older decisions/constraints were invisible. F6 adds **semantic recall**: Pip pulls the most *relevant* past notes by meaning. It plugs into F1's shared `buildAccountContext()` — a new `recall` section — so it reaches chat by construction (parity rule).
+
+**The build (plan-first per the F1/F3 playbook — `docs/pip-architecture-f6-plan.md`):**
+- **Schema** (`supabase/folio_embeddings.sql` + `schema.sql`): `folio_embeddings` (user_id, source_type, source_id, account_id, chunk, `content_fingerprint`, `embedding vector(1536)`, RLS on `auth.uid()`, **hnsw** cosine index). `match_folio_embeddings(...)` RPC — **SECURITY INVOKER + explicit `user_id = auth.uid()` predicate** (belt + suspenders), always called with the user-JWT client.
+- **Embed seam** (`api/_embed.js`): OpenAI `text-embedding-3-small` (1536d) via plain `fetch`, **key-optional** (no key → returns null → everything no-ops). `toVectorLiteral()` passes pgvector its `[...]` text form (de-risks the PostgREST→vector cast).
+- **Writer** (`api/embed-sync.js`): loads meeting notes/summaries/project-notes/account-updates (RLS), **fingerprint-gates per source** (embed-once), one batched OpenAI call, delete-then-insert chunks. Logs embed spend. Registered in `test-api-imports.js`.
+- **Trigger** (`src/hooks/useEmbeddingSync.js`): once/day/user, fire-and-forget. Called above App's `authLoading` return (Hook Order Rule); no-ops without userId/accounts/key.
+- **Reader** (`api/pip.js#attachRecall`): embeds the question, runs the RPC per focused account or one global lane in list mode. Gated chat/brief + ≥12-char query + key present; fail-silent. **Render** in the shared builder: `accountContext.js` new `recall` section (on for chat/brief, OFF for summarize/operator — can opt in later) + `pipContext.js` global lane.
+- **Docs:** `data-handling.md` (what's embedded + RLS + the OpenAI boundary) · `ai-governance.md` · `product-overview.md` · `upgrades.md` · fixlist F6 ticked · PDFs.
+
+**DATA LINE (compliance):** embeds only the user's own notes (verbatim) + Pip's already-generalized `pip_summary` (no NEW number retention). RLS-scoped to the user, account-scoped by default. OpenAI is a new boundary, documented.
+
+**Gates green:** `vite build` ✓ · tests ✓ (8 new: 5 accountContext recall, 3 pipContext recall) · `check-guards` (6) ✓ · `test-api-imports` ✓.
+
+**⚠️ CHRIS — TO ACTIVATE F6:** (1) **Add `OPENAI_API_KEY` to Vercel env** — recall is INERT without it. Optional `PIP_EMBED_MODEL` override. (2) **Live spot-check (Sanity-Pass — green build ≠ proof):** after the key's in + a day's sweep (or hit `/api/embed-sync` once), ask Pip a chat question whose answer lives in an OLD meeting → it should surface a "RELEVANT PAST NOTES" block. The PostgREST→`vector` cast is the one path not exercised without a live JWT (de-risked via text-literal form). If recall returns nothing: key set? embed-sync ran (rows in `folio_embeddings`)? RPC returns under the user's JWT?
+
+**Still open (Chris's call — out of F6 scope):** after-summarize instant-embed trigger; recall inside summarize/operator (section exists, default-off). Operator-run cost levers (item 48 #4/#5/#6) still open.
 
 ---
 
