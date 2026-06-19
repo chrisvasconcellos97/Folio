@@ -16,7 +16,7 @@
 // + the already-generalized Pip meeting summary. See docs/data-handling.md.
 
 import { createClient } from "@supabase/supabase-js";
-import { embedTexts, embeddingsConfigured, EMBED_MODEL } from "./_embed.js";
+import { embedTexts, embeddingsConfigured, EMBED_MODEL, toVectorLiteral } from "./_embed.js";
 import { logPipUsage } from "./_pipUsage.js";
 
 export const config = { maxDuration: 60 };
@@ -223,7 +223,7 @@ export default async function handler(req, res) {
         chunk_index: c.chunk_index,
         content: c.text,
         content_fingerprint: c.source.fp,
-        embedding: embedResult.vectors[i],
+        embedding: toVectorLiteral(embedResult.vectors[i]),
         updated_at: nowIso,
       };
     });

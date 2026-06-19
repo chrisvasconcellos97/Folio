@@ -79,6 +79,15 @@ export async function embedTexts(texts) {
   return { vectors: allVectors, usage: { input_tokens: totalTokens } };
 }
 
+// pgvector text literal: [1,2,3]. PostgREST coerces this unambiguously to the
+// `vector` type for both inserts and the recall RPC arg — more reliable than
+// passing a raw JS array (which can silently fail to coerce → nothing stored /
+// empty recall, a Sanity-Pass silent-failure trap).
+export function toVectorLiteral(arr) {
+  if (!Array.isArray(arr)) return null;
+  return "[" + arr.join(",") + "]";
+}
+
 // Embed a single string. Returns the vector (number[]) or null.
 export async function embedOne(text) {
   var r = await embedTexts([text]);

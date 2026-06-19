@@ -7,7 +7,7 @@ import { runAgentChat } from "./_pipAgentLoop.js";
 import { logPipUsage } from "./_pipUsage.js";
 // F6 — semantic recall. embedOne embeds the user's question; the
 // match_folio_embeddings RPC returns the most relevant past notes/summaries.
-import { embedOne, embeddingsConfigured, EMBED_MODEL, EMBED_DIMS } from "./_embed.js";
+import { embedOne, embeddingsConfigured, EMBED_MODEL, EMBED_DIMS, toVectorLiteral } from "./_embed.js";
 
 // F5 agent loop (chat only). When on, chat exposes server-executed read tools
 // (lookup_account / find_open_work / search_notes) and the server runs a real
@@ -326,6 +326,7 @@ async function attachRecall(userClient, userId, curated, query, mode) {
 
     var qvec = await embedOne(String(query).slice(0, 8000));
     if (!qvec || qvec.length !== EMBED_DIMS) return;
+    var qlit = toVectorLiteral(qvec); // pgvector text literal for the RPC arg
 
     function mapHits(rows) {
       return (rows || []).map(function (r) {
@@ -338,7 +339,7 @@ async function attachRecall(userClient, userId, curated, query, mode) {
       await Promise.all(curated.accounts.map(function (a) {
         if (!a || !a.id) return Promise.resolve();
         return userClient.rpc("match_folio_embeddings", {
-          query_embedding: qvec, match_account: a.id, match_count: 4,
+          query_embedding: qlit, match_account: a.id, match_count: 4,
         }).then(function (r) {
           if (r.error) { console.warn("recall rpc (focused) failed:", r.error.message); return; }
           if (r.data && r.data.length) a.recallHits = mapHits(r.data);
@@ -349,7 +350,7 @@ async function attachRecall(userClient, userId, curated, query, mode) {
       var nameById = {};
       curated.accounts.forEach(function (a) { if (a && a.id) nameById[a.id] = a.name; });
       var r = await userClient.rpc("match_folio_embeddings", {
-        query_embedding: qvec, match_account: null, match_count: 6,
+        query_embedding: qlit, match_account: null, match_count: 6,
       });
       if (r.error) { console.warn("recall rpc (global) failed:", r.error.message); return; }
       curated.globalRecall = mapHits(r.data).map(function (h) {
