@@ -13,6 +13,7 @@ import { useQuickTasks } from "./hooks/useQuickTasks";
 import { useProjects } from "./hooks/useProjects";
 import { useOrg } from "./hooks/useOrg";
 import { usePipAccountState } from "./hooks/usePipAccountState";
+import { useEmbeddingSync } from "./hooks/useEmbeddingSync";
 import { useUserProfile } from "./hooks/useUserProfile";
 import { useMode } from "./hooks/useMode";
 import { useLifeItems } from "./hooks/useLifeItems";
@@ -324,6 +325,10 @@ export default function App() {
     deleteTemplate:  deleteTemplateApp,
   } = useProjects(userId, null, orgId);
   var pipAcctStateApp = usePipAccountState(userId);
+  // F6 — daily background sweep that keeps the semantic-recall corpus
+  // (folio_embeddings) in sync. No-ops without userId/accounts or when
+  // embeddings aren't configured. Must stay above the authLoading return.
+  useEmbeddingSync(userId, accounts);
   var { workspaces: customWorkspaces, addWorkspace: addCustomWorkspace, deleteWorkspace: deleteCustomWorkspace } = useCustomWorkspaces(userId);
 
   // Part 9 — EVENT-DRIVEN pip_account_state refresh (F3).
