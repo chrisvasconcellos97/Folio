@@ -12,6 +12,11 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
 import { logPipUsage } from "./_pipUsage.js";
+// F2/F3 — the shared pure context module. buildAccountContext gives us the
+// structured "what Pip knew" record to persist; computeContextFingerprint gives
+// us the time-stable content hash the recompute gate compares against to skip
+// the Haiku call when nothing changed. .js extension required for the bundle.
+import { buildAccountContext, computeContextFingerprint } from "../src/lib/accountContext.js";
 
 export const config = { maxDuration: 60 };
 
@@ -212,41 +217,62 @@ export default async function handler(req, res) {
   if (!accountIds.length) return res.status(400).json({ error: "accountIds required" });
   accountIds = accountIds.slice(0, MAX_BATCH);
 
+  // force=true bypasses the fingerprint skip (the manual "resync Pip memory"
+  // button — an explicit user action always recomputes).
+  var force = body.force === true;
+
   if (!process.env.ANTHROPIC_API_KEY) {
     return res.status(500).json({ error: "ANTHROPIC_API_KEY is not configured on this deployment." });
   }
 
-  // Pull everything we need in 4 parallel queries, scoped via .in()
+  // Pull everything we need in parallel, scoped via .in(). Selects carry the
+  // fields the FINGERPRINT needs (updated_at on meetings/tasks, relationship_role
+  // / is_primary on contacts, status_updates on projects) — without them the gate
+  // can't detect a re-summarize / task edit / role change and would mis-skip.
     var pAccts  = userClient.from("folio_accounts")
-      .select("id, name, status, status_override, last_interaction_at, tier, region, account_type, is_my_department, owner_user_id, systems")
+      .select("id, name, status, status_override, last_interaction_at, tier, region, account_type, is_my_department, owner_user_id, systems, objective")
       .in("id", accountIds);
     var pMtgs   = userClient.from("folio_meetings")
-      .select("account_id, meeting_date, title, notes, pip_summary, action_items, follow_up_date")
+      .select("account_id, id, meeting_date, created_at, updated_at, title, notes, pip_summary, pip_tone, action_items, follow_up_date")
       .in("account_id", accountIds)
       .order("meeting_date", { ascending: false })
       .limit(200);
     var pItems  = userClient.from("folio_tasks")
-      .select("account_id, title, due_date, done, assignee_email")
+      .select("account_id, title, due_date, done, status, updated_at, created_at, is_commitment, waiting_on, waiting_on_since, assignee_email")
       .in("account_id", accountIds)
       .eq("done", false)
       .is("project_id", null);
     var pConts  = userClient.from("folio_contacts")
-      .select("account_id, name, title, is_poc")
+      .select("account_id, name, title, is_poc, is_primary, relationship_role, relationship_note")
+      .in("account_id", accountIds);
+    var pUpds   = userClient.from("folio_account_updates")
+      .select("account_id, update_date, update_type, title, description, observed_impact")
+      .in("account_id", accountIds)
+      .order("update_date", { ascending: false })
+      .limit(200);
+    // Existing fingerprints — the gate compares the freshly-computed hash against
+    // these to decide whether the Haiku call can be skipped.
+    var pState  = userClient.from("folio_pip_account_state")
+      .select("account_id, context_fingerprint, context_struct")
       .in("account_id", accountIds);
 
-    var results = await Promise.all([pAccts, pMtgs, pItems, pConts]);
+    var results = await Promise.all([pAccts, pMtgs, pItems, pConts, pUpds, pState]);
     if (results[0].error) throw results[0].error;
     var accts    = results[0].data || [];
     var meetings = results[1].data || [];
     var items    = results[2].data || [];
     var contacts = results[3].data || [];
+    var updates  = (results[4] && results[4].data) || [];
+    var stateRows = (results[5] && results[5].data) || [];
+    var stateByAcct = {};
+    stateRows.forEach(function (s) { stateByAcct[s.account_id] = s; });
 
     // Pull active projects for these accounts. The projects table is optional —
     // be tolerant of error.
     var projects = [];
     try {
       var pj = await userClient.from("gauge_projects")
-        .select("account_id, title, status, expected_complete_date")
+        .select("account_id, title, status, status_updates, expected_complete_date")
         .in("account_id", accountIds)
         .neq("status", "complete")
         .neq("status", "on_hold");
@@ -265,11 +291,65 @@ export default async function handler(req, res) {
     var iByAcct = byAcct(items);
     var cByAcct = byAcct(contacts);
     var pByAcct = byAcct(projects);
+    var uByAcct = byAcct(updates);
 
     var client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
     var systemBlocks = buildStateSystemBlocks();
+    var refreshedCount = 0;
+    var skippedCount = 0;
+
+    // Build the structured context (buildAccountContext, surface:"chat") from the
+    // raw rows — the durable "what Pip knew" record we persist (F2). Mapped to the
+    // builder's bundle shape (meetings → {date,title,summary,tone}; projects keep
+    // their .tasks empty here — state-refresh doesn't hydrate project tasks).
+    function structFor(a) {
+      var mapped = {
+        id: a.id, name: a.name, status: a.status, status_override: a.status_override,
+        tier: a.tier, account_type: a.account_type, owner_user_id: a.owner_user_id,
+        last_interaction_at: a.last_interaction_at, objective: a.objective, systems: a.systems,
+        meetings: (mByAcct[a.id] || []).map(function (m) {
+          return { date: m.meeting_date, title: m.title, summary: m.pip_summary, tone: m.pip_tone };
+        }),
+        openItems: iByAcct[a.id] || [],
+        contacts: cByAcct[a.id] || [],
+        activeProjects: pByAcct[a.id] || [],
+        recentUpdates: uByAcct[a.id] || [],
+      };
+      try { return buildAccountContext(mapped, { surface: "chat", userId: user.id }); }
+      catch (e) { return null; }
+    }
+
     var calls = accts.map(function (a) {
+      // The fingerprint is computed over the RAW loaded rows (they carry the
+      // updated_at / status_updates the gate needs). Same pure function the test
+      // locks for time-stability.
+      var fp = computeContextFingerprint({
+        account: a,
+        meetings: mByAcct[a.id] || [],
+        tasks: iByAcct[a.id] || [],
+        contacts: cByAcct[a.id] || [],
+        projects: pByAcct[a.id] || [],
+        updates: uByAcct[a.id] || [],
+      });
+      var prior = stateByAcct[a.id];
+      var nowIso = new Date().toISOString();
+
+      // ── Tier 2 gate — skip the Haiku call when content is unchanged ──
+      // force=true (the manual "resync" button) always recomputes. A no-op write
+      // (recency-positive but fingerprint-identical) costs $0 here.
+      if (!force && prior && prior.context_fingerprint && prior.context_fingerprint === fp) {
+        skippedCount++;
+        var patch = { context_checked_at: nowIso };
+        // Backfill context_struct if a prior row predates F2 (no struct yet).
+        if (!prior.context_struct) { var st0 = structFor(a); if (st0) patch.context_struct = st0; }
+        return userClient.from("folio_pip_account_state").update(patch).eq("account_id", a.id)
+          .then(function () {}, function (err) {
+            console.error("pip-state-refresh checked_at update failed", a.id, err && err.message);
+          });
+      }
+
+      // ── Content changed (or forced) — recompute via Haiku ──
       var prompt = buildPrompt(a, mByAcct[a.id], iByAcct[a.id], cByAcct[a.id], pByAcct[a.id], user.id);
       return client.messages.create({
         model: MODEL_HAIKU,
@@ -278,6 +358,7 @@ export default async function handler(req, res) {
         system: systemBlocks,
         messages: [{ role: "user", content: prompt }],
       }).then(function (resp) {
+        refreshedCount++;
         logPipUsage(userClient, user.id, "pip-state-refresh", "state-refresh", MODEL_HAIKU, resp.usage);
         var text = "";
         if (Array.isArray(resp.content)) {
@@ -292,8 +373,12 @@ export default async function handler(req, res) {
           health_signal: parsed.sidecar && parsed.sidecar.health_signal || null,
           momentum:      parsed.sidecar && parsed.sidecar.momentum || null,
           risk_flags:    parsed.sidecar && Array.isArray(parsed.sidecar.risk_flags) ? parsed.sidecar.risk_flags : null,
-          generated_at:  new Date().toISOString(),
+          generated_at:  nowIso,
           stale_at:      staleAt,
+          // F2 — persist the structured context + the fingerprint the gate reads.
+          context_struct:      structFor(a),
+          context_fingerprint: fp,
+          context_checked_at:  nowIso,
         };
         return userClient.from("folio_pip_account_state").upsert([row], { onConflict: "account_id" });
       }).catch(function (err) {
@@ -309,7 +394,7 @@ export default async function handler(req, res) {
       await Promise.all(calls.slice(wi, wi + ACCOUNT_CONCURRENCY));
     }
 
-    return res.status(200).json({ ok: true, refreshed: accts.length });
+    return res.status(200).json({ ok: true, refreshed: refreshedCount, skipped: skippedCount });
   } catch (err) {
     console.error("pip-state-refresh error:", err);
     return res.status(500).json({ error: "refresh failed", detail: err && err.message ? err.message : String(err) });

@@ -621,7 +621,16 @@ create table if not exists folio_pip_account_state (
   operator_proposed_moves jsonb default '[]'::jsonb,
   operator_agenda         text,
   operator_delta          text,
-  operator_generated_at   timestamptz
+  operator_generated_at   timestamptz,
+  -- F2/F3 — event-driven recompute (see supabase/pip_context_fingerprint.sql,
+  -- docs/pip-architecture-f3-plan.md). context_struct = the buildAccountContext
+  -- structured output (durable record of "what Pip knew"); context_fingerprint
+  -- = a time-stable hash of the signal inputs that the recompute gate compares
+  -- against to skip the Haiku call when nothing changed; context_checked_at =
+  -- last time the account was evaluated for recompute (set even when skipped).
+  context_struct          jsonb,
+  context_fingerprint     text,
+  context_checked_at      timestamptz
 );
 alter table folio_pip_account_state enable row level security;
 

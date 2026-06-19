@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { buildAccountContext, renderAccountContext } from "./accountContext";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { buildAccountContext, renderAccountContext, computeContextFingerprint } from "./accountContext";
 
 // One fixed, richly-populated account bundle. Each surface renders from this
 // SAME object; the assertions below are the drift lock — if a future change
@@ -233,5 +233,102 @@ describe("parity cross-checks (the drift lock)", function () {
     expect(keys).toContain("header");
     expect(keys).toContain("operatorRead");
     expect(keys).toContain("promiseLog");
+  });
+});
+
+// ── F2/F3 content fingerprint (event-driven recompute gate) ───────────────
+describe("computeContextFingerprint", function () {
+  afterEach(function () { vi.useRealTimers(); });
+
+  // Raw-DB-row bundle (NOT the buildAccountContext mapped shape — the server
+  // hashes what it loaded, which still carries updated_at).
+  function bundle() {
+    return {
+      account: {
+        id: "acc-1", name: "ABPA", status: "active", status_override: null,
+        tier: "Major", account_type: "mso", owner_user_id: "me",
+        last_interaction_at: "2026-06-15T10:00:00Z",
+        objective: "Grow integration coverage", systems: ["Fuse5", "Trax"],
+      },
+      meetings: [
+        { id: "m1", meeting_date: "2026-06-15", updated_at: "2026-06-15T10:05:00Z", title: "Cadence" },
+        { id: "m2", meeting_date: "2026-06-01", updated_at: "2026-06-01T09:00:00Z", title: "Kickoff" },
+      ],
+      tasks: [
+        { id: "t1", done: false, status: "in_progress", updated_at: "2026-06-15T11:00:00Z" },
+        { id: "t2", done: true,  status: "complete",    updated_at: "2026-06-10T08:00:00Z" },
+      ],
+      contacts: [
+        { name: "Jane", relationship_role: "champion", is_primary: true },
+        { name: "Bob",  relationship_role: "neutral",  is_primary: false },
+      ],
+      projects: [
+        { id: "p1", status: "in_progress", status_updates: [{ at: "2026-06-14T00:00:00Z", body: "x" }] },
+      ],
+      updates: [{ update_date: "2026-06-12" }],
+    };
+  }
+
+  it("is deterministic and order-independent", function () {
+    var a = computeContextFingerprint(bundle());
+    var b = bundle();
+    b.meetings.reverse(); b.contacts.reverse(); b.tasks.reverse();
+    expect(computeContextFingerprint(b)).toBe(a);
+    expect(typeof a).toBe("string");
+    expect(a.length).toBeGreaterThan(0);
+  });
+
+  it("is TIME-STABLE — same data a day later hashes identically (the drift lock)", function () {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-16T09:00:00Z"));
+    var day1 = computeContextFingerprint(bundle());
+    vi.setSystemTime(new Date("2026-06-25T09:00:00Z")); // 9 days later, SAME data
+    var day9 = computeContextFingerprint(bundle());
+    expect(day9).toBe(day1);
+  });
+
+  it("changes when a meeting is added / summarized (updated_at bumps)", function () {
+    var base = computeContextFingerprint(bundle());
+    var added = bundle();
+    added.meetings.push({ id: "m3", meeting_date: "2026-06-16", updated_at: "2026-06-16T12:00:00Z" });
+    expect(computeContextFingerprint(added)).not.toBe(base);
+    var edited = bundle();
+    edited.meetings[0].updated_at = "2026-06-16T13:00:00Z"; // re-summarized
+    expect(computeContextFingerprint(edited)).not.toBe(base);
+  });
+
+  it("changes when a task closes (done flips + updated_at bumps)", function () {
+    var base = computeContextFingerprint(bundle());
+    var closed = bundle();
+    closed.tasks[0].done = true;
+    closed.tasks[0].status = "complete";
+    closed.tasks[0].updated_at = "2026-06-16T14:00:00Z";
+    expect(computeContextFingerprint(closed)).not.toBe(base);
+  });
+
+  it("changes on account scalar edits (status_override, objective, systems)", function () {
+    var base = computeContextFingerprint(bundle());
+    var ov = bundle(); ov.account.status_override = "at_risk";
+    expect(computeContextFingerprint(ov)).not.toBe(base);
+    var obj = bundle(); obj.account.objective = "Totally different objective";
+    expect(computeContextFingerprint(obj)).not.toBe(base);
+    var sys = bundle(); sys.account.systems = ["Fuse5"];
+    expect(computeContextFingerprint(sys)).not.toBe(base);
+  });
+
+  it("changes on contact role / project status / account update changes", function () {
+    var base = computeContextFingerprint(bundle());
+    var role = bundle(); role.contacts[1].relationship_role = "blocker";
+    expect(computeContextFingerprint(role)).not.toBe(base);
+    var proj = bundle(); proj.projects[0].status = "complete";
+    expect(computeContextFingerprint(proj)).not.toBe(base);
+    var upd = bundle(); upd.updates.push({ update_date: "2026-06-18" });
+    expect(computeContextFingerprint(upd)).not.toBe(base);
+  });
+
+  it("tolerates empty / missing bundle without throwing", function () {
+    expect(typeof computeContextFingerprint({})).toBe("string");
+    expect(typeof computeContextFingerprint(undefined)).toBe("string");
+    expect(computeContextFingerprint({})).toBe(computeContextFingerprint({ account: {}, meetings: [], tasks: [] }));
   });
 });

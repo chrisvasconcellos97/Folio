@@ -634,3 +634,108 @@ export function renderAccountContext(account, opts) {
   });
   return out.join("\n");
 }
+
+// ── F2/F3 — content fingerprint for event-driven recompute ────────────────
+//
+// computeContextFingerprint(bundle) -> short stable string.
+//
+// THE POINT (F3): the server (api/pip-state-refresh.js) hashes the signal-
+// bearing inputs of an account and skips the Haiku recompute when the hash is
+// unchanged since the last compute. So this is change-detection, NOT security —
+// a tiny FNV-1a string hash is plenty.
+//
+// THE CRUX (Sanity-Pass Rule): the fingerprint must be TIME-STABLE. It must use
+// ONLY stored timestamps / ids / counts — NEVER Date.now(), "Xd ago", or any
+// value derived from the current time. If a relative-time value leaks in, the
+// hash changes every day → recompute every day → the cost cut silently evaporates.
+// `accountContext.test.js` mocks "+1 day" over identical data and asserts the
+// fingerprint is unchanged — that test is the drift lock for this property.
+//
+// `bundle` carries the RAW DB rows the server already loaded (not the
+// buildAccountContext-mapped shape, which drops updated_at):
+//   { account, meetings, tasks, contacts, projects, updates }
+// Any missing array is treated as empty. The function is order-independent
+// (it aggregates to counts + maxima), so row order never affects the result.
+
+function fnv1a(str) {
+  var h = 0x811c9dc5;
+  for (var i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    // h *= 16777619 with 32-bit overflow, via the shift-add identity.
+    h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+  }
+  // base36 keeps it short.
+  return h.toString(36);
+}
+
+// Cheap stable string hash for free-text fields (objective, contact roster).
+function hashStr(s) {
+  if (!s) return "0";
+  return fnv1a(String(s));
+}
+
+// Max stored value across rows for the first present candidate field per row
+// (ISO timestamps + YYYY-MM-DD dates both sort lexicographically). "" if none.
+function maxField(rows, fields) {
+  var max = "";
+  (rows || []).forEach(function (r) {
+    if (!r) return;
+    for (var i = 0; i < fields.length; i++) {
+      var v = r[fields[i]];
+      if (v != null && v !== "") { v = String(v); if (v > max) max = v; break; }
+    }
+  });
+  return max;
+}
+
+export function computeContextFingerprint(bundle) {
+  bundle = bundle || {};
+  var a  = bundle.account  || {};
+  var ms = bundle.meetings || [];
+  var ts = bundle.tasks    || [];
+  var cs = bundle.contacts || [];
+  var ps = bundle.projects || [];
+  var us = bundle.updates  || [];
+
+  var openTasks = 0, doneTasks = 0;
+  ts.forEach(function (t) {
+    if (!t) return;
+    if (t.done || t.status === "complete") doneTasks++;
+    else openTasks++;
+  });
+
+  // Max timestamp across all project status_updates (jsonb [{body,at,by}]).
+  var maxProjUpdate = "";
+  ps.forEach(function (p) {
+    var ups = p && Array.isArray(p.status_updates) ? p.status_updates : [];
+    ups.forEach(function (u) {
+      if (u && u.at != null && String(u.at) > maxProjUpdate) maxProjUpdate = String(u.at);
+    });
+  });
+
+  // Contact roster signature — order-independent (sorted) over the fields that
+  // change Pip's read (name, relationship role, primary flag).
+  var contactSig = cs.map(function (c) {
+    return [(c && c.name) || "", (c && c.relationship_role) || "", (c && c.is_primary) ? "1" : "0"].join("|");
+  }).sort().join("¦");
+
+  var projectStatuses = ps.map(function (p) { return (p && p.status) || ""; }).sort().join(",");
+
+  var canonical = {
+    a: [
+      a.id || "", a.name || "", a.status || "", a.status_override || "", a.tier || "",
+      a.account_type || "", a.owner_user_id || "", a.last_interaction_at || "",
+      hashStr(a.objective || ""),
+      Array.isArray(a.systems) ? a.systems.map(function (s) {
+        return typeof s === "string" ? s : ((s && s.name) || "");
+      }).sort().join(",") : "",
+    ],
+    m: { n: ms.length, u: maxField(ms, ["updated_at", "created_at"]), d: maxField(ms, ["meeting_date"]) },
+    t: { o: openTasks, c: doneTasks, u: maxField(ts, ["updated_at", "created_at"]) },
+    c: { n: cs.length, h: hashStr(contactSig) },
+    p: { n: ps.length, s: projectStatuses, u: maxProjUpdate },
+    u: { n: us.length, d: maxField(us, ["update_date", "updated_at", "created_at"]) },
+  };
+
+  return fnv1a(JSON.stringify(canonical));
+}
