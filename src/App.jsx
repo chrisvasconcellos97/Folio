@@ -1242,6 +1242,23 @@ export default function App() {
               setView(target);
             }
           },
+          // Open a person/1:1 cadence's hub (the Monday 1:1 pack lives there).
+          // Person cadences have no account → route via the contact's parent
+          // account, same path as CadenceView's onOpenHub.
+          onOpenPersonHub: function (cadence) {
+            if (!cadence) return;
+            var contact = (allContacts || []).find(function (c) { return c.id === cadence.contact_id; });
+            var acct = contact && contact.account_id
+              ? (accounts || []).find(function (a) { return a.id === contact.account_id; })
+              : null;
+            if (acct) {
+              setSelected(acct);
+              setPendingPersonHubCadenceId(cadence.id);
+              setView("accounts");
+            } else {
+              showToast("Couldn't open this 1:1 — the linked account wasn't found.", "warn");
+            }
+          },
           onOpenPip: function () { handleSetView("pip"); },
           onOpenConversation: function () { setShowStartConv(true); },
           onOpenQuickTask: function () { setShowGlobalQuickTask(true); },

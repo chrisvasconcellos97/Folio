@@ -24,6 +24,8 @@ import { InfoCard } from "../../components/InfoCard";
 import { useKokoroTTS } from "../../lib/useKokoroTTS";
 import { HexRingCanvas } from "../../components/HexRingCanvas";
 import { buildCardScript } from "../../lib/buildCardScript";
+import { MondayPackCard } from "./MondayPackCard";
+import { pickMondayCadence, shouldShowMondayCard } from "../../lib/mondayPack";
 
 var SERIF = "'Fraunces', Georgia, serif";
 var INTER = "'Inter', system-ui, sans-serif";
@@ -194,8 +196,24 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
   var onOpenDigest           = handlers.onOpenDigest;
   var onOpenScheduled        = handlers.onOpenScheduled;
   var onOpenCommitments      = handlers.onOpenCommitments;
+  var onOpenPersonHub        = handlers.onOpenPersonHub;
 
   commitmentNudges = commitmentNudges || [];
+
+  // Monday 1:1 pack — the weekly prep sheet leads Home on Monday (the approved
+  // Home design). Pick the Monday person cadence; show the card in the Monday
+  // window (Mon, or the Sunday-evening heads-up). (Phase 2 #1 "SHINE".)
+  var mondayCadence = useMemo(function () {
+    return pickMondayCadence(cadences || [], new Date());
+  }, [cadences]);
+  var showMondayPack = !!(onOpenPersonHub && mondayCadence && mondayCadence.contact_id &&
+    shouldShowMondayCard(mondayCadence, new Date()));
+  var mondayPersonName = useMemo(function () {
+    if (!mondayCadence || !mondayCadence.contact_id) return null;
+    var ct = (contacts || []).find(function (c) { return c.id === mondayCadence.contact_id; });
+    return ct ? ct.name : null;
+  }, [mondayCadence, contacts]);
+
   var [editingNudgeTask, setEditingNudgeTask] = useState(null);
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
@@ -1492,6 +1510,21 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
               Maybe later
             </button>
           </div>
+        </div>
+      )}
+
+      {showMondayPack && (
+        <div style={{ marginTop: 16 }}>
+          <MondayPackCard
+            userId={userId}
+            cadence={mondayCadence}
+            accounts={accounts}
+            profileProse={profileProse}
+            facts={pipFacts}
+            personName={mondayPersonName}
+            isMobile={isMobile}
+            onOpen={function () { onOpenPersonHub(mondayCadence); }}
+          />
         </div>
       )}
 
