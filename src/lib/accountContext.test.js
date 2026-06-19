@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { buildAccountContext, renderAccountContext, computeContextFingerprint } from "./accountContext";
+import { buildAccountContext, renderAccountContext, computeContextFingerprint, recallSourceLabel } from "./accountContext";
 
 // One fixed, richly-populated account bundle. Each surface renders from this
 // SAME object; the assertions below are the drift lock — if a future change
@@ -330,5 +330,58 @@ describe("computeContextFingerprint", function () {
     expect(typeof computeContextFingerprint({})).toBe("string");
     expect(typeof computeContextFingerprint(undefined)).toBe("string");
     expect(computeContextFingerprint({})).toBe(computeContextFingerprint({ account: {}, meetings: [], tasks: [] }));
+  });
+});
+
+// ── F6 — semantic recall section ──────────────────────────────────────────
+describe("buildAccountContext — recall (F6)", function () {
+  function withRecall() {
+    var a = fixture();
+    a.recallHits = [
+      { content: "Six months ago we agreed to phase the invoice feed behind a feature flag.", source_type: "meeting_summary", date: "2025-12-10T00:00:00Z", similarity: 0.81 },
+      { content: "Adam flagged that their IT needs 30 days lead time to whitelist new endpoints.", source_type: "meeting_notes", date: "2026-01-15", similarity: 0.74 },
+    ];
+    return a;
+  }
+
+  it("renders recall hits on the chat surface", function () {
+    var text = renderAccountContext(withRecall(), { surface: "chat", userId: ME });
+    expect(text).toContain("RELEVANT PAST NOTES");
+    expect(text).toContain("feature flag");
+    expect(text).toContain("[meeting summary · 2025-12-10]");
+    expect(text).toContain("[meeting note · 2026-01-15]");
+  });
+
+  it("omits recall on summarize + operator surfaces even when hits are present", function () {
+    var summ = renderAccountContext(withRecall(), { surface: "summarize", userId: ME });
+    expect(summ).not.toContain("RELEVANT PAST NOTES");
+    var opFix = operatorFixture(); opFix.recallHits = withRecall().recallHits;
+    var oper = renderAccountContext(opFix, { surface: "operator", userId: ME });
+    expect(oper).not.toContain("RELEVANT PAST NOTES");
+  });
+
+  it("emits no recall section when there are no hits (chat)", function () {
+    var text = renderAccountContext(fixture(), { surface: "chat", userId: ME });
+    expect(text).not.toContain("RELEVANT PAST NOTES");
+    var built = buildAccountContext(fixture(), { surface: "chat", userId: ME });
+    expect(built.sections.some(function (s) { return s.key === "recall"; })).toBe(false);
+  });
+
+  it("caps to recallLimit and truncates long content", function () {
+    var a = fixture();
+    a.recallHits = [];
+    for (var i = 0; i < 10; i++) a.recallHits.push({ content: "x".repeat(600) + " hit" + i, source_type: "meeting_notes" });
+    var built = buildAccountContext(a, { surface: "chat", userId: ME, recallLimit: 2, recallChars: 50 });
+    var recall = built.sections.find(function (s) { return s.key === "recall"; });
+    expect(recall).toBeTruthy();
+    var rows = recall.text.split("\n").filter(function (l) { return l.indexOf("- [") === 0; });
+    expect(rows.length).toBe(2);
+    expect(rows[0].length).toBeLessThan(80); // truncated to ~50 + label + ellipsis
+  });
+
+  it("recallSourceLabel maps known + unknown source types", function () {
+    expect(recallSourceLabel("meeting_notes")).toBe("meeting note");
+    expect(recallSourceLabel("account_update")).toBe("account update");
+    expect(recallSourceLabel("something_else")).toBe("note");
   });
 });

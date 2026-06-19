@@ -85,6 +85,9 @@ var SURFACE_DEFAULTS = {
     includeHealthTrend: true, includeMetrics: true, metricsHealthStatus: false, includePromiseLog: true,
     includePortfolioThemes: true,
     includeOperatorRead: true, operatorFraming: "read", includeLessonsLearned: false,
+    // F6 — semantic recall hits (older context surfaced by meaning). The caller
+    // attaches a.recallHits; this builder only renders them. On for chat/brief.
+    includeRecall: true, recallLimit: 4, recallChars: 280,
   },
   // Brief Me shares chat's depth — it's the moment to spend tokens on one account.
   brief: null, // filled below (= chat)
@@ -102,6 +105,9 @@ var SURFACE_DEFAULTS = {
     includeHealthTrend: true, includeMetrics: true, metricsHealthStatus: false, includePromiseLog: true,
     includePortfolioThemes: false,
     includeOperatorRead: true, operatorFraming: "dont_repropose", includeLessonsLearned: false,
+    // Off for summarize in v1 — it doesn't fetch recall hits (cost control). The
+    // section lives here so the surface can opt in later with zero render change.
+    includeRecall: false, recallLimit: 3, recallChars: 240,
   },
   operator: {
     includeStatusLine: true, includeStatusOverride: true, includeTypeExtras: true,
@@ -117,6 +123,7 @@ var SURFACE_DEFAULTS = {
     includeHealthTrend: false, includeMetrics: true, metricsHealthStatus: true, includePromiseLog: false,
     includePortfolioThemes: false,
     includeOperatorRead: true, operatorFraming: "last_run", includeLessonsLearned: true,
+    includeRecall: false, recallLimit: 3, recallChars: 240,
   },
 };
 SURFACE_DEFAULTS.brief = SURFACE_DEFAULTS.chat;
@@ -573,6 +580,33 @@ function operatorReadSection(a, o) {
   return lines.join("\n");
 }
 
+// F6 — recall hits. Human-readable label per source type, so the model can tell
+// recalled (older, surfaced-by-meaning) context from current context.
+export function recallSourceLabel(t) {
+  if (t === "meeting_notes")   return "meeting note";
+  if (t === "meeting_summary") return "meeting summary";
+  if (t === "project_note")    return "project note";
+  if (t === "account_update")  return "account update";
+  return "note";
+}
+
+// Render the semantic-recall hits the caller attached (a.recallHits). Each hit:
+//   { content, source_type, source_id?, date?, similarity? }
+// Hits are assumed already ordered by relevance (the match RPC orders by cosine).
+function recallSection(a, o) {
+  if (!o.includeRecall) return "";
+  var hits = Array.isArray(a.recallHits) ? a.recallHits : [];
+  if (!hits.length) return "";
+  var lines = ["RELEVANT PAST NOTES (semantic recall — older context surfaced by meaning, may pre-date the recent meetings above):"];
+  hits.slice(0, o.recallLimit).forEach(function (h) {
+    if (!h || !h.content) return;
+    var meta = recallSourceLabel(h.source_type);
+    if (h.date) meta += " · " + String(h.date).slice(0, 10);
+    lines.push("- [" + meta + "] " + trunc(h.content, o.recallChars));
+  });
+  return lines.length > 1 ? lines.join("\n") : "";
+}
+
 // Ordered list of section renderers. Order matches the legacy renderAccountFull
 // so chat output stays byte-close (the existing pipContext tests lock it).
 var SECTION_ORDER = [
@@ -598,6 +632,7 @@ var SECTION_ORDER = [
   ["promiseLog",      promiseLogSection,       true],
   ["portfolioThemes", portfolioThemesSection,  true],
   ["operatorRead",    operatorReadSection,     true],
+  ["recall",          recallSection,           true],
 ];
 
 /**
