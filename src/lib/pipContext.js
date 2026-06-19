@@ -8,7 +8,7 @@
 //
 // Both functions are pure; safe to call on either client or server.
 
-import { renderAccountContext } from "./accountContext.js";
+import { renderAccountContext, recallSourceLabel } from "./accountContext.js";
 
 // Resolve account names mentioned in the message + the prior assistant message
 // (for follow-up context). Returns array of account objects, deduped.
@@ -215,6 +215,22 @@ export function renderContextProse(curated) {
         }));
       }
     });
+  }
+
+  // F6 — global semantic-recall lane (list mode / "across all accounts"). Older
+  // context surfaced by meaning, account-labeled, deduped by source_id.
+  if (Array.isArray(curated.globalRecall) && curated.globalRecall.length) {
+    var seenSrc = {};
+    var recallLines = ["", "RELEVANT PAST CONTEXT (semantic recall across all accounts — older notes surfaced by meaning):"];
+    curated.globalRecall.slice(0, 6).forEach(function (h) {
+      if (!h || !h.content) return;
+      if (h.source_id && seenSrc[h.source_id]) return;
+      if (h.source_id) seenSrc[h.source_id] = true;
+      var label = recallSourceLabel(h.source_type);
+      if (h.account_name) label += " · " + h.account_name;
+      recallLines.push("- [" + label + "] " + trunc(h.content, 280));
+    });
+    if (recallLines.length > 2) sections.push(recallLines.join("\n"));
   }
 
   if (curated.openQuickTasks && curated.openQuickTasks.length) {

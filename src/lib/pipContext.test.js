@@ -103,3 +103,35 @@ describe("renderContextProse", function () {
     expect(text).not.toMatch(/\[open \d+d, no due date\] Schedule onboarding/);
   });
 });
+
+describe("renderContextProse — F6 recall", function () {
+  it("renders the global recall lane (list mode) with account labels + source dedup", function () {
+    var curated = curateContext(raw, "general question", null);
+    curated.globalRecall = [
+      { content: "We agreed to phase the invoice feed behind a flag.", source_type: "meeting_summary", source_id: "m1", account_id: "acc-ksi", account_name: "KSI Auto Parts", similarity: 0.8 },
+      { content: "duplicate source should be dropped", source_type: "meeting_notes", source_id: "m1", account_id: "acc-ksi", account_name: "KSI Auto Parts", similarity: 0.7 },
+      { content: "Their IT needs 30 days lead time.", source_type: "meeting_notes", source_id: "m2", account_id: "acc-as", account_name: "All Star Auto", similarity: 0.6 },
+    ];
+    var text = renderContextProse(curated);
+    expect(text).toMatch(/RELEVANT PAST CONTEXT \(semantic recall across all accounts/);
+    expect(text).toMatch(/\[meeting summary · KSI Auto Parts\] We agreed to phase/);
+    expect(text).toMatch(/\[meeting note · All Star Auto\] Their IT needs/);
+    expect(text).not.toMatch(/duplicate source should be dropped/); // deduped by source_id
+  });
+
+  it("renders per-account recall hits attached in focused mode", function () {
+    var curated = curateContext(raw, "tell me about KSI", null);
+    curated.accounts[0].recallHits = [
+      { content: "Six months ago we picked the phased rollout.", source_type: "meeting_summary", source_id: "old1" },
+    ];
+    var text = renderContextProse(curated);
+    expect(text).toMatch(/RELEVANT PAST NOTES/);
+    expect(text).toMatch(/phased rollout/);
+  });
+
+  it("emits nothing when globalRecall is empty/absent", function () {
+    var curated = curateContext(raw, "general question", null);
+    var text = renderContextProse(curated);
+    expect(text).not.toMatch(/RELEVANT PAST CONTEXT/);
+  });
+});

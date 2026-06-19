@@ -5,6 +5,9 @@ import { PIP_TOOLS } from "../src/lib/pipTools.js";
 import { PIP_READ_TOOLS } from "../src/lib/pipAgentTools.js";
 import { runAgentChat } from "./_pipAgentLoop.js";
 import { logPipUsage } from "./_pipUsage.js";
+// F6 — semantic recall. embedOne embeds the user's question; the
+// match_folio_embeddings RPC returns the most relevant past notes/summaries.
+import { embedOne, embeddingsConfigured, EMBED_MODEL, EMBED_DIMS } from "./_embed.js";
 
 // F5 agent loop (chat only). When on, chat exposes server-executed read tools
 // (lookup_account / find_open_work / search_notes) and the server runs a real
@@ -305,6 +308,60 @@ function sseWrite(res, event, data) {
   res.write("event: " + event + "\ndata: " + JSON.stringify(data) + "\n\n");
 }
 
+// ----- F6 semantic recall -----------------------------------------------
+//
+// Embed the user's question once, then pull the most relevant past notes by
+// MEANING (not recency). Focused mode → per-account hits attached to each
+// focused account (rendered by accountContext's recall section). List mode (the
+// "across all accounts" case) → a global lane attached to the curated payload.
+//
+// Strictly additive + fail-silent: any error leaves the curated context
+// untouched. Gated to chat/brief with a real query + embeddings configured.
+async function attachRecall(userClient, userId, curated, query, mode) {
+  try {
+    if (mode !== "chat" && mode !== "brief") return;
+    if (!embeddingsConfigured()) return;
+    if (!curated || !Array.isArray(curated.accounts) || !curated.accounts.length) return;
+    if (!query || String(query).trim().length < 12) return;
+
+    var qvec = await embedOne(String(query).slice(0, 8000));
+    if (!qvec || qvec.length !== EMBED_DIMS) return;
+
+    function mapHits(rows) {
+      return (rows || []).map(function (r) {
+        return { content: r.content, source_type: r.source_type, source_id: r.source_id, account_id: r.account_id, similarity: r.similarity };
+      });
+    }
+
+    if (curated.mode === "focused") {
+      // Per-account recall for each focused account, in parallel.
+      await Promise.all(curated.accounts.map(function (a) {
+        if (!a || !a.id) return Promise.resolve();
+        return userClient.rpc("match_folio_embeddings", {
+          query_embedding: qvec, match_account: a.id, match_count: 4,
+        }).then(function (r) {
+          if (r.error) { console.warn("recall rpc (focused) failed:", r.error.message); return; }
+          if (r.data && r.data.length) a.recallHits = mapHits(r.data);
+        }, function (err) { console.warn("recall rpc (focused) threw:", err && err.message); });
+      }));
+    } else {
+      // List mode — one global, user-scoped lane across all accounts.
+      var nameById = {};
+      curated.accounts.forEach(function (a) { if (a && a.id) nameById[a.id] = a.name; });
+      var r = await userClient.rpc("match_folio_embeddings", {
+        query_embedding: qvec, match_account: null, match_count: 6,
+      });
+      if (r.error) { console.warn("recall rpc (global) failed:", r.error.message); return; }
+      curated.globalRecall = mapHits(r.data).map(function (h) {
+        h.account_name = nameById[h.account_id] || null;
+        return h;
+      });
+    }
+  } catch (err) {
+    console.warn("attachRecall error:", err && err.message);
+  }
+}
+
 // ----- Main handler ------------------------------------------------------
 
 export default async function handler(req, res) {
@@ -392,6 +449,12 @@ export default async function handler(req, res) {
   var contextProse = "";
   if (rawContext) {
     var curated = curateContext(rawContext, lastUserMsg, focusedAccountIds, { mode: mode });
+    // F6 — augment the curated context with semantic recall (fail-silent, gated
+    // to chat/brief). Logs the tiny query-embed cost to the spend tile.
+    if (embeddingsConfigured() && (mode === "chat" || mode === "brief") && lastUserMsg && lastUserMsg.trim().length >= 12) {
+      logPipUsage(userClient, user.id, "pip", "recall-embed", EMBED_MODEL, { input_tokens: Math.ceil(lastUserMsg.length / 4), output_tokens: 0 });
+    }
+    await attachRecall(userClient, user.id, curated, lastUserMsg, mode);
     contextProse = renderContextProse(curated);
   }
 
