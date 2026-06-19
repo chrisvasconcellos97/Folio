@@ -24,6 +24,7 @@ var handlers = [
   "api/invite.js",
   "api/followup-question.js",
   "api/monday-pack.js",
+  "api/embed-sync.js",
 ];
 
 var failed = false;
