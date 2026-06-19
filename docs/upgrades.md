@@ -1,6 +1,23 @@
 # Folios — Upgrade Log
 
-*Last updated: 2026-06-19 (the Monday 1:1 pack — your weekly prep, auto-assembled)*
+*Last updated: 2026-06-19 (Pip can now recall the right old note by meaning — semantic recall)*
+
+---
+
+## 2026-06-19 — Pip remembers the right thing, not just the recent thing
+
+**What I built:** Until now, when Pip pulled up context on an account, it only ever saw the *latest* handful of meetings. Anything older — a decision you made six months ago, a constraint someone mentioned once and never again — was effectively invisible unless it happened to be recent. I gave Pip **semantic recall**: it can now find the most *relevant* past notes by meaning, not by date. Ask "what did we decide about the invoice-feed integration?" and Pip surfaces that conversation even if it was half a year and forty meetings ago.
+
+**Problem it solves:** Your real institutional memory isn't the last three meetings — it's spread across everything you've ever written down. "Recency" is a bad proxy for "relevance." This is the start of Folios being the portable brain it's meant to be: the longer you use it, the more it remembers, and the more it can connect today's question to something you said long ago.
+
+**What changed:**
+- Folios quietly keeps a meaning-based index of **your own notes** — meeting notes, Pip's meeting summaries, the per-project notes you type in meetings, and account updates. A once-a-day background pass adds anything new; it never re-indexes something that hasn't changed, so it costs effectively nothing to keep current.
+- When you ask Pip a question, Folios matches it against that index and slips the most relevant past notes into Pip's context — scoped to the account you're asking about, or across your whole book for "did we ever decide…" questions. It flows through the one shared context builder every Pip surface uses, so it just works in chat.
+- **Your data stays yours.** Only your own notes are indexed, locked to your account with a database-level owner check, and the data line holds — no revenue, volumes, or shop lists are ever embedded (your own words go in verbatim; Pip's summaries were already scrubbed of numbers when written).
+
+**What you see today:** Pip gets noticeably better at "remember when…" questions — it can reach back past the recent meetings to the thing that actually matters. Everyday briefs and summaries look the same; the difference shows up when the useful context is old. *(Recall switches on once an embeddings key is configured; until then Pip simply falls back to recent-meetings context as before.)*
+
+**Why it matters:** This is the memory that compounds. Every note you take makes the next "what did we decide about X" answer better — and it travels with you. It's the foundation for deeper portable-brain features (cross-account pattern spotting, "since you were here" deltas) down the line.
 
 ---
 

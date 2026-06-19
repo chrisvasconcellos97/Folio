@@ -1,6 +1,6 @@
 # Folios — Product Overview
 
-*Last updated: 2026-06-19 (added the Monday 1:1 pack — auto-assembled weekly prep)*
+*Last updated: 2026-06-19 (F6 — Pip semantic recall; Monday 1:1 pack; chat agent loop)*
 
 This is the substantive product read after the [one-pager](./one-pager.md).
 Covers what Folios does, how it's structured, and what makes the Pip
@@ -399,6 +399,30 @@ row. User can override in the preview modal.
 account (`account_type = 'internal_team'`), Pip's default flips —
 it expects tasks to fan out to customer accounts, not stay on the
 internal account.
+
+### Pip — semantic recall (pgvector)
+
+Recency context only ever shows Pip the *latest* N meetings on an account. Some
+of the most useful context is older — a decision made six months ago, a
+constraint a contact mentioned once. Semantic recall closes that gap: Pip can
+pull the most relevant past notes by **meaning**, not date.
+
+**How it works.** Folios keeps a vector index (`folio_embeddings`, Postgres
+pgvector) of the user's own content — meeting notes, Pip's meeting summaries,
+per-project meeting notes, and account updates. A daily background sweep embeds
+anything new or changed (each source carries a content fingerprint, so nothing
+is ever re-embedded unchanged — the running cost is effectively zero). When the
+user asks Pip a question, the question is embedded and the closest past notes
+are retrieved — account-scoped when the question is about one account, or across
+the whole book for "what did we ever decide about X" questions — and folded into
+Pip's context through the same shared context builder every Pip surface reads
+from, so recall reaches chat by construction.
+
+**Privacy & data line.** Recall is strictly the user's own content, RLS-scoped
+to them and account-scoped by default (the retrieval function runs under the
+caller's identity with an explicit owner check). Only data-line-clean text is
+embedded — no revenue, volumes, or rosters. Recall stays inert until an
+embeddings key is configured; without it, Pip simply falls back to recency.
 
 ### Pip — the summarize-preview modal
 

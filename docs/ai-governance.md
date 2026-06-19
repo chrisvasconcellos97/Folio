@@ -1,6 +1,6 @@
 # Folios — AI Governance
 
-*Last updated: 2026-06-19 (chat agent loop — bounded, read-only tool round-trips)*
+*Last updated: 2026-06-19 (F6 semantic recall inherits the data line; RLS + account scope)*
 
 This document describes how Folios uses AI (Pip) responsibly. It
 covers what Pip can and can't do, what guardrails are in place, how
@@ -72,6 +72,13 @@ quantitative business data:
   quantitative business data the user discloses ("high-volume supplier,
   trending healthy" — never the number). The user's own raw notes are
   never silently edited.
+- **Semantic recall (`folio_embeddings`) inherits the line:** the recall
+  index embeds only the user's own notes and Pip's already-generalized
+  meeting summaries — no new retention of company numbers is introduced
+  (the embedded text is the same data-line-clean content already stored
+  and already sent to Anthropic). Recall is RLS-scoped to the user and
+  account-scoped by default, so it never widens who can see what. See
+  `data-handling.md` for the embeddings-provider boundary.
 
 ## Two-brain architecture (the data-line bridge)
 

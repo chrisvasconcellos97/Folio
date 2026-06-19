@@ -1,6 +1,6 @@
 # Folios — Data Handling
 
-*Last updated: 2026-06-19 (chat agent loop: read tools stay RLS-scoped, write nothing)*
+*Last updated: 2026-06-19 (F6 — semantic recall: folio_embeddings, RLS scope, embeddings-provider boundary)*
 
 This document inventories what data Folios stores, where it lives,
 who can access it, and what crosses the boundary to third-party AI
@@ -54,6 +54,34 @@ For broader security posture, see [security.md](./security.md).
 | `pip_glossary` | User-taught terms, aliases, definitions | Pip learns user vocabulary |
 | `pip_account_state` | Per-account distilled "lessons learned" | Pip's running notebook |
 | `pip_promise_log` | Tracking of Pip-suggested follow-ups and their outcomes | Calibration |
+| `folio_embeddings` | Vector embeddings of the user's own notes/summaries (see below) | Semantic recall — Pip finds relevant past context by meaning, not just recency |
+
+#### Semantic recall (`folio_embeddings`, pgvector)
+
+Folios embeds a copy of four kinds of the user's own content so Pip can answer
+"what did we decide about X months ago" by **meaning**:
+
+| `source_type` | Source column | Author |
+|---|---|---|
+| `meeting_notes` | `folio_meetings.notes` (verbatim) | user |
+| `meeting_summary` | `folio_meetings.pip_summary` | Pip (already generalized — see data line) |
+| `project_note` | `folio_meetings.project_notes` (verbatim) | user |
+| `account_update` | `folio_account_updates.title` + `.description` (verbatim) | user |
+
+- **RLS scope:** `folio_embeddings` carries an RLS policy filtering on
+  `auth.uid() = user_id`. The recall function (`match_folio_embeddings`) runs
+  `SECURITY INVOKER` **and** adds an explicit `user_id = auth.uid()` predicate,
+  and is only ever called with the caller's JWT — so a user can only ever
+  retrieve their **own** embeddings, scoped to the account by default.
+- **Data line:** the three user-authored sources are the user's own words
+  (the same text already stored verbatim in their notebook). The one
+  Pip-authored source (`pip_summary`) is already required to generalize any
+  quantitative business data at generation time, so embedding introduces no new
+  retention of company numbers. No revenue/volumes/rosters are embedded.
+- **Embeddings provider:** chunk text is sent to the embeddings provider
+  (default OpenAI `text-embedding-3-small`, server-side) to produce the vector;
+  see "What crosses the boundary" below. The corpus is rebuilt only when the
+  underlying note changes (per-source content fingerprint).
 
 ### Observability data
 
@@ -87,12 +115,24 @@ retain it.
 
 ---
 
-## What crosses the boundary to Anthropic
+## What crosses the boundary (Anthropic + the embeddings provider)
 
 Pip is the only feature in Folios that sends user data outside the
 Supabase + Vercel boundary. Every other interaction is fully
 self-contained within the user's session and the user's database
-rows.
+rows. Two external AI services are involved: **Anthropic** (Pip's
+language model) and the **embeddings provider** (semantic recall).
+
+**Embeddings provider (default OpenAI, server-side only):** to build the
+semantic-recall corpus, the text of the user's own notes/summaries/updates
+(see `folio_embeddings` above) is sent over TLS to the embeddings provider,
+which returns a numeric vector. Only the user's own content is sent; no
+passwords, JWTs, MFA secrets, or other users' data. At query time, only the
+user's typed question is embedded. This is the same data-line-clean content
+already sent to Anthropic — it stays within the corporate data line (no
+revenue/volumes/rosters). Recall is **off** until `OPENAI_API_KEY` is
+configured; with no key, nothing is sent and Pip falls back to recency-only
+context.
 
 When Pip runs, the following is sent to Anthropic via TLS:
 
@@ -111,6 +151,9 @@ When Pip runs, the following is sent to Anthropic via TLS:
 - Org members: name, email (so Pip knows who could be assigned a task)
 - Pip's own learning state: assignment hints, lessons learned, recent
   corrections (last 10)
+- Semantic recall: a few of the user's own past notes/summaries that are
+  most relevant to the question (retrieved from `folio_embeddings`, the
+  user's own content, account-scoped)
 
 **Never sent:**
 - User passwords or password hashes (Supabase Auth holds these; Folios
