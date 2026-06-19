@@ -11,6 +11,7 @@ import { AddToTasksButton } from "../../components/AddToTasksButton";
 import { CadenceMeetingMode } from "./CadenceMeetingMode";
 import { PipSummarizePreview } from "./PipSummarizePreview";
 import { SummarizeStreamingOverlay } from "./SummarizeStreamingOverlay";
+import { MondayPackSection } from "./MondayPackSection";
 import { ProjectStageEditor } from "../gauge/ProjectStageEditor";
 import { StandingBoardView } from "../gauge/StandingBoardView";
 import { ProjectNotesEditor } from "../gauge/ProjectNotesEditor";
@@ -1877,6 +1878,22 @@ export function CadenceHub({
   ) : null;
 
   /* ---- Sections ---- */
+  // Monday 1:1 pack — promised-vs-done, boss's open asks pre-answered, what
+  // moved, who has the ball. Renders for any person/1:1 cadence (prep for the
+  // 1:1); the Home card auto-surfaces the Monday one. (Phase 2 #1.)
+  var packSection = isPersonCadence ? (
+    <MondayPackSection
+      userId={userId}
+      cadence={cadence}
+      accounts={accounts}
+      userProfile={userProfile}
+      facts={pipFactsApi.activeFactStrings || []}
+      personName={contact ? contact.name : null}
+      onOpenAccount={onOpenAccount}
+      isMobile={isMobile}
+    />
+  ) : null;
+
   var briefSection = isPersonCadence ? (
     <PortfolioBriefPanel
       brief={portfolioBrief}
@@ -2345,6 +2362,7 @@ export function CadenceHub({
       <div>
         {header}
         {prepCheckInSection && <div style={{ marginBottom: 10 }}>{prepCheckInSection}</div>}
+        {packSection && <div style={{ marginBottom: 14 }}>{packSection}</div>}
         {briefSection}
         <div style={{ marginTop: 14 }}>{startMeetingSection}</div>
         <div style={{
@@ -2402,6 +2420,7 @@ export function CadenceHub({
       {header}
       <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
         {prepCheckInSection}
+        {packSection}
         {briefSection}
         {startMeetingSection}
         {draftsSection}
