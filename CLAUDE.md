@@ -1,5 +1,28 @@
 # Folios — Claude Development Context
 
+## Session Handoff — June 19 2026 (Phase 2 #1): Monday 1:1 pack — the first SHINE feature (branch, NOT deployed)
+
+**⚠️ WHERE IT LIVES:** branch **`claude/monday-1on1-pack-7cb6ia`** (6 commits, pushed), **NOT `main`, NOT deployed.** Cut from `main` tip `c93f2f1` (which already includes F3) — **clean fast-forward verified** (`git push origin claude/monday-1on1-pack-7cb6ia:main` works when Chris says, after he tests). The 4-column migration is **ALREADY APPLIED to prod** (additive, harmless before the code ships). NOTE: F5 (`claude/f5-agent-loop-gtbcok`) and F6 (`claude/f6-pgvector-recall-jh2yjc`) are parallel-pending off the same base — if either lands on `main` first, **rebase this branch onto the new main** before handing back (no shared files expected, but verify).
+
+**DONE — the Monday 1:1 pack (GAME PLAN Phase 2 #1).** Chris runs his Monday 1:1 from Folios; this auto-builds a prep pack so he's never flat-footed (his #1 fear). Built to the LOCKED spec: hybrid (Pip read on top + scannable sections), order = **0 read · 1 YOUR WORD (promised-vs-done) · 2 BOSS'S OPEN ASKS pre-answered · 3 WHAT MOVED by account · 4 WHO HAS THE BALL**. Surfaces: **Home card Monday** (+ Sunday heads-up) → opens the **full pack in the 1:1 cadence hub**.
+
+**The build (plan-first, one concern per gated commit — the F-series playbook):**
+- **`docs/monday-1on1-pack-plan.md`** — resolves every design question (read it for rationale).
+- **Mostly deterministic assembly** (the point — it's framing over existing data, not new capture). `src/lib/mondayPack.js` (pure): `pickMondayCadence`/`shouldShowMondayCard` (the Monday person cadence = `cadence_scope='person'` + `day_of_week===1`), `buildPackSections` (kept/slipped/open commitments · per-account week delta · waiting-on ball), `computePackFingerprint` (**time-stable**, F3 drift-locked), `buildPackPromptPayload`. **+16 tests** incl. the +1-day drift lock.
+- **THE ONE Sonnet call** = `api/monday-pack.js` → `{ read, boss_asks:[{ask,status,account}] }`. Boss-asks are **extracted from the last 1:1's notes/pip_summary + leadership tasks** (`folio_tasks.cadence_id`, account-less) — **NO tagging UI, reads what Chris already types.** JWT-scoped, `logPipUsage`, salvage fallback, Data-Line-enforced (directional only). `PIP_MONDAY_PACK_MODEL` override.
+- **`useMondayPack`** gathers the week (5 bounded queries), builds sections, **fingerprint-gates the call**, caches `{read,boss_asks}` to **`folio_cadences.pack/pack_fingerprint/pack_generated_at/pack_week`** (precedent: `pip_brief` on this table). **Cost = ~1 Sonnet call/week; $0 within a quiet week.** Model failure falls back to cached/deterministic — never blocks the pack.
+- **`MondayPackSection`** (in `CadenceHub` for any person cadence) + **`MondayPackCard`** (Home, Monday window) + `App.onOpenPersonHub`.
+
+**accountContext parity note:** the pack is a **cross-portfolio weekly digest** (same class as `portfolio-brief`/`leadership-readout`), so it assembles compact lines rather than per-account `buildAccountContext` dumps — documented + justified in the plan doc §2.4 (the parity rule targets per-account chat/summarize/operator drift, not portfolio rollups). No new per-account renderer written.
+
+**Gates (every commit):** `vite build` ✓ · **346 tests** (330 + 16) ✓ · `check-guards` ✓ · `test-api-imports` ✓ (monday-pack registered). Docs: product-overview + upgrades updated, **PDFs regenerated**.
+
+**Live spot-check to do (Chris, before fast-forwarding `main`):** (1) On a Monday (or set a person cadence to Monday), open Home → the "Monday 1:1 Pack" card should lead; tap → full pack in the 1:1 hub. (2) Confirm boss-asks pull from your last 1:1's notes; if the last 1:1 has no notes, Section 2 shows a calm empty state (not a broken card). (3) Open the pack twice in a quiet week → second open should NOT re-bill (fingerprint cache hit). Then `git push origin claude/monday-1on1-pack-7cb6ia:main`.
+
+**Still open (Chris's call):** Phase 2 #2 (team request queue / Excel export), #3 (win log), #4 (Pip Wrap), #5 (pgvector recall = F6), #6 (admin instruction-writer).
+
+---
+
 ## Deployment Rule
 
 ### 🚨 PUSH TO `main` ONLY — NON-NEGOTIABLE (locked by Chris, June 2026)
@@ -820,7 +843,7 @@ All items below are DONE except three deliberately rejected on sanity-pass: fetc
 8. **Small locked items** — *(✅ SHIPPED June 10 2026 PM: (a) multi-department cadences — `folio_cadences.account_ids uuid[]` (prod migration `cadence_account_ids` + schema.sql + supabase/cadence_account_ids.sql; ALSO fixed the latent Gauge-V3 bug where multi-account TASK cadences wrote this nonexistent column and silently failed); SetCadenceModal "Also include departments" toggle chips on meeting cadences; CadenceHub merges contacts from all cadence account_ids into the roster (attendees/brief/summarize see everyone). (b) notes editor — sentence auto-capitalization (phone-keyboard style, in useAutoBullet) + sub-bullet indent deepened 2→4 spaces.)*
 
 ### Phase 2 — SHINE (promotion-visible)
-1. **Monday 1:1 pack** — auto-generated before the Monday 1:1: everything that moved last week, promised-vs-done sweep (nothing surprises him in front of the boss), talking points. The operator cron already runs at the right time; teach it Mondays matter.
+1. **Monday 1:1 pack** — *(✅ BUILT June 19 2026 on branch `claude/monday-1on1-pack-7cb6ia`, NOT deployed — see the Session Handoff at the top. Hybrid: Pip read + YOUR WORD (promised-vs-done) + BOSS'S OPEN ASKS pre-answered (extracted from the last 1:1's notes — no tagging UI) + WHAT MOVED by account + WHO HAS THE BALL. Home card Monday → full pack in the 1:1 hub. Mostly deterministic; ONE fingerprint-gated Sonnet call/week cached on `folio_cadences`. `src/lib/mondayPack.js` + `api/monday-pack.js` + `useMondayPack` + `MondayPackSection`/`MondayPackCard`.)* — auto-generated before the Monday 1:1: everything that moved last week, promised-vs-done sweep (nothing surprises him in front of the boss), talking points.
 2. **Team request queue in Folios — Folios is the MASTER, the Excel is an OUTPUT (design LOCKED with Chris, June 10 2026).** The Tuesday tracker's columns (Priority · Date of Request · Owner · Supplier · # of Shops · Email Thread · Initiative · Required Completion Date · Connection Macro Date · Integration Macro Date · Comments) become a Folios surface where Chris manages requests. He then **exports changed rows as tab-separated lines in the sheet's exact column order** (pastes straight into Excel cells) for the team/admin who work off the sheet. Folios **tracks dirty rows since last export and reminds him** — timing-aware (Mon afternoon / Tue morning, before the team meeting): "4 updates aren't on the team sheet yet — copy them?" One tap copies exactly those lines. This fixes the thing Chris says he's currently bad at (keeping the sheet updated) and kills the two-system drift without requiring the admin or boss to change behavior. Plus a clean meeting-ready view he can screen-share Tuesdays.
 3. **Win log / brag file + commitment integrity stats** — operator-detected wins persist on one-tap confirm; "promises kept" stats; feeds QBR/leadership readout and review season.
 4. **Pip Wrap** — Friday week-in-review (kept/slipped, accounts touched/neglected, what moved in Gauge, one pattern about how he worked).

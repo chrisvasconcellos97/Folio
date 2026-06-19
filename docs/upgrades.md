@@ -1,6 +1,6 @@
 # Folios — Upgrade Log
 
-*Last updated: 2026-06-19 (Pip's chat can look things up mid-answer — a real tool loop)*
+*Last updated: 2026-06-19 (the Monday 1:1 pack — your weekly prep, auto-assembled)*
 
 ---
 
@@ -18,6 +18,20 @@
 **What you see today:** Chat feels the same for simple questions, and noticeably smarter for "go find X" ones — Pip can pull the detail itself instead of asking you to. Anything that changes your data still asks first.
 
 **Why it matters:** It's the step from "Pip answers from what's in front of it" to "Pip can go look, then answer" — the foundation for Pip doing multi-step work for you in one ask, while keeping every actual change behind your approval.
+
+---
+
+## 2026-06-19 — The Monday 1:1 pack (never walk in flat-footed)
+
+**What I built:** A prep sheet for your Monday 1:1 that Folios builds for you, so nothing your boss raises is a surprise. It shows up on the Home screen Monday morning (with a Sunday-evening heads-up) and opens into the full pack inside that 1:1's hub. It reads top to bottom: a one-line read from Pip, then **your word** (the commitments you made — each marked Kept, Slipped, or Open, with the account), then **the boss's open asks, already answered** (Pip pulls what the boss asked about from your last 1:1's notes and attaches where each one stands now), then **what moved this week, by account**, then **who has the ball** — what you owe versus what's owed to you.
+
+**Problem it solves:** Your biggest fear is being flat-footed — forgetting something you said you'd do, or getting asked "where are we on X" and not having the answer ready. Until now that prep was in your head (or scattered across accounts) every Monday morning. The pack assembles it for you from what's already in Folios.
+
+**What changed:** Almost the entire pack is built from data you already capture — commitments, meetings, Gauge updates, waiting-ons — so it's free and always current. The only part that needs Pip is the short read and pulling the boss's asks out of your last 1:1's notes, and that's **one model call a week**: the result is saved and only rebuilt when something in the week actually changes, so a quiet week costs nothing. There's **no new step for you** — Pip reads the notes you already type; it doesn't ask you to tag anything. And it stays on the data line: asks and statuses are directional ("waiting on legal," "moving"), never numbers, and your raw notes are read, never edited.
+
+**What you see today:** On Monday, a "Monday 1:1 Pack" card leads your Home screen with the read and a few count chips (slipped / open / kept / boss asks); tap it to open the full pack in the 1:1. Any day, the full pack lives at the top of that 1:1's hub.
+
+**Why it matters:** This is the first of the "shine" features — it's not plumbing, it's the thing that makes you look on top of your book in front of your boss every single week, with zero extra effort.
 
 ---
 

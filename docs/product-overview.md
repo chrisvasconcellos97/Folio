@@ -1,6 +1,6 @@
 # Folios — Product Overview
 
-*Last updated: 2026-06-17 (operator now manual-trigger only; nightly cron retired)*
+*Last updated: 2026-06-19 (added the Monday 1:1 pack — auto-assembled weekly prep)*
 
 This is the substantive product read after the [one-pager](./one-pager.md).
 Covers what Folios does, how it's structured, and what makes the Pip
@@ -463,6 +463,33 @@ Pip sees your entire portfolio at once, not just one account at a time.
 - **Portfolio state utility (`buildPortfolioState`)**: a compact text block
   summarising at-risk / watching accounts and stuck projects, injected into
   cross-portfolio Pip surfaces.
+
+### Pip — the Monday 1:1 pack
+
+An auto-assembled prep sheet for your weekly 1:1, so nothing surprises you in
+front of your boss. It surfaces on the Home screen on Monday (and as a Sunday-
+evening heads-up) and opens into the full pack inside that 1:1's cadence hub.
+The pack reads top to bottom:
+
+1. **Pip's read** — one to three sentences framing the week.
+2. **Your word** — promised-vs-done: the week's commitments, each marked
+   **Kept / Slipped / Open**, with the account.
+3. **Boss's open asks, pre-answered** — Pip pulls the asks from your last 1:1's
+   notes (and the open leadership tasks tagged to that 1:1) and attaches the
+   current status to each, so you walk in with the answer ready.
+4. **What moved, by account** — the week's per-account delta: meetings, Gauge
+   status pulses, deliveries.
+5. **Who has the ball** — waiting-ons: what you owe vs. what's owed you.
+
+Almost all of it is **deterministic assembly over data you already captured** —
+zero AI cost and always fresh. Only the read + the boss-ask extraction use a
+model, folded into **one Sonnet call per week**: the output is cached on the
+cadence row and regenerated only when the week's content actually changes
+(the same event-driven gating used for Pip's per-account state), so a quiet
+week never re-bills. The boss-ask extraction reads what you already type — there
+is **no extra tagging step**. Data Line Rule applies throughout: asks and
+statuses are directional, never numbers, and your raw 1:1 notes are read, never
+rewritten.
 
 ---
 
