@@ -1,6 +1,24 @@
 # Folios — Upgrade Log
 
-*Last updated: 2026-06-18 (Task-model unification — folio_tasks is now the single home for all task work)*
+*Last updated: 2026-06-19 (Pip recomputes on real events, not on a clock — a 70–90% cut to a recurring AI cost)*
+
+---
+
+## 2026-06-19 — Pip recomputes on real events, not on a clock
+
+**What I built:** Pip keeps a short "state" read for every account (where things stand, momentum, risks) that the app uses without paying for a fresh AI call each time you open a screen. That state used to be refreshed on **timers** — a background pass every few hours over your most-active accounts, plus another sweep every time you opened Pip chat — whether or not anything had actually changed. Most of those refreshes re-described an account that hadn't moved since the morning: money spent to learn nothing. I rewired it so a refresh fires **only when an account genuinely changed** — a meeting logged or summarized, a task added, closed, or edited — and never on a clock.
+
+**Problem it solves:** It was a quiet, steady drain on the AI budget (Chris flagged "I fly through tokens now"), and it had a blind spot: the old gate only noticed when a *meeting* was logged, so closing a task or editing one never freshened Pip's read. The new design fixes both — it spends only on real change, and it now catches task changes the old one missed.
+
+**What changed (two gates, belt-and-suspenders):**
+- **A cheap front gate (in the app):** when your account, meeting, and task data loads or updates live, the app figures out which accounts have a signal newer than the last time Pip looked at them, and only those get queued. Untouched accounts are never sent. The old "every few hours" and "every time you open chat" timers are gone.
+- **A precise back gate (on the server):** for each account that *is* sent, the server computes a small fingerprint of the account's real content and **skips the AI call entirely if the fingerprint is identical** to last time — so even a false alarm from the front gate costs nothing. The fingerprint is built only from stable facts (dates, counts, ids), never from "3 days ago"-style text, so it doesn't drift on its own as the clock ticks. An automated test locks that property in place.
+- **The structured context Pip builds for each account is now saved** alongside its state — a durable record of "what Pip knew," and the groundwork for smarter recall later.
+- The manual **"resync Pip memory"** button still forces a fresh read on demand, ignoring both gates.
+
+**What you see today:** Nothing looks different — Pip's reads are the same quality, and actually a little fresher (closing a task now updates his read, which it didn't before). The difference is on the bill: the per-account refresh line should drop by roughly **70–90%**, with no loss of freshness.
+
+**Why it matters:** It's the difference between an assistant that re-reads the whole book every few hours out of habit and one that looks again only when something actually happened. Same intelligence, a fraction of the cost — and the saved structured context is the foundation for Pip's next memory upgrades.
 
 ---
 
