@@ -443,7 +443,26 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 ---
 
-## Session Handoff — June 18 2026 (F1): ONE shared buildAccountContext() — the tri-renderer drift cured (branch, NOT deployed)
+## Session Handoff — June 19 2026: F1 + audit work + PersonPicker SHIPPED TO PROD (state change — read first)
+
+**⚠️ STATE CHANGE — everything below that says "branch, NOT deployed" is now STALE. It's all LIVE on `main` / `folioshq.com` (tip `1a9f0d7`).** Chris said push; `main` fast-forwarded cleanly from `claude/app-audit-strategy-hhcrz2` (7 commits, 0 divergence) and the Vercel production deploy went out. Branch is level with `main`.
+
+**What went live this push (`1a9f0d7`):**
+- **F1 — the shared `buildAccountContext()`** (commits `244533f` module+test · `d1b08c5` chat · `a5239e4` summarize · `3ae2bf0` operator · `6376e6a` cleanup). The tri-renderer drift is cured in prod — chat, summarize, and operator-run now read account context from ONE builder. (Full detail in the F1 handoff just below — only its "NOT deployed" framing is stale.)
+- **Scoped PersonPicker dropdown** (`1a9f0d7`) — dropdown defaults to the relevant people (task/project account contacts + My Team) with a "⋯ Show all contacts…" expander for the rest.
+- No DB changes, no migrations — clean code-only deploy.
+
+**Gates before push:** `vite build` ✓ · **323 tests** ✓ · `check-guards` ✓ · `test-api-imports` ✓. CI green on prior `main` runs; the push's own CI run re-runs the same gates.
+
+**Sanity-Pass caveat (still open):** green build ≠ proof the model reads identically. F1 was equivalence-checked statically last session (no fields lost, chat context equivalent-or-better), but Chris had NOT hand-tested it before shipping (no time). **The live spot-check to do:** (1) Ask Pip a recall question on an account, (2) summarize a meeting / open a recent plan, (3) trigger an operator run if convenient — all three should read the same as before, just from one source now.
+
+**🎯 NEXT JOB — F3 (event-driven recompute), in its OWN fresh Opus session.** F1 cleared the path; F3 is the 70–90% Pip-cost cut. Decision locked this session: F3 is NOT a Patch/Sonnet job (real architectural judgment — which events trigger recompute, what F2 persists, gating interaction with the operator loop), so the executing session stays Opus, works on the branch, and does NOT deploy until Chris tests — the F1 playbook. F2 (persist structured context) is the foundation step F3 builds on.
+
+**Still open (unchanged, see the audit fixlist + item 48):** F2 · F3 · F5 (agent loop) · F6 (pgvector recall) · Recent-Deliveries sentinel-row refactor · item 48 cost levers (gate/retire `pip-state-refresh`, on-demand draft emails, conditional output fields, quiet-night roll-up skip). **Chris's two dashboard toggles:** Vercel preview-deploys OFF + Supabase leaked-password protection ON. **Doc debt:** the `docs/` suite still calls the operator a "nightly cron" — it's manual-trigger now; square it in the next change.
+
+---
+
+## Session Handoff — June 18 2026 (F1): ONE shared buildAccountContext() — the tri-renderer drift cured (SHIPPED June 19 — see handoff above)
 
 **⚠️ WHERE IT LIVES:** branch **`claude/app-audit-strategy-hhcrz2-4ix1ho`** (pushed, 5 commits), **NOT `main`, NOT deployed.** Chris asked to build on the branch and NOT ship until he tests it himself — the deploy-to-`main` rule was explicitly suspended for this session at his instruction. He fast-forwards `main` after testing. No DB changes, no migrations pending.
 
