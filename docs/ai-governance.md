@@ -1,6 +1,6 @@
 # Folios — AI Governance
 
-*Last updated: 2026-06-17 (operator manual-trigger only; two-brain architecture documented)*
+*Last updated: 2026-06-19 (chat agent loop — bounded, read-only tool round-trips)*
 
 This document describes how Folios uses AI (Pip) responsibly. It
 covers what Pip can and can't do, what guardrails are in place, how
@@ -138,6 +138,35 @@ tool call. Tool calls are classified:
 
 The threshold lives in `src/lib/pipTools.js` (`CONFIRM_THRESHOLD`)
 and is biased toward asking for confirmation.
+
+### Chat agent loop (bounded)
+Pip's chat can run a short, server-side **agent loop**: the model
+may call a small family of **read-only** tools — look up one account
+in depth, find open/stalled/overdue work across the portfolio, or
+search the user's own meeting notes — get the result back, and keep
+reasoning before answering. This lets Pip gather-then-act in one turn
+("find the stalled project, then draft the chase note") instead of a
+single isolated step.
+
+The loop is tightly bounded:
+- **Read-only.** The loop only ever executes read tools. They run
+  against the caller's own session (RLS-scoped), read the user's own
+  notebook data, and **write nothing**. Every write/action stays on the
+  existing client-side path with its confirm-card gate — the loop never
+  commits anything on the user's behalf.
+- **Hard step cap.** At most a few model calls per turn
+  (`PIP_AGENT_MAX_STEPS`, default 4); the final allowed step forbids
+  further tool use so Pip must produce a text answer — never a
+  half-finished loop.
+- **Full cost visibility.** Usage is logged on every model call in the
+  loop, so the spend tile reflects the true cost of a looped turn.
+- **Degrades cleanly.** If the model calls no read tool — the common
+  case — the loop is a single call, identical to the prior single-shot
+  behavior. A kill switch (`PIP_AGENT_LOOP=off`) removes the read tools
+  entirely. Any loop error falls back to a clean single answer.
+
+Read tools are server-internal: they never surface to the user as
+action cards (there is nothing to approve — they only read).
 
 ### Glossary and assignment hints
 The user can edit or delete any glossary entry (Settings → Pip

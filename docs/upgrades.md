@@ -1,6 +1,23 @@
 # Folios — Upgrade Log
 
-*Last updated: 2026-06-19 (Pip recomputes on real events, not on a clock — a 70–90% cut to a recurring AI cost)*
+*Last updated: 2026-06-19 (Pip's chat can look things up mid-answer — a real tool loop)*
+
+---
+
+## 2026-06-19 — Pip can look things up mid-answer (the chat agent loop)
+
+**What I built:** Until now, when you asked Pip something in chat, it answered in one shot from whatever was already loaded in front of it — and if it wanted to *do* something (log a meeting, set a follow-up), it handed that action to the app to run. It couldn't pause mid-thought to go *find* more. I gave Pip a real **agent loop**: it can now reach for a few read-only lookups while it's thinking — pull up one account in depth, scan the whole book for what's overdue or stalled or waiting on someone, or search your meeting notes for a topic — get the answer back, and keep reasoning before it replies. So "find the stalled project and draft the chase note for it" happens in a single turn instead of you having to do the finding yourself.
+
+**Problem it solves:** Pip only knew what the screen happened to send it. Ask about an account it didn't have loaded, or "what's slipping across everything," and it had to ask you to narrow down. Now it can go look — within your own data — and answer.
+
+**What changed:**
+- Three new **read-only** lookups Pip can call mid-answer: deep-read one account, find open/overdue/stalled/waiting work across all your accounts, and search your own notes and summaries. They only ever *read*, only your own data, and write nothing.
+- Pip's existing actions (logging a meeting, creating an item, setting health, etc.) are **unchanged** — they still come to you as a card to approve, exactly as before. The loop never commits anything on its own.
+- Tight limits so it can't run away: at most a few lookups per question, full cost still shown on the spend tile, and if Pip doesn't need to look anything up, the answer is a single step just like before.
+
+**What you see today:** Chat feels the same for simple questions, and noticeably smarter for "go find X" ones — Pip can pull the detail itself instead of asking you to. Anything that changes your data still asks first.
+
+**Why it matters:** It's the step from "Pip answers from what's in front of it" to "Pip can go look, then answer" — the foundation for Pip doing multi-step work for you in one ask, while keeping every actual change behind your approval.
 
 ---
 

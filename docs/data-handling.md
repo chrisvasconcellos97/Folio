@@ -1,6 +1,6 @@
 # Folios — Data Handling
 
-*Last updated: 2026-06-18 (merge re-parents suggestion.account_id; alias note)*
+*Last updated: 2026-06-19 (chat agent loop: read tools stay RLS-scoped, write nothing)*
 
 This document inventories what data Folios stores, where it lives,
 who can access it, and what crosses the boundary to third-party AI
@@ -120,6 +120,16 @@ When Pip runs, the following is sent to Anthropic via TLS:
 - Other users' data (RLS scopes context to the requesting user; Pip
   only sees what the user could see)
 - Anything from `folio_errors` (observability is local)
+
+> **Chat agent loop (read tools).** When Pip's chat loop fetches more
+> on demand (a deep account read, open/stalled work, a notes search),
+> the query runs against the **caller's own** RLS-scoped session — it
+> can only read the requesting user's own notebook rows, the same data
+> Pip could already be sent. The read tools **write nothing** and never
+> solicit quantitative business data (they take account names, topics,
+> and status filters — never figures), so they neither cross the
+> corporate data line nor retain anything. See `ai-governance.md` →
+> "Chat agent loop (bounded)".
 - Anything from `folio_pip_usage` (cost telemetry is local)
 - Anything from `folio_activity` (audit log is local)
 
