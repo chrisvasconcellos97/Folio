@@ -244,6 +244,18 @@ release-note formality. Bug fixes, styling tweaks, and doc-only
 updates do NOT belong in upgrades.md — those live in git history.
 Technical release-notes detail still goes in `changelog.md`.
 
+## Session Self-Documentation Rule (the shared brain stays current — June 19 2026)
+
+**This file IS the memory.** Folios is built across many short Claude chats; each one clones `main` and reads this file on startup. That only works if every session leaves the brain current — so the next chat (or a fresh one Chris jumps to) picks up *without Chris re-pasting prompts or relaying reports*. Historically this was a soft rule the model forgot; it is now a **gate**, not a hope.
+
+**The rule:** every session that changes code MUST write or refresh a **Session Handoff** entry in this file before it ends — what shipped / which branch / current state / what's next / the spot-check to run. Self-document; don't make Chris be the courier.
+
+**Enforcement (so it can't be forgotten):** a **Stop hook** — `.claude/settings.json` → `.claude/hooks/claudemd-handoff-guard.sh` (committed, so every clone inherits it) — blocks a session from ending when it changed code (`src/`/`api/`/`supabase/`/`scripts/`) on a feature branch without touching CLAUDE.md. It fails safe (never traps a session) and exempts `main`, clean trees, and doc-only changes. This is the same move as `check-guards.js` / `test-api-imports.js`: a recurring "the model forgot" failure turned into a machine check. Don't remove it; if it ever mis-fires, fix the script, don't delete the gate.
+
+**Keep "CURRENT STATE & NEXT-JOB QUEUE" (top of the handoff stack) accurate** — it's the first thing a fresh chat should read: what's live, which branches are built-but-unshipped, ship order, and the next job to pick up. A new chat needs only a one-line nudge ("do the next job in CLAUDE.md") — the spec lives here, not in a pasted card.
+
+**Free doc pushes:** so keeping this file current on `main` doesn't cost a Vercel deploy each time, set Vercel's **Ignored Build Step** to skip when only `CLAUDE.md`/`docs`/`.claude` changed (e.g. `git diff --quiet HEAD^ HEAD -- . ':(exclude)CLAUDE.md' ':(exclude)docs/**' ':(exclude).claude/**'` → exit 0 = skip build). Then the brain can update on `main` for free.
+
 ## Pip Data Line Rule (locked by Chris, June 10 2026 — compliance-critical)
 
 Folios is Chris's **personal notebook**. OEC's quantitative business data must never live in it — that's Chris's hard line and his professional exposure. Two halves, both enforced in every Pip prompt:
@@ -443,9 +455,32 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 ---
 
-## Session Handoff — June 19 2026 (F3): event-driven Pip-state recompute — the 70–90% cost cut (branch, NOT deployed)
+## ⭐ CURRENT STATE & NEXT-JOB QUEUE (read this FIRST — living doc, June 19 2026)
 
-**⚠️ WHERE IT LIVES:** branch **`claude/f3-pip-event-recompute-sxllsa`** (4 commits, pushed, tip `6cd3b1b`), **NOT `main`, NOT deployed.** Cut from `main` tip `fa614e4` → **clean fast-forward verified** (`git push origin claude/f3-pip-event-recompute-sxllsa:main` works when Chris says, after he tests). This handoff note rides ON that branch so it lands in `main` with the code — no separate prod deploy to record it. **The 3-column migration is ALREADY APPLIED to prod** (additive, harmless before the code ships).
+*Keep this block accurate every session (Session Self-Documentation Rule). It's the fast brief for a fresh chat — detail lives in the dated handoffs below.*
+
+**LIVE on `main` / `folioshq.com`** (tip `c93f2f1`): the whole Pip-architecture sequence through F3 — F1 (shared `buildAccountContext()`), F2 (persisted structured context), F3 (event-driven recompute, the 70–90% cost cut), plus the June-17 audit fixes + scoped PersonPicker.
+
+**BUILT, on branches, NOT deployed (parallel — all cut from `c93f2f1`):**
+| Branch | What | Gate before ship |
+|---|---|---|
+| `claude/f5-agent-loop-gtbcok` | **F5** — Pip chat agent loop (multi-step read tools → tool_result → continue). Kill switch `PIP_AGENT_LOOP=off`. | Chris spot-check (multi-step / deep-read / no-regression). Lowest risk. |
+| `claude/monday-1on1-pack-7cb6ia` | **Monday 1:1 pack** — auto-built boss-meeting prep sheet (promised-vs-done · boss's open asks · what moved · who-has-ball). | Chris spot-check on a Monday. |
+| `claude/f6-pgvector-recall-jh2yjc` | **F6** — pgvector semantic recall over own notes/Pip summaries. Inert until a key is set. | Add `OPENAI_API_KEY` to Vercel, then spot-check. |
+
+**⚠️ They're PARALLEL, not stacked** — the first one shipped moves `main` past `c93f2f1`; the other two then need a rebase before they fast-forward (the maintainer session does the rebase; Chris just tests + ships). Recommended order: **F5 → Monday pack → F6**.
+
+**To ship any one:** Chris tests → says "ship X" → maintainer session re-runs gates (`vite build` · `vitest` · `check-guards` · `test-api-imports`) → `git push origin <branch>:main` → rebases the rest.
+
+**NEXT JOBS (Phase 2 "SHINE" remainder, after the three above land):** #2 team request queue / Excel export · #3 win log + commitment-integrity stats · #4 Pip Wrap (Friday review) · #6 admin instruction-writer. (Specs in the GAME PLAN section + the dated handoffs.) The F-architecture sequence is otherwise complete (F5 is its last item).
+
+**Standing dashboard toggles for Chris (out of any branch):** Vercel preview-deploys OFF · Supabase leaked-password protection ON · (optional) Vercel Ignored Build Step so `CLAUDE.md`/`docs` pushes don't deploy.
+
+---
+
+## Session Handoff — June 19 2026 (F3): event-driven Pip-state recompute — the 70–90% cost cut (SHIPPED June 19)
+
+**⚠️ STATE CHANGE — F3 is LIVE on `main` / `folioshq.com` (shipped in `c93f2f1`).** Chris said "just push it"; `main` fast-forwarded cleanly from `claude/f3-pip-event-recompute-sxllsa`, gates re-run green (330 tests), one Vercel prod deploy went out. The 3-column migration was already on prod.
 
 **DONE — F2 + F3, the audit's headline Pip-cost job.** Pip's per-account "state" read (where it stands / momentum / risks) was refreshed on **timers** (a 6h background pass over top accounts + another sweep every time Pip chat opened) whether or not anything changed — tokens burned to re-describe unchanged accounts. The old change-gate watched only `last_interaction_at`, so it ALSO missed task closes/edits (a staleness leak). F3 makes recompute **event-driven**; F2 persists the structured context F1 produced so the gate has something stable to compare against.
 
