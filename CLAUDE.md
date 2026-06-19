@@ -478,9 +478,32 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 ---
 
+## Session Handoff — June 19 2026 (F5): Pip chat agent loop — the last FORM item (branch, NOT deployed)
+
+**⚠️ WHERE IT LIVES:** branch **`claude/f5-agent-loop-gtbcok`** (4 code commits + this CLAUDE.md note), **NOT `main`, NOT deployed.** Cut from `main` tip `c93f2f1` → clean fast-forward verified. Ship: `git push origin claude/f5-agent-loop-gtbcok:main`. **⚠️ PARALLEL with the F6 branch** — both were cut from `c93f2f1`, so they've diverged. Whichever ships first moves `main` past `c93f2f1`; the OTHER then needs a rebase before it can fast-forward (Claude will rebase the loser onto the new `main` when Chris picks an order). No DB changes in F5 (code + docs only).
+
+**DONE — F5, the last X6 FORM item (F1/F2/F3/F5 now done; F6 built, awaiting a key).** Chat was single-shot: the model answered in one pass, the client ran any action, and the tool result never returned to the model. F5 makes chat a real **agent loop** — model emits a READ tool → server executes it (RLS-scoped, JWT) → `tool_result` → model continues → final answer. Multi-step in one turn ("find the stalled project, then draft the chase note").
+
+**The build (no-regression by construction — the #1 rule):**
+- **NEW `src/lib/pipAgentTools.js`** (pure, 15 tests) — read-only tool defs + loop control: `isReadTool`, `partitionToolUses`, `decideLoopStep`, `buildToolResultBlocks`.
+- **NEW `api/_pipAgentLoop.js`** (server I/O; receives the client as a param so it stays outside Guard 3) — `executeReadTool` (Supabase via caller JWT, **writes nothing**) + `runAgentChat` (drives the loop, streams deltas live).
+- **`api/pip.js`** — chat (stream + buffered) routes through `runAgentChat` when enabled.
+- **THREE read tools (read-only, own-notebook only):** `lookup_account` (deep single-account read, rendered via the F1 shared `src/lib/accountContext.js` surface:"chat" → parity by construction) · `find_open_work(filter)` (overdue/stalled/waiting_on_them/due_soon/all) · `search_notes(query)` (ilike over meeting notes + Pip summaries — plain text, NOT pgvector; that's F6).
+- **No-regression design:** existing action tools (`pipTools.js`) UNCHANGED + terminal (still go to the client confirm-card path); the loop only READS, never commits. A turn is either gathering (read tools → loop continues) or acting (action tool → terminate, hand to client). Read tools never cross to the client. **Degrades to single-shot by construction** — no read tool emitted → exactly one model call → byte-identical to today. Kill switch `PIP_AGENT_LOOP=off` removes read tools entirely (instant, no redeploy).
+- **Cost guard:** ≤4 model calls/turn (`PIP_AGENT_MAX_STEPS`, default 4); the last allowed step forces `tool_choice:{type:"none"}` → clean text answer, never a half-finished loop. `logPipUsage` fires per model call (spend tile sees the full looped-turn cost). Worst case ~$0.01–0.03 only on a fully-looped turn; most turns = 1 call.
+- **Invariants held:** prompt cache (tools + system byte-stable across iterations; only `messages` grows) · streaming preserved (deltas stream across iterations; `pipStream.js` + PipView UNCHANGED — loop is fully server-internal) · Data Line clean (reads Chris's own verbatim notebook; tools never solicit numbers, never retain).
+
+**Gates green:** `vite build` ✓ · **345 tests** (330 + 15 new) ✓ · `check-guards` (6) ✓ · `test-api-imports` ✓. Commits: `13adeb1` (plan) · `a4542b4` (tools + control logic) · `1d1e736` (server loop) · `3173741` (docs/PDFs). Plan doc: `docs/pip-architecture-f5-plan.md`.
+
+**Sanity-Pass caveat (green build ≠ proof — the model↔tool round-trip isn't unit-testable, only the control logic is). Chris's live spot-check before FF:** (1) multi-step: *"what's stalled, and draft a nudge for the worst one"* → should call `find_open_work` then answer with a draft in one turn; (2) deep read: ask about an account NOT in context → should `lookup_account` instead of asking you to narrow; (3) no regression: normal chat + an action ("mark the CAPA item done" — still shows the confirm card) behave exactly as today. If anything misbehaves: `PIP_AGENT_LOOP=off` in Vercel (instant kill).
+
+**Still open (X6 FORM):** F6 = pgvector semantic recall (built, on `claude/f6-pgvector-recall-jh2yjc`, needs `OPENAI_API_KEY`). F1/F2/F3/F5 done.
+
+---
+
 ## Session Handoff — June 19 2026 (F3): event-driven Pip-state recompute — the 70–90% cost cut (SHIPPED June 19)
 
-**⚠️ STATE CHANGE — F3 is LIVE on `main` / `folioshq.com` (shipped in `c93f2f1`).** Chris said "just push it"; `main` fast-forwarded cleanly from `claude/f3-pip-event-recompute-sxllsa`, gates re-run green (330 tests), one Vercel prod deploy went out. The 3-column migration was already on prod.
+**⚠️ STATE CHANGE — F3 is LIVE on `main` / `folioshq.com` (shipped in `c93f2f1`).** Chris said "just push it"; `main` fast-forwarded cleanly from `claude/f3-pip-event-recompute-sxllsa`, gates re-run green (330 tests), one Vercel prod deploy went out. The 3-column migration was already on prod. (Original framing below said "branch, NOT deployed" — that's now stale; left for the record. Spot-check still worth doing per the live-check note below.)
 
 **DONE — F2 + F3, the audit's headline Pip-cost job.** Pip's per-account "state" read (where it stands / momentum / risks) was refreshed on **timers** (a 6h background pass over top accounts + another sweep every time Pip chat opened) whether or not anything changed — tokens burned to re-describe unchanged accounts. The old change-gate watched only `last_interaction_at`, so it ALSO missed task closes/edits (a staleness leak). F3 makes recompute **event-driven**; F2 persists the structured context F1 produced so the gate has something stable to compare against.
 
