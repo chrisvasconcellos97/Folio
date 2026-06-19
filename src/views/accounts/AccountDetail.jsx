@@ -154,7 +154,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
   function handleRefreshPipMemory() {
     if (!account || !account.id || refreshingState) return;
     setRefreshingState(true);
-    Promise.resolve(pipAcctState.refreshState(account.id)).finally(function () {
+    Promise.resolve(pipAcctState.refreshState(account.id, true)).finally(function () {
       setRefreshingState(false);
       showToast("Pip memory resynced");
     });

@@ -326,35 +326,71 @@ export default function App() {
   var pipAcctStateApp = usePipAccountState(userId);
   var { workspaces: customWorkspaces, addWorkspace: addCustomWorkspace, deleteWorkspace: deleteCustomWorkspace } = useCustomWorkspaces(userId);
 
-  // Part 9 — periodic background pip_account_state refresh.
-  // Once per 6h, refresh top 10 accounts by last_interaction_at — but only
-  // those that CHANGED since their state was last computed (change-gate:
-  // last_interaction_at > generated_at, or no state row). Accounts that
-  // haven't been touched since their last refresh are skipped, killing
-  // timer-driven Haiku calls for untouched accounts.
+  // Part 9 — EVENT-DRIVEN pip_account_state refresh (F3).
+  // No timer. When account / meeting / task data is ready, find accounts whose
+  // signal inputs are newer than the last time their state was evaluated, and
+  // refresh just those. "Newer" spans every real signal we have client-side:
+  // last_interaction_at (a meeting logged), a meeting's updated_at (logged or
+  // re-summarized), and a task's updated_at (added / closed / edited). The
+  // SERVER then skips the Haiku call for any whose content fingerprint is
+  // unchanged (Tier-2 gate), so this client gate can be generous — a false
+  // positive costs $0, a missed signal would leave Pip stale.
+  var stateSweepInFlight = useRef(new Set());
   useEffect(function () {
     if (!userId || !accounts || accounts.length === 0) return;
-    var key = 'folio_pip_state_refresh_last_' + userId;
-    var last = 0;
-    try { last = parseInt(localStorage.getItem(key) || '0', 10); } catch (e) {}
-    if (Date.now() - last < 6 * 60 * 60 * 1000) return; // throttle: once per 6h
-    var recent = accounts
-      .filter(function (a) { return !a.is_inactive && a.last_interaction_at; })
-      .sort(function (a, b) { return new Date(b.last_interaction_at) - new Date(a.last_interaction_at); })
-      .slice(0, 10)
-      // Change-gate: only refresh accounts whose last_interaction_at is newer
-      // than their state row's generated_at (or have no state row yet).
-      .filter(function (a) {
-        var row = pipAcctStateApp.getStateRow(a.id);
-        if (!row) return true; // no state yet
-        if (!row.generated_at) return true;
-        return new Date(a.last_interaction_at) > new Date(row.generated_at);
-      });
-    recent.forEach(function (a, i) {
-      setTimeout(function () { pipAcctStateApp.refreshState(a.id).catch(function () { /* guard-ok: background state refresh, failure is acceptable */ }); }, i * 1200);
+    if (pipAcctStateApp.loading) return;
+
+    var maxMeetingByAcct = {};
+    (meetings || []).forEach(function (m) {
+      if (!m.account_id) return;
+      var t = m.updated_at || m.created_at || (m.meeting_date ? m.meeting_date + "T00:00:00Z" : null);
+      if (!t) return;
+      if (!maxMeetingByAcct[m.account_id] || t > maxMeetingByAcct[m.account_id]) maxMeetingByAcct[m.account_id] = t;
     });
-    try { localStorage.setItem(key, String(Date.now())); } catch (e) {}
-  }, [userId, accounts]);
+    var maxTaskByAcct = {};
+    (allItems || []).forEach(function (i) {
+      if (!i.account_id) return;
+      var t = i.updated_at || i.created_at;
+      if (!t) return;
+      if (!maxTaskByAcct[i.account_id] || t > maxTaskByAcct[i.account_id]) maxTaskByAcct[i.account_id] = t;
+    });
+    var stateByAcct = {};
+    (pipAcctStateApp.states || []).forEach(function (s) { stateByAcct[s.account_id] = s; });
+
+    function signalTime(a) {
+      var mx = a.last_interaction_at || "";
+      if (maxMeetingByAcct[a.id] && maxMeetingByAcct[a.id] > mx) mx = maxMeetingByAcct[a.id];
+      if (maxTaskByAcct[a.id]    && maxTaskByAcct[a.id]    > mx) mx = maxTaskByAcct[a.id];
+      return mx || null;
+    }
+
+    var candidates = accounts.filter(function (a) {
+      if (a.is_inactive) return false;
+      if (stateSweepInFlight.current.has(a.id)) return false; // in-flight this session
+      var row = stateByAcct[a.id];
+      if (!row) return true;                                  // no state yet → seed it
+      var sig = signalTime(a);
+      if (!sig) return false;                                 // nothing has happened
+      // Recompute when there's a signal newer than the last time we EVALUATED
+      // this account (context_checked_at advances even on a fingerprint skip, so
+      // a no-op stays skipped across reloads; fall back to generated_at pre-F3).
+      var checkpoint = row.context_checked_at || row.generated_at;
+      if (!checkpoint) return true;
+      return new Date(sig) > new Date(checkpoint);
+    });
+    if (!candidates.length) return;
+
+    // Major tier first when the cap bites; cap the batch (server runs waves of 4).
+    candidates.sort(function (x, y) {
+      var rank = function (t) { return t === "Major" ? 0 : t === "Mid" ? 1 : 2; };
+      return rank(x.tier) - rank(y.tier);
+    });
+    var ids = candidates.slice(0, 20).map(function (a) { return a.id; });
+    ids.forEach(function (id) { stateSweepInFlight.current.add(id); });
+    Promise.resolve(pipAcctStateApp.refreshState(ids))
+      .catch(function () { /* guard-ok: background state refresh, failure is acceptable */ })
+      .then(function () { ids.forEach(function (id) { stateSweepInFlight.current.delete(id); }); });
+  }, [userId, accounts, meetings, allItems, pipAcctStateApp.loading, pipAcctStateApp.states]);
 
   // V2 brain — compression pass. Once per 6h, check each account for 5+
   // unprocessed corrections. For qualifying accounts, distill them into

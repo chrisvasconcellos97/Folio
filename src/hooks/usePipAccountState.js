@@ -49,7 +49,8 @@ export function usePipAccountState(userId) {
     return row.state_prose;
   }
 
-  function refreshState(accountIds) {
+  // force=true bypasses the server fingerprint skip (manual "resync" button).
+  function refreshState(accountIds, force) {
     var ids = Array.isArray(accountIds) ? accountIds : [accountIds];
     ids = ids.filter(function (id) { return !!id; }).slice(0, 50);
     if (!ids.length) return Promise.resolve(null);
@@ -57,7 +58,7 @@ export function usePipAccountState(userId) {
       var token = result.data.session ? result.data.session.access_token : null;
       var headers = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = "Bearer " + token;
-      return fetch_refresh(ids, headers).then(function () {
+      return fetch_refresh(ids, headers, force).then(function () {
         fetch();
       });
     });
@@ -65,13 +66,13 @@ export function usePipAccountState(userId) {
 
   // Separate so it can be reused with custom headers — kept inside the hook
   // closure so the network call lives next to its hook caller.
-  function fetch_refresh(ids, headers) {
+  function fetch_refresh(ids, headers, force) {
     // Refresh is best-effort, but bound it to 30s so a hung connection
     // doesn't leak fetch promises forever.
     return fetchWithTimeout("/api/pip-state-refresh", {
       method: "POST",
       headers: headers,
-      body: JSON.stringify({ accountIds: ids }),
+      body: JSON.stringify({ accountIds: ids, force: !!force }),
     }, 30000).then(function (r) {
       if (!r.ok) {
         console.warn("pip-state-refresh failed:", r.status);

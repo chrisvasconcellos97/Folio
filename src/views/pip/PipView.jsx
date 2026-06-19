@@ -16,7 +16,7 @@ import { getNextOccurrence, getFrequencyLabel } from "../../lib/cadenceUtils";
 import { routeToolCall, planToolCalls, describeToolCall, classifyTool, CONFIRM_THRESHOLD } from "../../lib/pipTools";
 // (CONFIRM_THRESHOLD re-export below; routeToolCall still used by executeTools.)
 import { usePipFacts } from "../../hooks/usePipFacts";
-import { usePipAccountState, findStaleAccountIds } from "../../hooks/usePipAccountState";
+import { usePipAccountState } from "../../hooks/usePipAccountState";
 import { useAccountSnapshots } from "../../hooks/useAccountSnapshots";
 import { usePipPromiseStats } from "../../hooks/usePipPromiseStats";
 import { useGlossary } from "../../hooks/useGlossary";
@@ -116,7 +116,6 @@ export function PipView(props) {
   var bottomRef                   = useRef(null);
   var taskMsgSet                  = useRef(false);
   var recognitionRef              = useRef(null);
-  var stateRefreshFired           = useRef(false);
   var kokoro = useKokoroTTS();
   var voiceSupported = typeof window !== "undefined" && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
   var ttsAvailable   = typeof window !== "undefined" && !!(window.AudioContext || window.webkitAudioContext);
@@ -163,29 +162,10 @@ export function PipView(props) {
     }
   }, [messages]);
 
-  // Fire-and-forget rolling-state refresh on mount when changed accounts exist.
-  // Gated by a 6h localStorage throttle so opening Pip repeatedly in a day
-  // doesn't re-fire. findStaleAccountIds already change-gates per account so
-  // only accounts with new activity since their last refresh are refreshed.
-  useEffect(function () {
-    if (!userId || stateRefreshFired.current) return;
-    if (!accounts || !accounts.length) return;
-    if (pipAcctState.loading) return;
-    // 6h throttle — mirrors App.jsx Part 9 periodic-refresh pattern.
-    var throttleKey = "folio_pipview_state_refresh_" + userId;
-    var lastFired = 0;
-    try { lastFired = parseInt(localStorage.getItem(throttleKey) || "0", 10); } catch (e) {}
-    if (Date.now() - lastFired < 6 * 60 * 60 * 1000) {
-      stateRefreshFired.current = true; // already ran recently, skip
-      return;
-    }
-    stateRefreshFired.current = true;
-    try { localStorage.setItem(throttleKey, String(Date.now())); } catch (e) {}
-    var stale = findStaleAccountIds(accounts, pipAcctState.states, 20);
-    if (stale.length) {
-      pipAcctState.refreshState(stale);
-    }
-  }, [userId, accounts, pipAcctState.loading, pipAcctState.states]);
+  // (Rolling-state refresh removed in F3 — App.jsx Part 9 is now the single
+  // event-driven sweep that keeps pip_account_state fresh on real signals, so
+  // opening Pip chat no longer fires its own timer-throttled refresh. One sweep,
+  // not two, per the App Coherence Rule.)
 
   function buildContext() {
     var allItems    = items    || [];
