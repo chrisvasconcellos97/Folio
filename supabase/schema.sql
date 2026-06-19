@@ -1297,6 +1297,19 @@ alter table gauge_projects
   add column if not exists waiting_on_since date;
 
 -- ──────────────────────────────────────────────────────────────────────
+-- Monday 1:1 pack cache (June 19 2026) — Phase 2 #1 "SHINE"
+-- (see supabase/monday_1on1_pack.sql; applied to prod via MCP)
+-- Caches the pack's ONE Sonnet output (Pip read + extracted boss-asks) on the
+-- cadence row; regenerated only when pack_fingerprint changes (event-driven, F3)
+-- or the week rolls over (pack_week). Same precedent as pip_brief on this table.
+-- ──────────────────────────────────────────────────────────────────────
+alter table folio_cadences
+  add column if not exists pack jsonb,
+  add column if not exists pack_fingerprint text,
+  add column if not exists pack_generated_at timestamptz,
+  add column if not exists pack_week date;
+
+-- ──────────────────────────────────────────────────────────────────────
 -- Task-model unification (June 2026) — folio_tasks is now the single
 -- canonical task store; gauge_projects.stages is retired as a write target
 -- (kept as a frozen read-only backup). These columns let a folio_task carry
