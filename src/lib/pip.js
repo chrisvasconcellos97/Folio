@@ -1495,6 +1495,22 @@ export function callPortfolioBriefPip(payload) {
   });
 }
 
+// Monday 1:1 pack — the ONE Sonnet call (read + boss-ask extraction). Phase 2 #1.
+// Deterministic sections are built client-side (src/lib/mondayPack.js); this only
+// fetches sections 0 + 2. Returns { read, boss_asks: [{ask, status, account}] }.
+export function callMondayPackPip(payload) {
+  return authHeaders().then(function (headers) {
+    return fetch("/api/monday-pack", {
+      method: "POST",
+      headers: headers,
+      body: JSON.stringify(payload),
+    }).then(function (r) {
+      if (!r.ok) throw new Error("Monday pack failed");
+      return r.json();
+    });
+  });
+}
+
 // On-demand follow-up email draft for OperatorPanel (Fix B — item 48).
 // Called when the user taps "✦ Draft a follow-up" on an account's operator card.
 // Uses mode "email" → Haiku 768 (the right tier for email drafting — cheap,

@@ -23,6 +23,7 @@ var handlers = [
   "api/operator-run.js",
   "api/invite.js",
   "api/followup-question.js",
+  "api/monday-pack.js",
 ];
 
 var failed = false;
