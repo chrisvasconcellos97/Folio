@@ -2,7 +2,21 @@ import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
 import { curateContext, renderContextProse } from "../src/lib/pipContext.js";
 import { PIP_TOOLS } from "../src/lib/pipTools.js";
+import { PIP_READ_TOOLS } from "../src/lib/pipAgentTools.js";
+import { runAgentChat } from "./_pipAgentLoop.js";
 import { logPipUsage } from "./_pipUsage.js";
+
+// F5 agent loop (chat only). When on, chat exposes server-executed read tools
+// (lookup_account / find_open_work / search_notes) and the server runs a real
+// model<->tool loop, feeding tool_results back so Pip can gather-then-act in
+// one turn. Additive: if the model emits no read tool the loop runs exactly one
+// call — byte-identical to the old single-shot path. PIP_AGENT_LOOP=off removes
+// the read tools entirely (the model can't call them) → guaranteed single-shot.
+var AGENT_LOOP_ON   = process.env.PIP_AGENT_LOOP !== "off";
+var AGENT_MAX_STEPS = (function () {
+  var n = parseInt(process.env.PIP_AGENT_MAX_STEPS || "4", 10);
+  return isNaN(n) || n < 1 ? 4 : n;
+})();
 
 // Buffered meeting summaries (Sonnet, large meeting + context, up to 3072
 // output tokens) can run well past the default function timeout. Give the
@@ -422,13 +436,22 @@ export default async function handler(req, res) {
   // for it. Tool use works with streaming — we forward tool_use blocks via SSE.
   var wantStream = body.stream === true;
 
+  // F5: the agent loop applies to chat only. When enabled, chat also exposes
+  // the read tools the loop iterates on. Other modes (summary/brief/email/
+  // action) keep today's exact behavior.
+  var loopEnabled = AGENT_LOOP_ON && mode === "chat";
+
   // summary mode never uses tools — the response is structured JSON only.
+  var toolSet = mode === "summary"
+    ? undefined
+    : (loopEnabled ? PIP_TOOLS.concat(PIP_READ_TOOLS) : PIP_TOOLS);
+
   var createParams = {
     model:      cfg.model,
     max_tokens: cfg.max_tokens,
     system:     systemBlocks,
     messages:   trimmed,
-    tools:      mode === "summary" ? undefined : PIP_TOOLS,
+    tools:      toolSet,
   };
   // Only set temperature where a mode opts in (summary) — others keep the
   // API default.
@@ -441,6 +464,46 @@ export default async function handler(req, res) {
 
       sseWrite(res, "meta", { mode: mode, model: cfg.model });
 
+      // ── F5 agent-loop path (chat) ────────────────────────────────────────
+      // The loop streams text deltas live across iterations, runs read tools
+      // server-side, and returns ONLY action tools (read tools never cross to
+      // the client). logUsage fires per model call so the spend tile sees the
+      // whole looped turn. If the model emits no read tool, runAgentChat makes
+      // exactly one call — identical to the legacy single-shot below.
+      if (loopEnabled) {
+        var loopResult;
+        try {
+          loopResult = await runAgentChat({
+            client:     client,
+            baseParams: createParams,
+            messages:   trimmed,
+            supabase:   userClient,
+            userId:     user.id,
+            maxSteps:   AGENT_MAX_STEPS,
+            onText:     function (delta) { sseWrite(res, "delta", { text: delta }); },
+            logUsage:   function (usage) { logPipUsage(userClient, user.id, "pip", mode, cfg.model, usage); },
+          });
+        } catch (loopErr) {
+          console.error("Pip agent-loop error:", loopErr);
+          sseWrite(res, "error", { error: "Pip is unavailable right now." });
+          return res.end();
+        }
+        var loopTools = loopResult.actionToolCalls || [];
+        loopTools.forEach(function (tc) { sseWrite(res, "tool_use", tc); });
+        sseWrite(res, "done", {
+          content: loopResult.content || "",
+          tool_calls: loopTools,
+          meta: {
+            mode: mode,
+            model: cfg.model,
+            usage: loopResult.usage || null,
+            stop_reason: loopResult.stopReason || null,
+          },
+        });
+        return res.end();
+      }
+
+      // ── Legacy single-shot streaming path (non-chat modes, or loop off) ──
       var streamObj = client.messages.stream(createParams);
       streamObj.on("text", function (delta) {
         sseWrite(res, "delta", { text: delta });
@@ -482,6 +545,37 @@ export default async function handler(req, res) {
     }
 
     // Buffered path (stream === false)
+    // F5: chat runs the loop here too (buffered, no deltas) so read tools never
+    // leak to the client even on the rarely-used non-streaming chat path.
+    if (loopEnabled) {
+      var bufLoop;
+      try {
+        bufLoop = await runAgentChat({
+          client:     client,
+          baseParams: createParams,
+          messages:   trimmed,
+          supabase:   userClient,
+          userId:     user.id,
+          maxSteps:   AGENT_MAX_STEPS,
+          onText:     null,
+          logUsage:   function (usage) { logPipUsage(userClient, user.id, "pip", mode, cfg.model, usage); },
+        });
+      } catch (bufErr) {
+        console.error("Pip agent-loop error (buffered):", bufErr);
+        return res.status(500).json({ error: "Pip is unavailable right now.", detail: bufErr && bufErr.message });
+      }
+      return res.status(200).json({
+        content: bufLoop.content || "",
+        tool_calls: bufLoop.actionToolCalls || [],
+        meta: {
+          mode: mode,
+          model: cfg.model,
+          usage: bufLoop.usage || null,
+          stop_reason: bufLoop.stopReason || null,
+        },
+      });
+    }
+
     var response = await client.messages.create(createParams);
     var text = "";
     var bufferedToolCalls = [];
