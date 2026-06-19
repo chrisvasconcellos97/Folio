@@ -443,6 +443,27 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 ---
 
+## Session Handoff — June 19 2026 (F3): event-driven Pip-state recompute — the 70–90% cost cut (branch, NOT deployed)
+
+**⚠️ WHERE IT LIVES:** branch **`claude/f3-pip-event-recompute-sxllsa`** (4 commits, pushed, tip `6cd3b1b`), **NOT `main`, NOT deployed.** Cut from `main` tip `fa614e4` → **clean fast-forward verified** (`git push origin claude/f3-pip-event-recompute-sxllsa:main` works when Chris says, after he tests). This handoff note rides ON that branch so it lands in `main` with the code — no separate prod deploy to record it. **The 3-column migration is ALREADY APPLIED to prod** (additive, harmless before the code ships).
+
+**DONE — F2 + F3, the audit's headline Pip-cost job.** Pip's per-account "state" read (where it stands / momentum / risks) was refreshed on **timers** (a 6h background pass over top accounts + another sweep every time Pip chat opened) whether or not anything changed — tokens burned to re-describe unchanged accounts. The old change-gate watched only `last_interaction_at`, so it ALSO missed task closes/edits (a staleness leak). F3 makes recompute **event-driven**; F2 persists the structured context F1 produced so the gate has something stable to compare against.
+
+**The build (two-tier gate):**
+- **Tier 1 — client (`src/App.jsx` Part 9 rewritten):** no more timers. Recomputes an account only when a real signal — `max(last_interaction_at, meeting.updated_at, task.updated_at)` — is newer than `context_checked_at` (last eval). Widens triggers meeting-only → meeting + task add/close/edit. In-flight ref guards realtime thrash; Major-tier first; batch capped at 20. Removed PipView's redundant chat-open sweep (one sweep — App Coherence).
+- **Tier 2 — server (`api/pip-state-refresh.js`):** rebuilds a content fingerprint and **skips the Haiku call entirely when nothing changed ($0)**; `force` flag bypasses (manual "resync Pip memory" button).
+- **F2 foundation (persisted):** new columns on `folio_pip_account_state` — `context_struct` (jsonb), `context_fingerprint` (text), `context_checked_at` (timestamptz). New pure helper `computeContextFingerprint()` in `src/lib/accountContext.js` hashes **STABLE inputs only** (ids/dates/counts, never relative-time) so it can't drift daily. +7 tests incl. the "+1 day = same hash" drift lock.
+
+**Why it's safe (Sanity-Pass):** fingerprint computed **server-side only** → no client/server divergence trap; Haiku prompt input unchanged → `state_prose` quality identical, just fresher on real change; **fails toward freshness** (false positive = $0 skip; never skips when in doubt). **Result: ~70–90% fewer per-account refresh AI calls, no freshness loss (actually fresher — task changes now trigger it).**
+
+**Gates:** `vite build` ✓ · **330 tests** (323 + 7 new) ✓ · `check-guards` (6) ✓ · `test-api-imports` ✓. Commits: `25ed1b8` (plan) · `ee0046f` (F2 + F3 server) · `61c3fe7` (F3 client) · `6cd3b1b` (docs/upgrades/fixlist). Design doc: `docs/pip-architecture-f3-plan.md`. Migration: `supabase/pip_context_fingerprint.sql` + folded into `schema.sql`.
+
+**Live spot-check to do (Chris, before fast-forwarding `main`):** (1) summarize a meeting or close a task on an account, then open Pip chat there — its read should reflect the change (gate fired); (2) open chat on an *untouched* account twice — second open should NOT re-bill (fingerprint skip). Then `git push origin claude/f3-pip-event-recompute-sxllsa:main` → one Vercel deploy.
+
+**Still open (Chris's call — out of F3 scope):** retiring the Haiku `state_prose` ENTIRELY (bigger cut but changes what reaches the chat model — deferred); operator-run cost levers (item 48 #4/#5/#6 — conditional output fields, on-demand draft emails, skip roll-up on quiet nights).
+
+---
+
 ## Session Handoff — June 19 2026: F1 + audit work + PersonPicker SHIPPED TO PROD (state change — read first)
 
 **⚠️ STATE CHANGE — everything below that says "branch, NOT deployed" is now STALE. It's all LIVE on `main` / `folioshq.com` (tip `1a9f0d7`).** Chris said push; `main` fast-forwarded cleanly from `claude/app-audit-strategy-hhcrz2` (7 commits, 0 divergence) and the Vercel production deploy went out. Branch is level with `main`.
