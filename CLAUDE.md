@@ -1,8 +1,8 @@
 # Folios — Claude Development Context
 
-## Session Handoff — June 19 2026 (Phase 2 #1): Monday 1:1 pack — the first SHINE feature (branch, NOT deployed)
+## Session Handoff — June 19 2026 (Phase 2 #1): Monday 1:1 pack — the first SHINE feature (SHIPPED June 20)
 
-**⚠️ WHERE IT LIVES:** branch **`claude/monday-1on1-pack-7cb6ia`** (6 commits, pushed), **NOT `main`, NOT deployed.** Cut from `main` tip `c93f2f1` (which already includes F3) — **clean fast-forward verified** (`git push origin claude/monday-1on1-pack-7cb6ia:main` works when Chris says, after he tests). The 4-column migration is **ALREADY APPLIED to prod** (additive, harmless before the code ships). NOTE: F5 (`claude/f5-agent-loop-gtbcok`) and F6 (`claude/f6-pgvector-recall-jh2yjc`) are parallel-pending off the same base — if either lands on `main` first, **rebase this branch onto the new main** before handing back (no shared files expected, but verify).
+**⚠️ STATE CHANGE — the Monday 1:1 pack is LIVE on `main` / `folioshq.com` (shipped June 20, second of the three-feature push).** Chris said "push all to main"; rebased onto `main` after F5 (docs-only conflicts resolved), gates re-run green (361 tests), pushed (`53795e1 → 03d55b8`). The 4-column `folio_cadences` migration was already on prod (additive). No activation step — it just works (the Home card surfaces on Mondays; the full pack lives in the 1:1 hub).
 
 **DONE — the Monday 1:1 pack (GAME PLAN Phase 2 #1).** Chris runs his Monday 1:1 from Folios; this auto-builds a prep pack so he's never flat-footed (his #1 fear). Built to the LOCKED spec: hybrid (Pip read on top + scannable sections), order = **0 read · 1 YOUR WORD (promised-vs-done) · 2 BOSS'S OPEN ASKS pre-answered · 3 WHAT MOVED by account · 4 WHO HAS THE BALL**. Surfaces: **Home card Monday** (+ Sunday heads-up) → opens the **full pack in the 1:1 cadence hub**.
 
@@ -478,32 +478,25 @@ This app is currently single-user but should be built with multi-tenancy in mind
 
 ---
 
-## ⭐ CURRENT STATE & NEXT-JOB QUEUE (read this FIRST — living doc, June 19 2026)
+## ⭐ CURRENT STATE & NEXT-JOB QUEUE (read this FIRST — living doc, June 20 2026)
 
 *Keep this block accurate every session (Session Self-Documentation Rule). It's the fast brief for a fresh chat — detail lives in the dated handoffs below.*
 
-**LIVE on `main` / `folioshq.com`** (tip `c93f2f1`): the whole Pip-architecture sequence through F3 — F1 (shared `buildAccountContext()`), F2 (persisted structured context), F3 (event-driven recompute, the 70–90% cost cut), plus the June-17 audit fixes + scoped PersonPicker.
+**LIVE on `main` / `folioshq.com`** (tip `4b69109`): the WHOLE Pip-architecture sequence **F1–F6 is now complete and deployed** — F1 (shared `buildAccountContext()`), F2 (persisted structured context), F3 (event-driven recompute, the 70–90% cost cut), **F5 (chat agent loop)**, **F6 (pgvector semantic recall)** — plus the **Monday 1:1 pack**, the June-17 audit fixes, and the scoped PersonPicker. The shared-brain Stop hook (`.claude/`) is live too.
 
-**BUILT, on branches, NOT deployed (parallel — all cut from `c93f2f1`):**
-| Branch | What | Gate before ship |
-|---|---|---|
-| `claude/f5-agent-loop-gtbcok` | **F5** — Pip chat agent loop (multi-step read tools → tool_result → continue). Kill switch `PIP_AGENT_LOOP=off`. | Chris spot-check (multi-step / deep-read / no-regression). Lowest risk. |
-| `claude/monday-1on1-pack-7cb6ia` | **Monday 1:1 pack** — auto-built boss-meeting prep sheet (promised-vs-done · boss's open asks · what moved · who-has-ball). | Chris spot-check on a Monday. |
-| `claude/f6-pgvector-recall-jh2yjc` | **F6** — pgvector semantic recall over own notes/Pip summaries. Inert until a key is set. | Add `OPENAI_API_KEY` to Vercel, then spot-check. |
+**SHIPPED June 20 2026 (the last three, pushed together — `115deda → 4b69109`):** F5, the Monday 1:1 pack, and F6 were each rebased onto `main`, gated green (`vite build` · `vitest` · `check-guards` · `test-api-imports`), and pushed one at a time (3 prod deploys). Their branches still exist (rebased) but `main` is the truth. Per-feature detail in the dated handoffs below.
 
-**⚠️ They're PARALLEL, not stacked** — the first one shipped moves `main` past `c93f2f1`; the other two then need a rebase before they fast-forward (the maintainer session does the rebase; Chris just tests + ships). Recommended order: **F5 → Monday pack → F6**.
+**⚠️ ONE ACTIVATION STEP OUTSTANDING — F6 is INERT until `OPENAI_API_KEY` is added to Vercel.** It degrades cleanly to recency-only context (no errors) until the key is set. After the key: hit `/api/embed-sync` once (or wait a day's sweep), then ask Pip a chat question whose answer lives in an OLD meeting → expect a "RELEVANT PAST NOTES" block. (F5 kill switch if ever needed: `PIP_AGENT_LOOP=off`.)
 
-**To ship any one:** Chris tests → says "ship X" → maintainer session re-runs gates (`vite build` · `vitest` · `check-guards` · `test-api-imports`) → `git push origin <branch>:main` → rebases the rest.
+**NEXT JOBS (Phase 2 "SHINE" remainder — the F-architecture sequence is DONE):** #2 team request queue / Excel export · #3 win log + commitment-integrity stats · #4 Pip Wrap (Friday review) · #6 admin instruction-writer. (Specs in the GAME PLAN section + the dated handoffs.)
 
-**NEXT JOBS (Phase 2 "SHINE" remainder, after the three above land):** #2 team request queue / Excel export · #3 win log + commitment-integrity stats · #4 Pip Wrap (Friday review) · #6 admin instruction-writer. (Specs in the GAME PLAN section + the dated handoffs.) The F-architecture sequence is otherwise complete (F5 is its last item).
-
-**Standing dashboard toggles for Chris (out of any branch):** Vercel preview-deploys OFF · Supabase leaked-password protection ON · (optional) Vercel Ignored Build Step so `CLAUDE.md`/`docs` pushes don't deploy.
+**Standing dashboard toggles for Chris (out of any branch):** **add `OPENAI_API_KEY` (activates F6)** · Vercel preview-deploys OFF · Supabase leaked-password protection ON · (optional) Vercel Ignored Build Step so `CLAUDE.md`/`docs` pushes don't deploy.
 
 ---
 
-## Session Handoff — June 19 2026 (F5): Pip chat agent loop — the last FORM item (branch, NOT deployed)
+## Session Handoff — June 19 2026 (F5): Pip chat agent loop — the last FORM item (SHIPPED June 20)
 
-**⚠️ WHERE IT LIVES:** branch **`claude/f5-agent-loop-gtbcok`** (4 code commits + this CLAUDE.md note), **NOT `main`, NOT deployed.** Cut from `main` tip `c93f2f1` → clean fast-forward verified. Ship: `git push origin claude/f5-agent-loop-gtbcok:main`. **⚠️ PARALLEL with the F6 branch** — both were cut from `c93f2f1`, so they've diverged. Whichever ships first moves `main` past `c93f2f1`; the OTHER then needs a rebase before it can fast-forward (Claude will rebase the loser onto the new `main` when Chris picks an order). No DB changes in F5 (code + docs only).
+**⚠️ STATE CHANGE — F5 is LIVE on `main` / `folioshq.com` (shipped June 20, first of the three-feature push).** Chris said "push all to main"; F5 was rebased onto `main` (CLAUDE.md conflict resolved), gates re-run green (345 tests), pushed (`115deda → 53795e1`). No DB changes (code + docs only). Kill switch if it ever misbehaves: `PIP_AGENT_LOOP=off` in Vercel (instant, no redeploy).
 
 **DONE — F5, the last X6 FORM item (F1/F2/F3/F5 now done; F6 built, awaiting a key).** Chat was single-shot: the model answered in one pass, the client ran any action, and the tool result never returned to the model. F5 makes chat a real **agent loop** — model emits a READ tool → server executes it (RLS-scoped, JWT) → `tool_result` → model continues → final answer. Multi-step in one turn ("find the stalled project, then draft the chase note").
 
