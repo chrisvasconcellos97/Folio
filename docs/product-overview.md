@@ -199,6 +199,29 @@ the update timeline to see what changed and when. (Revenue surfaces
 themselves have been removed from the personal-mode build — see
 "Ripped" in CLAUDE.md — but the change-event log remains valuable.)
 
+### Team Sheet — the team request tracker
+
+The aftermarket team works a shared Excel request tracker, reviewed in the
+weekly team meeting. Folios is the **master** of that tracker; the
+spreadsheet is an **output**. Any Gauge project can be flagged "Track on
+team sheet," which surfaces it in **Gauge → Team Sheet** — a read-only grid
+in the spreadsheet's exact column order (Priority · Date of Request · Owner ·
+Supplier · # of Shops · Email Thread · Initiative · Required Completion Date ·
+Connection Macro Date · Integration Macro Date · Comments).
+
+Every column except **# of Shops** is generated automatically from the
+project (priority, request date, owner, linked account, title, completion
+date, latest status pulse). One tap copies the rows that have **changed since
+the last export** as tab-separated lines that paste straight into the
+spreadsheet's cells. A timing-aware nudge appears on Home on Monday
+afternoon / Tuesday morning when tracked projects have unsynced changes.
+
+This kills the two-system drift: instead of maintaining projects in Folios
+*and* the sheet by hand, the sheet is generated from Folios. (The
+**# of Shops** column is left blank on purpose — that figure is OEC business
+data that never lives in Folios; it's filled in Excel. See
+`data-handling.md`.)
+
 ### Inactive & Merge
 
 No hard deletes for accounts or users. Everything is reversible:

@@ -113,6 +113,14 @@ AI-authored memory (facts, profiles, summaries, account state) is
 instructed to generalize any quantitative business data rather than
 retain it.
 
+**The line holds in feature design, too.** The Team Sheet (the team request
+tracker that generates the weekly Excel rows) mirrors the spreadsheet's
+columns — *except* "# of Shops." That count is a customer-volume figure, so
+it is deliberately **not a column in Folios**: the export emits an empty cell
+for it and the user fills it in Excel. There is no `shop_count` field
+anywhere in the schema. This is a worked example of the data line shaping
+what the database is allowed to hold, not just what the AI is allowed to say.
+
 ---
 
 ## What crosses the boundary (Anthropic + the embeddings provider)

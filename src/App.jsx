@@ -1218,6 +1218,7 @@ export default function App() {
         commitmentNudges={commitmentNudgesHook.nudges}
         userEmail={session && session.user ? session.user.email : null}
         contacts={allContacts}
+        members={members}
         themes={recentThemes}
         scheduledMeetings={scheduledMeetings}
         handlers={{

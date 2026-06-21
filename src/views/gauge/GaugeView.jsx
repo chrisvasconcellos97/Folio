@@ -25,6 +25,7 @@ import { supabase } from "../../lib/supabase";
 import { FlatTaskQueue } from "./FlatTaskQueue";
 import { LeaderProjectsView } from "./LeaderProjectsView";
 import { TeammateDetailView } from "./TeammateDetailView";
+import { TeamSheetView } from "./TeamSheetView";
 import { autoStatusPatch, gaugeStatusLabel } from "../../lib/gaugeStatus";
 import { fmtShort } from "../../lib/dateUtils";
 import { logSilentFailure } from "../../lib/logSilentFailure.js";
@@ -542,6 +543,7 @@ export function GaugeView({
           (members || []).length >= 2 ? { id: "leader",   label: "Leader"   } : null,
           { id: "projects", label: "Projects" },
           { id: "tasks",    label: "Tasks"    },
+          { id: "team",     label: "Team Sheet" },
         ].filter(Boolean).map(function (v) {
           var active = primaryView === v.id;
           return (
@@ -590,6 +592,19 @@ export function GaugeView({
             }, 50);
           }}
           onOpenMember={function (email) { setViewingMember(email); }}
+        />
+      ) : primaryView === "team" ? (
+        <TeamSheetView
+          projects={projects}
+          accounts={accounts}
+          members={members}
+          onEditProject={function (p) { setEditing(p); }}
+          onMarkExported={function (ids, at) {
+            ids.forEach(function (id) {
+              updateProject(id, { tracker_exported_at: at })
+                .catch(function (err) { logSilentFailure("GaugeView/tracker-mark-exported", err); });
+            });
+          }}
         />
       ) : primaryView === "tasks" ? (
         <div style={{

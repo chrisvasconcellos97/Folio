@@ -459,11 +459,20 @@ create table if not exists gauge_projects (
   task_status_columns  jsonb default '["intake","in_progress","done"]',
   total_duration_days  integer,
   expected_complete_date date,
+  -- Team Sheet (Tuesday request tracker) — Phase 2 #2. NO shop_count by design
+  -- (data line). See supabase/team_tracker.sql + docs/data-handling.md.
+  on_team_tracker        boolean default false,
+  email_thread_url       text,
+  connection_macro_date  date,
+  integration_macro_date date,
+  tracker_exported_at    timestamptz,
   created_at     timestamptz default now(),
   updated_at     timestamptz default now()
 );
 
 alter table gauge_projects enable row level security;
+create index if not exists idx_gauge_projects_team_tracker
+  on gauge_projects (user_id) where on_team_tracker;
 
 drop policy if exists "Gauge owner access" on gauge_projects;
 create policy "Gauge owner access"

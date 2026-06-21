@@ -98,6 +98,12 @@ export function ProjectModal({
   var [assigneeEmail, setAssignee]  = useState(existing ? existing.assignee || "" : "");
   var [waitingOn, setWaitingOn]     = useState(existing ? existing.waiting_on || "" : "");
   var [requestedBy, setRequestedBy] = useState(existing ? existing.requested_by || "" : "");
+  // Team Sheet (Tuesday tracker) fields — Phase 2 #2. # of Shops is NOT here:
+  // it's quantitative business data and never lives in Folios (data line).
+  var [onTeamTracker, setOnTeamTracker]   = useState(existing ? !!existing.on_team_tracker : false);
+  var [emailThreadUrl, setEmailThreadUrl] = useState(existing ? existing.email_thread_url || "" : "");
+  var [connectionMacroDate, setConnectionMacroDate]   = useState(existing ? existing.connection_macro_date || "" : "");
+  var [integrationMacroDate, setIntegrationMacroDate] = useState(existing ? existing.integration_macro_date || "" : "");
   var [blockedReason, setBlockedReason] = useState(existing ? existing.blocked_reason || "" : "");
   // Task-model unification: a project's tasks live in folio_tasks, hydrated
   // onto existing.tasks. Seed the editor from there (template stages for new).
@@ -175,6 +181,10 @@ export function ProjectModal({
       custom_field_schema: customFieldSchema,
       task_status_columns: taskStatusColumns,
       total_duration_days: (!isNaN(durDraft) && durDraft > 0) ? durDraft : null,
+      on_team_tracker:        onTeamTracker,
+      email_thread_url:       emailThreadUrl.trim() || null,
+      connection_macro_date:  connectionMacroDate || null,
+      integration_macro_date: integrationMacroDate || null,
     }).then(function (saved) {
       return syncTasks(saved || existing).then(function () {
         setSaving(false);
@@ -402,6 +412,10 @@ export function ProjectModal({
       custom_field_schema: customFieldSchema,
       task_status_columns: taskStatusColumns,
       total_duration_days: (!isNaN(durSave) && durSave > 0) ? durSave : null,
+      on_team_tracker:        onTeamTracker,
+      email_thread_url:       emailThreadUrl.trim() || null,
+      connection_macro_date:  connectionMacroDate || null,
+      integration_macro_date: integrationMacroDate || null,
     }).then(function (saved) {
       // Project tasks live in folio_tasks now — sync them after the row saves.
       return syncTasks(saved || existing).then(function () {
@@ -756,6 +770,79 @@ export function ProjectModal({
             noneLabel="— No requestor —"
             contactValue={function(c) { return c.name; }}
           />
+        </div>
+
+        {/* Team Sheet (Tuesday request tracker) — Phase 2 #2. When on, this
+            project surfaces in Gauge → Team Sheet and gets exported as a row to
+            the team's Excel tracker. # of Shops is intentionally absent — that
+            figure never lives in Folios (data line); Chris fills it in Excel. */}
+        <div>
+          <FL>Team Sheet</FL>
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={function () { setOnTeamTracker(!onTeamTracker); }}
+            onKeyDown={function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOnTeamTracker(!onTeamTracker); } }}
+            style={{
+              display: "flex", alignItems: "center", gap: 10, cursor: "pointer",
+              padding: "9px 12px", borderRadius: 8,
+              border: "1px solid " + (onTeamTracker ? C.accentLine : C.rule),
+              background: onTeamTracker ? C.accentFaint : "transparent",
+            }}
+          >
+            <div style={{
+              width: 18, height: 18, borderRadius: 5, flexShrink: 0,
+              border: "1px solid " + (onTeamTracker ? C.accent : C.rule),
+              background: onTeamTracker ? C.accent : "transparent",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: "#fff", fontSize: 12, fontWeight: 700,
+            }}>{onTeamTracker ? "✓" : ""}</div>
+            <span style={{
+              fontSize: 13, color: onTeamTracker ? C.text : C.textMuted,
+              fontFamily: "'Inter', system-ui, sans-serif",
+            }}>Track on the team request sheet</span>
+          </div>
+
+          {onTeamTracker && (
+            <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 10 }}>
+              <div>
+                <FL>Email Thread</FL>
+                <InputField
+                  type="url"
+                  placeholder="Link to the email thread (optional)"
+                  value={emailThreadUrl}
+                  onChange={function (e) { setEmailThreadUrl(e.target.value); }}
+                />
+              </div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <div style={{ flex: 1 }}>
+                  <FL>Connection Macro Date</FL>
+                  <InputField
+                    type="date"
+                    value={connectionMacroDate}
+                    onChange={function (e) { setConnectionMacroDate(e.target.value); }}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <FL>Integration Macro Date</FL>
+                  <InputField
+                    type="date"
+                    value={integrationMacroDate}
+                    onChange={function (e) { setIntegrationMacroDate(e.target.value); }}
+                  />
+                </div>
+              </div>
+              <div style={{
+                fontSize: 11, color: C.textMuted, lineHeight: 1.5,
+                fontFamily: "'Inter', system-ui, sans-serif",
+              }}>
+                Priority, request date, owner, supplier, initiative, required
+                completion and comments all come from this project automatically.
+                The sheet's <b style={{ color: C.text }}>“# of Shops”</b> cell is
+                left blank for you to fill in Excel.
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Custom columns schema — drives the task detail panel + standing board */}

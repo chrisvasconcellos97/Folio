@@ -1,6 +1,49 @@
 # Folios — Upgrade Log
 
-*Last updated: 2026-06-19 (Pip can now recall the right old note by meaning — semantic recall)*
+*Last updated: 2026-06-21 (Folios now generates the team's Tuesday request sheet — the Team Sheet)*
+
+---
+
+## 2026-06-21 — Folios owns the team request tracker (the Team Sheet)
+
+**What I built:** Your team's Tuesday meeting runs off a shared Excel request
+tracker — and you've been keeping it updated by hand while also tracking the
+same projects in Folios. That double-entry was dying: lots of projects in
+Folios never made it onto the sheet. Now Folios **generates the sheet for
+you.** Flip "Track on team sheet" on any Gauge project and it shows up in a
+new **Gauge → Team Sheet** view, laid out in your spreadsheet's exact column
+order. One tap copies the rows that changed since you last exported, ready to
+paste straight into Excel.
+
+**Problem it solves:** You can't maintain two systems, so the sheet drifted.
+Make Folios the master and the sheet an output, and the drift problem
+disappears — the spreadsheet is always a copy of what's already in Folios.
+
+**What changed:**
+- Any project can be flagged for the team sheet, with a few tracker-specific
+  fields (email thread link, connection/integration macro dates). Everything
+  else — priority, request date, owner, supplier, initiative, required
+  completion date, latest comment — comes from the project automatically.
+- The **Team Sheet view** is a clean, screen-shareable grid for the Tuesday
+  meeting, with unsynced rows marked.
+- **"Copy unsynced rows"** puts exactly the changed rows on your clipboard as
+  tab-separated lines that paste into the spreadsheet's cells.
+- A gentle **nudge on Home** (Monday afternoon / Tuesday morning) reminds you
+  when tracked projects have changes that aren't on the sheet yet — one tap to
+  copy them.
+
+**What you see today:** A "Team Sheet" tab in Gauge. Turn it on for the
+projects your team tracks, and the weekly sheet update becomes copy-and-paste
+instead of hand-maintenance.
+
+**Why it matters:** It closes the last "I maintain the same thing in two
+places" gap — one of the things you said you were worst at. The sheet stays
+current without you babysitting it, and nothing in Folios contradicts what the
+team sees on Tuesday.
+
+*(One column stays manual on purpose: "# of Shops" is a customer-count figure,
+so it never lives in Folios — the export leaves that cell blank for you to fill
+in Excel. That's the data line doing its job.)*
 
 ---
 

@@ -13,6 +13,7 @@ import { useOperatorReport } from "../../hooks/useOperatorReport";
 import { OperatorHub } from "./OperatorHub";
 import { OperatorRunButton } from "./OperatorRunButton";
 import { generateCheckInQuestions } from "../../lib/checkIn";
+import { trackerProjects, isTrackerDirty, buildTrackerTSV, isTrackerReminderWindow } from "../../lib/teamTracker";
 import { callPortfolioBriefPip } from "../../lib/pip";
 import { isProjectComplete } from "../../lib/gaugeStatus";
 import { notMyRelationship } from "../../lib/accountHealth";
@@ -169,7 +170,7 @@ function makeAccountLinkify(accounts, onOpenAccount) {
   };
 }
 
-export function HomeView({ userName, userId, userEmail, accounts, meetings, items, cadences, projects, contacts, themes, showOnboardingCard, dripQuestion, dripQueueCount, commitmentNudges, pipFacts, profileProse, scheduledMeetings, handlers }) {
+export function HomeView({ userName, userId, userEmail, accounts, meetings, items, cadences, projects, contacts, members, themes, showOnboardingCard, dripQuestion, dripQueueCount, commitmentNudges, pipFacts, profileProse, scheduledMeetings, handlers }) {
   // All callback props arrive grouped in one `handlers` bag (Batch 8 — prop-
   // sprawl reduction). Re-expanded to locals here so the many internal call
   // sites (onOpenAccount ×17, onOpenCadenceHub ×14, …) stay byte-for-byte
@@ -734,6 +735,29 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
     return (waitingOnRows || []).filter(function (r) { return !suppressedByCheckIn(r.kind, r.id); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [waitingOnRows, checkInTargetKeys]);
+
+  // Team Sheet sync nudge — Phase 2 #2. Surfaces Mon afternoon / Tue (before the
+  // team meeting) when tracked projects have changed since their last export.
+  // One tap copies exactly the unsynced rows for pasting into the Excel sheet.
+  var teamSheetDirty = useMemo(function () {
+    if (!isTrackerReminderWindow()) return [];
+    return trackerProjects(projects).filter(isTrackerDirty);
+  }, [projects]);
+
+  function copyTeamSheetDirty() {
+    if (!teamSheetDirty.length) return;
+    var tsv = buildTrackerTSV(teamSheetDirty, { accounts: accounts, members: members });
+    var stamp = function () {
+      var at = new Date().toISOString();
+      teamSheetDirty.forEach(function (p) { if (onUpdateProject) onUpdateProject(p.id, { tracker_exported_at: at }); });
+      showToast("Copied " + teamSheetDirty.length + " row" + (teamSheetDirty.length === 1 ? "" : "s") + " — paste into the team sheet");
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(tsv).then(stamp).catch(function () { showToast("Couldn't copy to clipboard", "error"); });
+    } else {
+      showToast("Clipboard unavailable", "error");
+    }
+  }
 
   function handleCheckInAnswer(q, optId) {
     var next = Object.assign({}, checkInAnswered);
@@ -2064,6 +2088,28 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
               }}
             >↺ Replay</button>
           </div>
+        </div>
+      )}
+
+      {teamSheetDirty.length > 0 && (
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          gap: 12, flexWrap: "wrap",
+          padding: isMobile ? "12px 14px" : "14px 16px",
+          marginBottom: 12,
+          background: C.accentFaint, border: "1px solid " + C.accentLine, borderRadius: 12,
+        }}>
+          <div style={{ fontSize: 13, color: C.text, lineHeight: 1.4, flex: 1, minWidth: 0 }}>
+            <b>{teamSheetDirty.length}</b> update{teamSheetDirty.length === 1 ? " isn't" : "s aren't"} on the team sheet yet — copy {teamSheetDirty.length === 1 ? "it" : "them"} before the meeting?
+          </div>
+          <button
+            onClick={copyTeamSheetDirty}
+            style={{
+              background: C.accent, color: "#fff", border: "none", borderRadius: 8,
+              padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer",
+              fontFamily: "'Inter', system-ui, sans-serif", flexShrink: 0,
+            }}
+          >Copy rows</button>
         </div>
       )}
 
