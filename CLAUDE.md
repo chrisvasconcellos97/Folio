@@ -15,7 +15,7 @@
 
 **Gates green:** `vite build` ✓ · **394 tests** (385 + 9 new) ✓ · `check-guards` (6) ✓ · `test-api-imports` ✓.
 
-**TO SHIP (when Chris says):** (1) apply migration `folio_wins_table` to prod (SQL in `supabase/folio_wins.sql` — re-run MCP `apply_migration`, approve the prompt); (2) `git push origin claude/folios-onboarding-th7bv5:main` (ships Team Sheet + this together, since stacked) → one Vercel deploy; (3) `git update-ref refs/remotes/origin/$(git branch --show-current) HEAD`. **Note: shipping requires BOTH pending migrations applied** (team_tracker_columns + folio_wins_table) since the branch carries both.
+**TO SHIP (when Chris says):** migration `folio_wins_table` is **already applied to prod** (Chris ran it by hand June 21). So ship = (1) `git push origin claude/folios-onboarding-th7bv5:main` (ships Team Sheet + this together, since stacked) → one Vercel deploy; (2) `git update-ref refs/remotes/origin/$(git branch --show-current) HEAD`. No DB step left (both `team_tracker_columns` + `folio_wins_table` are live).
 
 **Live spot-check for Chris (post-ship):** (1) Settings → Pip → see "Promises kept" stat + Win log; log a manual win, confirm it lists. (2) On a **Friday**, Home shows the Pip Wrap card with the week's read; tap a "wins to log" chip → it persists + leaves the candidate list; tap "✦ Pip's take" → one short paragraph (costs one Haiku call). (Off-Friday the card is hidden by design.)
 
@@ -39,7 +39,7 @@
 
 **Gates green:** `vite build` ✓ · **385 tests** (369 + 16 new) ✓ · `check-guards` (6) ✓ · `test-api-imports` ✓.
 
-**TO SHIP (when Chris says):** (1) apply migration `team_tracker_columns` to prod (the SQL is in `supabase/team_tracker.sql` — re-run the MCP `apply_migration`, approve the prompt) — additive/nullable, safe to apply anytime; (2) `git push origin claude/folios-onboarding-th7bv5:main` → one Vercel prod deploy; (3) after push: `git update-ref refs/remotes/origin/$(git branch --show-current) HEAD`.
+**TO SHIP (when Chris says):** migration `team_tracker_columns` is **already applied to prod** (Chris ran it by hand June 21). So ship = (1) `git push origin claude/folios-onboarding-th7bv5:main` → one Vercel prod deploy; (2) after push: `git update-ref refs/remotes/origin/$(git branch --show-current) HEAD`.
 
 **Live spot-check for Chris (post-ship):** open a Gauge project → turn on "Track on team sheet" + set the macro dates → Gauge → **Team Sheet** tab shows it as a row in sheet-column order with the # of Shops cell blank → "Copy unsynced rows" → paste into a scratch spreadsheet, confirm columns line up. Then edit the project and confirm it re-marks as unsynced. On a Monday afternoon / Tuesday, the Home nudge should appear.
 
@@ -539,7 +539,7 @@ This app is currently single-user but should be built with multi-tenancy in mind
 - **Phase 2 #2 — Team Sheet** (team request tracker as a lens over Gauge projects + TSV export + Home sync nudge). Migration `team_tracker_columns` pending prod-apply.
 - **Phase 2 #3 + #4 — Win log + Friday Pip Wrap** (shared `src/lib/weekReview.js` engine → promises-kept stat + Win log in Settings, + deterministic Friday Wrap card on Home with optional on-demand `api/week-wrap.js` "Pip's take"). Migration `folio_wins_table` pending prod-apply.
 
-Both gated green (`vite build` · **394 tests** · `check-guards` (6) · `test-api-imports`). **Two migrations are written + folded into `schema.sql` but PENDING prod-apply** (the MCP `apply_migration` calls returned "requires approval"). To ship each: Chris says ship → apply its migration → `git push origin claude/folios-onboarding-th7bv5:main`. Full detail in the June-21 handoffs below.
+Both gated green (`vite build` · **394 tests** · `check-guards` (6) · `test-api-imports`). **Both migrations (`team_tracker_columns` + `folio_wins_table`) are APPLIED to prod** — Chris ran the SQL by hand in the Supabase SQL Editor June 21 2026 (the MCP `apply_migration` approval prompt never surfaced on his side; read-verify was also approval-gated, so applied-state is on Chris's word — idempotent SQL, safe to re-run if ever in doubt). schema.sql matches. **To ship: Chris says ship → `git push origin claude/folios-onboarding-th7bv5:main`** (migrations already live; no DB step left). Full detail in the June-21 handoffs below.
 
 **NEXT JOBS (Phase 2 "SHINE" remainder):** #6 admin instruction-writer (parked — depends on the work-Claude two-brain side maturing). The Phase 2 SHINE batch (#2/#3/#4) is otherwise built; after they ship, the queue is essentially the roadmap/wishlist. (Specs in the GAME PLAN section + the dated handoffs.)
 
