@@ -13,6 +13,8 @@ import { usePipFacts } from "../../hooks/usePipFacts";
 import { useUserProfile } from "../../hooks/useUserProfile";
 import { usePipUsage } from "../../hooks/usePipUsage";
 import { useFolioHealth, CORRECTION_TYPE_LABEL } from "../../hooks/useFolioHealth";
+import { useWins } from "../../hooks/useWins";
+import { AccountPicker } from "../../components/AccountPicker";
 import { useGlossary } from "../../hooks/useGlossary";
 import { useActivity } from "../../hooks/useActivity";
 import { useTheme } from "../../hooks/useTheme";
@@ -852,6 +854,15 @@ function FolioHealthSection({ userId, accounts }) {
               value={money(h.cost.usd30)}
               sub={"30 days · " + costTrend + (h.cost.top ? " · top: " + h.cost.top.endpoint + " " + money(h.cost.top.usd) : "")}
             />
+            {h.commitments && h.commitments.resolved > 0 && (
+              <HealthStat
+                label="Promises kept"
+                value={h.commitments.kept + " / " + h.commitments.resolved + (h.commitments.rate != null ? " (" + Math.round(h.commitments.rate * 100) + "%)" : "")}
+                sub={"commitments kept on time"
+                  + (h.commitments.slipped ? " · " + h.commitments.slipped + " slipped" : "")
+                  + (h.commitments.open ? " · " + h.commitments.open + " still open" : "")}
+              />
+            )}
           </div>
 
           {h.canary.length > 0 && (
@@ -862,6 +873,76 @@ function FolioHealthSection({ userId, accounts }) {
             </div>
           )}
         </>
+      )}
+    </Card>
+  );
+}
+
+// Win Log (#3) — the brag file. Confirmed wins persist for review season; the
+// Friday Wrap also writes here. Manual quick-add + a list with remove.
+function WinLogSection({ userId, accounts }) {
+  var winsHook = useWins(userId);
+  var [title, setTitle]   = useState("");
+  var [acctId, setAcctId] = useState(null);
+  var byId = {};
+  (accounts || []).forEach(function (a) { byId[a.id] = a; });
+
+  function add() {
+    if (!title.trim()) return;
+    winsHook.addWin({ title: title.trim(), account_id: acctId || null, kind: "manual" });
+    setTitle(""); setAcctId(null);
+    showToast("Win logged ✦");
+  }
+
+  var wins = winsHook.wins || [];
+  return (
+    <Card>
+      <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 6 }}>Win log</div>
+      <div style={{ fontSize: 13, color: C.textSub, lineHeight: 1.6, marginBottom: 14 }}>
+        Your brag file — the things that went right. Folios offers one-tap wins on the Friday Wrap; log anything else here. Pull it up at review time.
+      </div>
+
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+        <div style={{ flex: "1 1 220px", minWidth: 0 }}>
+          <InputField
+            value={title}
+            onChange={function (e) { setTitle(e.target.value); }}
+            onKeyDown={function (e) { if (e.key === "Enter") add(); }}
+            placeholder="What went right? (e.g. landed the All Star integration)"
+          />
+        </div>
+        <div style={{ flex: "0 1 200px", minWidth: 0 }}>
+          <AccountPicker accounts={accounts} value={acctId} onChange={setAcctId} placeholder="Account (optional)" allowNone />
+        </div>
+        <AmberBtn onClick={add} disabled={!title.trim()}>Log win</AmberBtn>
+      </div>
+
+      {wins.length === 0 ? (
+        <div style={{ fontSize: 13, color: C.textMuted }}>No wins logged yet.</div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {wins.map(function (w) {
+            var a = w.account_id ? byId[w.account_id] : null;
+            return (
+              <div key={w.id} style={{
+                display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10,
+                padding: "9px 11px", borderRadius: 8, border: "1px solid " + C.rule, background: C.surface,
+              }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 13.5, color: C.text, lineHeight: 1.4 }}>{w.title}</div>
+                  <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
+                    {fmtMedium(w.occurred_on)}{a ? " · " + a.name : ""}{w.kind && w.kind !== "manual" ? " · " + w.kind : ""}
+                  </div>
+                </div>
+                <button
+                  onClick={function () { winsHook.removeWin(w.id); }}
+                  aria-label="Remove win"
+                  style={{ background: "transparent", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 16, lineHeight: 1, flexShrink: 0 }}
+                >×</button>
+              </div>
+            );
+          })}
+        </div>
       )}
     </Card>
   );
@@ -1811,6 +1892,7 @@ export function SettingsView({ userId, userMeta, orgId, role, members, accounts,
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <FolioHealthSection userId={userId} accounts={accounts} />
+              <WinLogSection userId={userId} accounts={accounts} />
               <PipPrefsSection userId={userId} />
               <PipUsageSection userId={userId} />
               <PipGlossarySection userId={userId} orgId={orgId} accounts={accounts} />

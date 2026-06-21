@@ -1,6 +1,44 @@
 # Folios — Upgrade Log
 
-*Last updated: 2026-06-21 (Folios now generates the team's Tuesday request sheet — the Team Sheet)*
+*Last updated: 2026-06-21 (Win log + the Friday Pip Wrap — your track record, kept)*
+
+---
+
+## 2026-06-21 — Your track record: the Win log + the Friday Pip Wrap
+
+**What I built:** Two connected things that finally make Folios remember the
+good — not just the to-dos. A **Win log** (your brag file): the things that
+went right get saved so they're still there at review time, instead of
+evaporating the moment you move on. And a **Friday Pip Wrap** on Home: a tidy
+week-in-review of what you actually got done.
+
+**Problem it solves:** You're measured on keeping suppliers happy and on not
+dropping things — but the *evidence* of a strong week (promises kept, projects
+moved, fires put out) was nowhere. When review season comes, you're
+reconstructing it from memory. Now it accumulates on its own.
+
+**What changed:**
+- **Promises kept** — Folios now tracks your commitments kept-on-time vs.
+  slipped, and shows the rate in Settings → Pip (next to "is Folios earning
+  its keep?"). It's the honest scorecard on whether you keep your word.
+- **Win log** — confirmed wins persist in Settings → Pip. Log anything by
+  hand, and the Friday Wrap offers **one-tap wins** for things it spots
+  automatically (a project you completed, a promise you kept on time).
+- **Friday Pip Wrap** — every Friday a card appears on Home with the week:
+  promises kept/slipped, accounts you met vs. ones that went quiet, projects
+  that moved, wins logged. It's built **for free** (no AI) — and if you want
+  Pip's read on *how* the week went, one tap adds a short reflective paragraph.
+
+**What you see today:** A "Promises kept" stat and a Win log in Settings → Pip,
+and — on Fridays — a Pip Wrap card on Home.
+
+**Why it matters:** This is the half of the picture Folios was missing. It
+already nags you about what's overdue; now it also banks what went right. That
+compounds into a real promotion case — and into Pip understanding your week,
+not just your backlog.
+
+*(Everything here is about your own work — promises, projects, wins. No
+business numbers are involved, by design.)*
 
 ---
 

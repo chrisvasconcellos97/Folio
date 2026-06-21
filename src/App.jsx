@@ -62,6 +62,7 @@ import { detectKnowledgeGaps, purgeEvergreenQuestions } from "./lib/detectKnowle
 import { usePipDripQuestions } from "./hooks/usePipDripQuestions.js";
 import { usePipFacts as usePipFactsApp } from "./hooks/usePipFacts.js";
 import { useCommitmentNudges } from "./hooks/useCommitmentNudges.js";
+import { useWins } from "./hooks/useWins.js";
 import { useRecentThemes } from "./hooks/useRecentThemes";
 import { C } from "./lib/colors";
 import { QuickTaskModal } from "./views/quicktasks/QuickTaskModal";
@@ -909,6 +910,7 @@ export default function App() {
   }, [userId, dripHook.answeredSinceSynthesis]);
 
   var commitmentNudgesHook = useCommitmentNudges(userId, accounts);
+  var winsHook             = useWins(userId);
   var recentThemes         = useRecentThemes(userId);
 
   // Share Target — detect when the app is launched via the PWA Web Share Target.
@@ -1219,6 +1221,7 @@ export default function App() {
         userEmail={session && session.user ? session.user.email : null}
         contacts={allContacts}
         members={members}
+        wins={winsHook.wins}
         themes={recentThemes}
         scheduledMeetings={scheduledMeetings}
         handlers={{
@@ -1284,6 +1287,7 @@ export default function App() {
           onUpdateItem: updateItem,
           onDeleteItem: deleteItem,
           onUpdateProject: updateProjectApp,
+          onAddWin: winsHook.addWin,
           onOpenDigest: function () { setShowDigestIngest(true); },
           onOpenScheduled: handleOpenScheduled,
           onOpenCommitments: function () { handleSetView("commitments"); },

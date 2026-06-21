@@ -25,6 +25,7 @@ var handlers = [
   "api/followup-question.js",
   "api/monday-pack.js",
   "api/embed-sync.js",
+  "api/week-wrap.js",
 ];
 
 var failed = false;

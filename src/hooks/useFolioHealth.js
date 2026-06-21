@@ -12,6 +12,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { commitmentStats } from "../lib/weekReview";
 
 var DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -57,11 +58,21 @@ export function useFolioHealth(userId) {
       .gte("created_at", d30)
       .limit(2000);
 
-    Promise.all([usageQ, corrQ, meetQ]).then(function (res) {
+    // Commitment integrity (#3) — all commitments, all-time: kept vs slipped is
+    // the "promises kept" track record. Cheap: indexed partial on is_commitment.
+    var commitQ = supabase
+      .from("folio_tasks")
+      .select("is_commitment, done, closed_at, due_date")
+      .eq("user_id", userId)
+      .eq("is_commitment", true)
+      .limit(3000);
+
+    Promise.all([usageQ, corrQ, meetQ, commitQ]).then(function (res) {
       if (cancelled) return;
       var usageRows = (res[0] && !res[0].error && res[0].data) || [];
       var corrRows  = (res[1] && !res[1].error && res[1].data) || [];
       var meetRows  = (res[2] && !res[2].error && res[2].data) || [];
+      var commitRows = (res[3] && !res[3].error && res[3].data) || [];
 
       // ── Cost (30d) ──────────────────────────────────────────────
       var usd30 = 0, thisWeek = 0, prevWeek = 0;
@@ -137,6 +148,7 @@ export function useFolioHealth(userId) {
           top: byEndpoint[0] || null,
           endpoints: byEndpoint.slice(0, 5),
         },
+        commitments: commitmentStats(commitRows, { now: now }),
       });
       setLoading(false);
     }, function () {

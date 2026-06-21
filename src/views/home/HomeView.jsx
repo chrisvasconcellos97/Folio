@@ -14,7 +14,8 @@ import { OperatorHub } from "./OperatorHub";
 import { OperatorRunButton } from "./OperatorRunButton";
 import { generateCheckInQuestions } from "../../lib/checkIn";
 import { trackerProjects, isTrackerDirty, buildTrackerTSV, isTrackerReminderWindow } from "../../lib/teamTracker";
-import { callPortfolioBriefPip } from "../../lib/pip";
+import { callPortfolioBriefPip, callWeekWrapPip } from "../../lib/pip";
+import { weeklyMovement, candidateWins, isFridayWrapWindow } from "../../lib/weekReview";
 import { isProjectComplete } from "../../lib/gaugeStatus";
 import { notMyRelationship } from "../../lib/accountHealth";
 import { suggestionLabel } from "../pip/PipCatchUp";
@@ -170,7 +171,7 @@ function makeAccountLinkify(accounts, onOpenAccount) {
   };
 }
 
-export function HomeView({ userName, userId, userEmail, accounts, meetings, items, cadences, projects, contacts, members, themes, showOnboardingCard, dripQuestion, dripQueueCount, commitmentNudges, pipFacts, profileProse, scheduledMeetings, handlers }) {
+export function HomeView({ userName, userId, userEmail, accounts, meetings, items, cadences, projects, contacts, members, wins, themes, showOnboardingCard, dripQuestion, dripQueueCount, commitmentNudges, pipFacts, profileProse, scheduledMeetings, handlers }) {
   // All callback props arrive grouped in one `handlers` bag (Batch 8 — prop-
   // sprawl reduction). Re-expanded to locals here so the many internal call
   // sites (onOpenAccount ×17, onOpenCadenceHub ×14, …) stay byte-for-byte
@@ -194,6 +195,7 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
   var onUpdateItem           = handlers.onUpdateItem;
   var onDeleteItem           = handlers.onDeleteItem;
   var onUpdateProject        = handlers.onUpdateProject;
+  var onAddWin               = handlers.onAddWin;
   var onOpenDigest           = handlers.onOpenDigest;
   var onOpenScheduled        = handlers.onOpenScheduled;
   var onOpenCommitments      = handlers.onOpenCommitments;
@@ -757,6 +759,57 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
     } else {
       showToast("Clipboard unavailable", "error");
     }
+  }
+
+  // Friday Pip Wrap (#4) — the week-in-review. Deterministic by default; the
+  // "✦ Pip's take" paragraph is an on-demand Pip call. Only computes on Fridays.
+  var isFriday = isFridayWrapWindow();
+  var wrap = useMemo(function () {
+    if (!isFriday) return null;
+    var isMine = function (a) { return !a.owner_user_id || a.owner_user_id === userId; };
+    return weeklyMovement({
+      now: new Date(), accounts: accounts, meetings: meetings,
+      projects: projects, tasks: items, wins: wins, isMine: isMine,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFriday, accounts, meetings, projects, items, wins, userId]);
+  var wrapCandidates = useMemo(function () {
+    if (!isFriday) return [];
+    var logged = {};
+    (wins || []).forEach(function (w) { if (w.source_ref) logged[w.source_ref] = true; });
+    return candidateWins({ now: new Date(), accounts: accounts, projects: projects, tasks: items })
+      .filter(function (c) { return !logged[c.ref]; });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFriday, accounts, projects, items, wins]);
+  var [wrapTake, setWrapTake] = useState(null);
+  var [wrapTakeLoading, setWrapTakeLoading] = useState(false);
+
+  function askWrapTake() {
+    if (wrapTakeLoading || !wrap) return;
+    setWrapTakeLoading(true);
+    callWeekWrapPip({
+      firstName: userName || "",
+      summary: {
+        commitmentsKept: wrap.commitmentsKept, commitmentsSlipped: wrap.commitmentsSlipped,
+        touched: wrap.touched.map(function (t) { return t.name; }),
+        neglected: wrap.neglected.map(function (n) { return n.name; }),
+        moved: wrap.moved.map(function (m) { return m.title; }),
+        wins: (wrap.wins || []).map(function (w) { return w.title; }),
+      },
+    }).then(function (r) {
+      setWrapTakeLoading(false);
+      if (r && r.wrap) setWrapTake(r.wrap);
+      else showToast("Pip had nothing to add", "error");
+    }).catch(function () {
+      setWrapTakeLoading(false);
+      showToast("Pip's take is unavailable right now", "error");
+    });
+  }
+
+  function logCandidateWin(c) {
+    if (!onAddWin) return;
+    onAddWin({ title: c.title, account_id: c.accountId || null, kind: c.kind, source_ref: c.ref });
+    showToast("Win logged ✦");
   }
 
   function handleCheckInAnswer(q, optId) {
@@ -2110,6 +2163,85 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
               fontFamily: "'Inter', system-ui, sans-serif", flexShrink: 0,
             }}
           >Copy rows</button>
+        </div>
+      )}
+
+      {wrap && (
+        <div style={{ marginBottom: 12 }}>
+          <InfoCard label="✦ Pip Wrap · this week" accent={C.accent}>
+            {wrap.isQuiet ? (
+              <div style={{ fontSize: 13.5, color: C.textSub, lineHeight: 1.5 }}>
+                Quiet week — nothing major moved. Sometimes that's the read.
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13.5, color: C.text, lineHeight: 1.5 }}>
+                <div>
+                  <b>{wrap.commitmentsKept}</b> promise{wrap.commitmentsKept === 1 ? "" : "s"} kept
+                  {wrap.commitmentsSlipped > 0 && <span style={{ color: C.yellow }}> · {wrap.commitmentsSlipped} slipped</span>}
+                  {" · "}<b>{wrap.touched.length}</b> account{wrap.touched.length === 1 ? "" : "s"} met
+                  {" · "}<b>{wrap.moved.length}</b> project{wrap.moved.length === 1 ? "" : "s"} moved
+                </div>
+                {wrap.touched.length > 0 && (
+                  <div style={{ fontSize: 12.5, color: C.textSub }}>
+                    <span style={{ color: C.textMuted }}>Met with:</span> {wrap.touched.map(function (t) { return t.name; }).join(", ")}
+                  </div>
+                )}
+                {wrap.moved.length > 0 && (
+                  <div style={{ fontSize: 12.5, color: C.textSub }}>
+                    <span style={{ color: C.textMuted }}>Moved:</span> {wrap.moved.map(function (m) { return m.title; }).join(", ")}
+                  </div>
+                )}
+                {wrap.neglected.length > 0 && (
+                  <div style={{ fontSize: 12.5, color: C.textSub }}>
+                    <span style={{ color: C.textMuted }}>Went quiet:</span> {wrap.neglected.map(function (n) { return n.name + (n.days ? " (" + n.days + "d)" : ""); }).join(", ")}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {wrapCandidates.length > 0 && (
+              <div style={{ marginTop: 12 }}>
+                <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 6, fontWeight: 600, letterSpacing: "0.03em" }}>WINS TO LOG</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {wrapCandidates.slice(0, 6).map(function (c) {
+                    return (
+                      <button
+                        key={c.ref}
+                        onClick={function () { logCandidateWin(c); }}
+                        style={{
+                          background: C.accentFaint, border: "1px solid " + C.accentLine, borderRadius: 14,
+                          padding: "5px 11px", fontSize: 12, color: C.text, cursor: "pointer",
+                          fontFamily: "'Inter', system-ui, sans-serif", maxWidth: 280,
+                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                        }}
+                      >✦ {c.title}</button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div style={{ marginTop: 14 }}>
+              {wrapTake ? (
+                <div style={{
+                  fontSize: 13.5, color: C.text, lineHeight: 1.6, fontStyle: "italic",
+                  borderLeft: "2px solid " + C.accentLine, paddingLeft: 12,
+                }}>{wrapTake}</div>
+              ) : (
+                <button
+                  onClick={askWrapTake}
+                  disabled={wrapTakeLoading || (wrap && wrap.isQuiet)}
+                  style={{
+                    background: "transparent", border: "1px solid " + C.accentLine, borderRadius: 8,
+                    padding: "7px 14px", fontSize: 12.5, fontWeight: 600,
+                    color: wrap && wrap.isQuiet ? C.textMuted : C.accent,
+                    cursor: wrapTakeLoading || (wrap && wrap.isQuiet) ? "default" : "pointer",
+                    fontFamily: "'Inter', system-ui, sans-serif",
+                  }}
+                >{wrapTakeLoading ? "Pip's thinking…" : "✦ Pip's take on the week"}</button>
+              )}
+            </div>
+          </InfoCard>
         </div>
       )}
 

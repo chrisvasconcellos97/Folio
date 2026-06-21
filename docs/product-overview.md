@@ -222,6 +222,24 @@ This kills the two-system drift: instead of maintaining projects in Folios
 data that never lives in Folios; it's filled in Excel. See
 `data-handling.md`.)
 
+### Win log & the Friday Pip Wrap
+
+A **win log** (the "brag file") persists the things that went right — a
+project landed, a promise kept, a fire put out — so they survive for review
+season instead of evaporating. Wins are logged one-tap from auto-detected
+candidates (a project completed this week, a commitment kept on time) or
+typed in manually. The log lives in **Settings → Pip**, alongside a
+**"promises kept" track-record stat** (commitments kept on time vs. slipped),
+which also feeds the "is Folios earning its keep?" dashboard.
+
+On Fridays, the **Pip Wrap** card appears on Home — a week-in-review built
+**deterministically** (zero AI cost): promises kept/slipped, accounts met
+vs. gone quiet, projects that moved, wins logged. A one-tap **"✦ Pip's take"**
+adds a single reflective paragraph about *how* the week went (the one optional
+AI call, kept cheap and on-demand — the same cost philosophy as the
+manual-trigger operator). Everything here is about the user's own work; no
+business figures are involved.
+
 ### Inactive & Merge
 
 No hard deletes for accounts or users. Everything is reversible:

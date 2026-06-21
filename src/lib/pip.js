@@ -1495,6 +1495,23 @@ export function callPortfolioBriefPip(payload) {
   });
 }
 
+// Friday Pip Wrap (#4) — the OPTIONAL "✦ Pip's take" paragraph. The Wrap card is
+// deterministic by default; this is tapped on demand. Payload is the already-
+// summarized week (qualitative — names/titles/counts, data-line clean).
+// Returns { wrap: "<paragraph>" } or { wrap: null }.
+export function callWeekWrapPip(payload) {
+  return authHeaders().then(function (headers) {
+    return fetch("/api/week-wrap", {
+      method: "POST",
+      headers: headers,
+      body: JSON.stringify(payload),
+    }).then(function (r) {
+      if (!r.ok) throw new Error("Week wrap failed");
+      return r.json();
+    });
+  });
+}
+
 // Monday 1:1 pack — the ONE Sonnet call (read + boss-ask extraction). Phase 2 #1.
 // Deterministic sections are built client-side (src/lib/mondayPack.js); this only
 // fetches sections 0 + 2. Returns { read, boss_asks: [{ask, status, account}] }.
