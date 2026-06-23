@@ -43,6 +43,7 @@ var AddAccountModal        = lazy(function () { return import("./views/accounts/
 var StartConversationModal = lazy(function () { return import("./views/accounts/StartConversationModal").then(function (m) { return { default: m.StartConversationModal }; }); });
 var AdHocConversationFlow  = lazy(function () { return import("./views/accounts/AdHocConversationFlow").then(function (m) { return { default: m.AdHocConversationFlow }; }); });
 var ScheduleMeetingModal   = lazy(function () { return import("./views/cadence/ScheduleMeetingModal").then(function (m) { return { default: m.ScheduleMeetingModal }; }); });
+var SetPTOModal            = lazy(function () { return import("./views/cadence/SetPTOModal").then(function (m) { return { default: m.SetPTOModal }; }); });
 var AddLifeItemModal       = lazy(function () { return import("./views/life/AddLifeItemModal").then(function (m) { return { default: m.AddLifeItemModal }; }); });
 var OnboardingTour         = lazy(function () { return import("./views/welcome/OnboardingTour").then(function (m) { return { default: m.OnboardingTour }; }); });
 var PipCatchUp             = lazy(function () { return import("./views/pip/PipCatchUp").then(function (m) { return { default: m.PipCatchUp }; }); });
@@ -63,6 +64,7 @@ import { usePipDripQuestions } from "./hooks/usePipDripQuestions.js";
 import { usePipFacts as usePipFactsApp } from "./hooks/usePipFacts.js";
 import { useCommitmentNudges } from "./hooks/useCommitmentNudges.js";
 import { useWins } from "./hooks/useWins.js";
+import { useAwayPeriods } from "./hooks/useAwayPeriods.js";
 import { useRecentThemes } from "./hooks/useRecentThemes";
 import { C } from "./lib/colors";
 import { QuickTaskModal } from "./views/quicktasks/QuickTaskModal";
@@ -92,6 +94,7 @@ export default function App() {
   var [convPrefillDate, setConvPrefillDate] = useState(null); // ISO date string from calendar click
   var [adHocFlow, setAdHocFlow]         = useState(null); // { accountId, draftId }
   var [showScheduleModal, setShowScheduleModal] = useState(false);
+  var [showPTOModal, setShowPTOModal] = useState(false);
   var [schedulePrefillDate, setSchedulePrefillDate] = useState(null); // ISO date string from clicking a day
   // Ref so handleSetView's setTimeout can pick up the intended account without
   // the setSelected(null) inside the delay wiping it out.
@@ -911,6 +914,7 @@ export default function App() {
 
   var commitmentNudgesHook = useCommitmentNudges(userId, accounts);
   var winsHook             = useWins(userId);
+  var awayHook             = useAwayPeriods(userId);
   var recentThemes         = useRecentThemes(userId);
 
   // Share Target — detect when the app is launched via the PWA Web Share Target.
@@ -1222,6 +1226,7 @@ export default function App() {
         contacts={allContacts}
         members={members}
         wins={winsHook.wins}
+        awayPeriods={awayHook.periods}
         themes={recentThemes}
         scheduledMeetings={scheduledMeetings}
         handlers={{
@@ -1403,6 +1408,7 @@ export default function App() {
           setSchedulePrefillDate(dateOrNull);
           setShowScheduleModal(true);
         }}
+        onSetPTO={function () { setShowPTOModal(true); }}
         onOpenScheduled={handleOpenScheduled}
         onOpenHub={function (cadence) {
           if (cadence.cadence_scope === 'person' || !cadence.account_id) {
@@ -1465,6 +1471,7 @@ export default function App() {
         role={role}
         members={members}
         accounts={accounts}
+        awayPeriods={awayHook.periods}
         onStartInterview={function () { setShowInterview(true); }}
         onOpenCatchUp={function () { setCatchUpOpen(true); }}
       />
@@ -1535,6 +1542,15 @@ export default function App() {
         });
       }}
       onClose={function () { setShowScheduleModal(false); setSchedulePrefillDate(null); }}
+    /></Suspense>
+  );
+
+  var setPTOModal = showPTOModal && (
+    <Suspense fallback={null}><SetPTOModal
+      periods={awayHook.periods}
+      onAdd={awayHook.addAway}
+      onRemove={awayHook.removeAway}
+      onClose={function () { setShowPTOModal(false); }}
     /></Suspense>
   );
 
@@ -1721,6 +1737,7 @@ export default function App() {
       accounts={accounts}
       userId={userId}
       addMeeting={addMeeting}
+      awayPeriods={awayHook.periods}
       onClose={function () { setShowDigestIngest(false); }}
     /></Suspense>
   ) : null;
@@ -1766,6 +1783,7 @@ export default function App() {
         {addAccountModal}
         {startConvModal}
         {scheduleMeetingModal}
+        {setPTOModal}
         {adHocFlowOverlay}
         {globalQuickTaskModal}
         {/* Floating Pip (desktop) — hidden on home (home has its own centerpiece orb) and pip itself */}
@@ -1866,6 +1884,7 @@ export default function App() {
       {addAccountModal}
       {startConvModal}
       {scheduleMeetingModal}
+        {setPTOModal}
       {adHocFlowOverlay}
       {globalQuickTaskModal}
       {/* Mobile floating Pip removed — Pip now lives in the bottom nav bar. */}

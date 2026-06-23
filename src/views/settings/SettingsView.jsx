@@ -773,8 +773,8 @@ function HealthStat({ label, value, sub, warn }) {
   );
 }
 
-function FolioHealthSection({ userId, accounts }) {
-  var health = useFolioHealth(userId);
+function FolioHealthSection({ userId, accounts, awayPeriods }) {
+  var health = useFolioHealth(userId, awayPeriods);
   var h = health.data;
 
   // Account feed stats — straight from the accounts already loaded.
@@ -860,7 +860,8 @@ function FolioHealthSection({ userId, accounts }) {
                 value={h.commitments.kept + " / " + h.commitments.resolved + (h.commitments.rate != null ? " (" + Math.round(h.commitments.rate * 100) + "%)" : "")}
                 sub={"commitments kept on time"
                   + (h.commitments.slipped ? " · " + h.commitments.slipped + " slipped" : "")
-                  + (h.commitments.open ? " · " + h.commitments.open + " still open" : "")}
+                  + (h.commitments.open ? " · " + h.commitments.open + " still open" : "")
+                  + (h.commitments.excused ? " · " + h.commitments.excused + " excused (PTO)" : "")}
               />
             )}
           </div>
@@ -1863,7 +1864,7 @@ function AppearanceSection() {
   );
 }
 
-export function SettingsView({ userId, userMeta, orgId, role, members, accounts, onStartInterview, onOpenCatchUp }) {
+export function SettingsView({ userId, userMeta, orgId, role, members, accounts, awayPeriods, onStartInterview, onOpenCatchUp }) {
   return (
     <div style={{ maxWidth: 600, margin: "0 auto", padding: "8px 0 40px" }}>
       <div style={{ marginBottom: 24, display: "flex", alignItems: "center", gap: 14 }}>
@@ -1891,7 +1892,7 @@ export function SettingsView({ userId, userMeta, orgId, role, members, accounts,
               Pip — AI assistant
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <FolioHealthSection userId={userId} accounts={accounts} />
+              <FolioHealthSection userId={userId} accounts={accounts} awayPeriods={awayPeriods} />
               <WinLogSection userId={userId} accounts={accounts} />
               <PipPrefsSection userId={userId} />
               <PipUsageSection userId={userId} />

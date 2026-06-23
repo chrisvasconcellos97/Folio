@@ -240,6 +240,23 @@ AI call, kept cheap and on-demand — the same cost philosophy as the
 manual-trigger operator). Everything here is about the user's own work; no
 business figures are involved.
 
+### PTO / Away Mode
+
+Folios knows when the user is out, so silence over a vacation reads as "you
+were away," not "you dropped the ball." PTO is set as a date range from the
+**calendar** ("✈ Set PTO"). Over that window:
+
+- **False alarms are suppressed** — cold-account nudges and off-cadence
+  anomaly signals whose quiet stretch overlaps the away window don't fire.
+- **The score isn't punished** — commitments that came due while away are
+  *excused* from the "promises kept" stat rather than counted as slipped.
+- **The return is caught** — when the user is freshly back and pastes their
+  catch-up summary (the daily-summary box), the filed items are tagged and
+  surface in a **"While you were out"** card on Home that persists until each
+  is cleared.
+
+Away periods are personal scheduling only — no business data is involved.
+
 ### Inactive & Merge
 
 No hard deletes for accounts or users. Everything is reversible:

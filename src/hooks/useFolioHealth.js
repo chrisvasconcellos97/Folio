@@ -22,7 +22,7 @@ function dayKey(d) {
   return dt.getFullYear() + "-" + dt.getMonth() + "-" + dt.getDate();
 }
 
-export function useFolioHealth(userId) {
+export function useFolioHealth(userId, awayPeriods) {
   var [data, setData]       = useState(null);
   var [loading, setLoading] = useState(false);
 
@@ -148,7 +148,7 @@ export function useFolioHealth(userId) {
           top: byEndpoint[0] || null,
           endpoints: byEndpoint.slice(0, 5),
         },
-        commitments: commitmentStats(commitRows, { now: now }),
+        commitments: commitmentStats(commitRows, { now: now, awayPeriods: awayPeriods }),
       });
       setLoading(false);
     }, function () {
@@ -158,7 +158,7 @@ export function useFolioHealth(userId) {
     });
 
     return function () { cancelled = true; };
-  }, [userId]);
+  }, [userId, awayPeriods]);
 
   return { data: data, loading: loading };
 }

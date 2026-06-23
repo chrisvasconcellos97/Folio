@@ -46,6 +46,19 @@ describe("weekReview", () => {
       var s = commitmentStats([{ is_commitment: true, done: false, due_date: "2026-12-31" }], { now: FRI });
       expect(s.rate).toBe(null);
     });
+    it("excuses slips whose due date fell during an away period (don't punish PTO)", () => {
+      var t = [
+        { is_commitment: true, done: false, due_date: "2026-06-16" }, // overdue, but during PTO
+        { is_commitment: true, done: false, due_date: "2026-06-10" }, // overdue, not PTO → slipped
+        { is_commitment: true, done: true, closed_at: "2026-06-10T12:00:00Z", due_date: "2026-06-12" }, // kept
+      ];
+      var away = [{ start_date: "2026-06-15", end_date: "2026-06-19" }];
+      var s = commitmentStats(t, { now: FRI, awayPeriods: away });
+      expect(s.excused).toBe(1);
+      expect(s.slipped).toBe(1);
+      expect(s.kept).toBe(1);
+      expect(s.rate).toBe(0.5); // 1 kept / (1 kept + 1 slipped); the excused one doesn't count
+    });
   });
 
   describe("weeklyMovement", () => {

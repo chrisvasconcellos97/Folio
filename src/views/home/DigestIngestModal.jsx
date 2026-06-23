@@ -5,6 +5,7 @@ import { AccountPicker } from "../../components/AccountPicker";
 import { showToast } from "../../components/Toast";
 import { parseDigest } from "../../lib/digestParse";
 import { callParseDigestPip } from "../../lib/pip";
+import { justBackFrom } from "../../lib/awayMode";
 import { insertTask } from "../../hooks/useTasks";
 
 var INTER = "'Inter', system-ui, sans-serif";
@@ -44,7 +45,10 @@ function KindBadge({ kind }) {
   );
 }
 
-export function DigestIngestModal({ accounts, userId, addMeeting, onClose }) {
+export function DigestIngestModal({ accounts, userId, addMeeting, awayPeriods, onClose }) {
+  // If the user is freshly back from PTO, items filed from this paste are the
+  // catch-up pile → tag them so they surface under "While you were out" (#50).
+  var backFromPTO = !!justBackFrom(awayPeriods, new Date(), 14);
   var [step, setStep]       = useState("paste"); // paste | preview
   var [raw, setRaw]         = useState("");
   var [rows, setRows]       = useState([]);
@@ -108,21 +112,24 @@ export function DigestIngestModal({ accounts, userId, addMeeting, onClose }) {
 
     var counts = { owe: 0, waiting: 0, quiet: 0, touch: 0 };
     var ops = selected.map(function (r) {
+      // Only set the flag when actually back from PTO — omitting it otherwise
+      // keeps the insert from depending on the (maybe-not-yet-migrated) column.
+      var awayTag = backFromPTO ? { follow_up_on_return: true } : {};
       if (r.kind === "owe") {
-        return insertTask(userId, {
+        return insertTask(userId, Object.assign({
           title: r.text, account_id: r.accountId,
           due_date: r.due || null, is_commitment: true, user_added: true,
-        }).then(function () { counts.owe++; });
+        }, awayTag)).then(function () { counts.owe++; });
       }
       if (r.kind === "waiting" || r.kind === "quiet") {
         // waiting_on names the PERSON who has the ball — never the account.
         // A QUIET thread with no named person stays a waiting-on task without a
         // who, rather than stamping the account name into the person field.
-        return insertTask(userId, {
+        return insertTask(userId, Object.assign({
           title: r.text, account_id: r.accountId,
           waiting_on: r.who || null, waiting_on_since: r.since || todayISO,
           user_added: true,
-        }).then(function () { counts[r.kind]++; });
+        }, awayTag)).then(function () { counts[r.kind]++; });
       }
       // touch → a lightweight summarized email touchpoint; feeds last-interaction,
       // history, and Pip context through the normal meeting path.

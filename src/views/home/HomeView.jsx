@@ -14,6 +14,7 @@ import { OperatorHub } from "./OperatorHub";
 import { OperatorRunButton } from "./OperatorRunButton";
 import { generateCheckInQuestions } from "../../lib/checkIn";
 import { trackerProjects, isTrackerDirty, buildTrackerTSV, isTrackerReminderWindow } from "../../lib/teamTracker";
+import { overlapsAway, currentlyAway, justBackFrom, awayLabel } from "../../lib/awayMode";
 import { callPortfolioBriefPip, callWeekWrapPip } from "../../lib/pip";
 import { weeklyMovement, candidateWins, isFridayWrapWindow } from "../../lib/weekReview";
 import { isProjectComplete } from "../../lib/gaugeStatus";
@@ -171,7 +172,7 @@ function makeAccountLinkify(accounts, onOpenAccount) {
   };
 }
 
-export function HomeView({ userName, userId, userEmail, accounts, meetings, items, cadences, projects, contacts, members, wins, themes, showOnboardingCard, dripQuestion, dripQueueCount, commitmentNudges, pipFacts, profileProse, scheduledMeetings, handlers }) {
+export function HomeView({ userName, userId, userEmail, accounts, meetings, items, cadences, projects, contacts, members, wins, awayPeriods, themes, showOnboardingCard, dripQuestion, dripQueueCount, commitmentNudges, pipFacts, profileProse, scheduledMeetings, handlers }) {
   // All callback props arrive grouped in one `handlers` bag (Batch 8 — prop-
   // sprawl reduction). Re-expanded to locals here so the many internal call
   // sites (onOpenAccount ×17, onOpenCadenceHub ×14, …) stay byte-for-byte
@@ -460,6 +461,9 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
       var coldAccounts = (accounts || []).filter(function (a) {
         if (a.is_inactive) return false;
         if (notMyRelationship(a, userId)) return false; // not my relationship
+        // PTO Mode (#50): if the quiet stretch overlaps time you were OUT, don't
+        // flag it as a dropped ball — the silence is explained.
+        if (overlapsAway(a.last_interaction_at, new Date(), awayPeriods)) return false;
         var snap = (snapshots || []).find(function (s) { return s.account_id === a.id; });
         if (!snap) return false;
         return snap.days_since_contact !== null && snap.days_since_contact >= 30 &&
@@ -572,6 +576,8 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
         if (a.is_inactive) return;
         // Item 38: skip off-cadence nudges for accounts owned by someone else.
         if (notMyRelationship(a, userId)) return;
+        // PTO Mode (#50): silence explained by being out isn't an anomaly.
+        if (overlapsAway(a.last_interaction_at, new Date(), awayPeriods)) return;
         var dates = (meetings || [])
           .filter(function (m) { return m.account_id === a.id && m.meeting_date && m.status !== "scheduled"; })
           .map(function (m) { return m.meeting_date; })
@@ -737,6 +743,20 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
     return (waitingOnRows || []).filter(function (r) { return !suppressedByCheckIn(r.kind, r.id); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [waitingOnRows, checkInTargetKeys]);
+
+  // "While you were out" (#50) — items filed from a return-from-vacation summary,
+  // tagged follow_up_on_return. Persists until the user clears each (their call).
+  var whileAwayItems = useMemo(function () {
+    return (items || []).filter(function (i) { return i && i.follow_up_on_return && !i.done; });
+  }, [items]);
+  var justBackPeriod = justBackFrom(awayPeriods, new Date(), 14);
+  function clearAwayItem(id) {
+    if (onUpdateItem) onUpdateItem(id, { follow_up_on_return: false });
+  }
+  function clearAllAway() {
+    whileAwayItems.forEach(function (i) { if (onUpdateItem) onUpdateItem(i.id, { follow_up_on_return: false }); });
+    showToast("Cleared — welcome back");
+  }
 
   // Team Sheet sync nudge — Phase 2 #2. Surfaces Mon afternoon / Tue (before the
   // team meeting) when tracked projects have changed since their last export.
@@ -2141,6 +2161,50 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
               }}
             >↺ Replay</button>
           </div>
+        </div>
+      )}
+
+      {whileAwayItems.length > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          <InfoCard label={"✈ While you were out" + (justBackPeriod ? " · back from " + awayLabel(justBackPeriod) : "")} accent={C.accent}>
+            <div style={{ fontSize: 12.5, color: C.textSub, lineHeight: 1.5, marginBottom: 10 }}>
+              These piled up while you were away. Clear each as you handle it — they stay here until you do.
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+              {whileAwayItems.map(function (i) {
+                var acct = (accounts || []).find(function (a) { return a.id === i.account_id; });
+                return (
+                  <div key={i.id} style={{
+                    display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10,
+                    padding: "8px 11px", borderRadius: 8, border: "1px solid " + C.rule, background: C.surface,
+                  }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 13.5, color: C.text, lineHeight: 1.4 }}>{i.text || i.title}</div>
+                      <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
+                        {acct ? acct.name : "No account"}{i.waiting_on ? " · waiting on " + i.waiting_on : (i.is_commitment ? " · you owe" : "")}
+                      </div>
+                    </div>
+                    <button
+                      onClick={function () { clearAwayItem(i.id); }}
+                      style={{
+                        background: "transparent", border: "1px solid " + C.rule, borderRadius: 6,
+                        padding: "4px 10px", fontSize: 11.5, color: C.textMuted, cursor: "pointer",
+                        fontFamily: "'Inter', system-ui, sans-serif", whiteSpace: "nowrap", flexShrink: 0,
+                      }}
+                    >✓ Handled</button>
+                  </div>
+                );
+              })}
+            </div>
+            <button
+              onClick={clearAllAway}
+              style={{
+                marginTop: 10, background: "transparent", border: "none",
+                fontSize: 12, color: C.textMuted, cursor: "pointer",
+                fontFamily: "'Inter', system-ui, sans-serif",
+              }}
+            >Clear all</button>
+          </InfoCard>
         </div>
       )}
 

@@ -89,7 +89,7 @@ function buildGlobalCadenceInsight(allCadences, handlers, activeAccountIds) {
 }
 
 /* ---- Main CadenceView ---- */
-export function CadenceView({ cadences, cadencesError, onRetryCadences, accounts, contacts, onSelectAccount, addCadence, onCreateItem, onOpenHub, scheduledMeetings, onScheduleMeeting, onOpenScheduled }) {
+export function CadenceView({ cadences, cadencesError, onRetryCadences, accounts, contacts, onSelectAccount, addCadence, onCreateItem, onOpenHub, scheduledMeetings, onScheduleMeeting, onOpenScheduled, onSetPTO }) {
   var [viewMode, setViewMode] = useState('list');
   var insightHandlers = {
     onClickToday:    function () { setViewMode('list'); setTimeout(function () { scrollToCadenceGroup('today'); }, 50); },
@@ -175,7 +175,25 @@ export function CadenceView({ cadences, cadencesError, onRetryCadences, accounts
               </div>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
+            {onSetPTO && (
+              <button
+                onClick={function () { onSetPTO(); }}
+                title="Tell Pip when you're out so it doesn't flag the quiet as dropped balls"
+                style={{
+                  background: 'transparent',
+                  border: '1px solid ' + C.rule,
+                  borderRadius: 6,
+                  padding: '8px 14px',
+                  color: C.textMuted,
+                  fontFamily: INTER,
+                  fontSize: 12, fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                ✈ Set PTO
+              </button>
+            )}
             {onScheduleMeeting && (
               <button
                 onClick={function () { onScheduleMeeting(null); }}

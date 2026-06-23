@@ -11,6 +11,7 @@
 // shops/customers/revenue ever enter these computations.
 
 import { toLocalDate } from "./dateUtils.js";
+import { isAwayOn } from "./awayMode.js";
 
 var DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -34,25 +35,32 @@ export function weekStart(now) {
 export function commitmentStats(tasks, opts) {
   opts = opts || {};
   var now = opts.now ? new Date(opts.now) : new Date();
-  var kept = 0, slipped = 0, open = 0;
+  var away = opts.awayPeriods || [];
+  var kept = 0, slipped = 0, open = 0, excused = 0;
   (tasks || []).forEach(function (t) {
     if (!t || !t.is_commitment) return;
     var due = t.due_date ? toLocalDate(t.due_date) : null;
+    var slippedNow;
     if (t.done) {
       var closed = t.closed_at ? new Date(t.closed_at).getTime() : null;
-      if (due && closed && closed > endOfDayMs(due)) slipped++;
-      else kept++;
+      if (due && closed && closed > endOfDayMs(due)) { slippedNow = true; }
+      else { kept++; return; }
     } else if (due && now.getTime() > endOfDayMs(due)) {
-      slipped++;
+      slippedNow = true;
     } else {
-      open++;
+      open++; return;
     }
+    // It slipped — but don't punish PTO: a commitment whose due date fell while
+    // the user was away is EXCUSED (dropped from the score), not counted slipped.
+    if (slippedNow && t.due_date && isAwayOn(t.due_date, away)) { excused++; return; }
+    slipped++;
   });
   var resolved = kept + slipped;
   return {
     kept: kept,
     slipped: slipped,
     open: open,
+    excused: excused,              // slipped-but-on-PTO, excluded from the rate
     resolved: resolved,
     rate: resolved ? kept / resolved : null, // null when nothing has resolved yet
   };
