@@ -5,7 +5,15 @@
 --    folded into schema.sql function defs. Pins search_path on trigger fns
 --    (advisor lint 0011). Zero behavior change.
 alter function public.update_updated_at()            set search_path = '';
-alter function public.update_last_interaction()      set search_path = '';
+-- update_last_interaction() references folio_accounts UNQUALIFIED in its body,
+-- so an empty search_path makes it throw "relation folio_accounts does not
+-- exist" on every meeting/conversation insert (it's the trigger that bumps
+-- folio_accounts.last_interaction_at). It MUST keep `public` in the path.
+-- (Corrected 2026-06-23 after the '' pin broke meeting logging in prod. The
+-- prod fix is: alter function public.update_last_interaction() set search_path = public;
+-- Do NOT pin this one to '' — qualify the body as public.folio_accounts first
+-- if you ever want to.)
+alter function public.update_last_interaction()      set search_path = public;
 alter function public.folio_tasks_touch_updated_at() set search_path = '';
 alter function public.set_updated_at()               set search_path = '';
 

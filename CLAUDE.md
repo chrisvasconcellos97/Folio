@@ -543,7 +543,9 @@ Both gated green (`vite build` · **394 tests** · `check-guards` (6) · `test-a
 
 **NEXT JOBS (Phase 2 "SHINE" remainder):** #6 admin instruction-writer (parked — depends on the work-Claude two-brain side maturing). The Phase 2 SHINE batch (#2/#3/#4) is otherwise built; after they ship, the queue is essentially the roadmap/wishlist. (Specs in the GAME PLAN section + the dated handoffs.)
 
-**Standing dashboard toggles for Chris (out of any branch):** **add `OPENAI_API_KEY` (activates F6)** · Vercel preview-deploys OFF · Supabase leaked-password protection ON · (optional) Vercel Ignored Build Step so `CLAUDE.md`/`docs` pushes don't deploy.
+**⚠️ PROD DB FOOTGUN FIXED June 23 2026 — `update_last_interaction()` search_path.** The June-17 hardening pinned `search_path = ''` on this trigger fn, but its body references `folio_accounts` UNQUALIFIED → it threw "relation folio_accounts does not exist" on EVERY meeting/conversation insert (broke Log Conversation + Start Meeting; reads were fine, served from localStorage cache, which masked it + sent us chasing a phantom PostgREST cache issue). The cache/restart was a RED HERRING — the real tell was the raw error text. **Prod fix (Chris runs in SQL Editor, takes effect immediately, no restart):** `alter function public.update_last_interaction() set search_path = public;` Corrected in `supabase/security_hardening_20260617.sql`. Lesson: get the raw error string before theorizing; "relation X does not exist" = SQL/search_path, NOT PostgREST cache ("could not find table in schema cache").
+
+**Standing dashboard toggles for Chris (out of any branch):** **run the `update_last_interaction` search_path fix above if not yet done** · **add `OPENAI_API_KEY` (activates F6)** · Vercel preview-deploys OFF · Supabase leaked-password protection ON · (optional) Vercel Ignored Build Step so `CLAUDE.md`/`docs` pushes don't deploy.
 
 ---
 
