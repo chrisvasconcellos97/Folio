@@ -101,12 +101,15 @@ employer's quantitative business data. Two enforced properties:
    transaction volumes, customer counts, shop lists/rosters, pricing, or
    contract terms. Where business performance matters, questions are
    directional ("trending up or down?") — never numeric.
-2. **Sanitized at the source.** The Email/Teams Digest Handoff — the one
-   structured channel from the user's work environment into Folios — runs
-   on a fixed prompt whose first rule excludes all quantitative business
-   data. The digest carries account names, people's names, qualitative
-   conclusions, and dates only. Folios parses it deterministically (no AI
-   call) and the user reviews every row before anything is filed.
+2. **Generalized on intake.** The daily-summary ingest — where the user
+   pastes a free-form summary of their work day — extracts commitments,
+   waiting-ons, and notable touchpoints via a Pip (Claude) call whose prompt
+   carries the data line as a hard rule: it generalizes any quantitative
+   business data (revenue, volumes, customer/shop counts, pricing) to
+   qualitative conclusions and never stores the figure. Account and people
+   names are retained; numbers are not. The user reviews every extracted row
+   in a preview before anything is filed. (A deterministic, no-AI parser
+   remains as a fallback if the call is unavailable.)
 
 Raw user-typed notes are stored verbatim (it's the user's notebook), but
 AI-authored memory (facts, profiles, summaries, account state) is

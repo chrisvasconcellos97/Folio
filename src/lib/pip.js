@@ -1495,6 +1495,22 @@ export function callPortfolioBriefPip(payload) {
   });
 }
 
+// Digest ingest (#49) — Pip reads a free-form daily summary and returns
+// structured rows (owe / waiting / quiet / touch) for the preview-and-file flow.
+// Payload: { text, accounts: [names], today }. Returns { rows: [...] }.
+export function callParseDigestPip(payload) {
+  return authHeaders().then(function (headers) {
+    return fetch("/api/parse-digest", {
+      method: "POST",
+      headers: headers,
+      body: JSON.stringify(payload),
+    }).then(function (r) {
+      if (!r.ok) throw new Error("Digest parse failed");
+      return r.json();
+    });
+  });
+}
+
 // Friday Pip Wrap (#4) — the OPTIONAL "✦ Pip's take" paragraph. The Wrap card is
 // deterministic by default; this is tapped on demand. Payload is the already-
 // summarized week (qualitative — names/titles/counts, data-line clean).

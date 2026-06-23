@@ -244,8 +244,10 @@ efficiency where it doesn't:
 - **claude-haiku-4-5-20251001** runs the high-volume or mechanical
   surfaces: per-account Brief Me, follow-up email drafting,
   terminology extraction, account-state compression, the
-  leadership readout, and the on-demand Friday "Pip's take"
-  (`/api/week-wrap`, `PIP_WRAP_MODEL` override).
+  leadership readout, the on-demand Friday "Pip's take"
+  (`/api/week-wrap`, `PIP_WRAP_MODEL` override), and the daily-summary
+  ingest extraction (`/api/parse-digest`, `PIP_DIGEST_MODEL` override —
+  reads the pasted summary and returns rows; data line enforced in-prompt).
 - Each Sonnet surface has a per-surface env override
   (`PIP_CHAT_MODEL`, `PIP_QUESTIONS_MODEL`, `PIP_DAILY_BRIEF_MODEL`,
   `PIP_PROFILE_MODEL`, `PIP_QBR_MODEL`) so the tier can be re-dialed

@@ -4,32 +4,26 @@ import { C } from "../../lib/colors";
 import { AccountPicker } from "../../components/AccountPicker";
 import { showToast } from "../../components/Toast";
 import { parseDigest } from "../../lib/digestParse";
+import { callParseDigestPip } from "../../lib/pip";
 import { insertTask } from "../../hooks/useTasks";
 
 var INTER = "'Inter', system-ui, sans-serif";
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 
-// The matched half of the bridge: this prompt goes to WORK CLAUDE (the
-// corporate side). It enforces the Pip Data Line Rule AT THE SOURCE — the
-// digest arrives in Folios already sanitized. Keep the two halves in sync:
-// this prompt's format ↔ src/lib/digestParse.js.
-var WORK_CLAUDE_PROMPT = `At the end of your email/Teams analysis, output a "Folios digest" — a sanitized handoff block for my personal account notebook. STRICT RULES:
-- NEVER include revenue figures, transaction volumes, customer counts, shop lists, pricing, or contract terms. Qualitative conclusions only.
-- Use supplier/account names and people's names freely; those are fine.
-- One line per entry, exactly these formats (the pipe characters matter):
-
-=== FOLIOS DIGEST · YYYY-MM-DD ===
-[OWE] Account Name | what I committed to do | due: YYYY-MM-DD
-[WAITING] Account Name | Person Name | what they owe me | since: YYYY-MM-DD
-[QUIET] Account Name | Person Name | thread that went quiet | last: YYYY-MM-DD
-[TOUCH] Account Name | one-line qualitative note about a meaningful exchange
-=== END DIGEST ===
-
-- [OWE] = commitments I made in email/Teams that aren't done yet. due: only if a date was stated or clearly implied.
-- [WAITING] = things I'm waiting on from a specific person. since: the date I asked.
-- [QUIET] = threads where the other side went silent and a nudge is warranted.
-- [TOUCH] = notable exchanges worth remembering on the account (tone, direction, decisions) — NOT routine noise. 3 max.
-- Skip empty categories. If nothing qualifies, output the header and END line only.`;
+// Resolve a free-text account name (from Pip's extraction) to an account id:
+// exact case-insensitive first, then a contains match either direction. No
+// match → null, and the user picks it in the preview.
+function matchAccountId(name, accounts) {
+  if (!name) return null;
+  var n = name.trim().toLowerCase();
+  var exact = (accounts || []).find(function (a) { return (a.name || "").toLowerCase() === n; });
+  if (exact) return exact.id;
+  var partial = (accounts || []).find(function (a) {
+    var an = (a.name || "").toLowerCase();
+    return an && (an.indexOf(n) !== -1 || n.indexOf(an) !== -1);
+  });
+  return partial ? partial.id : null;
+}
 
 function KindBadge({ kind }) {
   var cfg = {
@@ -56,23 +50,47 @@ export function DigestIngestModal({ accounts, userId, addMeeting, onClose }) {
   var [rows, setRows]       = useState([]);
   var [unparsed, setUnparsed] = useState([]);
   var [applying, setApplying] = useState(false);
-  var [promptCopied, setPromptCopied] = useState(false);
+  var [parsing, setParsing]   = useState(false);
 
-  function handleParse() {
-    var out = parseDigest(raw, accounts);
-    if (out.rows.length === 0 && out.unparsed.length === 0) {
-      showToast("Nothing to parse — paste the digest block from work Claude");
+  function toPreview(extracted, skipped) {
+    if (!extracted.length && (!skipped || !skipped.length)) {
+      showToast("Pip didn't find anything to file in that — try adding a bit more detail");
       return;
     }
-    setRows(out.rows.map(function (r) {
+    setRows(extracted.map(function (r) {
+      var accountId = r.accountId || matchAccountId(r.accountName, accounts);
       // Matched rows start checked; unmatched need an account picked first.
-      // Already-done commitments ("sent"/"done") start UNchecked so the digest
-      // doesn't re-create a commitment for something already finished — the user
-      // can still tick it if they want it logged.
-      return Object.assign({}, r, { checked: !!r.accountId && !r.done });
+      // Already-done commitments start UNchecked so we don't re-create a
+      // commitment for something finished — the user can still tick it.
+      return Object.assign({}, r, { accountId: accountId, checked: !!accountId && !r.done });
     }));
-    setUnparsed(out.unparsed);
+    setUnparsed(skipped || []);
     setStep("preview");
+  }
+
+  // Pip reads the free-form summary and returns structured rows. Falls back to
+  // the deterministic parser if the call fails (or the paste is already tagged),
+  // so the box never hard-dead-ends.
+  function handleParse() {
+    if (parsing || !raw.trim()) return;
+    setParsing(true);
+    callParseDigestPip({
+      text: raw,
+      accounts: (accounts || []).map(function (a) { return a.name; }).filter(Boolean),
+      today: new Date().toISOString().slice(0, 10),
+    }).then(function (out) {
+      setParsing(false);
+      toPreview((out && out.rows) || [], []);
+    }).catch(function () {
+      // Network/AI failure → deterministic fallback (handles tagged input too).
+      setParsing(false);
+      var det = parseDigest(raw, accounts);
+      if (det.rows.length || det.unparsed.length) {
+        toPreview(det.rows, det.unparsed);
+      } else {
+        showToast("Couldn't read that right now — try again in a moment");
+      }
+    });
   }
 
   function patchRow(idx, fields) {
@@ -131,63 +149,47 @@ export function DigestIngestModal({ accounts, userId, addMeeting, onClose }) {
   }
 
   return (
-    <Modal title="Work digest → Folios" onClose={onClose} width={640}>
+    <Modal title="Paste your daily summary" onClose={onClose} width={640}>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {step === "paste" && (
           <>
             <div style={{ fontSize: 12.5, color: C.textSoft, lineHeight: 1.55, fontFamily: INTER }}>
-              Paste the digest block from your work Claude. One paste files everything —
-              commitments you made, things you're waiting on, threads gone quiet, and
-              notable touchpoints — onto the right accounts.
+              Drop in a summary of your day — emails, calls, whatever you've got, in
+              any format. Pip reads it and pulls out what you owe people, what you're
+              waiting on, and notable exchanges, then files them to the right accounts.
+              You review everything before anything's saved.
             </div>
             <textarea
               value={raw}
               onChange={function (e) { setRaw(e.target.value); }}
-              placeholder={"=== FOLIOS DIGEST · 2026-06-10 ===\n[OWE] Parts Authority | send the audit results | due: 2026-06-12\n[WAITING] All Star | Mike | updated POC list | since: 2026-06-05\n..."}
-              rows={9}
+              placeholder={"Paste your summary here…\n\ne.g. Caught up on email. Told All Star I'd send the audit results by Friday. Still waiting on Mike for the updated POC list — asked him Monday. Good call with Parts Authority, they're leaning toward the integration."}
+              rows={10}
               autoFocus
+              disabled={parsing}
               style={{
                 width: "100%", boxSizing: "border-box",
                 background: C.surface, color: C.text,
                 border: "1px solid " + C.rule, borderRadius: 10,
                 padding: "12px 14px",
-                fontFamily: MONO, fontSize: 16, lineHeight: 1.5,
+                fontFamily: INTER, fontSize: 16, lineHeight: 1.5,
                 resize: "vertical", outline: "none",
+                opacity: parsing ? 0.6 : 1,
               }}
             />
             <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
               <button
                 onClick={handleParse}
-                disabled={!raw.trim()}
+                disabled={!raw.trim() || parsing}
                 style={{
-                  background: raw.trim() ? C.accentDeep : C.accentFaint,
+                  background: raw.trim() && !parsing ? C.accentDeep : C.accentFaint,
                   border: "none", borderRadius: 8, padding: "9px 18px",
                   fontSize: 13, fontWeight: 700,
-                  color: raw.trim() ? "#fff" : C.textMuted,
-                  fontFamily: INTER, cursor: raw.trim() ? "pointer" : "default",
+                  color: raw.trim() && !parsing ? "#fff" : C.textMuted,
+                  fontFamily: INTER, cursor: raw.trim() && !parsing ? "pointer" : "default",
                 }}
               >
-                Preview →
+                {parsing ? "Pip's reading…" : "Review what Pip found →"}
               </button>
-              <button
-                onClick={function () {
-                  navigator.clipboard && navigator.clipboard.writeText(WORK_CLAUDE_PROMPT);
-                  setPromptCopied(true);
-                  showToast("Work-Claude prompt copied — add it to your morning email report");
-                }}
-                style={{
-                  background: "transparent", border: "1px solid " + C.rule,
-                  borderRadius: 8, padding: "9px 14px",
-                  fontSize: 12, color: promptCopied ? C.accent : C.textSoft,
-                  fontFamily: INTER, cursor: "pointer",
-                }}
-              >
-                {promptCopied ? "✓ Prompt copied" : "Get the work-Claude prompt"}
-              </button>
-            </div>
-            <div style={{ fontSize: 11, color: C.textMuted, lineHeight: 1.5, fontFamily: INTER }}>
-              The prompt teaches your work Claude the digest format — sanitized at the
-              source: account and people names only, never numbers, lists, or pricing.
             </div>
           </>
         )}
@@ -246,7 +248,7 @@ export function DigestIngestModal({ accounts, userId, addMeeting, onClose }) {
             </div>
             {unparsed.length > 0 && (
               <div style={{ fontSize: 11, color: C.textMuted, fontFamily: MONO, lineHeight: 1.6 }}>
-                Skipped (not digest lines): {unparsed.slice(0, 3).join(" · ")}{unparsed.length > 3 ? " +" + (unparsed.length - 3) : ""}
+                Skipped (couldn't read as an item): {unparsed.slice(0, 3).join(" · ")}{unparsed.length > 3 ? " +" + (unparsed.length - 3) : ""}
               </div>
             )}
             <div style={{ display: "flex", gap: 8 }}>

@@ -1731,7 +1731,7 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
                     border: "none", cursor: "pointer",
                   }}
                 >
-                  Paste work digest ✦
+                  Paste a daily summary ✦
                 </button>
               </div>
             )}
