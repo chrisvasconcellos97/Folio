@@ -216,12 +216,21 @@ export function DigestIngestModal({ accounts, userId, addMeeting, awayPeriods, o
                     borderRadius: 8, padding: "9px 11px",
                     opacity: r.checked ? 1 : 0.55,
                   }}>
-                    <input
-                      type="checkbox"
-                      checked={!!r.checked}
-                      onChange={function (e) { patchRow(idx, { checked: e.target.checked }); }}
-                      style={{ width: 17, height: 17, marginTop: 2, accentColor: "var(--c-accent)", cursor: "pointer" }}
-                    />
+                    <div
+                      role="checkbox"
+                      aria-checked={!!r.checked}
+                      tabIndex={0}
+                      onClick={function () { patchRow(idx, { checked: !r.checked }); }}
+                      onKeyDown={function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); patchRow(idx, { checked: !r.checked }); } }}
+                      title={r.checked ? "Filed — click to skip" : "Skipped — click to include"}
+                      style={{
+                        width: 22, height: 22, flexShrink: 0, marginTop: 1, borderRadius: 6,
+                        border: "2px solid " + (r.checked ? C.accent : C.textMuted),
+                        background: r.checked ? C.accent : "transparent",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer",
+                      }}
+                    >{r.checked ? "✓" : ""}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", marginBottom: 3 }}>
                         <KindBadge kind={r.kind} />
