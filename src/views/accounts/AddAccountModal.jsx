@@ -643,7 +643,7 @@ export function AddAccountModal({ userId, onSave, onAddContacts, onClose, existi
           />
         </div>
 
-        {members && members.length > 0 ? (
+        {members && members.length > 1 ? (
           <div>
             <FL>Owner</FL>
             <ChipDropdown

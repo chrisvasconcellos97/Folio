@@ -72,11 +72,34 @@ export function useOrg(userId, userEmail) {
               });
             });
         } else {
-          // No accepted membership — check for a pending invite by email
+          // No accepted membership — solo user. Still surface the current user
+          // as a named, selectable "member" so every PersonPicker can assign
+          // work to them BY NAME (not raw email) and there's always a "you" to
+          // pick. Without this, solo users had NO self option anywhere — the
+          // root cause of the long-standing "assignee shows my email / can't
+          // assign to anyone but myself" bug. (TeamSection only mounts when an
+          // org exists, so this never shows a stray "Members (1)" card.)
           setOrg(null);
           setRole(null);
-          setMembers([]);
           setPending([]);
+
+          supabase.auth.getSession().then(function (authResult) {
+            var u = authResult && authResult.data && authResult.data.session && authResult.data.session.user;
+            var fullName = u && u.user_metadata && u.user_metadata.full_name ? u.user_metadata.full_name : null;
+            setMembers([{
+              user_id: userId,
+              email: userEmail || (u && u.email) || null,
+              full_name: fullName,
+              role: "owner",
+              accepted: true,
+              is_inactive: false,
+              org_id: null,
+            }]);
+          }).catch(function () {
+            setMembers(userEmail
+              ? [{ user_id: userId, email: userEmail, full_name: null, role: "owner", accepted: true, is_inactive: false, org_id: null }]
+              : []);
+          });
 
           if (userEmail) {
             supabase
