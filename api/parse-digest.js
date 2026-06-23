@@ -17,7 +17,11 @@ import { logPipUsage } from "./_pipUsage.js";
 
 export const config = { maxDuration: 30 };
 
-var DIGEST_MODEL = process.env.PIP_DIGEST_MODEL || "claude-haiku-4-5-20251001";
+// Sonnet by default: this is extraction-WITH-JUDGMENT (what's a real commitment
+// vs journal noise — the precision-over-volume problem), same task class as
+// meeting summarize, which is also Sonnet. It's once-a-day + preview-gated, so
+// the ~penny/paste is worth the restraint. Flip PIP_DIGEST_MODEL to test Haiku.
+var DIGEST_MODEL = process.env.PIP_DIGEST_MODEL || "claude-sonnet-4-6";
 
 var rateLimitMap = new Map();
 var WINDOW_MS    = 60 * 1000;
