@@ -56,32 +56,46 @@ export function useCadences(userId, accountId) {
   }
 
   function deleteCadence(id) {
-    // Guard: check for account-less leadership tasks tied to this cadence.
-    // Deleting the cadence would orphan them (account_id null + cadence_id null
-    // = invisible forever). Block the delete and tell the caller why.
+    // Account-less leadership tasks tie to this cadence via cadence_id as their
+    // ONLY anchor. cadence_id is ON DELETE SET NULL, so deleting the cadence nulls
+    // that anchor → account_id null + cadence_id null + project_id null violates
+    // chk_task_has_anchor and the DELETE aborts with a raw DB error. So:
+    //   • OPEN such tasks → block the delete (don't silently drop active work).
+    //   • DONE such tasks → hard-delete them (already-finished 1:1 to-dos that
+    //     would otherwise become unanchored orphans the instant the cadence is gone).
+    // Tasks that also carry a project_id are anchored independently — leave them.
     return supabase
       .from("folio_tasks")
-      .select("id", { count: "exact", head: true })
+      .select("id, done")
       .is("account_id", null)
+      .is("project_id", null)
       .eq("cadence_id", id)
-      .eq("done", false)
       .then(function (r) {
         if (r.error) throw r.error;
-        if ((r.count || 0) > 0) {
+        var rows = r.data || [];
+        var openCount = rows.filter(function (t) { return !t.done; }).length;
+        if (openCount > 0) {
           throw new Error(
-            "This cadence has " + r.count + " open leadership task" +
-            (r.count === 1 ? "" : "s") +
+            "This cadence has " + openCount + " open leadership task" +
+            (openCount === 1 ? "" : "s") +
             ". Complete or reassign them before deleting."
           );
         }
-        return supabase
-          .from("folio_cadences")
-          .delete()
-          .eq("id", id)
-          .then(function (result) {
-            if (result.error) throw result.error;
-            fetch();
-          });
+        var doneIds = rows.map(function (t) { return t.id; }); // all remaining are done
+        var clearDone = doneIds.length
+          ? supabase.from("folio_tasks").delete().in("id", doneIds)
+          : Promise.resolve({ error: null });
+        return clearDone.then(function (d) {
+          if (d && d.error) throw d.error;
+          return supabase
+            .from("folio_cadences")
+            .delete()
+            .eq("id", id)
+            .then(function (result) {
+              if (result.error) throw result.error;
+              fetch();
+            });
+        });
       });
   }
 

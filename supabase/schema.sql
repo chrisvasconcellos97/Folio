@@ -231,7 +231,7 @@ create table if not exists folio_tasks (
   user_id             uuid not null references auth.users(id) on delete cascade,
   org_id              uuid,
   account_id          uuid references folio_accounts(id) on delete set null,
-  project_id          uuid references gauge_projects(id) on delete set null,
+  project_id          uuid,   -- FK to gauge_projects added post-hoc (after that table is created) — see below; avoids a forward reference so a linear schema.sql run rebuilds cleanly
   parent_step_index   integer,
   title               text not null,
   description         text,
@@ -492,6 +492,15 @@ drop trigger if exists gauge_projects_updated_at on gauge_projects;
 create trigger gauge_projects_updated_at
   before update on gauge_projects
   for each row execute function update_updated_at();
+
+-- folio_tasks.project_id → gauge_projects FK is installed HERE (not inline on the
+-- folio_tasks table above) because folio_tasks is defined before gauge_projects;
+-- an inline reference would be a forward reference that aborts a linear rebuild.
+-- drop-if-exists keeps this idempotent and adopts the constraint prod already has.
+alter table folio_tasks drop constraint if exists folio_tasks_project_id_fkey;
+alter table folio_tasks
+  add constraint folio_tasks_project_id_fkey
+  foreign key (project_id) references gauge_projects(id) on delete set null;
 
 create table if not exists gauge_templates (
   id                  uuid primary key default gen_random_uuid(),
@@ -1107,6 +1116,15 @@ begin
    where source_id = any (account_ids);
   get diagnostics bumped = row_count; moved := moved + bumped;
 
+  -- Re-parent tables added after the previous merge-function update. The source
+  -- account is only soft-deleted (is_inactive), so rows left pointing at it are
+  -- NOT cascade-purged — without these the absorbed account's semantic-recall
+  -- coverage (folio_embeddings) goes dark and its logged wins detach.
+  update folio_wins        set account_id = target_id where account_id = source_id;
+  get diagnostics bumped = row_count; moved := moved + bumped;
+  update folio_embeddings  set account_id = target_id where account_id = source_id;
+  get diagnostics bumped = row_count; moved := moved + bumped;
+
   update folio_accounts
      set is_inactive            = true,
          inactivated_at         = now(),
@@ -1354,7 +1372,8 @@ alter table folio_tasks
   add column if not exists external_contact_name text,
   add column if not exists blocked_reason        text,      -- non-null => task/stage is blocked
   add column if not exists sub_stages            jsonb not null default '[]'::jsonb,  -- nested checklist [{title, completed_at}]
-  add column if not exists sort_order            integer;   -- preserves stage order within a project (drag-reorder)
+  add column if not exists sort_order            integer,   -- preserves stage order within a project (drag-reorder)
+  add column if not exists task_notes            jsonb not null default '[]'::jsonb;   -- per-task note/history entries [{at, note}] (written by task_unification.sql + seed; reconciles schema.sql with prod so a fresh rebuild + seed/migration run doesn't reference a missing column)
 create index if not exists folio_tasks_project_order_idx
   on folio_tasks (project_id, sort_order) where project_id is not null;
 
@@ -1480,3 +1499,35 @@ language sql stable security invoker set search_path = public as $$
 $$;
 
 grant execute on function match_folio_embeddings(vector, uuid, int) to authenticated;
+
+-- ──────────────────────────────────────────────────────────────────────
+-- PTO / Away Mode (#50) — folded in from supabase/away_periods.sql so a fresh
+-- schema.sql rebuild includes it. Pip uses this to treat silence over a known
+-- away window as "you were out," not "you dropped it." DATA LINE: a date range
+-- + free note; no business figures. All additive/nullable; the app reads it
+-- fail-soft (missing table → no-op).
+-- ──────────────────────────────────────────────────────────────────────
+create table if not exists folio_away_periods (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid references auth.users not null,
+  start_date  date not null,
+  end_date    date not null,
+  note        text,
+  created_at  timestamptz default now()
+);
+
+create index if not exists folio_away_periods_user_idx
+  on folio_away_periods (user_id, start_date);
+
+alter table folio_away_periods enable row level security;
+drop policy if exists "Away periods owner access" on folio_away_periods;
+create policy "Away periods owner access" on folio_away_periods
+  for all
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+-- "Arrived while you were out → follow up on return." Tagged on items/meetings
+-- filed from the return-from-vacation summary; surfaced in "While you were out"
+-- until the user clears them.
+alter table folio_tasks    add column if not exists follow_up_on_return boolean default false;
+alter table folio_meetings add column if not exists follow_up_on_return boolean default false;
