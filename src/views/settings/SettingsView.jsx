@@ -15,6 +15,7 @@ import { useUserProfile } from "../../hooks/useUserProfile";
 import { usePipUsage } from "../../hooks/usePipUsage";
 import { useFolioHealth, CORRECTION_TYPE_LABEL } from "../../hooks/useFolioHealth";
 import { useWins } from "../../hooks/useWins";
+import { PromotionPacketModal } from "./PromotionPacketModal";
 import { AccountPicker } from "../../components/AccountPicker";
 import { useGlossary } from "../../hooks/useGlossary";
 import { useActivity } from "../../hooks/useActivity";
@@ -886,6 +887,7 @@ function WinLogSection({ userId, accounts }) {
   var winsHook = useWins(userId);
   var [title, setTitle]   = useState("");
   var [acctId, setAcctId] = useState(null);
+  var [showPacket, setShowPacket] = useState(false);
   var byId = {};
   (accounts || []).forEach(function (a) { byId[a.id] = a; });
 
@@ -899,10 +901,21 @@ function WinLogSection({ userId, accounts }) {
   var wins = winsHook.wins || [];
   return (
     <Card>
-      <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 6 }}>Win log</div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 6 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>Win log</div>
+        <button
+          onClick={function () { setShowPacket(true); }}
+          style={{ background: "none", border: "1px solid " + C.accentLine, borderRadius: 8, padding: "5px 11px", fontSize: 12, fontWeight: 600, color: C.accent, fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer", whiteSpace: "nowrap" }}
+        >
+          ✦ Promotion packet →
+        </button>
+      </div>
       <div style={{ fontSize: 13, color: C.textSub, lineHeight: 1.6, marginBottom: 14 }}>
         Your brag file — the things that went right. Folios offers one-tap wins on the Friday Wrap; log anything else here. Pull it up at review time.
       </div>
+      {showPacket && (
+        <PromotionPacketModal userId={userId} accounts={accounts} onClose={function () { setShowPacket(false); }} />
+      )}
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
         <div style={{ flex: "1 1 220px", minWidth: 0 }}>
