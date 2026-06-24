@@ -34,6 +34,7 @@ import { logPipUsage, overDailySpendCap } from "./_pipUsage.js";
 // so the operator's "what Pip knows about this account" can never drift from
 // chat / summarize again. .js extension is required for the serverless bundle.
 import { renderAccountContext } from "../src/lib/accountContext.js";
+import { currentlyAway, justBackFrom, awayLabel } from "../src/lib/awayMode.js";
 
 // Give the function a real time budget — it does several model calls. 60s is
 // valid on every Vercel plan; with the per-account passes parallelized below
@@ -350,6 +351,26 @@ async function processUser(admin, client, userId, tz) {
       userContext = (userContext ? userContext + "\n\n" : "") +
         "── THEIR VOCABULARY (use these terms) ──\n" + glossLines.join("\n");
     }
+  }
+
+  // PTO / Away Mode (#50) — if the user is out or just back, tell the overnight
+  // pass to treat silence over the window as "they were out", not "they dropped
+  // it" (the All-Star-Monday false-alarm class, applied to vacation). Fail-soft:
+  // a missing table returns {data:null} → [] → no framing, never a crash.
+  var awayRes = await admin.from("folio_away_periods")
+    .select("start_date,end_date,note").eq("user_id", userId);
+  var awayPeriods = (awayRes && awayRes.data) ? awayRes.data : [];
+  var nowLocal = new Date(local.date + "T12:00:00");
+  var awayNow = currentlyAway(awayPeriods, nowLocal);
+  var backFrom = awayNow ? null : justBackFrom(awayPeriods, nowLocal, 5);
+  if (awayNow) {
+    userContext = (userContext ? userContext + "\n\n" : "") +
+      "── AWAY / PTO ──\nThe user is CURRENTLY out of office (" + awayLabel(awayNow) +
+      "). Do NOT flag accounts as cold/slipping or commitments as dropped because of silence during this window — that silence is expected. Frame anything time-sensitive as 'for when you're back', never as a failure.";
+  } else if (backFrom) {
+    userContext = (userContext ? userContext + "\n\n" : "") +
+      "── JUST BACK FROM PTO ──\nThe user just returned from time off (" + awayLabel(backFrom) +
+      "). Anything that went quiet or came due during that window is a catch-up item, NOT a dropped ball — frame it as 'piled up while you were out' and help them triage, don't scold.";
   }
 
   // Activity since last run → which accounts moved. Pull from folio_activity

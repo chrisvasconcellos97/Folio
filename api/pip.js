@@ -276,25 +276,28 @@ function renderLensNote(lens) {
 
 function buildSystem(facts, staticBlock, contextProse, ephemeralNotes, profileProse) {
   var blocks = [];
+  // Static block FIRST so it is the byte-stable cached PREFIX — Anthropic caches
+  // everything up to and including the cache_control breakpoint, and a cross-user
+  // hit requires nothing user-specific before it. profileProse is also kept out
+  // for the same reason (per-user values would fork the cache).
+  blocks.push({ type: "text", text: staticBlock, cache_control: { type: "ephemeral" } });
+  // Dynamic tail (uncached) — everything user-/call-specific lives AFTER the cache
+  // point so it can never bust the static cache: USER MEMORY facts, profile,
+  // today's date, ephemeral notes, current context. (USER MEMORY used to sit
+  // BEFORE the static block, which made the "cached" prefix per-user and re-billed
+  // full input for any user who had remembered facts.)
+  var memBlock = "";
   if (facts && facts.length) {
     var lines = ["USER MEMORY (things this user has told Pip to remember):"];
     facts.slice(0, 20).forEach(function (f) {
       if (typeof f === "string" && f.trim()) lines.push("- " + f.trim());
     });
-    if (lines.length > 1) {
-      blocks.push({ type: "text", text: lines.join("\n") });
-    }
+    if (lines.length > 1) memBlock = lines.join("\n") + "\n\n";
   }
-  // Static block first — gets the cache_control marker so cross-user cache hits fire.
-  // profileProse intentionally excluded here so the static block stays byte-stable
-  // across all users (different profileProse values would create per-user cache buckets).
-  blocks.push({ type: "text", text: staticBlock, cache_control: { type: "ephemeral" } });
-  // Dynamic tail — profileProse + today's date + ephemeralNotes + context.
-  // No cache_control here; this section changes per user and per call.
   var profileBlock = profileProse ? "── WHO YOU ARE (about you) ──\n" + profileProse + "\n\n" : "";
   var today = new Date().toISOString().slice(0, 10);
   var tail = [];
-  tail.push(profileBlock + "Today: " + today + (ephemeralNotes ? "\n\n" + ephemeralNotes : ""));
+  tail.push(memBlock + profileBlock + "Today: " + today + (ephemeralNotes ? "\n\n" + ephemeralNotes : ""));
   if (contextProse) tail.push("CURRENT CONTEXT:\n\n" + contextProse);
   if (tail.length) {
     blocks.push({ type: "text", text: tail.join("\n\n") });
@@ -475,8 +478,11 @@ export default async function handler(req, res) {
   if (summarySystemBlocks) {
     // summary mode — use the client-supplied static schema/rules as system.
     // No Pip persona, no context prose in system (context lives in user blocks).
-    // User memory facts still prepended if present.
+    // The schema blocks carry their own cache_control breakpoint, so USER MEMORY
+    // facts go AFTER them (not before) — prepending per-user facts ahead of the
+    // cached schema prefix would fork the cache per user.
     var sysArr = [];
+    summarySystemBlocks.forEach(function (b) { sysArr.push(b); });
     if (facts && facts.length) {
       var memLines = ["USER MEMORY (things this user has told Pip to remember):"];
       facts.slice(0, 20).forEach(function (f) {
@@ -484,7 +490,6 @@ export default async function handler(req, res) {
       });
       if (memLines.length > 1) sysArr.push({ type: "text", text: memLines.join("\n") });
     }
-    summarySystemBlocks.forEach(function (b) { sysArr.push(b); });
     systemBlocks = sysArr;
   } else {
     // Build system as array of blocks (static gets cache_control, dynamic doesn't).

@@ -125,11 +125,6 @@ export function curateContext(raw, message, focusedAccountIds, opts) {
   };
 }
 
-function fmtDate(d) {
-  if (!d) return "";
-  return String(d);
-}
-
 function daysSince(iso) {
   if (!iso) return null;
   var t = new Date(iso).getTime();
@@ -142,24 +137,6 @@ function trunc(s, n) {
   s = String(s).replace(/\s+/g, " ").trim();
   if (s.length <= n) return s;
   return s.slice(0, n - 1) + "…";
-}
-
-// Compact "cached state" rendering — used when a fresh state_prose blob is
-// available and the caller is OK with the lighter view (chat mode mostly).
-// The cached prose is treated as the body; we still emit the ACCOUNT header
-// and a minimal status line so the model can find the id.
-function renderAccountCached(a) {
-  var lines = [];
-  lines.push("ACCOUNT: " + a.name + (a.id ? " (id: " + a.id + ")" : ""));
-  var status = a.status || "—";
-  var health = a.health || "—";
-  var last   = a.last_interaction_at ? fmtDate(a.last_interaction_at) : "never";
-  var ds     = daysSince(a.last_interaction_at);
-  var dsStr  = ds == null ? "" : " (" + ds + "d ago)";
-  lines.push("Status: " + status + " · Health: " + health + " · Last contact: " + last + dsStr);
-  lines.push("");
-  lines.push("Pip's cached read: " + a.cachedState);
-  return lines.join("\n");
 }
 
 function renderAccountListItem(a) {
@@ -202,17 +179,26 @@ export function renderContextProse(curated) {
   } else if (curated.mode === "focused" && curated.accounts.length > 0) {
     var curatedUserId = curated.userId || null;
     curated.accounts.forEach(function (a) {
-      // Phase 2: prefer the rolling cached state when it's fresh and the
-      // caller did NOT mark this as a brief-mode request. Brief mode wants
-      // the full raw data because that's the moment to spend tokens.
+      // F1 — ALWAYS render the full shared per-account context for a focused
+      // account (contacts, open work, commitments, projects, waiting-on, recall).
+      // Previously, if a rolling `cachedState` (Haiku state_prose) existed we
+      // emitted ONLY a one-line "cached read" instead — which quietly made
+      // day-to-day chat lossy for almost every account (they're nearly all
+      // state-refreshed). The cached read is now SUPPLEMENTARY, not a substitute.
+      sections.push(renderAccountContext(a, {
+        surface: curated.briefMode ? "brief" : "chat",
+        userId: curatedUserId,
+      }));
+      // Demoted: the rolling synthesis is a useful momentum/where-it-stands
+      // narrative the structured data doesn't directly express — append it as a
+      // short extra in chat mode (brief mode already spends full tokens; keep it
+      // byte-identical there to avoid redundant context).
       if (a.cachedState && !curated.briefMode) {
-        sections.push(renderAccountCached(a));
-      } else {
-        // F1 — one shared per-account renderer (src/lib/accountContext.js).
-        sections.push(renderAccountContext(a, {
-          surface: curated.briefMode ? "brief" : "chat",
-          userId: curatedUserId,
-        }));
+        sections.push(
+          "PIP'S RECENT ROLLING READ ON " + a.name +
+          " (a prior synthesis — supplementary to the structured context above):\n" +
+          a.cachedState
+        );
       }
     });
   }

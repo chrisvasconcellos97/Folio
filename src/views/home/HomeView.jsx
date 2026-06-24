@@ -608,6 +608,17 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
       anomalySignals.sort(function (p, q) { return q.days_since - p.days_since; });
       anomalySignals = anomalySignals.slice(0, 5);
 
+      // PTO / Away Mode (#50) — tell the brief to read silence over a vacation
+      // window as "you were out", not "you dropped it" (same false-alarm class
+      // the cold/anomaly nudges above already suppress).
+      var briefAwayNow = currentlyAway(awayPeriods, new Date());
+      var briefBackFrom = briefAwayNow ? null : justBackFrom(awayPeriods, new Date(), 5);
+      var awayContext = briefAwayNow
+        ? "The user is OUT OF OFFICE right now (" + awayLabel(briefAwayNow) + "). Treat quiet accounts and anything due in this window as expected — do NOT call them cold or dropped; frame as 'for when you're back'."
+        : (briefBackFrom
+            ? "The user JUST RETURNED from time off (" + awayLabel(briefBackFrom) + "). Anything that went quiet or came due during that window is catch-up, not a dropped ball — frame it as 'piled up while you were out'."
+            : null);
+
       callPortfolioBriefPip({
         snapshots: snapshotsWithDetails,
         projects: activeProjects.concat(recentWins),
@@ -623,6 +634,7 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
         anomalySignals: anomalySignals,
         portfolioThemes: portfolioThemes,
         recentUpdates: recentUpdates,
+        awayContext: awayContext,
         facts: pipFacts || [],
         profileProse: profileProse || null,
       }).then(function (result) {

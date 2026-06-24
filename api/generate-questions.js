@@ -265,9 +265,25 @@ export default async function handler(req, res) {
       });
       logPipUsage(supabase, userId, "generate-questions", "questions", questionsModel, msg.usage);
       var raw = (msg.content && msg.content[0] && msg.content[0].text) || "{}";
+      var truncated = msg.stop_reason === "max_tokens";
       var parsed = {};
-      try { parsed = JSON.parse(raw.replace(/^```json\n?/, "").replace(/\n?```$/, "")); } catch (e) { parsed = {}; }
+      try {
+        parsed = JSON.parse(raw.replace(/^```json\n?/, "").replace(/\n?```$/, ""));
+      } catch (e) {
+        parsed = {};
+        // Don't die silently: a truncated/garbled batch produced zero questions.
+        // Surface why (modelError is returned for observability + logged) instead
+        // of looking like "nothing insightful to ask."
+        modelError = truncated
+          ? "question JSON truncated at max_tokens — raise max_tokens or shrink the batch"
+          : "question JSON parse failed: " + ((e && e.message) || "unknown");
+        console.error("[generate-questions] " + modelError);
+      }
       questions = Array.isArray(parsed.questions) ? parsed.questions : [];
+      if (truncated && !questions.length && !modelError) {
+        modelError = "question JSON truncated at max_tokens — raise max_tokens or shrink the batch";
+        console.error("[generate-questions] " + modelError);
+      }
     } catch (modelErr) {
       modelError = (modelErr && modelErr.message) || "model_call_failed";
       console.error("[generate-questions] model call failed:", modelError);

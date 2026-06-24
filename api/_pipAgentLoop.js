@@ -122,7 +122,17 @@ async function toolFindOpenWork(input, ctx) {
   var filter = input.filter || "all";
   var accounts = await getAccounts(ctx);
   var nameById = {};
-  accounts.forEach(function (a) { nameById[a.id] = a.name; });
+  // Ownership: accounts someone else owns (MSO / project-involvement-only). The
+  // app's convention (HomeView nudges, operator-run) is not-mine =
+  // owner_user_id set AND != me. find_open_work answers "what do I owe / who has
+  // the ball on MY work" — relationship/commitment work on a not-mine account
+  // isn't the user's debt, so suppress it here (account-less leadership tasks,
+  // which have no account_id, are always kept — they're the user's own).
+  var notMine = {};
+  accounts.forEach(function (a) {
+    nameById[a.id] = a.name;
+    if (a.owner_user_id && ctx.userId && a.owner_user_id !== ctx.userId) notMine[a.id] = true;
+  });
   var today = TODAY();
   var sb = ctx.supabase;
   var lines = [];
@@ -134,6 +144,7 @@ async function toolFindOpenWork(input, ctx) {
   var tasks = (tRes && tRes.data) ? tRes.data : [];
 
   tasks.forEach(function (t) {
+    if (t.account_id && notMine[t.account_id]) return; // not the user's relationship/debt
     var due = t.due_date || null;
     var overdue = due && due < today;
     var dueSoon = due && due >= today && due <= addDays(today, 7);
@@ -159,6 +170,7 @@ async function toolFindOpenWork(input, ctx) {
       .select("account_id,title,status,waiting_on,waiting_on_since,updated_at,status_updates")
       .eq("status", "in_progress").limit(200);
     (pRes && pRes.data ? pRes.data : []).forEach(function (p) {
+      if (p.account_id && notMine[p.account_id]) return; // not the user's account
       var waiting = !!p.waiting_on;
       var idle = daysSinceIso(p.updated_at);
       var stalled = waiting || (idle != null && idle >= 10);

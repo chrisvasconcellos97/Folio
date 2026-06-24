@@ -51,7 +51,7 @@ export default async function handler(req, res) {
   try {
 
   var MAX_ARRAY = 200; // payload size cap — guard against unbounded client arrays
-  var { snapshots, projects, overdueTasks, commitmentsDue, commitmentsOverdue, todayCadences, coldAccounts, looseEnds, healthDeltas, relationshipSignals, toneSignals, anomalySignals, leadershipTasks, portfolioThemes, recentUpdates, facts, profileProse } = req.body || {};
+  var { snapshots, projects, overdueTasks, commitmentsDue, commitmentsOverdue, todayCadences, coldAccounts, looseEnds, healthDeltas, relationshipSignals, toneSignals, anomalySignals, leadershipTasks, portfolioThemes, recentUpdates, awayContext, facts, profileProse } = req.body || {};
   snapshots = (snapshots || []).slice(0, MAX_ARRAY);
   projects  = (projects  || []).slice(0, MAX_ARRAY);
 
@@ -221,7 +221,13 @@ export default async function handler(req, res) {
       facts.slice(0, 20).map(function (f) { return "- " + f; }).join("\n") + "\n\n";
   }
 
-  var portfolioText = knownBlock + [
+  // PTO / Away Mode (#50) — lead with the away framing so the model reads quiet
+  // accounts / due-this-window items as expected, not as dropped balls.
+  var awayBlock = (typeof awayContext === "string" && awayContext.trim())
+    ? "⚠ AWAY CONTEXT (overrides cold/slip framing below): " + awayContext.trim() + "\n\n"
+    : "";
+
+  var portfolioText = awayBlock + knownBlock + [
     snapshots.length > 0 ? snapshots.length + " accounts total." : null,
     flaggedLines.length > 0 ? "Account flags:\n" + flaggedLines.join("\n") : "No accounts flagged at the account level.",
     workloadLines.length > 0 ? "Active workload:\n" + workloadLines.join("\n") : "No overdue tasks or upcoming commitments.",
