@@ -1214,11 +1214,6 @@ export default function App() {
             autoOpenMeetingMode={pendingAutoOpenMeetingMode}
             onAutoOpenMeetingModeConsumed={function () { setPendingAutoOpenMeetingMode(false); }}
             allProjects={allProjects}
-            addProject={addProjectApp}
-            updateProject={updateProjectApp}
-            deleteProject={deleteProjectApp}
-            refetchProjects={refetchProjectsApp}
-            projectsError={projectsErrorApp}
           />
         </div>
       );

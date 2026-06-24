@@ -10,6 +10,7 @@ import { useMeetings } from "../../hooks/useMeetings";
 import { useItems } from "../../hooks/useItems";
 import { useContacts } from "../../hooks/useContacts";
 import { useCadences, usePersonCadences } from "../../hooks/useCadences";
+import { useProjects } from "../../hooks/useProjects";
 import { useAccountUpdates } from "../../hooks/useAccountUpdates";
 import { useAccountSnapshots } from "../../hooks/useAccountSnapshots";
 import { callBriefMePip } from "../../lib/pip";
@@ -50,7 +51,6 @@ import { ErrorBanner } from "../../components/ErrorBanner";
 import { supabase } from "../../lib/supabase";
 import { buildAccountExport, downloadAccountExport } from "../../lib/accountExport";
 import { computeAccountHealth, gatherSignals } from "../../lib/accountHealth";
-import { projectMatchesAccount } from "../../lib/gaugeStatus";
 import { AccountHealthOverrideModal } from "./AccountHealthOverrideModal";
 import { useContactAliases } from "../../hooks/useContactAliases";
 
@@ -61,7 +61,7 @@ function setDefaultTab(accountId, tab) {
   try { localStorage.setItem("folio_default_tab_" + accountId, tab); } catch(e) {}
 }
 
-export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, accounts, members, globalPeople, handlers, pipPrefill, onPipPrefillHandled, initialHubCadenceId, onHubConsumed, initialPersonHubCadenceId, onPersonHubConsumed, autoOpenMeetingMode, onAutoOpenMeetingModeConsumed, allProjects, addProject, updateProject, deleteProject, refetchProjects, projectsError }) {
+export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, accounts, members, globalPeople, handlers, pipPrefill, onPipPrefillHandled, initialHubCadenceId, onHubConsumed, initialPersonHubCadenceId, onPersonHubConsumed, autoOpenMeetingMode, onAutoOpenMeetingModeConsumed, allProjects }) {
   // Account-level action callbacks arrive grouped in one `handlers` bag (Batch 8
   // — prop-sprawl reduction). Re-expanded to locals here so the ~40 internal
   // call sites stay unchanged; behavior is identical. The lifecycle prefill/
@@ -184,21 +184,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
   var { contacts, addContact, updateContact, deleteContact, error: contactsError, refetch: refetchContacts } = useContacts(userId, account.id, orgId);
   var { cadences, addCadence, updateCadence, deleteCadence, error: cadencesError, refetch: refetchCadences } = useCadences(userId, account.id);
   var { cadences: personCadencesAll, addCadence: addPersonCadence, refetch: refetchPersonCadences } = useCadences(userId);
-  // Derive this account's projects from the App-level projects instance (passed
-  // as allProjects) instead of mounting a second useProjects — eliminates a
-  // duplicate gauge_projects + folio_tasks realtime channel pair and a redundant
-  // fetch per account open. Same membership semantics as the old per-account
-  // query (account_id OR account_ids overlap, incl. child accounts). Mutations
-  // (addProject/updateProject/deleteProject/refetchProjects) come from props,
-  // wired to that same shared instance.
-  var childIdsKey = childAccountIds.join(",");
-  var projects = useMemo(function () {
-    var ids = [account.id].concat(childAccountIds);
-    return (allProjects || []).filter(function (p) {
-      return ids.some(function (id) { return projectMatchesAccount(p, id); });
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allProjects, account.id, childIdsKey]);
+  var { projects, addProject, updateProject, deleteProject, error: projectsError, refetch: refetchProjects } = useProjects(userId, account.id, orgId, childAccountIds);
   var { updates, addUpdate, updateUpdate, deleteUpdate, error: updatesError, refetch: refetchUpdates } = useAccountUpdates(userId, account.id, orgId);
   var briefSnapshotsApi = useAccountSnapshots(userId);
   var contactAliasesApi = useContactAliases(orgId || null, userId);
