@@ -525,19 +525,9 @@ export default function App() {
   useEffect(function () { pipStateCtx.setAlert(diagnosticsCount > 0); }, [diagnosticsCount, pipStateCtx]);
 
   // Pip Tier A — daily snapshot compute. Fire-and-forget once per day after
-  // auth resolves. No-ops if already computed today (localStorage gate). Deferred
-  // to idle — it kicks ~6 queries incl. a large task pull, so it must not compete
-  // with the first paint's critical data fetches.
+  // auth resolves. No-ops if already computed today (localStorage gate).
   useEffect(function () {
-    if (!userId) return;
-    var ric = (typeof window !== "undefined" && window.requestIdleCallback)
-      ? window.requestIdleCallback
-      : function (cb) { return setTimeout(cb, 1500); };
-    var cic = (typeof window !== "undefined" && window.cancelIdleCallback)
-      ? window.cancelIdleCallback
-      : clearTimeout;
-    var handle = ric(function () { computeAndSaveSnapshots(userId); });
-    return function () { try { cic(handle); } catch (_) { /* ignore */ } };
+    if (userId) computeAndSaveSnapshots(userId);
   }, [userId]);
 
   // Prune stale per-day localStorage keys on startup (once per session).

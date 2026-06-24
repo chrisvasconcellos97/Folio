@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { logActivity } from "../lib/activity";
 import { useRealtimeSync } from "./useRealtimeSync";
@@ -48,24 +48,6 @@ export function useProjects(userId, accountId, orgId, extraAccountIds) {
     });
   }, [userId, accountId, extrasKey]);
 
-  // Keep the latest projects in a ref so the task-only re-hydration path can
-  // read them without re-running the (heavier) gauge_projects query.
-  var projectsRef = useRef([]);
-  useEffect(function () { projectsRef.current = projects; }, [projects]);
-
-  // folio_tasks changed but the project SET didn't (a task add/edit/complete
-  // doesn't alter project metadata). Re-pull just the tasks and re-attach onto
-  // the projects we already have — skipping the `select("*").limit(500)` over
-  // gauge_projects that the full `fetch()` would do on every task edit. New or
-  // deleted PROJECTS still arrive via the separate gauge_projects channel below.
-  var rehydrateTasks = useCallback(function () {
-    var current = projectsRef.current;
-    if (!current || !current.length) { fetch(); return; } // nothing hydrated yet → full load
-    fetchProjectTasks(current.map(function (p) { return p.id; })).then(function (taskRows) {
-      setProjects(attachTasksToProjects(projectsRef.current, taskRows));
-    });
-  }, [fetch]);
-
   var fetchTemplates = useCallback(function () {
     if (!userId) return Promise.resolve([]);
     return supabase
@@ -85,12 +67,10 @@ export function useProjects(userId, accountId, orgId, extraAccountIds) {
   useEffect(function () { fetchTemplates(); }, [fetchTemplates]);
 
   // Phase 8 — multi-device realtime sync. See useRealtimeSync.js.
-  // gauge_projects changes (new/edited/deleted project) → full refetch.
   useRealtimeSync("gauge_projects", userId, fetch);
-  // folio_tasks changes (task add/edit/complete) → lightweight task-only
-  // re-hydration; the project metadata is unchanged, so skip the 500-row
-  // gauge_projects pull. (Perf: this fired a full refetch on every task edit.)
-  useRealtimeSync("folio_tasks", userId, rehydrateTasks);
+  // Task-model unification — folio_tasks now holds project work, so a task
+  // edit must re-hydrate the projects (the `.tasks` arrays).
+  useRealtimeSync("folio_tasks", userId, fetch);
 
   function addProject(data) {
     return supabase
