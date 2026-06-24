@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, lazy, Suspense } from "react";
 import { supabase } from "./lib/supabase";
 import { touchAccount } from "./lib/touchAccount";
 import { logSilentFailure } from "./lib/logSilentFailure.js";
+import { pruneDailyKeys } from "./lib/pruneDailyKeys";
 import { useAuth } from "./hooks/useAuth";
 import { useBreakpoint } from "./hooks/useBreakpoint";
 import { useAccounts } from "./hooks/useAccounts";
@@ -136,6 +137,13 @@ export default function App() {
     maybeToast("tasks",    tasksError,   null);
     maybeToast("projects", projectsErrorApp, refetchProjectsApp);
   }, [session, acctError, meetError, cadenceError, tasksError, projectsErrorApp, refetchAccounts, refetchMeetings, refetchCadencesApp, refetchProjectsApp]);
+
+  // Once-per-load housekeeping: drop stale per-day localStorage keys (daily brief
+  // + check-in) from earlier days so they don't accumulate toward the storage
+  // quota. Cheap, best-effort, runs above the authLoading early-return (hook order).
+  useEffect(function () {
+    pruneDailyKeys(new Date().toISOString().slice(0, 10));
+  }, []);
 
   useEffect(function () {
     if (!session || welcomeShown.current) return;
