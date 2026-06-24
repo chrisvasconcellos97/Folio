@@ -1,5 +1,13 @@
 # Folios — Claude Development Context
 
+## Session Handoff — June 24 2026 (PM-3): audit-backlog cleanup + H4 finish — UNSHIPPED (local, awaiting "push")
+
+**Closed out "everything else" from the audit before upgrades.** Two commits HELD LOCALLY on top of `main` `174a6bd` (NOT pushed — new rule: commit-and-hold, push to `main` only on Chris's explicit "push"; no feature-branch pushes → no Vercel preview spam). Gates green (check-guards 6/6 · test-api-imports · 403 tests · vite build).
+- **`75d61c0` — cleanup:** leadership-readout `maxDuration:60`; `search_notes` ilike fallback strips `,()` (PostgREST `.or()` safety); ProjectModal + LeaderProjectsView status dropdowns derive from `GAUGE_STATUS_CONFIG`; OverviewTab health labels → shared `healthLabel()`; StartConversationModal date input `colorScheme` follows theme (was forced dark in light mode); HomeView card-nav aria-label guards `cardScript[i]`.
+- **`3407c37` — H4 finish (the win-log compounding half):** the win log now feeds the two boss-facing surfaces — **Monday 1:1 pack** (useMondayPack gathers window wins → WINS line in `currentState`; fingerprint `wn:` key so a new win refreshes; read prompt banks a win) and **leadership readout** (CadenceHub one-shot-fetches 30d of wins → email gains a wins/progress section). Data-line clean (titles only).
+- **DEFERRED (no bug, noted): `C.onAccent` token + migrating ~8 hardcoded `#fff` accent buttons; wrapping the lazy-modal cluster in an inline ErrorBoundary (root boundary already prevents a white screen); monday-pack away-framing (pack isn't a daily-alarm surface — operator/brief already got it).** These are the only audit items left, all 🟢/enhancement.
+- **TO SHIP:** `git push origin HEAD:main` → `git update-ref refs/remotes/origin/$(git branch --show-current) HEAD`. No DB/migration step. **Spot-check:** log a win, then open the Monday pack (its read should credit it) + generate a leadership readout (email should have a wins section).
+
 ## Session Handoff — June 24 2026 (PM-2): perf follow-up — UNSHIPPED on branch `claude/folio-confidence-gaps-mtv7ub` (`b8d53e1`)
 
 **Picked up the deferred perf work after the audit batches shipped.** Three commits (`dd6db01`, `b8d53e1`) NOT on `main` — awaiting Chris's eyeball (touch core data hooks + the most-used screen). Gates green (check-guards 6/6 · 403 tests · vite build).
