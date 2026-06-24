@@ -68,7 +68,7 @@ export function CommandPalette({ accounts, contacts, userId, onSelectAccount, on
       // search never comes back empty due to a query quirk.
       var meetingSearch = supabase
         .from("folio_meetings")
-        .select("id, account_id, date, notes, pip_short_title")
+        .select("id, account_id, meeting_date, notes, pip_short_title")
         .eq("user_id", userId)
         .textSearch("notes", q, { type: "websearch", config: "english" })
         .limit(3)
@@ -76,7 +76,7 @@ export function CommandPalette({ accounts, contacts, userId, onSelectAccount, on
           if (r && r.error) {
             return supabase
               .from("folio_meetings")
-              .select("id, account_id, date, notes, pip_short_title")
+              .select("id, account_id, meeting_date, notes, pip_short_title")
               .eq("user_id", userId)
               .ilike("notes", "%" + q + "%")
               .limit(3);
@@ -109,7 +109,7 @@ export function CommandPalette({ accounts, contacts, userId, onSelectAccount, on
           var excerpt = (start > 0 ? "…" : "") + notes.slice(start, end).trim() + (end < notes.length ? "…" : "");
           rows.push({
             label: acct.name,
-            sub: (m.pip_short_title || (m.date ? m.date.slice(0, 10) : "Meeting")) + " · " + excerpt.slice(0, 80),
+            sub: (m.pip_short_title || (m.meeting_date ? m.meeting_date.slice(0, 10) : "Meeting")) + " · " + excerpt.slice(0, 80),
             group: "Notes",
             action: function () { onSelectAccount(acct); },
           });
