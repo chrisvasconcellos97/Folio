@@ -197,14 +197,32 @@ async function toolSearchNotes(input, ctx) {
   var accounts = await getAccounts(ctx);
   var nameById = {};
   accounts.forEach(function (a) { nameById[a.id] = a.name; });
-  var like = "%" + q.replace(/[%_]/g, "") + "%";
-  var r = await ctx.supabase
-    .from("folio_meetings")
-    .select("account_id,meeting_date,title,notes,pip_summary")
-    .or("notes.ilike." + like + ",pip_summary.ilike." + like)
-    .order("meeting_date", { ascending: false })
-    .limit(15);
-  var rows = (r && r.data) ? r.data : [];
+
+  var sel = "id,account_id,meeting_date,title,notes,pip_summary";
+  // Postgres full-text (stemming + multi-word + phrases), single-vendor, computed
+  // on the fly — no second AI, no schema change. PostgREST FTS is per-column, so
+  // search the user's own words AND Pip's summaries and merge. Falls back to
+  // substring match on any error so search never hard-fails.
+  var ftsOpts = { type: "websearch", config: "english" };
+  var rows = [];
+  try {
+    var res = await Promise.all([
+      ctx.supabase.from("folio_meetings").select(sel).textSearch("notes", q, ftsOpts).order("meeting_date", { ascending: false }).limit(15),
+      ctx.supabase.from("folio_meetings").select(sel).textSearch("pip_summary", q, ftsOpts).order("meeting_date", { ascending: false }).limit(15),
+    ]);
+    if ((res[0] && res[0].error) && (res[1] && res[1].error)) throw new Error("fts unavailable");
+    var seen = {};
+    res.forEach(function (r) {
+      if (r && !r.error && r.data) r.data.forEach(function (m) { if (!seen[m.id]) { seen[m.id] = true; rows.push(m); } });
+    });
+  } catch (_) {
+    var like = "%" + q.replace(/[%_]/g, "") + "%";
+    var rf = await ctx.supabase.from("folio_meetings").select(sel)
+      .or("notes.ilike." + like + ",pip_summary.ilike." + like)
+      .order("meeting_date", { ascending: false }).limit(15);
+    rows = (rf && rf.data) ? rf.data : [];
+  }
+  rows = rows.slice(0, 15);
   if (!rows.length) return "No notes or summaries mention \"" + q + "\".";
   var lines = rows.map(function (m) {
     var acctName = nameById[m.account_id] || "(no account)";

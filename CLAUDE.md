@@ -10,6 +10,8 @@
 
 **MCP STILL BROKEN this session:** every Supabase `apply_migration`/`execute_sql`/read bounced "requires approval" even after Chris hit "Always allow" — the approval handshake isn't reaching the agent. So ALL DB ops (migrations, the search_path fix, schema reloads) had to be hand-run by Chris in the SQL Editor. Until that connection is reconfigured, assume you CANNOT run DB tools — write the SQL file + have Chris run it.
 
+**ALSO SHIPPED June 23 (later):** (1) digest preview **checkbox was invisible on dark theme** (native `<input>` only shows accent when checked) → replaced with a clear 22px custom checkbox (`bc64193`). (2) **Keyword search → Postgres full-text** — `search_notes` (Pip chat agent-loop tool) + the ⌘K command-palette note search now use `.textSearch(col, q, {type:'websearch', config:'english'})` (stemming + multi-word + phrases), computed on the fly (NO migration, NO index — fine at single-user volume), with an `ilike` fallback so it never hard-fails. **This is the SINGLE-VENDOR recall path Chris chose over F6/OpenAI** — after the "head of IT" data-line conversation he didn't want a 2nd AI vendor (OpenAI embeddings) touching his notes; full-text gives stemming/ranking with zero new vendor. F6 semantic recall stays shipped-but-inert (needs `OPENAI_API_KEY`) if he ever wants meaning-based recall; for now full-text is the answer to "search my notes."
+
 ---
 
 ## Session Handoff — June 21 2026 (Phase 2 #3 + #4): Win log + Friday Pip Wrap — Folios banks what went right (BUILT, not shipped)

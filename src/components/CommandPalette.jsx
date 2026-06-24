@@ -63,12 +63,26 @@ export function CommandPalette({ accounts, contacts, userId, onSelectAccount, on
       var accountById = {};
       (accounts || []).forEach(function (a) { accountById[a.id] = a; });
 
+      // Meeting notes via Postgres full-text (stemming + multi-word), single
+      // vendor, computed on the fly — falls back to substring on any error so a
+      // search never comes back empty due to a query quirk.
       var meetingSearch = supabase
         .from("folio_meetings")
         .select("id, account_id, date, notes, pip_short_title")
         .eq("user_id", userId)
-        .ilike("notes", "%" + q + "%")
-        .limit(3);
+        .textSearch("notes", q, { type: "websearch", config: "english" })
+        .limit(3)
+        .then(function (r) {
+          if (r && r.error) {
+            return supabase
+              .from("folio_meetings")
+              .select("id, account_id, date, notes, pip_short_title")
+              .eq("user_id", userId)
+              .ilike("notes", "%" + q + "%")
+              .limit(3);
+          }
+          return r;
+        });
 
       var itemSearch = supabase
         .from("folio_tasks")
