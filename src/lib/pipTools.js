@@ -21,7 +21,7 @@ export var PIP_TOOLS = [
   },
   {
     name: "open_item",
-    description: "Open the Add Open Item modal for the named account.",
+    description: "Open the Add Task modal for the named account.",
     input_schema: {
       type: "object",
       properties: {
@@ -202,13 +202,13 @@ export var PIP_TOOLS = [
 
 export var TOOL_META = {
   open_meeting:          { category: "open",         displayTitle: "open the Log Meeting modal" },
-  open_item:             { category: "open",         displayTitle: "open the Add Open Item modal" },
+  open_item:             { category: "open",         displayTitle: "open the Add Task modal" },
   open_contact:          { category: "open",         displayTitle: "open the Add Contact modal" },
   open_cadence:          { category: "open",         displayTitle: "open the Set Cadence modal" },
   navigate:              { category: "navigate",     displayTitle: "navigate" },
   complete_task:         { category: "confirm",      displayTitle: "complete a task" },
   add_quick_task:        { category: "confirm",      displayTitle: "add a quick task" },
-  create_open_item:      { category: "confirm",      displayTitle: "create an open item" },
+  create_open_item:      { category: "confirm",      displayTitle: "create a task" },
   log_meeting:           { category: "confirm",      displayTitle: "log a meeting" },
   set_follow_up:         { category: "confirm",      displayTitle: "set a follow-up date" },
   update_account_health: { category: "confirm",      displayTitle: "update account health" },
@@ -408,13 +408,13 @@ export function describeToolCall(tool, accounts) {
 
   switch (tool.name) {
     case "open_meeting":     return "Log Meeting" + (acctName ? " — " + acctName : "");
-    case "open_item":        return "Add Open Item" + (acctName ? " — " + acctName : "");
+    case "open_item":        return "Add Task" + (acctName ? " — " + acctName : "");
     case "open_contact":     return "Add Contact" + (acctName ? " — " + acctName : "");
     case "open_cadence":     return "Set Cadence" + (acctName ? " — " + acctName : "");
     case "navigate":         return "Go to " + (input.view || "view");
     case "complete_task":    return "Mark task done";
     case "add_quick_task":   return "Add task: " + (input.title || "—");
-    case "create_open_item": return "Create open item" + (acctName ? " on " + acctName : "") + (input.text ? ": " + input.text : "");
+    case "create_open_item": return "Create task" + (acctName ? " on " + acctName : "") + (input.text ? ": " + input.text : "");
     case "log_meeting":      return "Log meeting" + (acctName ? " on " + acctName : "") + (input.title ? ": " + input.title : "");
     case "set_follow_up":    return "Set follow-up" + (acctName ? " on " + acctName : "") + (input.follow_up_date ? " for " + input.follow_up_date : "");
     case "update_account_health": return "Mark " + (acctName || "account") + " " + (input.status || "");

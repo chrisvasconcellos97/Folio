@@ -88,7 +88,6 @@ export function QuickCaptureModal({ accounts, userId, addMeeting, awayPeriods, i
   function handleFile() {
     if (filing) return;
     var todayISO = new Date().toISOString().slice(0, 10);
-    var ready = rows.filter(function (r) { return r.accountId || r.kind === "owe" || r.kind === "waiting" || r.kind === "quiet"; });
     // A task can be account-less (a personal to-do); a touch/note needs an account.
     setFiling(true);
     var ops = rows.map(function (r) {

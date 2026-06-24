@@ -164,7 +164,7 @@ describe("TOOL_META + helpers", function () {
   });
 
   it("displayTitleFor returns the configured title", function () {
-    expect(displayTitleFor("create_open_item")).toBe("create an open item");
+    expect(displayTitleFor("create_open_item")).toBe("create a task");
     expect(displayTitleFor("log_meeting")).toBe("log a meeting");
     expect(displayTitleFor("not_a_tool")).toBe("not a tool");
   });

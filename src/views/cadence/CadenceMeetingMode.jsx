@@ -923,12 +923,12 @@ export function CadenceMeetingMode({
           )}
           {openItemCount > 0 ? (
             <MetaChip
-              label="Open items"
+              label="Tasks"
               value={openItemCount + (overdueItems > 0 ? " (" + overdueItems + " overdue)" : "")}
               tone={overdueItems > 0 ? "warn" : "muted"}
             />
           ) : (
-            <MetaChip label="Open items" value="0 — all clear" tone="ok" />
+            <MetaChip label="Tasks" value="0 — all clear" tone="ok" />
           )}
           {projectHealth && (
             <MetaChip label="Projects" value={projectHealth.label} tone={projectHealth.tone} />
