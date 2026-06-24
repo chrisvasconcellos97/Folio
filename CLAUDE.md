@@ -1,5 +1,11 @@
 # Folios — Claude Development Context
 
+## Session Handoff — June 24 2026 (PM-5): 🔴 REVERTED the Gauge perf work — it broke task-completion persistence
+
+**Chris hit a live bug: completing a Gauge task, leaving the screen, and returning showed it back as NOT complete.** Root cause = the June-24 perf work (`dd6db01` useProjects task-only re-hydration + `b8d53e1` AccountDetail derives projects from App's `allProjects`). `ProjectStageEditor` shows completions optimistically via `localStages` and clears them with `useEffect(()=>setLocalStages(null), [project.tasks])`. The OLD AccountDetail had its OWN `useProjects` that re-fetched this account's tasks FRESH from the DB on mount/return; the consolidation replaced that with a `useMemo` over App's persistent `allProjects` — which (a) no longer re-fetches fresh on return and (b) hands the editor a new `project.tasks` reference on unrelated portfolio events, clearing the optimistic "complete" back to stale global state. The WRITE always persisted (`stageToTaskFields`→`done:true`); the read path starved the editor of fresh data.
+- **FIX: reverted BOTH perf commits** (`46ae556` reverts `b8d53e1`, `b73f2a4` reverts `dd6db01`). Gauge data layer restored to exactly pre-change (proven-working). Gates green (check-guards 6/6 · 403 tests · vite build). HELD LOCAL — awaiting Chris's "push" (the bug is LIVE on `main` `174a6bd`, so the revert needs to ship to fix prod).
+- **LESSON for re-attempting perf:** the `useProjects` triplication/channel work is real but must preserve (1) a fresh-on-mount/return DB read for the projects an editor reads, and (2) stable `project.tasks` references except when genuinely fresh — or the optimistic-localStages editors revert. Needs LIVE hand-testing of the complete→navigate→return cycle before shipping. Do NOT retry without that.
+
 ## Session Handoff — June 24 2026 (PM-4): UPGRADES begun — "Who Has the Ball" board (UNSHIPPED, local, awaiting "push")
 
 **Audit fully done + shipped (through `3d22523` on `main`); started the desktop-first UPGRADES arc.** First upgrade built: commit `991b29b` HELD LOCAL on top of `main` `3d22523` (not pushed — commit-and-hold rule). Gates green (check-guards 6/6 · 403 tests · vite build).
