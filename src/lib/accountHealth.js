@@ -21,6 +21,23 @@ export function notMyRelationship(account, userId) {
   return !isMine(account, userId);
 }
 
+// Canonical health label — the ONE place green/yellow/red/new (computeAccountHealth)
+// AND healthy/watching/at_risk (snapshots) map to display text. Use this instead
+// of re-declaring { green:"Healthy", ... } maps per surface (they drifted: some
+// knew "new", some didn't).
+export function healthLabel(status) {
+  switch (status) {
+    case "green":
+    case "healthy":   return "Healthy";
+    case "yellow":
+    case "watching":  return "Watching";
+    case "red":
+    case "at_risk":   return "At Risk";
+    case "new":       return "New";
+    default:          return "—";
+  }
+}
+
 // Computes account health from signals. Tier-aware thresholds.
 // Returns { status: 'green'|'yellow'|'red'|'new', reason: string }.
 // Override (when set) supersedes everything.

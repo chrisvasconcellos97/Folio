@@ -152,7 +152,7 @@ export function ScheduleMeetingModal({ accounts, contacts, defaultDate, onSchedu
                     fontFamily: INTER,
                   }}>
                     {a ? a.name : id}
-                    <button type="button" onClick={function() {
+                    <button type="button" aria-label={"Remove " + (a ? a.name : "account")} onClick={function() {
                       setSelectedAccountIds(function(prev) { return prev.filter(function(x) { return x !== id; }); });
                     }} style={{ background: "transparent", border: "none", color: C.textMuted, cursor: "pointer", padding: 0, fontSize: 13, lineHeight: 1 }}>×</button>
                   </span>

@@ -1,9 +1,9 @@
 import { C, glass } from "../../../lib/colors";
 import { AmberBtn } from "../../../components/Buttons";
 import { EmptyState } from "../../../components/EmptyState";
+import { healthLabel } from "../../../lib/accountHealth";
 
 var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red };
-var STATUS_LABELS = { green: "Healthy", yellow: "Watching", red: "At Risk" };
 
 export function ShopsTab({ shops, onAddShop, onSelectShop }) {
   var today = new Date().toISOString().split("T")[0];
@@ -66,7 +66,7 @@ export function ShopsTab({ shops, onAddShop, onSelectShop }) {
                 </div>
               )}
               <div style={{ fontSize: 10, color: C.textMuted, marginTop: 3 }}>
-                {STATUS_LABELS[shop.status] || "—"}
+                {healthLabel(shop.status)}
               </div>
             </div>
             <div style={{ fontSize: 11, fontWeight: 700, color: daysColor, fontVariantNumeric: "tabular-nums", flexShrink: 0 }}>

@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { C } from "../../lib/colors";
+import { fmtRelative } from "../../lib/dateUtils";
 import { Card } from "../../components/Card";
 import { NavMark } from "../../components/NavMark";
 import { showToast } from "../../components/Toast";
@@ -27,17 +28,7 @@ var TYPE_COLOR = function (type) {
 };
 
 function timeAgo(iso) {
-  if (!iso) return "";
-  var diff = Date.now() - new Date(iso).getTime();
-  if (diff < 0) return "just now";
-  var s = Math.floor(diff / 1000);
-  if (s < 60)  return s + "s ago";
-  var m = Math.floor(s / 60);
-  if (m < 60)  return m + "m ago";
-  var h = Math.floor(m / 60);
-  if (h < 48)  return h + "h ago";
-  var d = Math.floor(h / 24);
-  return d + "d ago";
+  return fmtRelative(iso); // shared relative-time layer (was a local reimplementation)
 }
 
 var FILTERS = [

@@ -5,6 +5,7 @@ import { Card } from "../../components/Card";
 import { FolioIcon } from "../../components/FolioIcon";
 import { PipMark } from "../../components/PipMark";
 import { gatherSignals, computeAccountHealth } from "../../lib/accountHealth";
+import { fmtRelative } from "../../lib/dateUtils";
 
 var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red, new: C.textMuted };
 
@@ -18,15 +19,7 @@ var EVENT_LABELS = {
 };
 
 function timeAgo(ts) {
-  var diff = Date.now() - new Date(ts).getTime();
-  var mins  = Math.floor(diff / 60000);
-  var hours = Math.floor(diff / 3600000);
-  var days  = Math.floor(diff / 86400000);
-  if (mins < 2)   return "just now";
-  if (mins < 60)  return mins + "m ago";
-  if (hours < 24) return hours + "h ago";
-  if (days === 1) return "Yesterday";
-  return days + "d ago";
+  return fmtRelative(ts); // shared relative-time layer (was a local reimplementation)
 }
 
 function daysSince(ts) {

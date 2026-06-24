@@ -9,6 +9,7 @@ import { useBreakpoint } from "../../hooks/useBreakpoint";
 import { useContacts } from "../../hooks/useContacts";
 import { extractTouchpointActionsPip } from "../../lib/pip";
 import { projectMatchesAccount } from "../../lib/gaugeStatus";
+import { ownerLabel } from "../../lib/ownerLabel";
 import { showToast } from "../../components/Toast";
 import { useAutoBullet } from "../../lib/useAutoBullet";
 
@@ -613,7 +614,9 @@ export function StartConversationModal({ accountId, accounts, userId, orgId, mem
                         {(members || []).map(function (m) {
                           var email = m.email || m.invited_email;
                           if (!email) return null;
-                          return <option key={email} value={email}>{email}</option>;
+                          // Show the person's name, not the raw email (the value
+                          // stays the email so assignment still keys correctly).
+                          return <option key={email} value={email}>{ownerLabel(m) || email}</option>;
                         })}
                       </select>
                       {(onCreateProject || accountGaugeProjects.length > 0) && (
