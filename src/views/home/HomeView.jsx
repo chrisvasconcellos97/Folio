@@ -354,6 +354,14 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
     // otherwise a race (e.g. two tabs opened at once) caches a sparse
     // "Unknown accounts" brief for the rest of the day.
     if (!accounts || accounts.length === 0) return;
+    // Debounce-to-stable: the brief also reads meetings / projects / cadences /
+    // contacts / themes, which load via independent hooks a beat after snapshots
+    // and accounts. Those arrays are in the dep list below, so each one landing
+    // re-runs this effect and resets the timer; the brief fires ONCE, ~1.2s after
+    // the inputs stop changing — so it's never built from half-loaded data and
+    // then cached all day. Still exactly one Pip call (the ref latch guarantees it).
+    var briefSettleTimer = setTimeout(function () {
+    if (briefFiredRef.current) return;
     briefFiredRef.current = true;
     setBriefLoading(true);
     (async function () {
@@ -651,8 +659,10 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
         console.warn("[HomeView] daily brief failed:", err && err.message);
       });
     })();
+    }, 1200);
+    return function () { clearTimeout(briefSettleTimer); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [snapshots.length, (items || []).length, briefNonce, userId, operatorLoaded, operatorReport]);
+  }, [snapshots.length, (items || []).length, (meetings || []).length, (projects || []).length, (cadences || []).length, (contacts || []).length, (themes || []).length, briefNonce, userId, operatorLoaded, operatorReport]);
 
   var accountById = useMemo(function () {
     var m = {};
@@ -1857,8 +1867,13 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
                           onClick={function () {
                             var msg = "Hi " + r.who.split(" ")[0] + " — checking in on \"" + r.what + "\"" +
                               (r.days ? " (" + r.days + " days now)" : "") + ". Where do things stand?";
-                            navigator.clipboard && navigator.clipboard.writeText(msg);
-                            showToast("Chase note copied");
+                            if (navigator.clipboard && navigator.clipboard.writeText) {
+                              navigator.clipboard.writeText(msg)
+                                .then(function () { showToast("Chase note copied"); })
+                                .catch(function () { showToast("Couldn't copy to clipboard", "error"); });
+                            } else {
+                              showToast("Couldn't copy to clipboard", "error");
+                            }
                           }}
                           style={CHASE_BTN}
                         >Chase</button>
@@ -2605,10 +2620,13 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
                   <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
                     <button
                       onClick={function () {
-                        try {
-                          navigator.clipboard.writeText(m.pip_email || "");
-                          showToast("Follow-up copied", "success");
-                        } catch (_) { /* ignore */ }
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                          navigator.clipboard.writeText(m.pip_email || "")
+                            .then(function () { showToast("Follow-up copied", "success"); })
+                            .catch(function () { showToast("Couldn't copy to clipboard", "error"); });
+                        } else {
+                          showToast("Couldn't copy to clipboard", "error");
+                        }
                       }}
                       style={{
                         background: C.accentFaint, border: "1px solid " + C.accentLine, borderRadius: 7,

@@ -927,7 +927,10 @@ export function HubProjectCard({ project, accounts, members, userEmail, onUpdate
   function persistStages(nextStages) {
     var sp = autoStatusPatch(nextStages, project.status, project.is_standing);
     if (sp) onUpdateProject(project.id, sp);
-    return reconcileProjectTasks(userId, project, nextStages);
+    // Pass the editor's OWN pre-mutation view (project.tasks) as currentStages so
+    // reconcile diffs against what the next-array was built from — not a possibly
+    // realtime-refreshed project.tasks — preventing duplicate re-inserts on edit.
+    return reconcileProjectTasks(userId, project, nextStages, project.tasks || []);
   }
   function updateStageAt(idx, fields) {
     var next = (project.tasks || []).map(function (s, i) {

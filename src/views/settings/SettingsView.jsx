@@ -8,6 +8,7 @@ import { AmberBtn } from "../../components/Buttons";
 import { showToast } from "../../components/Toast";
 import { Modal } from "../../components/Modal";
 import { supabase } from "../../lib/supabase";
+import { logSilentFailure } from "../../lib/logSilentFailure";
 import { MarkdownText } from "../../components/MarkdownText";
 import { usePipFacts } from "../../hooks/usePipFacts";
 import { useUserProfile } from "../../hooks/useUserProfile";
@@ -1634,7 +1635,10 @@ function PipQuestionsSection({ userId, onStartInterview, onOpenCatchUp }) {
       .not("answer_text", "is", null)
       .order("answered_at", { ascending: false })
       .limit(25)
-      .then(function (r) { if (!r.error) setAnswers(r.data || []); });
+      .then(function (r) {
+        if (r.error) { logSilentFailure("SettingsView/loadAnswers", r.error); return; }
+        setAnswers(r.data || []);
+      });
   }, [userId]);
 
   var paused = !!(profile && profile.pip_questions_paused);

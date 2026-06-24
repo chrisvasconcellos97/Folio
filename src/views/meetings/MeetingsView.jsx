@@ -19,9 +19,11 @@ var MV_SERIF = "'Fraunces', Georgia, serif";
 function groupByMonth(meetings) {
   var groups = {};
   meetings.forEach(function (m) {
+    // T00:00:00 so a date-only value parses in LOCAL time (bare new
+    // Date("YYYY-MM-DD") is UTC midnight → groups into the prior month in ET after ~8pm).
     var key = m.meeting_date
       // eslint-ok: one-off locale format (month + year group key)
-      ? new Date(m.meeting_date).toLocaleDateString("en-US", { month: "long", year: "numeric" })
+      ? new Date(m.meeting_date + "T00:00:00").toLocaleDateString("en-US", { month: "long", year: "numeric" })
       : "Unknown";
     if (!groups[key]) groups[key] = [];
     groups[key].push(m);
@@ -316,9 +318,9 @@ export function MeetingsView({ meetings, loading, allItems, addItem, accounts })
     onClickToday:    function () { var el = document.querySelector('[data-meetings-section="upcoming"]'); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); },
     onClickUpcoming: function () { var el = document.querySelector('[data-meetings-section="upcoming"]'); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); },
   }, activeAccountIds);
-  var today      = new Date();
-  var upcoming   = meetings.filter(function (m) { return m.meeting_date && new Date(m.meeting_date) >= today; });
-  var past       = meetings.filter(function (m) { return !m.meeting_date || new Date(m.meeting_date) < today; });
+  var today      = new Date(); today.setHours(0, 0, 0, 0); // local midnight → today's meetings count as upcoming
+  var upcoming   = meetings.filter(function (m) { return m.meeting_date && new Date(m.meeting_date + "T00:00:00") >= today; });
+  var past       = meetings.filter(function (m) { return !m.meeting_date || new Date(m.meeting_date + "T00:00:00") < today; });
   var pastGroups = groupByMonth(past);
 
   if (loading) {
@@ -363,7 +365,7 @@ export function MeetingsView({ meetings, loading, allItems, addItem, accounts })
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {upcoming.map(function (m) {
               var daysOut = Math.round(
-                (new Date(m.meeting_date) - today) / (1000 * 60 * 60 * 24)
+                (new Date(m.meeting_date + "T00:00:00") - today) / (1000 * 60 * 60 * 24)
               );
               var isHovered = hoveredId === m.id;
               return (

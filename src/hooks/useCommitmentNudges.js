@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase.js";
+import { logSilentFailure } from "../lib/logSilentFailure.js";
 
 export function useCommitmentNudges(userId, accounts) {
   var [nudges, setNudges] = useState([]);
@@ -22,7 +23,8 @@ export function useCommitmentNudges(userId, accounts) {
       .lte("due_date", windowEnd)
       .order("due_date", { ascending: true })
       .then(function (r) {
-        if (r.error || !r.data) return;
+        if (r.error) { logSilentFailure("useCommitmentNudges/fetch", r.error); return; }
+        if (!r.data) return;
         var byId = {};
         (accounts || []).forEach(function (a) { byId[a.id] = a; });
         var today0 = today.getTime();

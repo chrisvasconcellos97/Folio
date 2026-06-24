@@ -353,6 +353,10 @@ export function CadenceMeetingMode({
   var saveTimer = useRef(null);
   var attendeesTimer = useRef(null);
   var projectNotesTimer = useRef(null);
+  // Tombstones for project-note keys the user deleted locally. The autosave merges
+  // local notes over the realtime-fresh DB map; without a tombstone, a key cleared
+  // on this device gets resurrected from the DB copy. Cleared when the key is set again.
+  var deletedNotesRef = useRef({});
   var notesRef  = useRef(null);
   var handleCloseRef = useRef(null);
 
@@ -405,9 +409,12 @@ export function CadenceMeetingMode({
     var saved = draft.project_notes && typeof draft.project_notes === "object" ? draft.project_notes : {};
     if (JSON.stringify(saved) === JSON.stringify(projectNotes)) return;
     projectNotesTimer.current = setTimeout(function () {
-      // Merge: start from the latest DB state, overlay our local keys.
+      // Merge: start from the latest DB state, overlay our local keys, then drop
+      // any key we deleted locally (tombstone) so a concurrent device's copy can't
+      // resurrect a note the user cleared here.
       var latest = draft.project_notes && typeof draft.project_notes === "object" ? draft.project_notes : {};
       var merged = Object.assign({}, latest, projectNotes);
+      Object.keys(deletedNotesRef.current).forEach(function (pid) { delete merged[pid]; });
       onUpdate(draft.id, { project_notes: merged }).catch(function (e) {
         console.error("Meeting mode project notes save failed:", e);
       });
@@ -435,11 +442,13 @@ export function CadenceMeetingMode({
     });
   }
   function discardProjectNote(pid) {
+    deletedNotesRef.current[pid] = true; // tombstone — survive the merge until re-set
     setProjectNotes(function (prev) { var next = Object.assign({}, prev); delete next[pid]; return next; });
     setDiscussedProjectIds(function (prev) { return prev.filter(function (id) { return id !== pid; }); });
     setPendingUndiscussId(null);
   }
   function setProjectNote(pid, text) {
+    delete deletedNotesRef.current[pid]; // re-typing clears the tombstone
     setProjectNotes(function (prev) { var next = Object.assign({}, prev); next[pid] = text; return next; });
   }
 
