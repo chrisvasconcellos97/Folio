@@ -596,7 +596,8 @@ export function StartConversationModal({ accountId, accounts, userId, orgId, mem
                           borderRadius: 6, padding: "4px 8px",
                           color: it.due_date ? C.text : C.textMuted,
                           fontSize: 16, fontFamily: INTER, outline: "none",
-                          colorScheme: "dark",
+                          // Match the app theme so the native date picker isn't forced dark in light mode.
+                          colorScheme: (typeof document !== "undefined" && document.documentElement.getAttribute("data-theme") === "light") ? "light" : "dark",
                         }}
                       />
                       <select

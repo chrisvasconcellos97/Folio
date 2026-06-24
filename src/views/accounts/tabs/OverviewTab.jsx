@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { C } from "../../../lib/colors";
+import { healthLabel } from "../../../lib/accountHealth";
 import { PipMark } from "../../../components/PipMark";
 import { AmberBtn, SecBtn } from "../../../components/Buttons";
 import { Card } from "../../../components/Card";
@@ -594,7 +595,7 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
           <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 2 }}>
             <div style={{ width: 10, height: 10, borderRadius: "50%", background: healthScore === "green" ? C.green : healthScore === "yellow" ? C.yellow : healthScore === "new" ? C.textMuted : C.red }} />
             <span style={{ fontSize: 14, color: healthScore === "green" ? C.green : healthScore === "yellow" ? C.yellow : healthScore === "new" ? C.textMuted : C.red, fontWeight: 500, textTransform: "capitalize" }}>
-              {healthScore === "green" ? "Healthy" : healthScore === "yellow" ? "Watching" : healthScore === "new" ? "New" : "At Risk"}
+              {healthLabel(healthScore)}
             </span>
             <InfoTip text="Auto-computed from meeting recency, overdue items, and project health. Updates daily. Click the health pill at the top of the account to pin it manually if Pip has it wrong." />
           </div>
@@ -796,7 +797,7 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
                       )}
                       {sub.status && (
                         <span style={{ fontSize: 10, color: STATUS_COLORS[sub.status] || C.textMuted }}>
-                          {{ green: 'Healthy', yellow: 'Watching', red: 'At Risk' }[sub.status] || sub.status}
+                          {healthLabel(sub.status)}
                         </span>
                       )}
                     </div>

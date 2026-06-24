@@ -4,6 +4,9 @@ import { logPipUsage } from "./_pipUsage.js";
 
 var RATE_MAP = new Map();
 
+// Match the other synthesis endpoints — a Sonnet readout can run past the ~10s default.
+export const config = { maxDuration: 60 };
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
 

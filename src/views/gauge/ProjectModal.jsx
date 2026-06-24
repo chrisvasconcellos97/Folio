@@ -14,17 +14,15 @@ import { defaultCustomFieldSchema, DEFAULT_TASK_STATUS_COLUMNS } from "../../lib
 import { CustomFieldSchemaEditor } from "./CustomFieldSchemaEditor";
 import { insertTask, updateTask, deleteTask } from "../../hooks/useTasks";
 import { stageToTaskFields } from "../../lib/projectTasks";
-import { firstStatusColumn } from "../../lib/gaugeStatus";
+import { firstStatusColumn, GAUGE_STATUS_CONFIG } from "../../lib/gaugeStatus";
 
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
 
-var STATUS_OPTS = [
-  { value: "planned",     label: "Planned"     },
-  { value: "in_progress", label: "In Progress" },
-  { value: "blocked",     label: "Blocked"     },
-  { value: "complete",    label: "Complete"    },
-  { value: "on_hold",     label: "On Hold"     },
-];
+// Derived from the shared GAUGE_STATUS_CONFIG so labels never drift (draft is
+// intentionally omitted — a project is published from the modal, not set to draft here).
+var STATUS_OPTS = ["planned", "in_progress", "blocked", "complete", "on_hold"].map(function (s) {
+  return { value: s, label: GAUGE_STATUS_CONFIG[s].label };
+});
 
 var PRIORITY_OPTS = [
   { value: "high",   label: "High"   },

@@ -205,13 +205,11 @@ export function LeaderProjectsView({ projects, accounts, members, userEmail, onO
           label="Status"
           value={statusFilter}
           onChange={setStatusFilter}
-          options={[
-            { value: "all",         label: "Any status"  },
-            { value: "in_progress", label: "In Progress" },
-            { value: "blocked",     label: "Blocked"     },
-            { value: "planned",     label: "Planned"     },
-            { value: "on_hold",     label: "On Hold"     },
-          ]}
+          options={[{ value: "all", label: "Any status" }].concat(
+            ["in_progress", "blocked", "planned", "on_hold"].map(function (s) {
+              return { value: s, label: gaugeStatusLabel(s) };
+            })
+          )}
         />
         <button
           onClick={function () { setStuckOnly(!stuckOnly); }}

@@ -2080,7 +2080,7 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
               <button
                 key={i}
                 onClick={function () { goToCard(i); }}
-                aria-label={"Go to " + cardScript[i].label}
+                aria-label={"Go to " + ((cardScript[i] || {}).label || "card")}
                 style={{ background: "none", border: "none", padding: "4px 3px", cursor: "pointer", color: activeCard === i ? C.accent : C.rule, fontSize: 11, lineHeight: 1 }}
               >●</button>
             );

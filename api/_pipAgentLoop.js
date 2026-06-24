@@ -228,7 +228,9 @@ async function toolSearchNotes(input, ctx) {
       if (r && !r.error && r.data) r.data.forEach(function (m) { if (!seen[m.id]) { seen[m.id] = true; rows.push(m); } });
     });
   } catch (_) {
-    var like = "%" + q.replace(/[%_]/g, "") + "%";
+    // Strip %_ (ilike wildcards) AND ,() — the latter would otherwise alter the
+    // PostgREST .or() filter structure (a comma splits conditions, parens regroup).
+    var like = "%" + q.replace(/[%_,()]/g, "") + "%";
     var rf = await ctx.supabase.from("folio_meetings").select(sel)
       .or("notes.ilike." + like + ",pip_summary.ilike." + like)
       .order("meeting_date", { ascending: false }).limit(15);
