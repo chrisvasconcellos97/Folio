@@ -92,7 +92,7 @@ export function EditMeetingModal({ meeting, onSave, onClose }) {
         </div>
 
         <div>
-          <FL htmlFor="edit-meeting-action-items">Action Items</FL>
+          <FL htmlFor="edit-meeting-action-items">Tasks</FL>
           <TextArea
             id="edit-meeting-action-items"
             value={actionItems}

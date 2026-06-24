@@ -547,7 +547,7 @@ export function StartConversationModal({ accountId, accounts, userId, orgId, mem
 
         {phase === "review" && extractedItems.length > 0 && (
           <div>
-            <FL>Pip noticed these action items — keep the ones you want.</FL>
+            <FL>Pip noticed these tasks — keep the ones you want.</FL>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {extractedItems.map(function (it, idx) {
                 var faded = !it.checked;

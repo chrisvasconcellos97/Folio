@@ -177,7 +177,7 @@ function MeetingDetailModal({ meeting, onClose, allItems, addItem }) {
         {m.action_items && (
           <div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
-              <FL style={{ marginBottom: 0 }}>Action Items</FL>
+              <FL style={{ marginBottom: 0 }}>Tasks</FL>
               {addItem && m.account_id && (
                 <AddToTasksButton
                   actionItemsText={m.action_items}

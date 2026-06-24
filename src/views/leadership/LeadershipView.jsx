@@ -11,8 +11,8 @@ var STATUS_COLORS = { green: C.green, yellow: C.yellow, red: C.red, new: C.textM
 
 var EVENT_LABELS = {
   meeting_logged:       "logged a meeting",
-  item_added:          "added an open item",
-  item_completed:      "completed an item",
+  item_added:          "added a task",
+  item_completed:      "completed a task",
   contact_added:       "added a contact",
   gauge_status_changed: "updated a Gauge project",
   account_status_changed: "changed account status",
@@ -255,7 +255,7 @@ export function LeadershipView({ org, orgId, userMeta, onSignOut }) {
               {[
                 { label: "Accounts",    value: accounts.length },
                 { label: "Going Cold",  value: goingCold.length,  warn: goingCold.length > 0 },
-                { label: "Open Items",  value: totalOpen,          warn: totalOpen > 10 },
+                { label: "Open Tasks",  value: totalOpen,          warn: totalOpen > 10 },
                 { label: "Team Size",   value: members.length },
               ].map(function (s) {
                 return (
@@ -325,7 +325,7 @@ export function LeadershipView({ org, orgId, userMeta, onSignOut }) {
                 {topByItems.length > 0 && (
                   <div style={{ marginTop: 20 }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8 }}>
-                      Most Open Items
+                      Most Open Tasks
                     </div>
                     <Card>
                       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>

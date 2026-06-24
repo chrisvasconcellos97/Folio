@@ -577,7 +577,7 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
           </Card>
         )}
         <Card onClick={onSwitchTab ? function () { onSwitchTab("tasks"); } : undefined}>
-          <FL>Open Items</FL>
+          <FL>Tasks</FL>
           <div
             style={{
               fontSize: 22,
@@ -717,12 +717,12 @@ export function OverviewTab({ account, userId, orgId, openItems, meetings, onQui
       })()}
 
       {/* Actions — the meeting capture CTA lives in the launcher up top
-          ("Start / log a meeting"); down here we keep only Add Item plus a
+          ("Start / log a meeting"); down here we keep only Add Task plus a
           link into the full history. (App Coherence: one primary meeting CTA
           per surface — the redundant "Quick Conversation" button was pruned.) */}
       <div style={{ display: "flex", gap: 8 }}>
         <SecBtn style={{ flex: 1 }} onClick={onAddItem}>
-          Add Item
+          Add Task
         </SecBtn>
       </div>
       <div style={{ textAlign: "center" }}>

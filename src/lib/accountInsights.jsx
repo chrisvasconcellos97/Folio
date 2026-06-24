@@ -102,7 +102,7 @@ export function buildPartnerInsight(account, openItems) {
       <>{account.name} has gone quiet — {daysSince} days. Stay close to the relationship.</>,
     ]);
   } else if (!renewalLead && openCount > 0) {
-    fallbackLead = <>{openCount} open item{openCount !== 1 ? "s" : ""} with {account.name}.</>;
+    fallbackLead = <>{openCount} open task{openCount !== 1 ? "s" : ""} with {account.name}.</>;
   } else if (!renewalLead) {
     fallbackLead = pickV(seed + "a", [
       "Things are steady with " + account.name + ". No action needed right now.",
@@ -147,7 +147,7 @@ export function buildCustomerInsight(account, openItems, projects, handlers) {
     ]));
   } else if (account.status === "red") {
     parts.push(pickV(seed + "a", [
-      account.name + " needs attention." + (openCount > 0 ? " " + openCount + " open item" + (openCount !== 1 ? "s" : "") + " in the queue." : " The relationship needs a check-in."),
+      account.name + " needs attention." + (openCount > 0 ? " " + openCount + " open task" + (openCount !== 1 ? "s" : "") + " in the queue." : " The relationship needs a check-in."),
       account.name + " is flagged. I'd get ahead of this before it slips further.",
       "Something's off with " + account.name + ". Worth a proactive check-in before the next call.",
     ]));
@@ -166,7 +166,7 @@ export function buildCustomerInsight(account, openItems, projects, handlers) {
   } else if (account.status === "yellow") {
     parts.push(pickV(seed + "a", [
       account.name + " is moving in the right direction, but there's still work to do.",
-      account.name + " is trending okay. Watch the open items — they'll tell you if this is slipping.",
+      account.name + " is trending okay. Watch the open tasks — they'll tell you if this is slipping.",
       "Cautiously optimistic on " + account.name + ". Yellow means watch it, not forget it.",
     ]));
   } else if (account.status === "green" && daysSince !== null && daysSince <= 14) {

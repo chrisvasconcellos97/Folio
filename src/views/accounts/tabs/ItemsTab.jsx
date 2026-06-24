@@ -36,14 +36,14 @@ function buildItemsInsight(items, taskCadences, accountId) {
 
   if (items.length === 0 && (!taskCadences || taskCadences.length === 0)) {
     return pickV(seed + "i0", [
-      "Nothing here yet. Use this tab to track action items and recurring tasks for this account.",
-      "No tasks or items yet. Add anything that needs following up — it'll make your next call easier.",
+      "Nothing here yet. Use this tab to track tasks and recurring work for this account.",
+      "No tasks yet. Add anything that needs following up — it'll make your next call easier.",
     ]);
   }
 
   if (open.length === 0 && (!taskCadences || taskCadences.length === 0)) {
     return pickV(seed + "i0", [
-      "All " + closed.length + " item" + (closed.length !== 1 ? "s" : "") + " closed. Clean slate.",
+      "All " + closed.length + " task" + (closed.length !== 1 ? "s" : "") + " closed. Clean slate.",
       "Nothing open." + (recentlyClosed.length > 0 ? " " + recentlyClosed.length + " closed recently — good momentum." : " All done here."),
     ]);
   }
@@ -57,17 +57,17 @@ function buildItemsInsight(items, taskCadences, accountId) {
     ]));
   } else if (overdue.length > 0) {
     parts.push(pickV(seed + "il", [
-      overdue.length + " item" + (overdue.length !== 1 ? "s are" : " is") + " overdue. Clear those first.",
-      overdue.length + " overdue item" + (overdue.length !== 1 ? "s" : "") + " — flag them on your next call.",
+      overdue.length + " task" + (overdue.length !== 1 ? "s are" : " is") + " overdue. Clear those first.",
+      overdue.length + " overdue task" + (overdue.length !== 1 ? "s" : "") + " — flag them on your next call.",
     ]));
   } else if (open.length >= 5) {
     parts.push(pickV(seed + "il", [
-      open.length + " open items. That's a fair bit — watch that nothing slips.",
+      open.length + " open tasks. That's a fair bit — watch that nothing slips.",
       open.length + " things still open. Worth a review before your next call.",
     ]));
   } else if (open.length > 0) {
     parts.push(pickV(seed + "il", [
-      open.length + " open item" + (open.length !== 1 ? "s" : "") + ". Manageable.",
+      open.length + " open task" + (open.length !== 1 ? "s" : "") + ". Manageable.",
       open.length + " thing" + (open.length !== 1 ? "s" : "") + " still in progress for this account.",
     ]));
   }
@@ -205,10 +205,10 @@ export function ItemsTab({ items, taskCadences, accountId, userId, userEmail, on
         </div>
       )}
 
-      {/* Action Items */}
+      {/* Tasks */}
       {open.length > 0 && (
         <div>
-          <div style={sectionLabel}>Action Items</div>
+          <div style={sectionLabel}>Tasks</div>
           {open.map(function (item) {
             return (
               <div key={item.id} style={Object.assign({}, glass, { display: "flex", alignItems: "flex-start", gap: 10, borderRadius: 10, padding: "11px 13px", marginBottom: 6 })}>
@@ -333,7 +333,7 @@ export function ItemsTab({ items, taskCadences, accountId, userId, userEmail, on
         <EmptyState
           lattice={false}
           compact
-          title="No open items. You're caught up."
+          title="No open tasks. You're caught up."
           cta={onAdd && (
             <button
               onClick={onAdd}
@@ -343,7 +343,7 @@ export function ItemsTab({ items, taskCadences, accountId, userId, userEmail, on
                 color: C.accent, fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer",
               }}
             >
-              + Add Action Item
+              + Add Task
             </button>
           )}
         />
@@ -373,7 +373,7 @@ export function ItemsTab({ items, taskCadences, accountId, userId, userEmail, on
       )}
 
       <AmberBtn style={{ width: "100%", fontSize: 13 }} onClick={onAdd}>
-        + Add Action Item
+        + Add Task
       </AmberBtn>
 
       {editingItem && (

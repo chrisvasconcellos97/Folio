@@ -86,7 +86,7 @@ export function AddItemModal({ accountId, userId, userEmail, existing, onSave, o
   var latest = statusUpdates[0] || null;
 
   return (
-    <Modal title={isEdit ? "Edit Task" : "Add Open Item"} onClose={onClose} width={isEdit ? 480 : 400}>
+    <Modal title={isEdit ? "Edit Task" : "Add Task"} onClose={onClose} width={isEdit ? 480 : 400}>
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
 
         <div>
@@ -273,7 +273,7 @@ export function AddItemModal({ accountId, userId, userEmail, existing, onSave, o
 
         <div style={{ display: "flex", gap: 8 }}>
           <AmberBtn style={{ flex: 1 }} onClick={handleSave} disabled={loading}>
-            {loading ? "Saving…" : isEdit ? "Save Changes" : "Add Item"}
+            {loading ? "Saving…" : isEdit ? "Save Changes" : "Add Task"}
           </AmberBtn>
           <SecBtn style={{ flex: 1 }} onClick={onClose}>Cancel</SecBtn>
         </div>

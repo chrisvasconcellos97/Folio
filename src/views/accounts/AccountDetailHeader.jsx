@@ -346,7 +346,7 @@ export function AccountDetailHeader({
           >
             <span style={{ fontSize: 13 }}>✦</span> Brief Me
           </button>
-          <InfoTip text="Pip generates a pre-call summary — last meeting, open items, contacts, and anything to flag before you get on a call." />
+          <InfoTip text="Pip generates a pre-call summary — last meeting, open tasks, contacts, and anything to flag before you get on a call." />
           </div>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 6 }}>
           <button

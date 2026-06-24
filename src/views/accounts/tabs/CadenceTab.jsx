@@ -236,13 +236,13 @@ export function CadenceTab({ account, cadences, items, meetings, contacts, onAdd
       {/* Open items */}
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <div style={sectionLabel}>Open Items{openItems.length > 0 ? ' (' + openItems.length + ')' : ''}</div>
+          <div style={sectionLabel}>Tasks{openItems.length > 0 ? ' (' + openItems.length + ')' : ''}</div>
           <button onClick={onAddItem} style={{ background: 'none', border: 'none', fontSize: 11, color: C.accent, cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif" }}>
             + Add
           </button>
         </div>
         {openItems.length === 0 ? (
-          <div style={{ fontSize: 12, color: C.green, padding: '8px 0' }}>All clear — no open items.</div>
+          <div style={{ fontSize: 12, color: C.green, padding: '8px 0' }}>All clear — no open tasks.</div>
         ) : (
           openItems.map(function (item) {
             return (

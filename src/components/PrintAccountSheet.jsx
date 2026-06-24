@@ -46,7 +46,7 @@ export function PrintAccountSheet({ account, contacts, meetings, items }) {
 
       {openItems.length > 0 && (
         <div>
-          <h2>Open Items</h2>
+          <h2>Tasks</h2>
           <ul>
             {openItems.map(function (i) {
               return <li key={i.id}>{i.text}{i.due_date ? " (due " + i.due_date + ")" : ""}</li>;

@@ -209,9 +209,9 @@ export function MeetingsTab({ meetings, accountName, accountId, userId, openItem
           .then(function () {
             var n = data.action_items ? data.action_items.split(/\r?\n/).filter(function (l) { return l.trim(); }).length : 0;
             if (n > 0) {
-              showToast("Pip summary saved · " + n + " action item" + (n !== 1 ? "s" : ""));
+              showToast("Pip summary saved · " + n + " task" + (n !== 1 ? "s" : ""));
             } else {
-              showToast("Pip summary saved · no action items found", "warning");
+              showToast("Pip summary saved · no tasks found", "warning");
             }
           })
           .catch(function (err) { console.error("Pip save failed:", err); });
@@ -330,7 +330,7 @@ export function MeetingsTab({ meetings, accountName, accountId, userId, openItem
             {m.action_items && (
               <div style={{ marginBottom: 10 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
-                  <FL style={{ marginBottom: 0 }}>Action Items</FL>
+                  <FL style={{ marginBottom: 0 }}>Tasks</FL>
                   {addItem && (
                     <AddToTasksButton
                       actionItemsText={m.action_items}

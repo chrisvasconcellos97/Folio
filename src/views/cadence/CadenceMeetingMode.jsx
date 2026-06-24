@@ -584,7 +584,7 @@ export function CadenceMeetingMode({
     onAddItem({ text: t, due_date: null })
       .then(function () {
         setQuickItem("");
-        showToast("Added to open items");
+        showToast("Added to tasks");
       })
       .catch(function () {
         showToast("Couldn't add item");
@@ -987,7 +987,7 @@ export function CadenceMeetingMode({
                 {renderProjectCards()}
               </SidebarSection>
               <CollapsibleSection
-                title="Open Items"
+                title="Tasks"
                 count={(openItems || []).length}
                 open={itemsOpen}
                 onToggle={function () { setItemsOpen(function (v) { return !v; }); }}
@@ -1202,7 +1202,7 @@ export function CadenceMeetingMode({
                 {renderProjectCards()}
               </SidebarSection>
               <CollapsibleSection
-                title="Open Items"
+                title="Tasks"
                 count={(openItems || []).length}
                 open={itemsOpen}
                 onToggle={function () { setItemsOpen(function (v) { return !v; }); }}
@@ -1234,7 +1234,7 @@ export function CadenceMeetingMode({
               onKeyDown={function (e) {
                 if (e.key === "Enter") { e.preventDefault(); handleAddQuickItem(); }
               }}
-              placeholder="+ Quick action item — press Enter"
+              placeholder="+ Quick task — press Enter"
               style={{
                 flex: 1, background: C.surface, border: "1px solid " + C.rule,
                 borderRadius: 8, padding: "8px 12px",

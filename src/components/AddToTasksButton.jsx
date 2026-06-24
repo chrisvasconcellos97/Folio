@@ -33,8 +33,8 @@ export function AddToTasksButton({ actionItemsText, accountId, openItems, addIte
   return (
     <button
       onClick={handleClick}
-      title="Add each action item as a task"
-      aria-label="Add each action item as a task"
+      title="Add each line as a tracked task"
+      aria-label="Add each line as a tracked task"
       style={Object.assign({
         background: C.yellowFaint,
         border: "1px solid " + C.yellow,

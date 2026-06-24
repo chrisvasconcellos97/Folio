@@ -2038,10 +2038,10 @@ export function CadenceHub({
     </div>
   ) : (
     <div>
-      <SectionHeader count={openItems.length}>Open Items · Account</SectionHeader>
+      <SectionHeader count={openItems.length}>Tasks · Account</SectionHeader>
       {openItems.length === 0 ? (
         <div style={{ fontSize: 12, color: C.green, padding: "6px 0" }}>
-          All clear — no open items on this account.
+          All clear — no open tasks on this account.
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>

@@ -78,7 +78,7 @@ function MeetingsPreview() {
                 <div style={{ fontSize: 10, color: C.textMuted }}>{r.date}</div>
               </div>
               <div style={{ fontSize: 10, color: C.textSub, marginBottom: 3 }}>{r.note}</div>
-              <div style={{ fontSize: 9, color: C.accent }}>{r.items} action item{r.items !== 1 ? "s" : ""}</div>
+              <div style={{ fontSize: 9, color: C.accent }}>{r.items} task{r.items !== 1 ? "s" : ""}</div>
             </div>
           );
         })}
@@ -95,7 +95,7 @@ function CadencePreview() {
         <div style={{ fontSize: 11, color: C.accent, fontWeight: 600, marginBottom: 2 }}>
           Every Thursday · Next: May 29
         </div>
-        <div style={{ fontSize: 10, color: C.textMuted }}>2 open items pinned</div>
+        <div style={{ fontSize: 10, color: C.textMuted }}>2 open tasks pinned</div>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
         {["Follow up on pricing deck", "Send Q3 proposal draft"].map(function (item, i) {
@@ -181,13 +181,13 @@ var SCREENS = [
   },
   {
     headline: "Your accounts.",
-    body: "Every contact, meeting, and open item — under one roof.",
+    body: "Every contact, meeting, and task — under one roof.",
     pipTop: "10%", pipLeft: "15%",
     visual: AccountsPreview,
   },
   {
     headline: "Log your meetings.",
-    body: "Notes, action items, talking points — all of it. I'll read them.",
+    body: "Notes, tasks, talking points — all of it. I'll read them.",
     pipTop: "10%", pipLeft: "82%",
     visual: MeetingsPreview,
   },
