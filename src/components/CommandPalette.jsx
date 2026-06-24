@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { C } from "../lib/colors";
 import { supabase } from "../lib/supabase";
 
-export function CommandPalette({ accounts, contacts, userId, onSelectAccount, onSelectContact, onNavigate, onClose }) {
+export function CommandPalette({ accounts, contacts, userId, onSelectAccount, onSelectContact, onNavigate, onCapture, onClose }) {
   var [query, setQuery] = useState("");
   var [idx, setIdx] = useState(0);
   var [contentResults, setContentResults] = useState([]);
@@ -50,7 +50,13 @@ export function CommandPalette({ accounts, contacts, userId, onSelectAccount, on
     : [];
   var navResults = NAV_ITEMS.filter(function(n) { return !q || n.label.toLowerCase().includes(q); })
     .map(function(n) { return Object.assign({}, n, { group: "Navigate" }); });
-  var results = accountResults.concat(contactResults).concat(navResults).concat(contentResults);
+  // Quick capture — type a line ("told Dana I'd send the audit Friday") and file it
+  // as a task. Goes LAST so a query that matches an account still navigates on
+  // Enter; a free-form line that matches nothing leaves capture as the only action.
+  var captureResult = (query.trim() && onCapture)
+    ? [{ label: "✦ Capture as a task", sub: "“" + query.trim() + "”", group: "Capture", action: function() { onCapture(query.trim()); } }]
+    : [];
+  var results = accountResults.concat(contactResults).concat(navResults).concat(contentResults).concat(captureResult);
 
   // Debounced async full-text search across meeting notes and open items
   useEffect(function () {
@@ -180,7 +186,7 @@ export function CommandPalette({ accounts, contacts, userId, onSelectAccount, on
             value={query}
             onChange={function(e) { setQuery(e.target.value); }}
             onKeyDown={handleKey}
-            placeholder="Jump to account or view…"
+            placeholder="Jump to an account, or type to capture a task…"
             role="combobox"
             aria-label="Search accounts, contacts, or navigate"
             aria-expanded="true"

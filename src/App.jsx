@@ -50,6 +50,7 @@ var AddLifeItemModal       = lazy(function () { return import("./views/life/AddL
 var OnboardingTour         = lazy(function () { return import("./views/welcome/OnboardingTour").then(function (m) { return { default: m.OnboardingTour }; }); });
 var PipCatchUp             = lazy(function () { return import("./views/pip/PipCatchUp").then(function (m) { return { default: m.PipCatchUp }; }); });
 var DigestIngestModal      = lazy(function () { return import("./views/home/DigestIngestModal").then(function (m) { return { default: m.DigestIngestModal }; }); });
+var QuickCaptureModal      = lazy(function () { return import("./views/quicktasks/QuickCaptureModal").then(function (m) { return { default: m.QuickCaptureModal }; }); });
 import { DesktopLayout } from "./layout/DesktopLayout";
 import { MobileLayout } from "./layout/MobileLayout";
 import { PipOrb, PipMark } from "./components/PipMark";
@@ -91,6 +92,7 @@ export default function App() {
   var [showOnboarding, setShowOnboarding] = useState(false);
   var [pipTransition, setPipTransition] = useState("idle");
   var [showPalette, setShowPalette]     = useState(false);
+  var [captureText, setCaptureText]     = useState(null); // null = closed; string (incl "") = quick-capture open
   var [showStartConv, setShowStartConv] = useState(false);
   var [showDigestIngest, setShowDigestIngest] = useState(false);
   var [convPrefillDate, setConvPrefillDate] = useState(null); // ISO date string from calendar click
@@ -1867,8 +1869,19 @@ export default function App() {
               setShowPalette(false);
             }}
             onNavigate={function(v) { handleSetView(v); setShowPalette(false); }}
+            onCapture={function(text) { setShowPalette(false); setCaptureText(text || ""); }}
             onClose={function() { setShowPalette(false); }}
           />
+        )}
+        {captureText !== null && (
+          <Suspense fallback={null}><QuickCaptureModal
+            accounts={accounts}
+            userId={userId}
+            addMeeting={addMeeting}
+            awayPeriods={awayHook.periods}
+            initialText={captureText}
+            onClose={function() { setCaptureText(null); }}
+          /></Suspense>
         )}
         {catchUpOpen && (
           <Suspense fallback={null}><PipCatchUp
