@@ -1,5 +1,13 @@
 # Folios — Claude Development Context
 
+## Session Handoff — June 24 2026 (PM-2): perf follow-up (M1/M2) — UNSHIPPED on branch `claude/folio-confidence-gaps-mtv7ub` (`dd6db01`)
+
+**Picked up the deferred perf work after the audit batches shipped.** One commit `dd6db01` (NOT on `main`, awaiting Chris's eyeball — touches a core data hook). Gates green (check-guards 6/6 · 403 tests · vite build).
+- **DONE (safe):** `computeAndSaveSnapshots` deferred behind `requestIdleCallback` (off first-paint). **`useProjects`: a `folio_tasks` realtime change now re-hydrates tasks onto the existing projects instead of re-running `select('*').limit(500)` over `gauge_projects` on every task edit** — the project set is unchanged by a task add/edit/complete; new/deleted projects still full-fetch via the separate `gauge_projects` channel. Cuts the heaviest write-path refetch (was the real cost, not the per-account fetch).
+- **WON'T DO — narrowing the global `useMeetings` select:** that list feeds PipView chat context (`m.notes`/`pip_summary`/`pip_tone`/`theme`); narrowing would REGRESS the H1 full-chat-context fix. Left `select('*')` intentionally.
+- **STILL DEFERRED (isolated session):** AccountDetail + AdHocConversationFlow consuming the App-level projects (filtered client-side) instead of mounting their own `useProjects`, + consolidating the ~5 `folio_tasks` realtime channels into one. Touches the most-used screen's data flow + realtime — too risky to rush at session end. GaugeView is ALREADY deduped (its `localHook` passes `null` userId when an override is supplied, so its channels never mount — the audit was stale on that one).
+- **Spot-check before ship:** open Gauge + an account's Tasks tab, complete/edit a task → it should update everywhere instantly (realtime still works), just without the full project reload. **To ship:** `git push origin claude/folio-confidence-gaps-mtv7ub:main`.
+
 ## Session Handoff — June 24 2026 (PM): full-app audit (6 parallel agents) + Batches 1–5 fixes (SHIPPED `3142e51`)
 
 **WHAT THIS SESSION WAS:** a deep full-app audit (6 parallel subagents — security, Pip/AI, React correctness, performance, UX/coherence, schema) then implemented the fix game plan in 5 gated batches + the M3 vocab collapse. Also corrected a wrong assumption in this file (Chris is **90% DESKTOP**, not "heavy phone" — the old interview line was wrong; forward roadmap re-scoped desktop-first: ⌘K capture bar, paste-routing, ambient always-open tab, desktop notifications — NOT mobile/voice). **SHIPPED to `main` (`576f095`→`3142e51`, fast-forwarded clean) — one Vercel prod deploy.** The prod DB migration was run by Chris before ship. Every batch gated green (`check-guards` 6/6 · 403 tests · `vite build` · `test-api-imports`).
