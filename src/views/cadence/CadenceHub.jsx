@@ -1735,22 +1735,33 @@ export function CadenceHub({
       var token = result.data.session ? result.data.session.access_token : null;
       var headers = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = "Bearer " + token;
-      return fetch("/api/leadership-readout", {
-        method: "POST",
-        headers: headers,
-        body: JSON.stringify({
-          userId: userId,
-          meetingSummary: meeting.pip_summary || meeting.notes || "",
-          actionItems: [],
-          contactName: contact ? contact.name : null,
-          portfolioState: (snapshotsApi.snapshots || []).map(function (s) {
-            var acc = (accounts || []).find(function (a) { return a.id === s.account_id; });
-            return Object.assign({}, s, { account_name: acc ? acc.name : "Account" });
-          }),
-          facts:        pipFactsApi.activeFactStrings || [],
-          profileProse: userProfile && userProfile.profile_prose ? userProfile.profile_prose : null,
-        }),
-      });
+      // Recent logged wins (brag file) → the boss readout can bank what went right,
+      // not just surface risks. One-shot fetch; the readout is infrequent.
+      var winsSinceIso = new Date(Date.now() - 30 * 86400000).toISOString();
+      return supabase.from("folio_wins")
+        .select("title, created_at").eq("user_id", userId)
+        .gte("created_at", winsSinceIso)
+        .order("created_at", { ascending: false }).limit(15)
+        .then(function (wr) {
+          var recentWins = (wr && wr.data ? wr.data : []).map(function (w) { return w.title; });
+          return fetch("/api/leadership-readout", {
+            method: "POST",
+            headers: headers,
+            body: JSON.stringify({
+              userId: userId,
+              meetingSummary: meeting.pip_summary || meeting.notes || "",
+              actionItems: [],
+              contactName: contact ? contact.name : null,
+              portfolioState: (snapshotsApi.snapshots || []).map(function (s) {
+                var acc = (accounts || []).find(function (a) { return a.id === s.account_id; });
+                return Object.assign({}, s, { account_name: acc ? acc.name : "Account" });
+              }),
+              wins:         recentWins,
+              facts:        pipFactsApi.activeFactStrings || [],
+              profileProse: userProfile && userProfile.profile_prose ? userProfile.profile_prose : null,
+            }),
+          });
+        });
     })
       .then(function (r) { return r.json(); })
       .then(function (data) {

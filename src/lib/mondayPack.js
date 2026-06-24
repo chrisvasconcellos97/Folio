@@ -214,6 +214,7 @@ export function computePackFingerprint(bundle) {
   var meetings = bundle.meetings || [];
   var projects = bundle.projects || [];
   var tasks = bundle.tasks || [];
+  var wins = bundle.wins || [];
 
   function maxOf(rows, fields) {
     var max = "";
@@ -247,6 +248,7 @@ export function computePackFingerprint(bundle) {
     m: { n: meetings.length, u: maxOf(meetings, ["updated_at", "created_at"]), d: maxOf(meetings, ["meeting_date"]) },
     p: { n: projects.length, st: projects.map(function (p) { return (p && p.status) || ""; }).sort().join(","), u: maxProjUpdate },
     t: { n: tasks.length, u: maxOf(tasks, ["updated_at", "created_at"]) },
+    wn: { n: wins.length, u: maxOf(wins, ["created_at"]) }, // a newly-logged win refreshes the pack
   };
   return fnv1a(JSON.stringify(canonical));
 }
@@ -274,6 +276,9 @@ export function buildPackPromptPayload(bundle, sections) {
   sections.whoHasBall.owedMe.slice(0, 8).forEach(function (r) {
     lines.push("WAITING ON " + normalizePerson(r.who) + (r.since ? " (since " + r.since + ")" : "") + ": " + r.label + (r.account ? " (" + r.account + ")" : ""));
   });
+  // Wins logged this window — so the read can credit what went right, not just chase what's open.
+  var packWins = (bundle.wins || []).slice(0, 8);
+  if (packWins.length) lines.push("WINS this week: " + packWins.map(function (w2) { return w2.title; }).join("; "));
 
   return {
     lastOneOnOne: one ? {

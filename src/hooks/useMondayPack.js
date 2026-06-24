@@ -77,12 +77,20 @@ export function useMondayPack(userId, cadence, opts) {
         .eq("cadence_id", cadenceId)
         .order("meeting_date", { ascending: false })
         .limit(5),
+      // F — wins logged in the window (brag file → the read credits what went right)
+      supabase.from("folio_wins")
+        .select("id, title, created_at")
+        .eq("user_id", userId)
+        .gte("created_at", windowStartTs)
+        .order("created_at", { ascending: false })
+        .limit(20),
     ]).then(function (results) {
       var rowsA  = (results[0].data) || [];
       var mtgs   = (results[1].data) || [];
       var projs  = (results[2].data) || [];
       var lead   = (results[3].data) || [];
       var ones   = (results[4].data) || [];
+      var wins   = (results[5] && results[5].data) || [];
 
       var accountsById = {};
       (accounts || []).forEach(function (a) { if (a && a.id) accountsById[a.id] = a.name; });
@@ -101,6 +109,7 @@ export function useMondayPack(userId, cadence, opts) {
         meetings: mtgs,
         projects: projs,
         leadershipTasks: lead,
+        wins: wins,
         lastOneOnOne: lastOneOnOne,
         accountsById: accountsById,
       });

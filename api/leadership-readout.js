@@ -33,7 +33,7 @@ export default async function handler(req, res) {
   }
 
   var MAX_ARRAY = 200; // payload size cap — guard against unbounded client arrays
-  var { meetingSummary, actionItems, contactName, portfolioState, facts, profileProse } = req.body || {};
+  var { meetingSummary, actionItems, contactName, portfolioState, wins, facts, profileProse } = req.body || {};
   if (!meetingSummary) return res.status(400).json({ error: "meetingSummary required" });
 
   try {
@@ -43,6 +43,7 @@ export default async function handler(req, res) {
   var portfolioStateCapped = Array.isArray(portfolioState) ? portfolioState.slice(0, MAX_ARRAY) : [];
   var actionItemsCapped    = Array.isArray(actionItems)    ? actionItems.slice(0, MAX_ARRAY)    : [];
   var factsCapped          = Array.isArray(facts)          ? facts.slice(0, MAX_ARRAY)          : [];
+  var winsCapped           = Array.isArray(wins)           ? wins.slice(0, MAX_ARRAY)           : [];
 
   var portfolioSection = "";
   if (portfolioStateCapped.length > 0) {
@@ -61,7 +62,7 @@ export default async function handler(req, res) {
   var systemPrompt = "You are Pip, a loyal field analyst for an account manager. " +
     "Write a concise, professional email from the AM to their manager summarizing a 1:1 check-in and the current portfolio state. " +
     "Tone: direct, confident, no fluff. Use plain text — no markdown headers or bullet stars. " +
-    "Structure: short opening acknowledging the conversation, a brief recap section, a portfolio snapshot section if data is available, and a closing note on priorities. " +
+    "Structure: short opening acknowledging the conversation, a brief recap section, a wins/progress section when recent wins are provided (a manager update is where credit gets banked — surface them, don't only report risks), a portfolio snapshot section if data is available, and a closing note on priorities. " +
     "Keep it under 250 words. Do not include a subject line. Start with 'Hi [name],' on the first line. " +
     "Major-tier accounts carry the most revenue and relationship weight. Lead with them when surfacing risks, wins, or items needing attention. Don't bury a Major account issue behind Mid or Growth items.";
 
@@ -78,6 +79,7 @@ export default async function handler(req, res) {
 
   var userPrompt = knownBlock + "1:1 meeting summary:\n" + meetingSummary + "\n\n" +
     (actionItemsCapped.length ? "Action items from the call:\n" + actionItemsCapped.map(function(a) { return "- " + a; }).join("\n") + "\n\n" : "") +
+    (winsCapped.length ? "Recent wins (the AM's own logged wins — bank these, it's a manager update):\n" + winsCapped.map(function (w) { return "- " + w; }).join("\n") + "\n\n" : "") +
     (portfolioSection ? "Portfolio state:\n" + portfolioSection + "\n\n" : "") +
     "Write the email to " + bossName + ".";
 
