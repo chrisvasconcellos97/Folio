@@ -36,6 +36,7 @@ var TeamView       = lazy(function () { return import("./views/team/TeamView").t
 var LeadershipView = lazy(function () { return import("./views/leadership/LeadershipView").then(function (m) { return { default: m.LeadershipView }; }); });
 var ObservabilityView = lazy(function () { return import("./views/observability/ObservabilityView").then(function (m) { return { default: m.ObservabilityView }; }); });
 var CommitmentsView = lazy(function () { return import("./views/commitments/CommitmentsView").then(function (m) { return { default: m.CommitmentsView }; }); });
+var WaitingOnView = lazy(function () { return import("./views/waiting/WaitingOnView").then(function (m) { return { default: m.WaitingOnView }; }); });
 var ShareTargetView = lazy(function () { return import("./views/share/ShareTargetView").then(function (m) { return { default: m.ShareTargetView }; }); });
 // Heavy account-flow cluster — lazy so AccountDetail→CadenceHub→CadenceMeetingMode/
 // PipSummarizePreview (and pip.js) stay out of the initial index chunk (~150-200 kB).
@@ -189,6 +190,20 @@ export default function App() {
       if (r.error) { console.warn("[App] failed to load folio_contacts:", r.error && r.error.message); return; }
       setAllContacts(r.data || []);
     });
+  }
+  // Clear a waiting-on (they responded) from the "Who Has the Ball" board.
+  // Projects route through the shared projects instance; tasks update folio_tasks
+  // directly (realtime + fetchAllItems keep allItems fresh).
+  function clearWaitingOn(kind, id) {
+    if (kind === "project") {
+      if (updateProjectApp) updateProjectApp(id, { waiting_on: null, waiting_on_since: null });
+      return;
+    }
+    supabase.from("folio_tasks").update({ waiting_on: null, waiting_on_since: null }).eq("id", id)
+      .then(function (r) {
+        if (r.error) { logSilentFailure("App.clearWaitingOn", r.error); return; }
+        fetchAllItems();
+      });
   }
   useEffect(function () {
     if (!userId) return;
@@ -1319,6 +1334,7 @@ export default function App() {
           onOpenDigest: function () { setShowDigestIngest(true); },
           onOpenScheduled: handleOpenScheduled,
           onOpenCommitments: function () { handleSetView("commitments"); },
+          onOpenWaiting: function () { handleSetView("waiting"); },
         }}
       />
     );
@@ -1411,6 +1427,25 @@ export default function App() {
             accounts={accounts}
             onOpenAccount={function (acct) { setSelected(acct); setView("accounts"); }}
             onMarkDone={closeItem}
+          />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
+
+  if (view === "waiting") {
+    mainContent = (
+      <ErrorBoundary key="waiting" label="waiting-on" inline>
+        <Suspense fallback={<PipLoader />}>
+          <WaitingOnView
+            items={allItems}
+            projects={allProjects}
+            accounts={accounts}
+            onOpenAccount={function (acctId) {
+              var a = (accounts || []).find(function (x) { return x.id === acctId; });
+              if (a) { setSelected(a); setView("accounts"); }
+            }}
+            onClearWaiting={clearWaitingOn}
           />
         </Suspense>
       </ErrorBoundary>

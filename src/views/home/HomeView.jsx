@@ -200,6 +200,7 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
   var onOpenDigest           = handlers.onOpenDigest;
   var onOpenScheduled        = handlers.onOpenScheduled;
   var onOpenCommitments      = handlers.onOpenCommitments;
+  var onOpenWaiting          = handlers.onOpenWaiting;
   var onOpenPersonHub        = handlers.onOpenPersonHub;
 
   commitmentNudges = commitmentNudges || [];
@@ -1880,11 +1881,21 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
                       </div>
                     );
                   })}
-                  {(wordCommitments.length > 2 || wordWaitingOn.length > 2) && (
-                    <div style={{ fontSize: 11, color: C.textMuted, paddingTop: 6 }}>
-                      {"+" + (Math.max(0, wordCommitments.length - 2) + Math.max(0, wordWaitingOn.length - 2)) + " more"}
-                    </div>
-                  )}
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", paddingTop: 6 }}>
+                    {(wordCommitments.length > 2 || wordWaitingOn.length > 2) && (
+                      <span style={{ fontSize: 11, color: C.textMuted }}>
+                        {"+" + (Math.max(0, wordCommitments.length - 2) + Math.max(0, wordWaitingOn.length - 2)) + " more"}
+                      </span>
+                    )}
+                    {wordWaitingOn.length > 0 && onOpenWaiting && (
+                      <button
+                        onClick={onOpenWaiting}
+                        style={{ background: "none", border: "none", padding: 0, fontSize: 11, fontWeight: 600, color: C.accent, cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif" }}
+                      >
+                        Who has the ball →
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
               <HexSignature cells={3} peak={0.13} />
