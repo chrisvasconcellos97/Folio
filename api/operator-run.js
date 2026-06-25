@@ -300,7 +300,7 @@ function pickMovedAccounts(accounts, activitySinceIds, snapshotsById, opGenByAcc
 
 // ── per-user processing ────────────────────────────────────────────────
 
-async function processUser(admin, client, userId, tz) {
+async function processUser(admin, client, userId, tz, isScheduled) {
   var local = localParts(tz);
 
   // Last run = most recent operator report for this user. Used to decide which
@@ -364,6 +364,12 @@ async function processUser(admin, client, userId, tz) {
   var awayNow = currentlyAway(awayPeriods, nowLocal);
   var backFrom = awayNow ? null : justBackFrom(awayPeriods, nowLocal, 5);
   if (awayNow) {
+    // A SCHEDULED (cron) run does not fire while the user is on PTO — there's no
+    // workday to prep, and it saves the spend. A MANUAL run (the in-app button)
+    // still goes through, framed as away (below), in case they want a read.
+    if (isScheduled) {
+      return { userId: userId, skipped: "pto", away: awayLabel(awayNow) };
+    }
     userContext = (userContext ? userContext + "\n\n" : "") +
       "── AWAY / PTO ──\nThe user is CURRENTLY out of office (" + awayLabel(awayNow) +
       "). Do NOT flag accounts as cold/slipping or commitments as dropped because of silence during this window — that silence is expected. Frame anything time-sensitive as 'for when you're back', never as a failure.";
@@ -591,6 +597,18 @@ export default async function handler(req, res) {
     // treat the bearer as a user JWT and scope strictly to that user.
     var secret = process.env.CRON_SECRET;
     var isCron = !!secret && bearer === secret;
+
+    // Weekend skip — a SCHEDULED (cron) run does not fire on Sat/Sun mornings.
+    // Chris works weekdays; no point prepping a workday read on a day off, and it
+    // saves the spend. A MANUAL run (the in-app "Run Pip's pass" button, user JWT)
+    // always runs, even on a weekend — that's an explicit ask.
+    if (isCron) {
+      var wd = new Date().toLocaleDateString("en-US", { timeZone: tz, weekday: "short" });
+      if (wd === "Sat" || wd === "Sun") {
+        return res.status(200).json({ ok: true, skipped: "weekend", weekday: wd });
+      }
+    }
+
     var scopedUser = null;
     if (!isCron) {
       var authRes = await admin.auth.getUser(bearer);
@@ -624,7 +642,7 @@ export default async function handler(req, res) {
     var results = [];
     for (var i = 0; i < userIds.length; i++) {
       try {
-        results.push(await processUser(admin, client, userIds[i], tz));
+        results.push(await processUser(admin, client, userIds[i], tz, isCron));
       } catch (e) {
         console.error("[operator-run] user failed", userIds[i], e && e.message);
         results.push({ userId: userIds[i], error: e && e.message });

@@ -1,4 +1,7 @@
 {
+  "crons": [
+    { "path": "/api/operator-run", "schedule": "0 9 * * *" }
+  ],
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
   "headers": [
     {
