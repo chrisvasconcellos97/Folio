@@ -784,10 +784,10 @@ export function summarizeDraftPip(payload, opts) {
     "  ],\n" +
     "  \"receipts\": [\"0-3 short strings naming stored knowledge you ACTUALLY used for this plan — a glossary term you applied, a person you recognized from the directory (and therefore did not flag as new), an update-calendar event you connected, a past correction you honored. Empty array if none. Never invent these.\"],\n" +
     "  \"plan\": [\n" +
-    "    { \"kind\": \"new_item\",    \"text\": \"...\", \"due_date\": \"YYYY-MM-DD or null\", \"suggested_assignee\": \"email or null\", \"target_account_id\": \"id from YOUR ACCOUNTS list, or null if this belongs to the current account\", \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim 1-3 line slice of the draft notes that triggered this row\", \"is_commitment\": true, \"suggested_project_title\": \"OMIT unless this item is part of a coherent NEW multi-step initiative — see the project-suggestion rule\" },\n" +
+    "    { \"kind\": \"new_item\",    \"text\": \"...\", \"due_date\": \"YYYY-MM-DD or null\", \"suggested_assignee\": \"email or null\", \"target_account_id\": \"id from YOUR ACCOUNTS list, or null if this belongs to the current account\", \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim 1-3 line slice of the draft notes that triggered this row\", \"is_commitment\": true, \"waiting_on\": \"person name or null — see waiting_on rule\", \"waiting_on_since\": \"YYYY-MM-DD or null\", \"suggested_project_title\": \"OMIT unless this item is part of a coherent NEW multi-step initiative — see the project-suggestion rule\" },\n" +
     "    { \"kind\": \"update_item\", \"target_id\": \"I-...\", \"fields\": { \"due_date\": \"...\", \"text\": \"...\" }, \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim slice from notes\" },\n" +
     "    { \"kind\": \"close_item\",  \"target_id\": \"I-...\", \"reason\": \"...\", \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim slice from notes\" },\n" +
-    "    { \"kind\": \"new_task\",    \"project_id\": \"uuid — MUST be a UUID from the Active Gauge projects list below; only use new_task when you can match to a known project id, otherwise use new_item\", \"title\": \"...\", \"due_date\": \"YYYY-MM-DD or null\", \"suggested_assignee\": \"email or null\", \"target_account_id\": \"id or null\", \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim slice from notes\", \"is_commitment\": false },\n" +
+    "    { \"kind\": \"new_task\",    \"project_id\": \"uuid — MUST be a UUID from the Active Gauge projects list below; only use new_task when you can match to a known project id, otherwise use new_item\", \"title\": \"...\", \"due_date\": \"YYYY-MM-DD or null\", \"suggested_assignee\": \"email or null\", \"target_account_id\": \"id or null\", \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim slice from notes\", \"is_commitment\": false, \"waiting_on\": \"person name or null\", \"waiting_on_since\": \"YYYY-MM-DD or null\" },\n" +
     "    { \"kind\": \"update_task\", \"project_id\": \"uuid\", \"task_id\": \"T-...\", \"fields\": { \"due_date\": \"...\", \"task_status\": \"...\" }, \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim slice from notes\" },\n" +
     "    { \"kind\": \"skip\",        \"reason\": \"duplicate of T-... or I-...\", \"confidence\": \"high\" }\n" +
     "  ]\n" +
@@ -844,6 +844,7 @@ export function summarizeDraftPip(payload, opts) {
     "- Don't aggressively route — when an item is clearly about the current account or no other " +
     "account is mentioned, leave target_account_id null.\n" +
     "- is_commitment: set true when this row represents a first-person promise or deliverable you are committing to — language like \"I'll get you...\", \"we'll have X by...\", \"I'll follow up on...\", \"we'll send...\", \"I'll loop in...\". Default false for tasks, observations, or things the customer will do.\n" +
+    "- waiting_on (who-has-the-ball inference): set it to a PERSON'S NAME when the notes show someone OTHER than the user owes the next step — \"Rusty said he'd send the slots next week\", \"waiting on Magdalena for the billing answer\", \"Dan's getting us the file\", \"they'll confirm by Friday\". Use the person's name (or 'their team' / the company if no name). Set waiting_on_since to the date they took the ball if stated, else null (the system stamps today). LEAVE waiting_on null for a first-person commitment (that's is_commitment) or any row where the USER owes the next step. Evidence-based only — never invent who owes it; if it's genuinely unclear, leave it null.\n" +
     "- new_task: ONLY use this kind when the project_id is a UUID that appears in the Active Gauge projects list. If no project matches, use new_item instead — never invent a project_id.\n" +
     "- update_task / update_item: ONLY use these when you can point at a SPECIFIC existing task or item by its real id (task_id from the project's task list, or target_id from the open items list) AND you have a concrete change to make (a new due_date, status, or rewritten text). Never emit an update_* row for a project you can't tie to a specific existing task, and never with an empty fields object — create a new_task / new_item instead. A discussed project is NOT itself a task.\n" +
     "- unknown_people: Scan the meeting notes for proper names (people, not companies or products). BEFORE adding anyone, check IN ORDER: (1) this account's CONTACTS list, (2) the attendees list, (3) the PEOPLE DIRECTORY block — every contact across ALL the user's accounts and partners plus internal teammates, (4) the glossary — some capitalized words are systems/products, never people, (5) the current user themself. If the name matches ANY of those (exact or unambiguous first-name match), DO NOT include them — being MENTIONED in this meeting does not make someone a new contact on this account. For INTERNAL or DEPARTMENT meetings (account_type 'internal_team'), return an empty array always. unknown_people is ONLY for genuinely new external people the user met or clearly needs to track. When you exclude a recognized name, you may say so in receipts (e.g. \"Recognized Dana — Keystone contact, not new\").\n" +
@@ -1150,6 +1151,19 @@ export function summarizeDraftPip(payload, opts) {
   });
 }
 
+// Ownership inference (item 51 2b) — carry an evidence-backed waiting-on through
+// the plan when Pip detected that someone ELSE owes the next step. waiting_on is a
+// person name (no decay-math, no fabricated %); waiting_on_since must be a real
+// ISO date or it's dropped (the apply path stamps today if absent).
+function copyWaitingOn(r, out) {
+  if (r.waiting_on && typeof r.waiting_on === "string" && r.waiting_on.trim()) {
+    out.waiting_on = r.waiting_on.trim().slice(0, 80);
+    if (r.waiting_on_since && /^\d{4}-\d{2}-\d{2}$/.test(r.waiting_on_since)) {
+      out.waiting_on_since = r.waiting_on_since;
+    }
+  }
+}
+
 function normalizePlanRow(r) {
   if (!r || typeof r !== "object" || !r.kind) return null;
   var conf = r.confidence === "high" || r.confidence === "medium" || r.confidence === "low" ? r.confidence : "medium";
@@ -1164,6 +1178,7 @@ function normalizePlanRow(r) {
       out.due_date = r.due_date || null;
       out.suggested_assignee = r.suggested_assignee || null;
       out.is_commitment = !!r.is_commitment;
+      copyWaitingOn(r, out);
       if (r.target_account_id && typeof r.target_account_id === "string" && r.target_account_id.trim()) {
         out.target_account_id = r.target_account_id.trim();
       }
@@ -1189,6 +1204,7 @@ function normalizePlanRow(r) {
       out.due_date = r.due_date || null;
       out.suggested_assignee = r.suggested_assignee || null;
       out.is_commitment = !!r.is_commitment;
+      copyWaitingOn(r, out);
       if (r.target_account_id && typeof r.target_account_id === "string" && r.target_account_id.trim()) {
         out.target_account_id = r.target_account_id.trim();
       }

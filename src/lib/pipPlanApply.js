@@ -76,6 +76,11 @@ export function applyPipPlan(selected, ctx) {
           cadence_id:        (cadenceId && !targetAcct) ? cadenceId : null,
           source_meeting_id: meetingId,
           is_commitment:     row.is_commitment || false,
+          // Ownership inference (item 51 2b) — when the notes show someone ELSE
+          // owes the next step ("Rusty said he'd send slots next week"), Pip stamps
+          // who-has-the-ball so it lands on the waiting-on board without a manual flag.
+          waiting_on:        row.waiting_on || null,
+          waiting_on_since:  row.waiting_on ? (row.waiting_on_since || new Date().toISOString().slice(0, 10)) : null,
         };
         if (pipStampedAt) addPayload.pip_created_at = pipStampedAt;
         if (row.gaugeProjectId) addPayload.project_id = row.gaugeProjectId;
@@ -111,6 +116,8 @@ export function applyPipPlan(selected, ctx) {
           project_id:        row.project_id || null,
           source_meeting_id: meetingId,
           is_commitment:     row.is_commitment || false,
+          waiting_on:        row.waiting_on || null,
+          waiting_on_since:  row.waiting_on ? (row.waiting_on_since || new Date().toISOString().slice(0, 10)) : null,
         };
         if (row.project_id) {
           ntPayload.task_status = firstStatusColumn(proj);
