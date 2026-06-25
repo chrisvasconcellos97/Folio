@@ -1917,8 +1917,13 @@ export function CadenceHub({
     />
   ) : (() => {
     // When the nightly operator left a prepped block for this account, show
-    // THAT (it's fresher + deeper) and suppress the manual cadence brief so the
-    // user doesn't read two competing briefs (App Coherence Rule, item 9b).
+    // The overnight operator read (when present) shows on top as a situational
+    // heads-up. The on-demand cadence brief ALWAYS renders below it so Chris can
+    // hit "Brief me for this call" whenever he's about to jump on — it was
+    // previously suppressed whenever operator prep existed, which hid the brief
+    // (the rich buildAccountContext one) almost all the time. (Chris feedback
+    // June 24 2026: "there's no brief button I can find." On mobile it collapses
+    // to a single tappable button so the two don't compete for space.)
     var hasOperatorPrep = !!(pipAccountStateRow && pipAccountStateRow.operator_generated_at &&
       (pipAccountStateRow.operator_agenda || pipAccountStateRow.operator_situation));
     return (
@@ -1944,18 +1949,16 @@ export function CadenceHub({
             )}
           </div>
         )}
-        {!hasOperatorPrep && (
-          <PipBriefPanel
-            brief={cadence.pip_brief}
-            briefAt={cadence.pip_brief_at}
-            loading={briefLoading}
-            error={briefError}
-            onRefresh={handleRefreshBrief}
-            mobileCollapsed={isMobile && !briefExpanded}
-            onExpand={function () { setBriefExpanded(true); }}
-            lessonsLearned={pipLessonsLearned || null}
-          />
-        )}
+        <PipBriefPanel
+          brief={cadence.pip_brief}
+          briefAt={cadence.pip_brief_at}
+          loading={briefLoading}
+          error={briefError}
+          onRefresh={handleRefreshBrief}
+          mobileCollapsed={isMobile && (hasOperatorPrep || !briefExpanded)}
+          onExpand={function () { setBriefExpanded(true); }}
+          lessonsLearned={pipLessonsLearned || null}
+        />
       </>
     );
   })();
