@@ -241,6 +241,7 @@ export function ProjectsTab({ projects, accounts, accountId, userId, addProject,
       {showAdd && (
         <ProjectModal
           accounts={accounts}
+          userId={userId}
           onSave={handleSaveNew}
           onClose={function () { setShowAdd(false); }}
         />
@@ -250,6 +251,7 @@ export function ProjectsTab({ projects, accounts, accountId, userId, addProject,
         <ProjectModal
           existing={editing}
           accounts={accounts}
+          userId={userId}
           onSave={handleSaveEdit}
           onDelete={deleteProject}
           onClose={function () { setEditing(null); }}
