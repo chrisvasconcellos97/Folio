@@ -793,6 +793,11 @@ export function summarizeDraftPip(payload, opts) {
     "  ]\n" +
     "}\n\n" +
     "Rules:\n" +
+    "- PRECISION OVER VOLUME — classify each candidate BEFORE creating a row. Bucket it: " +
+    "(a) EXPLICIT — a concrete next step with a clear owner, or a first-person promise ('I'll send the audit Friday', 'we'll get you the file') → create the row, confidence 'high'. " +
+    "(b) LIKELY — soft or hedged ('we should probably look into X', 'might need to follow up', 'let me think about that') → create the row at confidence 'low' so the user can reject it in one tap. " +
+    "(c) DISCUSSION-POINT ONLY — a topic was talked about with NO owner and NO concrete next step ('we talked about reporting', 'discussed pricing', 'caught up on the integration') → DO NOT create a task. It belongs in the `summary`, not the `plan`. " +
+    "Two right tasks beat nine cleanups. An EMPTY plan is a valid, respectable output when the meeting was just a conversation — never manufacture tasks to look thorough.\n" +
     "- If the notes mention something that already exists as an open item or in-flight task, " +
     "PREFER update_item / update_task with shifted dates over creating new ones. If it sounds " +
     "done, use close_item.\n" +
