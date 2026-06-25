@@ -1480,6 +1480,11 @@ export function CadenceHub({
       pipAccountState:  pipAccountStateRow || null,
       facts:            pipFactsApi.activeFactStrings || [],
       profileProse:     userProfile && userProfile.profile_prose ? userProfile.profile_prose : null,
+      // Health momentum + recent account changes → buildAccountContext renders a
+      // "trending better/worse and why" line so the brief reads direction, not
+      // just a point-in-time snapshot (item 55 #3 follow-up).
+      healthSnapshots:  (snapshotsApi.snapshots || []).filter(function (s) { return s.account_id === accountId; }),
+      recentUpdates:    (updatesApi.updates || []).slice(0, 6),
     }).then(function (out) {
       var brief = out.brief || "";
       var when  = new Date().toISOString();
