@@ -932,7 +932,9 @@ export function summarizeDraftPip(payload, opts) {
       : "(none)") + "\n\n" +
     (discussedProjectIds.length || discussedItemIds.length
       ? "── DISCUSSED THIS MEETING (high-confidence signal) ──\n" +
-        "These were explicitly flagged as discussed by the user — STRONGLY prefer update/close over new rows for them:\n" +
+        "These were explicitly flagged as discussed by the user. Route any action items the notes actually contain to these projects. " +
+        "If the notes describe a concrete change to a SPECIFIC existing task on one of these projects, update/close that task; if the notes describe new work, create a new_task on it. " +
+        "But a project being flagged discussed is NOT by itself a reason to emit a row — if the notes contain no concrete change or new work for it, emit NO row for that project. Never invent an update just because it was tapped:\n" +
         (discussedProjectIds.length
           ? (function () {
               // Skip discussed ids that no longer resolve to an active project
