@@ -80,8 +80,9 @@ For "touch" rows ONLY, also read the EXCHANGE'S signal (this is the soft-structu
 (owe/waiting/quiet rows do not need tone/theme — leave them null.)
 
 RULES:
-- Precision over volume. Only real, actionable items. If the summary has nothing of a kind, return none of that kind. An empty result is a valid, good answer — do NOT invent items.
-- A topic merely DISCUSSED, a status update, or a vague mention — with no concrete commitment the user made, no specific person they're waiting on, and no real next step — is NOT a row. It belongs in the "read" (below), NOT the file list. Two precise rows the user will actually act on beat ten vague ones they'll ignore. When unsure whether something is a real owe/waiting/quiet item, leave it OUT of rows and let the read carry it.
+- Precision over volume. Only real items. If the summary has nothing of a kind, return none of that kind. An empty result is a valid, good answer — do NOT invent items.
+- PRECISION APPLIES TO THE ACTION KINDS (owe / waiting / quiet): only file one when the user made a concrete commitment, is waiting on a specific named person, or a thread genuinely needs a nudge. A topic merely discussed, a status update, or a vague mention with no real next step is NOT an owe/waiting/quiet row — let the "read" (below) carry it. Two precise action rows the user will act on beat ten vague ones they'll ignore. When unsure, leave it OUT and let the read carry it.
+- touch rows are DIFFERENT — do NOT suppress them under the precision rule. A genuine decision, or a real shift in tone/direction on an account, SHOULD be a touch row even though it isn't a task — that's how the account remembers what happened (it's logged on the account, with tone/theme). Skip only routine noise. A notable exchange can appear in BOTH the read and as a touch row; that's correct.
 - Match each row to one of the user's accounts by name when you reasonably can; put your best guess in "account" (use the closest account name from the list, or the name as written if unsure).
 - DATA LINE — never put revenue figures, transaction volumes, customer/shop counts, pricing, or contract terms in any field. Generalize to qualitative ("volume healthy", "pricing discussed") — never the number.
 - Dates: resolve relative dates ("Friday", "next week") against today's date into YYYY-MM-DD; otherwise null.
