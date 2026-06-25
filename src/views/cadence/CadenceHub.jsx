@@ -7,6 +7,7 @@ import { MarkdownText } from "../../components/MarkdownText";
 import { SecBtn, DangerBtn } from "../../components/Buttons";
 import { getFrequencyLabel, getNextOccurrence, daysUntil, formatTime } from "../../lib/cadenceUtils";
 import { summarizeDraftPip, callCadenceBriefPip, callPortfolioBriefPip } from "../../lib/pip";
+import { computeBriefReceipts } from "../../lib/briefReceipts";
 import { AddToTasksButton } from "../../components/AddToTasksButton";
 import { CadenceMeetingMode } from "./CadenceMeetingMode";
 import { PipSummarizePreview } from "./PipSummarizePreview";
@@ -225,8 +226,12 @@ function SectionHeader({ children, count, action }) {
 }
 
 /* ---- Pip brief panel ---- */
-export function PipBriefPanel({ brief, briefAt, loading, error, onRefresh, mobileCollapsed, onExpand, lessonsLearned }) {
+export function PipBriefPanel({ brief, briefAt, loading, error, onRefresh, mobileCollapsed, onExpand, lessonsLearned, glossary, facts }) {
   var [lessonsExpanded, setLessonsExpanded] = useState(false);
+
+  // Receipts — which taught terms/facts actually surfaced in this brief (honest:
+  // appearance-verified, not "was in the prompt"). Felt-Intelligence Rule #4.
+  var receipts = brief ? computeBriefReceipts(brief, { glossary: glossary, facts: facts, max: 4 }) : [];
 
   if (mobileCollapsed) {
     var oneLiner = brief
@@ -282,6 +287,12 @@ export function PipBriefPanel({ brief, briefAt, loading, error, onRefresh, mobil
       {brief ? (
         <>
           <MarkdownText text={brief} style={{ fontSize: 14, color: C.textSub, lineHeight: 1.65 }} />
+          {receipts.length > 0 && (
+            <div style={{ fontSize: 11, color: C.textMuted, marginTop: 9, lineHeight: 1.5, fontFamily: INTER }}>
+              <span style={{ color: C.accent }}>✦ Pip used: </span>
+              {receipts.join(" · ")}
+            </div>
+          )}
           {briefAt && (
             <div style={{ fontSize: 10, color: C.textMuted, marginTop: 8, fontFamily: MONO }}>
               Updated {fmtShort(briefAt)}
@@ -1963,6 +1974,8 @@ export function CadenceHub({
           mobileCollapsed={isMobile && (hasOperatorPrep || !briefExpanded)}
           onExpand={function () { setBriefExpanded(true); }}
           lessonsLearned={pipLessonsLearned || null}
+          glossary={glossaryApi.entries}
+          facts={pipFactsApi.activeFactStrings || []}
         />
       </>
     );
