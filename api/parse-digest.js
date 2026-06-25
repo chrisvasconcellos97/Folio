@@ -81,6 +81,7 @@ For "touch" rows ONLY, also read the EXCHANGE'S signal (this is the soft-structu
 
 RULES:
 - Precision over volume. Only real, actionable items. If the summary has nothing of a kind, return none of that kind. An empty result is a valid, good answer — do NOT invent items.
+- A topic merely DISCUSSED, a status update, or a vague mention — with no concrete commitment the user made, no specific person they're waiting on, and no real next step — is NOT a row. It belongs in the "read" (below), NOT the file list. Two precise rows the user will actually act on beat ten vague ones they'll ignore. When unsure whether something is a real owe/waiting/quiet item, leave it OUT of rows and let the read carry it.
 - Match each row to one of the user's accounts by name when you reasonably can; put your best guess in "account" (use the closest account name from the list, or the name as written if unsure).
 - DATA LINE — never put revenue figures, transaction volumes, customer/shop counts, pricing, or contract terms in any field. Generalize to qualitative ("volume healthy", "pricing discussed") — never the number.
 - Dates: resolve relative dates ("Friday", "next week") against today's date into YYYY-MM-DD; otherwise null.
@@ -88,14 +89,16 @@ RULES:
 - "who": the person's name for waiting/quiet rows; null otherwise.
 - Keep "text" short and concrete (one line), in the user's voice.
 
+ALSO produce a "read": a short (2-4 sentence) plain-language briefing of the user's day, in their voice, that they can scan in five seconds. Surface what they owe, what they're waiting on, what's gone quiet, and anything that genuinely shifted on an account (a decision, a warming/cooling relationship, a new name worth knowing). This is the PRIMARY output — the rows are just the few items worth filing; the read is where the intelligence lives, so it can mention things that aren't rows. Ground it ONLY in what they actually pasted — never invent. If the day is thin, one honest line is fine ("Quiet day — nothing you owe anyone, still waiting on Mike."). Same DATA LINE applies: no figures, ever.
+
 Today is ${today}.
 The user's accounts: ${accountNames.length ? accountNames.join(", ") : "(none provided)"}.
 
-Return ONLY JSON: { "rows": [ { "kind": "owe|waiting|quiet|touch", "account": "<name>", "text": "<one line>", "who": "<person or null>", "due": "<YYYY-MM-DD or null>", "since": "<YYYY-MM-DD or null>", "done": false, "tone": "<positive|neutral|mixed|negative or null>", "theme": "<theme or null>" } ] }. No prose, no code fences.`;
+Return ONLY JSON: { "read": "<2-4 sentence briefing>", "rows": [ { "kind": "owe|waiting|quiet|touch", "account": "<name>", "text": "<one line>", "who": "<person or null>", "due": "<YYYY-MM-DD or null>", "since": "<YYYY-MM-DD or null>", "done": false, "tone": "<positive|neutral|mixed|negative or null>", "theme": "<theme or null>" } ] }. No prose, no code fences.`;
 
     var msg = await client.messages.create({
       model: DIGEST_MODEL,
-      max_tokens: 1600,
+      max_tokens: 2000,
       system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
       messages: [{ role: "user", content: String(text).slice(0, 12000) }],
     });
@@ -110,6 +113,12 @@ Return ONLY JSON: { "rows": [ { "kind": "owe|waiting|quiet|touch", "account": "<
       var m = clean.match(/\{[\s\S]*\}/);
       if (m) { try { parsed = JSON.parse(m[0]); } catch (__) { /* give up */ } }
     }
+
+    // The read is the PRIMARY output (the day briefing); rows are the few
+    // items worth filing. Trim/guard it; null when the model didn't produce one.
+    var read = (parsed && typeof parsed.read === "string" && parsed.read.trim())
+      ? parsed.read.trim().slice(0, 1200)
+      : null;
 
     var rows = parsed && Array.isArray(parsed.rows) ? parsed.rows : [];
     // Normalize + defend: only the four known kinds, strings trimmed.
@@ -135,7 +144,7 @@ Return ONLY JSON: { "rows": [ { "kind": "owe|waiting|quiet|touch", "account": "<
         };
       });
 
-    return res.status(200).json({ rows: rows });
+    return res.status(200).json({ read: read, rows: rows });
   } catch (err) {
     console.error("[parse-digest] error:", err && err.message);
     return res.status(500).json({ error: "Pip couldn't read that right now.", detail: err && err.message });

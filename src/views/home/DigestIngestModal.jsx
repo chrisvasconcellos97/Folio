@@ -45,19 +45,31 @@ function KindBadge({ kind }) {
   );
 }
 
+// Where each filed row actually lands — shown on the row so nothing files into
+// a black hole (the "I don't even know where these go" complaint).
+function destLabel(kind) {
+  return {
+    owe:     "→ a commitment in Your Word",
+    waiting: "→ Who has the ball",
+    quiet:   "→ Who has the ball",
+    touch:   "→ logged as a touchpoint",
+  }[kind] || "";
+}
+
 export function DigestIngestModal({ accounts, userId, addMeeting, awayPeriods, onClose }) {
   // If the user is freshly back from PTO, items filed from this paste are the
   // catch-up pile → tag them so they surface under "While you were out" (#50).
   var backFromPTO = !!justBackFrom(awayPeriods, new Date(), 14);
   var [step, setStep]       = useState("paste"); // paste | preview
   var [raw, setRaw]         = useState("");
+  var [read, setRead]       = useState(null); // Pip's plain-language read of the day
   var [rows, setRows]       = useState([]);
   var [unparsed, setUnparsed] = useState([]);
   var [applying, setApplying] = useState(false);
   var [parsing, setParsing]   = useState(false);
 
-  function toPreview(extracted, skipped) {
-    if (!extracted.length && (!skipped || !skipped.length)) {
+  function toPreview(extracted, skipped, hasRead) {
+    if (!extracted.length && !hasRead && (!skipped || !skipped.length)) {
       showToast("Pip didn't find anything to file in that — try adding a bit more detail");
       return;
     }
@@ -84,13 +96,16 @@ export function DigestIngestModal({ accounts, userId, addMeeting, awayPeriods, o
       today: new Date().toISOString().slice(0, 10),
     }).then(function (out) {
       setParsing(false);
-      toPreview((out && out.rows) || [], []);
+      var rd = (out && out.read) || null;
+      setRead(rd);
+      toPreview((out && out.rows) || [], [], !!rd);
     }).catch(function () {
       // Network/AI failure → deterministic fallback (handles tagged input too).
       setParsing(false);
+      setRead(null); // deterministic fallback has no read
       var det = parseDigest(raw, accounts);
       if (det.rows.length || det.unparsed.length) {
-        toPreview(det.rows, det.unparsed);
+        toPreview(det.rows, det.unparsed, false);
       } else {
         showToast("Couldn't read that right now — try again in a moment");
       }
@@ -165,9 +180,9 @@ export function DigestIngestModal({ accounts, userId, addMeeting, awayPeriods, o
           <>
             <div style={{ fontSize: 12.5, color: C.textSoft, lineHeight: 1.55, fontFamily: INTER }}>
               Drop in a summary of your day — emails, calls, whatever you've got, in
-              any format. Pip reads it and pulls out what you owe people, what you're
-              waiting on, and notable exchanges, then files them to the right accounts.
-              You review everything before anything's saved.
+              any format. Pip reads it back to you — what you owe, what you're waiting
+              on, what's gone quiet, what shifted — and files the few real commitments
+              where you can find them. You review everything before anything's saved.
             </div>
             <textarea
               value={raw}
@@ -206,9 +221,30 @@ export function DigestIngestModal({ accounts, userId, addMeeting, awayPeriods, o
 
         {step === "preview" && (
           <>
+            {/* Pip's read of the day — the PRIMARY output. The rows below are
+                just the few items worth filing; this is where the intelligence
+                lives (owes, waitings, what went quiet, what shifted). */}
+            {read && (
+              <div style={{
+                background: C.accentFaint,
+                border: "1px solid " + C.accentLine,
+                borderRadius: 10, padding: "12px 14px",
+              }}>
+                <div style={{
+                  fontFamily: MONO, fontSize: 9.5, fontWeight: 700, color: C.accent,
+                  textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6,
+                }}>
+                  ✦ Pip's read of your day
+                </div>
+                <div style={{ fontSize: 13.5, color: C.text, lineHeight: 1.55, fontFamily: INTER, whiteSpace: "pre-wrap" }}>
+                  {read}
+                </div>
+              </div>
+            )}
             <div style={{ fontSize: 12, color: C.textSoft, fontFamily: INTER }}>
-              {rows.length} entr{rows.length === 1 ? "y" : "ies"} — uncheck anything you don't
-              want; rows without a matched account need one picked.
+              {rows.length === 0
+                ? "Nothing worth filing as a task — the read above is the takeaway."
+                : (rows.length + " thing" + (rows.length === 1 ? "" : "s") + " worth filing — each shows where it lands. Uncheck anything you don't want; rows without a matched account need one picked.")}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: "46vh", overflowY: "auto" }}>
               {rows.map(function (r, idx) {
@@ -248,8 +284,11 @@ export function DigestIngestModal({ accounts, userId, addMeeting, awayPeriods, o
                       <div style={{ fontSize: 13, color: C.text, lineHeight: 1.45 }}>{r.text}</div>
                       <div style={{ marginTop: 5 }}>
                         {r.accountId ? (
-                          <span style={{ fontSize: 11, color: C.accent }}>
-                            {(accounts.find(function (a) { return a.id === r.accountId; }) || {}).name || r.accountName}
+                          <span style={{ display: "flex", gap: 7, alignItems: "baseline", flexWrap: "wrap" }}>
+                            <span style={{ fontSize: 11, color: C.accent }}>
+                              {(accounts.find(function (a) { return a.id === r.accountId; }) || {}).name || r.accountName}
+                            </span>
+                            <span style={{ fontSize: 10, color: C.textMuted, fontFamily: MONO }}>{destLabel(r.kind)}</span>
                           </span>
                         ) : (
                           <AccountPicker
@@ -271,18 +310,31 @@ export function DigestIngestModal({ accounts, userId, addMeeting, awayPeriods, o
               </div>
             )}
             <div style={{ display: "flex", gap: 8 }}>
-              <button
-                onClick={handleApply}
-                disabled={applying}
-                style={{
-                  background: C.accentDeep, border: "none", borderRadius: 8,
-                  padding: "9px 18px", fontSize: 13, fontWeight: 700,
-                  color: C.bg, fontFamily: INTER,
-                  cursor: applying ? "default" : "pointer", opacity: applying ? 0.6 : 1,
-                }}
-              >
-                {applying ? "Filing…" : "File it all ✦"}
-              </button>
+              {rows.length > 0 ? (
+                <button
+                  onClick={handleApply}
+                  disabled={applying}
+                  style={{
+                    background: C.accentDeep, border: "none", borderRadius: 8,
+                    padding: "9px 18px", fontSize: 13, fontWeight: 700,
+                    color: C.bg, fontFamily: INTER,
+                    cursor: applying ? "default" : "pointer", opacity: applying ? 0.6 : 1,
+                  }}
+                >
+                  {applying ? "Filing…" : "File it all ✦"}
+                </button>
+              ) : (
+                <button
+                  onClick={onClose}
+                  style={{
+                    background: C.accentDeep, border: "none", borderRadius: 8,
+                    padding: "9px 18px", fontSize: 13, fontWeight: 700,
+                    color: C.bg, fontFamily: INTER, cursor: "pointer",
+                  }}
+                >
+                  Got it ✦
+                </button>
+              )}
               <button
                 onClick={function () { setStep("paste"); }}
                 style={{
