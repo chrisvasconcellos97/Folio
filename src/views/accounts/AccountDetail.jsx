@@ -14,6 +14,7 @@ import { useProjects } from "../../hooks/useProjects";
 import { useAccountUpdates } from "../../hooks/useAccountUpdates";
 import { useAccountSnapshots } from "../../hooks/useAccountSnapshots";
 import { callBriefMePip } from "../../lib/pip";
+import { computeBriefReceipts } from "../../lib/briefReceipts";
 import { BusinessReviewModal } from "./BusinessReviewModal";
 import { PipMemoryPanel } from "./PipMemoryPanel";
 import { usePipAccountState } from "../../hooks/usePipAccountState";
@@ -985,6 +986,14 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
           {briefText && (
             <MarkdownText text={briefText} style={{ fontSize: 14, color: C.textSub, lineHeight: 1.75 }} />
           )}
+          {briefText && (function () {
+            var receipts = computeBriefReceipts(briefText, { glossary: glossaryApi.entries, facts: pipFactsApi.activeFactStrings || [], max: 4 });
+            return receipts.length > 0 ? (
+              <div style={{ fontSize: 11, color: C.textMuted, marginTop: 10, lineHeight: 1.5 }}>
+                <span style={{ color: C.accent }}>✦ Pip used: </span>{receipts.join(" · ")}
+              </div>
+            ) : null;
+          })()}
         </Modal>
       )}
 
