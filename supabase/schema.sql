@@ -1124,6 +1124,11 @@ begin
   get diagnostics bumped = row_count; moved := moved + bumped;
   update folio_embeddings  set account_id = target_id where account_id = source_id;
   get diagnostics bumped = row_count; moved := moved + bumped;
+  -- Account-scoped glossary terms (the absorbed account's vocabulary) — without
+  -- this, useGlossary's account_id filter never surfaces them for the target and
+  -- Pip loses the merged account's words.
+  update pip_glossary      set account_id = target_id where account_id = source_id;
+  get diagnostics bumped = row_count; moved := moved + bumped;
 
   update folio_accounts
      set is_inactive            = true,

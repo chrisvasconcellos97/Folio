@@ -61,13 +61,29 @@ export function useContacts(userId, accountId, orgId) {
   }
 
   function deleteContact(id) {
+    // A person (1:1) cadence requires its subject contact (chk_person_cadence_
+    // requires_contact); the FK is ON DELETE SET NULL, so deleting a contact
+    // that's a 1:1 subject nulls cadence.contact_id and trips the CHECK — the
+    // delete fails with a cryptic DB error. Block it with a clear, actionable
+    // message instead (no destructive cascade).
     return supabase
-      .from("folio_contacts")
-      .delete()
-      .eq("id", id)
-      .then(function (result) {
-        if (result.error) throw result.error;
-        fetch();
+      .from("folio_cadences")
+      .select("id")
+      .eq("contact_id", id)
+      .eq("cadence_scope", "person")
+      .limit(1)
+      .then(function (guard) {
+        if (!guard.error && guard.data && guard.data.length) {
+          throw new Error("This contact is the subject of a 1:1 cadence — delete that 1:1 first, then remove the contact.");
+        }
+        return supabase
+          .from("folio_contacts")
+          .delete()
+          .eq("id", id)
+          .then(function (result) {
+            if (result.error) throw result.error;
+            fetch();
+          });
       });
   }
 
