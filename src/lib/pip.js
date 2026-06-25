@@ -1227,23 +1227,65 @@ export function callCadenceBriefPip(payload) {
   var meetings         = payload.meetings         || [];
   var openItems        = payload.openItems        || [];
   var activeProjects   = payload.activeProjects   || [];
-  var accountObjective = (payload.accountObjective || "").trim();
   var accountSystems   = Array.isArray(payload.accountSystems) ? payload.accountSystems : [];
   var glossary         = Array.isArray(payload.glossary) ? payload.glossary : [];
   var contacts         = Array.isArray(payload.contacts) ? payload.contacts : [];
   var pipAccountState  = payload.pipAccountState  || null;
 
-  var projectLines = activeProjects.slice(0, 6).map(function (p) {
-    var bits = [];
-    bits.push((p.status || "").replace("_", " "));
-    if (p.due_date) bits.push("due " + p.due_date);
-    if (p.waiting_on) bits.push("waiting on " + p.waiting_on + (p.waiting_on_since ? " since " + p.waiting_on_since : ""));
-    var owner = p._childAccountName ? " — for " + p._childAccountName : "";
-    return "- " + (p.title || "Untitled") + " (" + bits.join(" · ") + ")" + owner;
-  }).join("\n");
-
-  var commitments = (openItems || []).filter(function (i) { return i.is_commitment; });
-  var waitingTasks = (openItems || []).filter(function (i) { return i.waiting_on; });
+  // Build the SAME rich context object Brief Me uses, so the pre-call brief is
+  // rendered by the shared buildAccountContext (raw meeting notes, relationships,
+  // promise track-record, project who-has-ball, health trend) instead of a thin
+  // inline dump. WAS: context=null + a 200-char-truncated hand-built prompt — the
+  // #1 reason the pre-call brief felt generic despite everything Pip knows. The
+  // checklist instruction below stays; the account substance now comes from the
+  // shared renderer. (CLAUDE.md item 55 #3 — the felt-gap foundation fix.)
+  var context = {
+    accounts: [{
+      id:     account.id,
+      name:   account.name,
+      status: account.status,
+      tier:   account.tier,
+      health: account.health,
+      account_type: account.account_type || "standard",
+      last_interaction_at: account.last_interaction_at,
+      objective: account.objective,
+      systems: Array.isArray(account.systems) && account.systems.length ? account.systems : accountSystems,
+      notes:  account.objective,
+      tags:   account.tags,
+      region: account.region,
+      serviced_states: account.serviced_states || [],
+      meetings: (meetings || []).map(function (m) {
+        return {
+          date: m.meeting_date, title: m.title, notes: m.notes,
+          action_items: m.action_items, commitments: m.commitments,
+          follow_up: m.follow_up_date, summary: m.pip_summary,
+          attendees: m.attendees, theme: m.theme, tone: m.pip_tone,
+        };
+      }),
+      openItems: (openItems || []).map(function (i) {
+        return {
+          text: i.text || i.title, due: i.due_date, owner: i.owner,
+          created_at: i.created_at, is_commitment: !!i.is_commitment,
+          waiting_on: i.waiting_on || null, waiting_on_since: i.waiting_on_since || null,
+          done: i.done, status: i.status,
+        };
+      }),
+      contacts: (contacts || []).map(function (c) {
+        return { name: c.name, title: c.title, email: c.email, is_poc: c.is_poc, relationship_role: c.relationship_role || null, relationship_note: c.relationship_note || null };
+      }),
+      activeProjects: (activeProjects || []).map(function (p) {
+        return {
+          title: p.title, status: p.status, due_date: p.due_date,
+          waiting_on: p.waiting_on || null, waiting_on_since: p.waiting_on_since || null,
+          assignee: p.assignee || null, requested_by: p.requested_by || null,
+          status_updates: Array.isArray(p.status_updates) ? p.status_updates.slice(0, 3) : [],
+        };
+      }),
+      healthSnapshots: Array.isArray(payload.healthSnapshots) ? payload.healthSnapshots : [],
+      recentUpdates:   Array.isArray(payload.recentUpdates)   ? payload.recentUpdates   : [],
+    }],
+    recentDeliveries: payload.recentDeliveries || [],
+  };
 
   // V2 brain correction context — prefer compressed lessons_learned when fresh.
   var lessonsLearned = pipAccountState && pipAccountState.lessons_learned ? pipAccountState.lessons_learned.trim() : "";
@@ -1257,27 +1299,8 @@ export function callCadenceBriefPip(payload) {
 
   var prompt =
     renderGlossaryBlock(glossary) +
-    renderAccountObjectiveBlock(accountObjective) +
-    renderAccountSystemsBlock(accountSystems) +
     lessonsBlock +
-    renderContactsBlock(contacts) +
-    "Give me a short per-cadence brief.\n\n" +
-    "Cadence label: " + (payload.cadenceLabel || "cadence") + "\n" +
-    "Account: " + (account.name || "—") + "\n" +
-    "Recent conversations:\n" +
-    (meetings.length === 0 ? "(none yet)\n" : meetings.slice(0, 4).map(function (m) {
-      return "- " + (m.meeting_date || "") + " " + (m.title || "") + (m.pip_summary ? " — " + m.pip_summary : (m.notes ? " — " + m.notes.slice(0, 200) : ""));
-    }).join("\n") + "\n") +
-    "Open items: " + (openItems.length === 0 ? "none" : openItems.map(function (i) { return i.text; }).slice(0, 5).join("; ")) + "\n" +
-    "Commitments (promised deliverables): " + (commitments.length === 0 ? "none" : commitments.map(function (i) {
-      var overdue = i.due_date && i.due_date < new Date().toISOString().slice(0, 10) ? " [OVERDUE]" : "";
-      return (i.text || i.title || "—") + (i.due_date ? " due " + i.due_date : "") + overdue;
-    }).slice(0, 4).join("; ")) + "\n" +
-    "Waiting on others (they owe you): " + (waitingTasks.length === 0 ? "none" : waitingTasks.map(function (i) {
-      return (i.text || i.title || "—") + " — " + i.waiting_on + (i.waiting_on_since ? " since " + i.waiting_on_since : "");
-    }).slice(0, 4).join("; ")) + "\n" +
-    "Active Gauge projects on this account:\n" +
-    (projectLines || "(none)") + "\n\n" +
+    "Give me a short pre-call brief for the **" + (payload.cadenceLabel || "cadence") + "** with **" + (account.name || "this account") + "** — use everything you know about the account above.\n\n" +
     "Return a pre-call checklist. Format it as exactly 3-5 bullet points, each starting with '• '. " +
     "Cover in order (skip any that don't apply): " +
     "(1) Unresolved from last time — any open items or commitments not yet closed, " +
@@ -1291,7 +1314,7 @@ export function callCadenceBriefPip(payload) {
 
   return callPipApi(
     [{ role: "user", content: prompt }],
-    null,
+    context,
     {
       mode: "brief",
       focusedAccountIds: account.id ? [account.id] : null,
