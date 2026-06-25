@@ -469,8 +469,12 @@ export function PipSummarizePreview({
     // one-liner. Everything else collapses to a scannable summary + "Edit".
     var expandable = row.kind !== "skip";
     var expanded   = expandable && !!expandedRows[idx];
+    // Headline = the proposed NEW text. For an update row that only changes a
+    // property (due date, commitment flag) and not the wording, there is no new
+    // text — fall back to the EXISTING task's text so the row reads as what it's
+    // editing, never the bare "(no text)".
     var primaryText = hasEditableTitle(row.kind)
-      ? (s.title || initialTitle(row) || "(no text)")
+      ? (s.title || initialTitle(row) || currentTextForUpdate(row, ctx) || "(no text)")
       : rowLeader(row, ctx, s.gaugeProjectId);
     // The at-a-glance meta chips shown under the task text when collapsed —
     // only what's set, kept to a short scannable line.
