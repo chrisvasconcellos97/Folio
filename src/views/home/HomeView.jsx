@@ -173,7 +173,7 @@ function makeAccountLinkify(accounts, onOpenAccount) {
   };
 }
 
-export function HomeView({ userName, userId, userEmail, accounts, meetings, items, cadences, projects, contacts, members, wins, awayPeriods, themes, showOnboardingCard, dripQuestion, dripQueueCount, commitmentNudges, pipFacts, profileProse, scheduledMeetings, observations, onObservationAct, onObservationDismiss, generateObservations, handlers }) {
+export function HomeView({ userName, userId, userEmail, accounts, meetings, items, cadences, projects, contacts, members, wins, awayPeriods, themes, showOnboardingCard, dripQuestion, dripQueueCount, terminologyCount, commitmentNudges, pipFacts, profileProse, scheduledMeetings, observations, onObservationAct, onObservationDismiss, generateObservations, handlers }) {
   // All callback props arrive grouped in one `handlers` bag (Batch 8 — prop-
   // sprawl reduction). Re-expanded to locals here so the many internal call
   // sites (onOpenAccount ×17, onOpenCadenceHub ×14, …) stay byte-for-byte
@@ -2464,11 +2464,16 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
           borderRadius: 12,
         }}>
           <div style={{ fontFamily: MONO, fontSize: 10, color: C.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
-            {"Pip's Curious"}
+            {dripQuestion.category === "terminology" ? "✦ Teach Pip your words" : "Pip's Curious"}
           </div>
-          <div style={{ fontFamily: INTER, fontSize: 14, color: C.text, lineHeight: 1.55, marginBottom: 12 }}>
+          <div style={{ fontFamily: INTER, fontSize: 14, color: C.text, lineHeight: 1.55, marginBottom: dripQuestion.category === "terminology" ? 6 : 12 }}>
             {dripQuestion.question_text}
           </div>
+          {dripQuestion.category === "terminology" && (
+            <div style={{ fontFamily: INTER, fontSize: 11.5, color: C.textMuted, lineHeight: 1.45, marginBottom: 12 }}>
+              Pip keeps seeing this in your notes. Tell it once — and it'll use your shorthand in every brief from now on (you'll see "✦ Pip used" credit when it does).
+            </div>
+          )}
           {dripQuestion.suggestion && dripQuestion.suggestion.guess && !dripAnswer.trim() && (
             <button
               type="button"
@@ -2595,7 +2600,9 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
                   fontFamily: INTER, cursor: "pointer", padding: "4px 0",
                 }}
               >
-                {"+" + (dripQueueCount - 1) + " more · Catch up →"}
+                {dripQuestion.category === "terminology" && terminologyCount > 1
+                  ? "+" + (terminologyCount - 1) + " more word" + (terminologyCount - 1 === 1 ? "" : "s") + " · teach them all →"
+                  : "+" + (dripQueueCount - 1) + " more · Catch up →"}
               </button>
             )}
           </div>

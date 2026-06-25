@@ -1262,6 +1262,7 @@ export default function App() {
         showOnboardingCard={showOnboardingCard}
         dripQuestion={dripHook.activeQuestion}
         dripQueueCount={(dripHook.queuedQuestions || []).length}
+        terminologyCount={(dripHook.queuedQuestions || []).filter(function (q) { return q.category === "terminology"; }).length}
         pipFacts={pipFactsAppApi.activeFactStrings || []}
         profileProse={userProfile && userProfile.profile_prose ? userProfile.profile_prose : null}
         commitmentNudges={commitmentNudgesHook.nudges}
