@@ -114,6 +114,8 @@ export function QuickCaptureModal({ accounts, userId, addMeeting, awayPeriods, i
         return addMeeting({
           account_id: r.accountId, meeting_date: todayISO, method: "email",
           status: "summarized", title: "Email touchpoint", notes: r.text,
+          // Soft-structured signal (item 51 #4) — feeds tone-trend + mastermind themes.
+          pip_tone: r.tone || null, theme: r.theme || null,
         });
       }
       if (r.kind === "waiting" || r.kind === "quiet") {

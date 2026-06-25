@@ -140,6 +140,9 @@ export function DigestIngestModal({ accounts, userId, addMeeting, awayPeriods, o
         status: "summarized",
         title: "Email touchpoint",
         notes: r.text,
+        // Soft-structured signal (item 51 #4) — feeds tone-trend + mastermind themes.
+        pip_tone: r.tone || null,
+        theme: r.theme || null,
       }).then(function () { counts.touch++; });
     });
 

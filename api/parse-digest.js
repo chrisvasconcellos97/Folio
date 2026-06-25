@@ -74,6 +74,11 @@ export default async function handler(req, res) {
 - "quiet": a thread where the other side went silent and a nudge is warranted.
 - "touch": a notable exchange worth remembering on the account (a decision, a shift in tone/direction) — NOT routine noise.
 
+For "touch" rows ONLY, also read the EXCHANGE'S signal (this is the soft-structured part — richer than just the text):
+- "tone": the emotional read of the exchange — one of positive | neutral | mixed | negative. Customer frustration or pushback = negative; smooth progress = positive; both = mixed. null if you can't tell.
+- "theme": the dominant topic — one of pricing | integration | staffing | product | escalation | planning | delivery | relationship. null if none clearly dominant.
+(owe/waiting/quiet rows do not need tone/theme — leave them null.)
+
 RULES:
 - Precision over volume. Only real, actionable items. If the summary has nothing of a kind, return none of that kind. An empty result is a valid, good answer — do NOT invent items.
 - Match each row to one of the user's accounts by name when you reasonably can; put your best guess in "account" (use the closest account name from the list, or the name as written if unsure).
@@ -86,7 +91,7 @@ RULES:
 Today is ${today}.
 The user's accounts: ${accountNames.length ? accountNames.join(", ") : "(none provided)"}.
 
-Return ONLY JSON: { "rows": [ { "kind": "owe|waiting|quiet|touch", "account": "<name>", "text": "<one line>", "who": "<person or null>", "due": "<YYYY-MM-DD or null>", "since": "<YYYY-MM-DD or null>", "done": false } ] }. No prose, no code fences.`;
+Return ONLY JSON: { "rows": [ { "kind": "owe|waiting|quiet|touch", "account": "<name>", "text": "<one line>", "who": "<person or null>", "due": "<YYYY-MM-DD or null>", "since": "<YYYY-MM-DD or null>", "done": false, "tone": "<positive|neutral|mixed|negative or null>", "theme": "<theme or null>" } ] }. No prose, no code fences.`;
 
     var msg = await client.messages.create({
       model: DIGEST_MODEL,
@@ -109,6 +114,8 @@ Return ONLY JSON: { "rows": [ { "kind": "owe|waiting|quiet|touch", "account": "<
     var rows = parsed && Array.isArray(parsed.rows) ? parsed.rows : [];
     // Normalize + defend: only the four known kinds, strings trimmed.
     var KINDS = { owe: 1, waiting: 1, quiet: 1, touch: 1 };
+    var TONES = { positive: 1, neutral: 1, mixed: 1, negative: 1 };
+    var THEMES = { pricing: 1, integration: 1, staffing: 1, product: 1, escalation: 1, planning: 1, delivery: 1, relationship: 1 };
     rows = rows
       .filter(function (r) { return r && KINDS[r.kind] && r.text; })
       .map(function (r) {
@@ -120,6 +127,11 @@ Return ONLY JSON: { "rows": [ { "kind": "owe|waiting|quiet|touch", "account": "<
           due: /^\d{4}-\d{2}-\d{2}$/.test(r.due || "") ? r.due : null,
           since: /^\d{4}-\d{2}-\d{2}$/.test(r.since || "") ? r.since : null,
           done: !!r.done,
+          // Soft-structured signal (item 51 #4) — only on touch rows; lands on the
+          // touchpoint meeting's pip_tone/theme so it feeds the account tone-trend
+          // + the mastermind's theme detection.
+          tone: (r.kind === "touch" && TONES[r.tone]) ? r.tone : null,
+          theme: (r.kind === "touch" && THEMES[r.theme]) ? r.theme : null,
         };
       });
 
