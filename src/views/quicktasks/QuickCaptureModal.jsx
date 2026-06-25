@@ -42,6 +42,22 @@ export function QuickCaptureModal({ accounts, userId, addMeeting, awayPeriods, i
   var [rows, setRows]       = useState([]);
   var [parsing, setParsing] = useState(false);
   var [filing, setFiling]   = useState(false);
+  // Account pin — an optional DEFAULT for rows that don't name their own account.
+  // Per-row detection always wins; the pin only fills the blanks. Leave it unset
+  // for a multi-account daily summary; set it when the whole dump is one account
+  // (item 52 resolved design + item 55 #5 — capture→account routing).
+  var [pinnedAccountId, setPinnedAccountId] = useState(null);
+
+  // Setting/changing the pin fills any row that doesn't already have its OWN
+  // account (a line that named its account keeps it).
+  function applyPin(id) {
+    setPinnedAccountId(id || null);
+    if (id) {
+      setRows(function (prev) {
+        return prev.map(function (r) { return r.accountId ? r : Object.assign({}, r, { accountId: id }); });
+      });
+    }
+  }
 
   // If launched with text already (from the ⌘K palette), parse immediately.
   useEffect(function () {
@@ -52,12 +68,13 @@ export function QuickCaptureModal({ accounts, userId, addMeeting, awayPeriods, i
   function toReview(extracted) {
     if (!extracted.length) {
       // Pip found nothing structured — offer to file the raw line as a plain task.
-      setRows([{ kind: "owe", text: text.trim(), accountId: null, due: null, who: null, since: null, isFallback: true }]);
+      setRows([{ kind: "owe", text: text.trim(), accountId: pinnedAccountId || null, due: null, who: null, since: null, isFallback: true }]);
       setStep("review");
       return;
     }
     setRows(extracted.map(function (r) {
-      var accountId = r.accountId || matchAccountId(r.accountName, accounts);
+      // Per-row detection wins; fall back to the pinned account for un-attributed rows.
+      var accountId = r.accountId || matchAccountId(r.accountName, accounts) || pinnedAccountId || null;
       return Object.assign({}, r, { accountId: accountId });
     }));
     setStep("review");
@@ -124,6 +141,20 @@ export function QuickCaptureModal({ accounts, userId, addMeeting, awayPeriods, i
   return (
     <Modal title="Quick capture" onClose={onClose} width={560}>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div>
+          <AccountPicker
+            accounts={accounts}
+            value={pinnedAccountId || ""}
+            onChange={applyPin}
+            placeholder="Pin to an account (optional)"
+            allowNone
+          />
+          <div style={{ fontSize: 10.5, color: C.textFaint, marginTop: 4, lineHeight: 1.45, fontFamily: INTER }}>
+            {pinnedAccountId
+              ? "Anything that doesn't name its own account files here — a line that names one still wins."
+              : "Pin when the whole dump is one account; leave blank for a multi-account summary."}
+          </div>
+        </div>
         {step === "type" && (
           <>
             <div style={{ fontSize: 12.5, color: C.textSoft, lineHeight: 1.55, fontFamily: INTER }}>
