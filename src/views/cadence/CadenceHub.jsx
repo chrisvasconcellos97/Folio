@@ -2043,6 +2043,7 @@ export function CadenceHub({
                 accounts={accounts}
                 members={members}
                 userEmail={userEmail}
+                userId={userId}
                 onUpdateProject={updateProject}
               />
             );
