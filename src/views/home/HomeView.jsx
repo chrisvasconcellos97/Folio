@@ -16,6 +16,7 @@ import { generateCheckInQuestions } from "../../lib/checkIn";
 import { trackerProjects, isTrackerDirty, buildTrackerTSV, isTrackerReminderWindow } from "../../lib/teamTracker";
 import { overlapsAway, currentlyAway, justBackFrom, awayLabel } from "../../lib/awayMode";
 import { callPortfolioBriefPip, callWeekWrapPip } from "../../lib/pip";
+import { ObservationsCard } from "./ObservationsCard";
 import { weeklyMovement, candidateWins, isFridayWrapWindow } from "../../lib/weekReview";
 import { isProjectComplete } from "../../lib/gaugeStatus";
 import { notMyRelationship } from "../../lib/accountHealth";
@@ -172,7 +173,7 @@ function makeAccountLinkify(accounts, onOpenAccount) {
   };
 }
 
-export function HomeView({ userName, userId, userEmail, accounts, meetings, items, cadences, projects, contacts, members, wins, awayPeriods, themes, showOnboardingCard, dripQuestion, dripQueueCount, commitmentNudges, pipFacts, profileProse, scheduledMeetings, handlers }) {
+export function HomeView({ userName, userId, userEmail, accounts, meetings, items, cadences, projects, contacts, members, wins, awayPeriods, themes, showOnboardingCard, dripQuestion, dripQueueCount, commitmentNudges, pipFacts, profileProse, scheduledMeetings, observations, onObservationAct, onObservationDismiss, generateObservations, handlers }) {
   // All callback props arrive grouped in one `handlers` bag (Batch 8 — prop-
   // sprawl reduction). Re-expanded to locals here so the many internal call
   // sites (onOpenAccount ×17, onOpenCadenceHub ×14, …) stay byte-for-byte
@@ -223,6 +224,38 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
   var isDesktop = useBreakpoint();
   var isMobile  = !isDesktop;
   var [mounted, setMounted] = useState(false);
+
+  // Mastermind / synthesis (item 52) — once the portfolio data has settled,
+  // assemble the recent STREAM and fire the synthesis pass. generateObservations
+  // is internally gated (fingerprint + once/day), so this no-ops cheaply most
+  // loads; it only bills a Sonnet call when the stream actually moved.
+  useEffect(function () {
+    if (!userId || typeof generateObservations !== "function") return;
+    if (!accounts || !accounts.length) return;
+    var todayISO = new Date().toISOString().slice(0, 10);
+    var timer = setTimeout(function () {
+      var stream = {
+        accounts: (accounts || []).map(function (a) { return { id: a.id, name: a.name }; }),
+        tasks: (items || []).map(function (i) {
+          return {
+            id: i.id, title: i.text || i.title, account_id: i.account_id,
+            is_commitment: !!i.is_commitment, waiting_on: i.waiting_on || null,
+            waiting_on_since: i.waiting_on_since || null, due_date: i.due_date || null,
+            done: !!i.done, created_at: i.created_at, updated_at: i.updated_at,
+          };
+        }),
+        meetings: (meetings || []).filter(function (m) { return m.status !== "draft" && m.status !== "scheduled"; })
+          .slice(0, 40).map(function (m) {
+            return { id: m.id, account_id: m.account_id, meeting_date: m.meeting_date, title: m.pip_short_title || m.title, theme: m.theme };
+          }),
+        themes: (themes || []).map(function (th) { return { key: th.theme, count: th.count, accounts: th.accounts }; }),
+      };
+      generateObservations(stream, todayISO);
+    }, 2500); // debounce so realtime/late fetches settle before fingerprinting
+    return function () { clearTimeout(timer); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, accounts.length, items.length, meetings.length, themes.length]);
+
   var [dailyBrief, setDailyBrief] = useState("");
   var [captureMenuOpen, setCaptureMenuOpen] = useState(false);
   var [briefCallouts, setBriefCallouts] = useState([]);
@@ -2361,6 +2394,15 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
           <OperatorRunButton onDone={refetchOperator} hasReport={false} />
         </div>
       )}
+
+      {/* Mastermind / synthesis (item 52) — quarantined strategic surface. Renders
+          nothing when there are no open observations. */}
+      <ObservationsCard
+        observations={observations}
+        onAct={onObservationAct}
+        onDismiss={onObservationDismiss}
+        isMobile={isMobile}
+      />
 
       {operatorActive && (
         <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>

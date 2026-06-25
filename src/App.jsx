@@ -69,6 +69,7 @@ import { useCommitmentNudges } from "./hooks/useCommitmentNudges.js";
 import { useWins } from "./hooks/useWins.js";
 import { useAwayPeriods } from "./hooks/useAwayPeriods.js";
 import { useRecentThemes } from "./hooks/useRecentThemes";
+import { useObservations } from "./hooks/useObservations";
 import { C } from "./lib/colors";
 import { QuickTaskModal } from "./views/quicktasks/QuickTaskModal";
 
@@ -586,6 +587,22 @@ export default function App() {
       });
   }
 
+  // Mastermind action (item 52) — when Chris approves an observation's proposed
+  // move, file it as a task (the chase / "promote to a project") and mark the
+  // observation acted. Pip proposes; this is the one-tap approve.
+  function handleObservationAct(row) {
+    var o = (row && row.observation) || {};
+    var p = o.action_payload || {};
+    var acct = p.account
+      ? (accounts || []).find(function (a) { return a.name && a.name.toLowerCase() === String(p.account).toLowerCase(); })
+      : null;
+    var title = String(p.title || o.action_label || o.title || "Follow up").slice(0, 200);
+    return pipAddItem({ text: title, account_id: acct ? acct.id : null, is_commitment: false, user_added: true })
+      .then(function () { return observationsApi.markActed(row.id); })
+      .then(function () { showToast("Filed ✦"); })
+      .catch(function () { showToast("Couldn't file that — try again", "error"); });
+  }
+
   function closeItem(id) {
     var closedAt = new Date().toISOString();
     return supabase
@@ -941,6 +958,7 @@ export default function App() {
   var winsHook             = useWins(userId);
   var awayHook             = useAwayPeriods(userId);
   var recentThemes         = useRecentThemes(userId);
+  var observationsApi      = useObservations(userId); // mastermind / synthesis (item 52)
 
   // Share Target — detect when the app is launched via the PWA Web Share Target.
   // GET params title/text/url are set by the OS share sheet. Initialized once from
@@ -1254,6 +1272,10 @@ export default function App() {
         awayPeriods={awayHook.periods}
         themes={recentThemes}
         scheduledMeetings={scheduledMeetings}
+        observations={observationsApi.observations}
+        onObservationAct={handleObservationAct}
+        onObservationDismiss={observationsApi.dismiss}
+        generateObservations={observationsApi.generate}
         handlers={{
           onOpenAccount: function (accountId) {
             var a = (accounts || []).find(function (x) { return x.id === accountId; });
