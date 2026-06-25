@@ -27,6 +27,7 @@ var handlers = [
   "api/embed-sync.js",
   "api/week-wrap.js",
   "api/parse-digest.js",
+  "api/observations.js",
 ];
 
 var failed = false;
