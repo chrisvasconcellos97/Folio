@@ -208,13 +208,13 @@ export function AccountDetailHeader({
                 {computedHealth.pinned && (
                   <InfoTip position="below" text="You've manually pinned this account's health status. Pip will note the override in briefs. Click the pill to update or clear it." />
                 )}
-                {computedHealth.reason && !computedHealth.pinned && (
+                {(computedHealth.reasons && computedHealth.reasons.length ? computedHealth.reasons : (computedHealth.reason ? [computedHealth.reason] : [])).length > 0 && !computedHealth.pinned && (
                   <span style={{
                     fontFamily: MONO, fontSize: 9, color: statusColor,
                     textTransform: "uppercase", letterSpacing: "0.08em",
                     opacity: 0.85,
                   }}>
-                    {computedHealth.reason}
+                    {(computedHealth.reasons && computedHealth.reasons.length ? computedHealth.reasons : [computedHealth.reason]).join(" · ")}
                   </span>
                 )}
               </button>

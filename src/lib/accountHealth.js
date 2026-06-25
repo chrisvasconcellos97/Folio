@@ -39,17 +39,22 @@ export function healthLabel(status) {
 }
 
 // Computes account health from signals. Tier-aware thresholds.
-// Returns { status: 'green'|'yellow'|'red'|'new', reason: string }.
-// Override (when set) supersedes everything.
+// Returns { status: 'green'|'yellow'|'red'|'new', reason: string, reasons: string[] }.
+// `reason` = the single primary driver (backward compat); `reasons` = EVERY
+// contributing factor, human-readable, so surfaces can show "At Risk *because* —
+// 24d no contact · 2 items overdue · a project blocked" instead of one opaque
+// label (explainable health, item 51 Tier 1). Override (when set) supersedes all.
 export function computeAccountHealth(account, signals) {
   // signals: { openItemsOverdue, openItemsAll, blockedProjects, onHoldProjects, missedCadences, lastInteractionAt, accountAgeDays }
   // Override path first
   if (account.status_override) {
     var until = account.status_override_until;
     if (!until || new Date(until + 'T00:00:00') >= new Date()) {
+      var oReason = account.status_override_reason || 'pinned';
       return {
         status: account.status_override,
-        reason: account.status_override_reason || 'pinned',
+        reason: oReason,
+        reasons: [oReason],
         pinned: true,
       };
     }
@@ -58,7 +63,7 @@ export function computeAccountHealth(account, signals) {
   // "New" — fresh account, no signal
   var noTouch = !signals.lastInteractionAt;
   if (signals.accountAgeDays < 7 && noTouch) {
-    return { status: 'new', reason: 'new', pinned: false };
+    return { status: 'new', reason: 'new', reasons: ['new account, no contact yet'], pinned: false };
   }
 
   // Tier thresholds
@@ -74,32 +79,33 @@ export function computeAccountHealth(account, signals) {
     ? Math.floor((Date.now() - new Date(signals.lastInteractionAt).getTime()) / 86400000)
     : null;
 
-  // Red triggers
-  if (daysCold !== null && daysCold > th.redCold) {
-    return { status: 'red', reason: daysCold + 'd cold', pinned: false };
-  }
+  // Collect EVERY contributing factor, tagged by severity. Status is the worst
+  // severity present; order within red/yellow preserves the legacy primary-reason
+  // priority (cold → blocked → overdue → cadence). No status outcome changes.
+  var red = [], yellow = [];
+
+  if (daysCold !== null && daysCold > th.redCold) red.push(daysCold + 'd no substantive contact');
+  else if (daysCold !== null && daysCold >= th.yelCold) yellow.push(daysCold + 'd since last contact');
+
   if (signals.blockedProjects > 0) {
-    return { status: 'red', reason: 'project blocked', pinned: false };
+    red.push(signals.blockedProjects > 1 ? signals.blockedProjects + ' projects blocked' : 'a project blocked');
   }
   if (signals.openItemsOverdue >= th.redOverdue) {
-    return { status: 'red', reason: signals.openItemsOverdue + ' overdue', pinned: false };
+    red.push(signals.openItemsOverdue + ' items overdue');
+  } else if (signals.openItemsOverdue >= 1) {
+    yellow.push(signals.openItemsOverdue + (signals.openItemsOverdue > 1 ? ' items overdue' : ' item overdue'));
   }
-  if (signals.missedCadences >= 2) {
-    return { status: 'red', reason: 'cadence missed twice', pinned: false };
-  }
+  if (signals.missedCadences >= 2) red.push('cadence missed twice');
 
-  // Yellow triggers
-  if (daysCold !== null && daysCold >= th.yelCold) {
-    return { status: 'yellow', reason: daysCold + 'd cold', pinned: false };
-  }
-  if (signals.openItemsOverdue >= 1 && signals.openItemsOverdue <= th.yelOverdueMax) {
-    return { status: 'yellow', reason: signals.openItemsOverdue + ' overdue', pinned: false };
-  }
   if (signals.onHoldProjects > 0) {
-    return { status: 'yellow', reason: 'project on hold', pinned: false };
+    yellow.push(signals.onHoldProjects > 1 ? signals.onHoldProjects + ' projects on hold' : 'a project on hold');
   }
 
-  return { status: 'green', reason: 'on track', pinned: false };
+  var status = red.length ? 'red' : (yellow.length ? 'yellow' : 'green');
+  var reasons = red.concat(yellow);
+  if (!reasons.length) reasons = ['on track'];
+
+  return { status: status, reason: reasons[0], reasons: reasons, pinned: false };
 }
 
 var FREQ_DAYS = { weekly: 7, biweekly: 14, monthly: 30 };

@@ -95,6 +95,47 @@ describe("computeAccountHealth — blockers and overdue", function () {
   });
 });
 
+describe("computeAccountHealth — explainable reasons", function () {
+  function daysAgo(n) { return new Date(Date.now() - n * 86400000).toISOString(); }
+
+  it("collects EVERY contributing factor, not just the first", function () {
+    var acct = { tier: "Growth" };
+    var result = computeAccountHealth(acct, {
+      openItemsOverdue: 5, blockedProjects: 1, onHoldProjects: 2, missedCadences: 0,
+      lastInteractionAt: daysAgo(61), accountAgeDays: 100,
+    });
+    expect(result.status).toBe("red");
+    expect(Array.isArray(result.reasons)).toBe(true);
+    // cold + blocked + overdue + on-hold all present
+    expect(result.reasons.length).toBeGreaterThanOrEqual(4);
+    expect(result.reasons.join(" · ")).toMatch(/no substantive contact/);
+    expect(result.reasons.join(" · ")).toMatch(/blocked/);
+    expect(result.reasons.join(" · ")).toMatch(/overdue/);
+    expect(result.reasons.join(" · ")).toMatch(/on hold/);
+  });
+
+  it("primary reason stays first (cold before overdue)", function () {
+    var acct = { tier: "Growth" };
+    var result = computeAccountHealth(acct, {
+      openItemsOverdue: 4, blockedProjects: 0, missedCadences: 0,
+      lastInteractionAt: daysAgo(61), accountAgeDays: 100,
+    });
+    expect(result.reason).toMatch(/no substantive contact/);
+    expect(result.reason).toBe(result.reasons[0]);
+  });
+
+  it("green account → reasons is ['on track']", function () {
+    var result = computeAccountHealth({ tier: "Growth" }, { openItemsOverdue: 0, blockedProjects: 0, missedCadences: 0, lastInteractionAt: new Date().toISOString(), accountAgeDays: 100 });
+    expect(result.reasons).toEqual(["on track"]);
+  });
+
+  it("override carries its reason into reasons[]", function () {
+    var acct = { status_override: "red", status_override_reason: "contract risk", status_override_until: "2099-12-31" };
+    var result = computeAccountHealth(acct, { openItemsOverdue: 0, blockedProjects: 0, missedCadences: 0, lastInteractionAt: new Date().toISOString(), accountAgeDays: 100 });
+    expect(result.reasons).toEqual(["contract risk"]);
+  });
+});
+
 // ── gatherSignals ──────────────────────────────────────────────────────
 
 describe("gatherSignals", function () {
