@@ -257,6 +257,7 @@ export function AdHocConversationFlow({
       {previewPlan && !previewPlan.streaming && (
         <PipSummarizePreview
           plan={previewPlan.plan}
+          assignmentHints={hintsApi.hints}
           existingItems={openItems}
           activeProjects={activeProjects}
           orgMembers={members}

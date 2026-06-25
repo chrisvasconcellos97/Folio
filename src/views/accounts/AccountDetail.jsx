@@ -878,6 +878,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
       {adHocPreviewPlan && !adHocPreviewPlan.streaming && (
         <PipSummarizePreview
           plan={adHocPreviewPlan.plan}
+          assignmentHints={adHocHintsApi.hints}
           existingItems={openItemsList}
           activeProjects={activeProjects}
           orgMembers={members}

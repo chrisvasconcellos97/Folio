@@ -6,6 +6,7 @@ import { showToast } from "../../components/Toast";
 import { InfoTip } from "../../components/InfoTip";
 import { PersonPicker } from "../../components/PersonPicker";
 import { isDefaultMeetingTitle } from "../../lib/meetingTitle";
+import { taskPattern } from "../../hooks/usePipAssignmentHints";
 // Presentational layer (pure helpers + stateless leaf sub-components) extracted
 // to PipSummarizePreviewRows.jsx — Batch 8. This file is the orchestration /
 // state container that composes them; behavior is unchanged.
@@ -42,7 +43,21 @@ export function PipSummarizePreview({
   accountContacts,   // optional: [{ id, name, role }] — contacts for this account as assignee options
   discussedProjectIds = [],  // UUIDs of projects the user flagged as discussed
   discussedItemIds    = [],  // UUIDs of items/tasks the user flagged as discussed
+  assignmentHints     = [],  // [{ task_pattern, assignee_email, account_id }] — learned defaults (item 54 receipt)
 }) {
+  // Item 54 receipt — did this row's assignee come from a default Pip LEARNED?
+  // Match the row's task pattern + assignee against the learned hints; when it
+  // fires we show "✦ Pip set this — you usually do" so the silent learning is
+  // visible right in the flow.
+  function learnedAssignee(title, assignee) {
+    if (!assignee || !Array.isArray(assignmentHints) || !assignmentHints.length) return false;
+    var pat = taskPattern(title || "");
+    if (!pat) return false;
+    return assignmentHints.some(function (h) {
+      return h.assignee_email === assignee && h.task_pattern && (pat.indexOf(h.task_pattern) !== -1 || h.task_pattern.indexOf(pat) !== -1);
+    });
+  }
+
   // Sanitize Pip's plan: drop update rows that point at a task/item we can't
   // resolve, or that carry no concrete field change. Pip sometimes emits an
   // update_task on a "discussed" project without a real task to update —
@@ -717,6 +732,11 @@ export function PipSummarizePreview({
                     Assignee
                   </span>
                   {personField(s.assignee, function (v) { patch(idx, { assignee: v }); })}
+                  {learnedAssignee(s.title, s.assignee) && (
+                    <span title="Pip applied a default it learned from how you've assigned similar tasks. Manage these in Settings → Pip." style={{ fontSize: 10, color: C.accent, fontFamily: INTER, whiteSpace: "nowrap" }}>
+                      ✦ you usually do
+                    </span>
+                  )}
                 </div>
               )}
               {hasAssignee(row.kind) && (
