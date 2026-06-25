@@ -21,6 +21,7 @@ import { useGlossary } from "../../hooks/useGlossary";
 import { useActivity } from "../../hooks/useActivity";
 import { useTheme } from "../../hooks/useTheme";
 import { Mark } from "../../components/Mark";
+import { LearnedDefaultsSection } from "./LearnedDefaultsSection";
 
 var PIP_FACT_PLACEHOLDERS = [
   "Prefer concise replies",
@@ -1914,6 +1915,7 @@ export function SettingsView({ userId, userMeta, orgId, role, members, accounts,
               <PipPrefsSection userId={userId} />
               <PipUsageSection userId={userId} />
               <PipGlossarySection userId={userId} orgId={orgId} accounts={accounts} />
+              <LearnedDefaultsSection userId={userId} accounts={accounts} members={members} />
               <PipQuestionsSection userId={userId} onStartInterview={onStartInterview} onOpenCatchUp={onOpenCatchUp} />
             </div>
           </div>

@@ -98,5 +98,18 @@ export function usePipAssignmentHints(userId, accountId) {
       });
   }
 
-  return { hints, loading, error, refetch: fetch, addHint };
+  // Remove a learned default (item 54 — consent/control: Chris can always undo
+  // what Pip codified). Optimistic.
+  function removeHint(id) {
+    if (!id) return Promise.resolve();
+    setHints(function (prev) { return prev.filter(function (h) { return h.id !== id; }); });
+    return supabase
+      .from("pip_assignment_hints")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", userId)
+      .then(function (result) { if (result.error) fetch(); /* revert on failure */ });
+  }
+
+  return { hints, loading, error, refetch: fetch, addHint, removeHint };
 }
