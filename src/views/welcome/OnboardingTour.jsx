@@ -244,6 +244,13 @@ export function OnboardingTour({ onComplete }) {
     return function () { clearTimeout(t); };
   }, [introPhase]);
 
+  // L9 — Escape dismisses the tour (it's a skippable welcome overlay).
+  useEffect(function () {
+    function onKey(e) { if (e.key === "Escape") onComplete(); }
+    window.addEventListener("keydown", onKey);
+    return function () { window.removeEventListener("keydown", onKey); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   var current = SCREENS[screen];
   var pipSize = current.pipLarge ? 88 : 70;
   var half    = pipSize / 2;
@@ -263,6 +270,9 @@ export function OnboardingTour({ onComplete }) {
 
   return (
     <div
+      role="dialog"
+      aria-modal={true}
+      aria-label="Welcome to Folios — intro tour"
       style={{
         position: "fixed", inset: 0, zIndex: 1000,
         background: C.bgDark,
