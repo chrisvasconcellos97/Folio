@@ -5,6 +5,8 @@ import { PipMark } from "../../components/PipMark";
 import { showToast } from "../../components/Toast";
 import { InfoTip } from "../../components/InfoTip";
 import { PersonPicker } from "../../components/PersonPicker";
+import { AccountPicker } from "../../components/AccountPicker";
+import { persistAccountReads } from "../../lib/accountReads";
 import { isDefaultMeetingTitle } from "../../lib/meetingTitle";
 import { taskPattern } from "../../hooks/usePipAssignmentHints";
 // Presentational layer (pure helpers + stateless leaf sub-components) extracted
@@ -44,6 +46,9 @@ export function PipSummarizePreview({
   discussedProjectIds = [],  // UUIDs of projects the user flagged as discussed
   discussedItemIds    = [],  // UUIDs of items/tasks the user flagged as discussed
   assignmentHints     = [],  // [{ task_pattern, assignee_email, account_id }] — learned defaults (item 54 receipt)
+  accountReads        = [],  // [{ account_id, note, detail, impact }] — "✦ Pip will remember" per-account memory
+  userId,                    // for persisting account_reads as folio_account_updates
+  accounts            = [],  // full account list (org_id for the update insert + the re-route picker)
 }) {
   // Item 54 receipt — did this row's assignee come from a default Pip LEARNED?
   // Match the row's task pattern + assignee against the learned hints; when it
@@ -154,6 +159,22 @@ export function PipSummarizePreview({
   var [userRows, setUserRows] = useState([]);
   var [titleDraft, setTitleDraft] = useState(suggestedTitle || "");
   var [dismissedPeople, setDismissedPeople] = useState([]);
+  // "✦ Pip will remember" memory cards. Default checked for the meeting's own
+  // account (account_id null → current, or an explicit match); unchecked for
+  // cross-account reads (lower confidence — the user opts those in).
+  var [acctReads, setAcctReads] = useState(function () {
+    return (accountReads || []).map(function (r) {
+      var aid = r.account_id || currentAccountId || null;
+      return {
+        note: r.note, detail: r.detail || "", impact: r.impact || "unknown",
+        accountId: aid,
+        checked: !!aid && (!r.account_id || r.account_id === currentAccountId),
+      };
+    });
+  });
+  function patchAcctRead(i, fields) {
+    setAcctReads(function (prev) { return prev.map(function (a, idx) { return idx === i ? Object.assign({}, a, fields) : a; }); });
+  }
   var [sessionProjects, setSessionProjects] = useState([]);
   var [confidenceBannerDismissed, setConfidenceBannerDismissed] = useState(false);
   var [creatingProject, setCreatingProject] = useState({});  // { [idx]: true } while in-flight
@@ -423,6 +444,14 @@ export function PipSummarizePreview({
     if (onLogCorrections && corrections.length) {
       // Fire-and-forget — never block Apply on logging.
       Promise.resolve(onLogCorrections(corrections)).catch(function () { /* swallow */ });
+    }
+
+    // Persist the "Pip will remember" memory notes alongside the plan — best
+    // effort, never blocks Apply (mirrors the digest). Flows into the account's
+    // Recent Updates + both briefs via buildAccountContext.recentUpdates.
+    if (userId && acctReads.some(function (a) { return a.checked && a.accountId; })) {
+      persistAccountReads({ userId: userId, accounts: accounts, reads: acctReads, owner: "Pip ✦ meeting" })
+        .then(function () {}, function () {});
     }
 
     Promise.resolve(onApply(selected))
@@ -1135,6 +1164,59 @@ export function PipSummarizePreview({
                 {grouped.skipped.map(renderRow)}
               </div>
             )}
+          </div>
+        )}
+
+        {acctReads.length > 0 && (
+          <div style={{ marginTop: 8, borderTop: "1px solid " + C.rule, paddingTop: 16 }}>
+            <div style={{
+              fontSize: 10, color: C.accent, fontWeight: 600,
+              letterSpacing: "0.06em", textTransform: "uppercase",
+              marginBottom: 4, fontFamily: MONO,
+            }}>
+              ✦ Pip will remember this on your accounts
+            </div>
+            <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 10, fontFamily: INTER, lineHeight: 1.5 }}>
+              Durable per-account memory — surfaces next time you prep for the account. Uncheck to skip, or re-route to a different account.
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {acctReads.map(function (a, i) {
+                return (
+                  <div key={i} style={{
+                    background: a.checked ? C.accentFaint : C.bgDark,
+                    border: "1px solid " + (a.checked ? C.accentLine : C.rule),
+                    borderRadius: 8, padding: "10px 12px",
+                    display: "flex", gap: 10, alignItems: "flex-start",
+                    opacity: a.checked ? 1 : 0.6,
+                  }}>
+                    <RowCheckbox
+                      checked={a.checked}
+                      onChange={function (v) { patchAcctRead(i, { checked: v }); }}
+                      ariaLabel={a.checked ? "Pip will remember this — uncheck to skip" : "Skipped — check to remember"}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, color: C.text, fontWeight: 600, fontFamily: INTER, lineHeight: 1.4 }}>
+                        {a.note}
+                      </div>
+                      {a.detail ? (
+                        <div style={{ fontSize: 12, color: C.textSoft, marginTop: 3, fontFamily: INTER, lineHeight: 1.5 }}>
+                          {a.detail}
+                        </div>
+                      ) : null}
+                      <div style={{ marginTop: 8, maxWidth: 260 }}>
+                        <AccountPicker
+                          accounts={accounts}
+                          value={a.accountId}
+                          onChange={function (id) { patchAcctRead(i, { accountId: id, checked: !!id }); }}
+                          placeholder="Which account?"
+                          style={{ fontSize: 13 }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 

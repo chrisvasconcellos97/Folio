@@ -5,6 +5,7 @@ import { AccountPicker } from "../../components/AccountPicker";
 import { showToast } from "../../components/Toast";
 import { callParseDigestPip } from "../../lib/pip";
 import { parseDigest } from "../../lib/digestParse";
+import { persistAccountReads } from "../../lib/accountReads";
 import { justBackFrom } from "../../lib/awayMode";
 import { insertTask } from "../../hooks/useTasks";
 
@@ -40,8 +41,13 @@ export function QuickCaptureModal({ accounts, userId, addMeeting, awayPeriods, i
   var [text, setText]       = useState(initialText || "");
   var [step, setStep]       = useState("type"); // type | review
   var [rows, setRows]       = useState([]);
+  var [acctReads, setAcctReads] = useState([]); // "✦ Pip will remember" per-account memory
   var [parsing, setParsing] = useState(false);
   var [filing, setFiling]   = useState(false);
+
+  function patchAcctRead(i, fields) {
+    setAcctReads(function (prev) { return prev.map(function (a, idx) { return idx === i ? Object.assign({}, a, fields) : a; }); });
+  }
   // Account pin — an optional DEFAULT for rows that don't name their own account.
   // Per-row detection always wins; the pin only fills the blanks. Leave it unset
   // for a multi-account daily summary; set it when the whole dump is one account
@@ -90,6 +96,13 @@ export function QuickCaptureModal({ accounts, userId, addMeeting, awayPeriods, i
       today: new Date().toISOString().slice(0, 10),
     }).then(function (out) {
       setParsing(false);
+      // Per-account memory — default-checked for reads Pip matched to an account
+      // (or the pinned account), opt-in otherwise. Same shape as the meeting flow.
+      var reads = (out && Array.isArray(out.account_reads) ? out.account_reads : []).map(function (a) {
+        var aid = matchAccountId(a.account, accounts) || pinnedAccountId || null;
+        return { note: a.note, detail: a.detail || "", impact: a.impact || "unknown", accountId: aid, checked: !!aid };
+      });
+      setAcctReads(reads);
       toReview((out && out.rows) || []);
     }).catch(function () {
       setParsing(false);
@@ -131,6 +144,12 @@ export function QuickCaptureModal({ accounts, userId, addMeeting, awayPeriods, i
         due_date: r.due || null, is_commitment: !r.isFallback, user_added: true,
       }, awayTag));
     });
+    // Persist the "Pip will remember" memory notes alongside the rows — best
+    // effort, never blocks filing (flows into Recent Updates + both briefs).
+    if (userId && acctReads.some(function (a) { return a.checked && a.accountId; })) {
+      persistAccountReads({ userId: userId, accounts: accounts, reads: acctReads, owner: "Pip ✦ capture" })
+        .then(function () {}, function () {});
+    }
     Promise.allSettled(ops).then(function (results) {
       setFiling(false);
       var failed = results.filter(function (x) { return x.status === "rejected"; }).length;
@@ -238,6 +257,48 @@ export function QuickCaptureModal({ accounts, userId, addMeeting, awayPeriods, i
                 </div>
               );
             })}
+            {acctReads.length > 0 && (
+              <div style={{ marginTop: 4, borderTop: "1px solid " + C.rule, paddingTop: 12 }}>
+                <div style={{ fontSize: 10, color: C.accent, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 8, fontFamily: MONO }}>
+                  ✦ Pip will remember this on your accounts
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {acctReads.map(function (a, i) {
+                    return (
+                      <div key={i} style={{
+                        background: a.checked ? C.accentFaint : C.bgDark,
+                        border: "1px solid " + (a.checked ? C.accentLine : C.rule),
+                        borderRadius: 8, padding: "10px 12px", display: "flex", gap: 10, alignItems: "flex-start",
+                        opacity: a.checked ? 1 : 0.6,
+                      }}>
+                        <input
+                          type="checkbox"
+                          checked={a.checked}
+                          onChange={function (e) { patchAcctRead(i, { checked: e.target.checked }); }}
+                          aria-label={a.checked ? "Pip will remember this — uncheck to skip" : "Skipped — check to remember"}
+                          style={{ width: 18, height: 18, accentColor: C.accent, marginTop: 1, flexShrink: 0 }}
+                        />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, color: C.text, fontWeight: 600, fontFamily: INTER, lineHeight: 1.4 }}>{a.note}</div>
+                          {a.detail ? (
+                            <div style={{ fontSize: 12, color: C.textSoft, marginTop: 3, fontFamily: INTER, lineHeight: 1.5 }}>{a.detail}</div>
+                          ) : null}
+                          <div style={{ marginTop: 8, maxWidth: 240 }}>
+                            <AccountPicker
+                              accounts={accounts}
+                              value={a.accountId || ""}
+                              onChange={function (id) { patchAcctRead(i, { accountId: id, checked: !!id }); }}
+                              placeholder="Which account?"
+                              allowNone
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
               <button
                 onClick={function () { setStep("type"); }}

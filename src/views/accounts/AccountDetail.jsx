@@ -351,7 +351,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
     }).then(function (out) {
       setAdHocSummarizing(false);
       setAdHocTitleDraft(out.suggested_title || null);
-      setAdHocPreviewPlan({ plan: out.plan || [], summary: out.summary || "", draftId: draftPayload.id, skippedByPip: !!out.skippedByPip, suggestedTitle: out.suggested_title || null, meetingTitle: draftPayload.title || null, unknownPeople: out.unknown_people || [], receipts: out.receipts || [], discussedProjectIds: discussedProjectIds || [], discussedItemIds: discussedItemIds || [] });
+      setAdHocPreviewPlan({ plan: out.plan || [], summary: out.summary || "", draftId: draftPayload.id, skippedByPip: !!out.skippedByPip, suggestedTitle: out.suggested_title || null, meetingTitle: draftPayload.title || null, unknownPeople: out.unknown_people || [], receipts: out.receipts || [], accountReads: out.account_reads || [], discussedProjectIds: discussedProjectIds || [], discussedItemIds: discussedItemIds || [] });
     }).catch(function (err) {
       setAdHocSummarizing(false);
       setAdHocPreviewPlan(function (prev) { return prev && prev.streaming ? null : prev; });
@@ -917,6 +917,9 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
           accountContacts={contacts || []}
           discussedProjectIds={adHocPreviewPlan.discussedProjectIds || []}
           discussedItemIds={adHocPreviewPlan.discussedItemIds || []}
+          accountReads={adHocPreviewPlan.accountReads || []}
+          userId={userId}
+          accounts={accounts}
         />
       )}
 

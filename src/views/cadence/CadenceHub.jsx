@@ -1699,6 +1699,7 @@ export function CadenceHub({
         meetingTitle:   draftPayload.title || null,
         unknownPeople:  out.unknown_people || [],
         receipts:       out.receipts || [],
+        accountReads:   out.account_reads || [],
       });
       // The meeting is already marked summarized; close meeting mode if it was open.
       if (meetingMode && meetingMode.draft && meetingMode.draft.id === draftId) {
@@ -2304,6 +2305,9 @@ export function CadenceHub({
       accountContacts={rosterContacts || []}
       discussedProjectIds={lastDiscussedProjectIds}
       discussedItemIds={lastDiscussedItemIds}
+      accountReads={previewPlan.accountReads || []}
+      userId={userId}
+      accounts={accounts}
     />
   ) : null;
 

@@ -173,6 +173,7 @@ export function AdHocConversationFlow({
         meetingTitle:   draftPayload.title || null,
         unknownPeople:  out.unknown_people || [],
         receipts:       out.receipts || [],
+        accountReads:   out.account_reads || [],
       });
     }).catch(function (err) {
       setSummarizing(false);
@@ -284,6 +285,9 @@ export function AdHocConversationFlow({
               status: "planned",
             }));
           } : undefined}
+          accountReads={previewPlan.accountReads || []}
+          userId={userId}
+          accounts={accounts}
         />
       )}
     </>
