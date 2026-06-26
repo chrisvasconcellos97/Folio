@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { useRealtimeSync } from "./useRealtimeSync";
+import { logSilentFailure } from "../lib/logSilentFailure";
 
 export function useAccountSnapshots(userId) {
   var [snapshots, setSnapshots]             = useState([]);
@@ -24,6 +25,9 @@ export function useAccountSnapshots(userId) {
       .order("snapshot_date", { ascending: false })
       .then(function (r) {
         setLoading(false);
+        // M5 — don't blank health snapshots on a transient/RLS read error; keep
+        // prior state and surface the failure instead of going silently dark.
+        if (r.error) { logSilentFailure("useAccountSnapshots/fetch", r.error); return; }
         var all = r.data || [];
         setSnapshots(all.filter(function (s) { return s.snapshot_date === today; }));
         setSnapshotHistory(all);

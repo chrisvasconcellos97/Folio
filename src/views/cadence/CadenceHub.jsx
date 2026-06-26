@@ -1480,6 +1480,7 @@ export function CadenceHub({
     callCadenceBriefPip({
       cadence:          cadence,
       account:          account || {},
+      userId:           userId, // H2 — lets the RELATIONSHIP_OWNER:NO guard fire on the pre-call brief
       cadenceLabel:     cadenceLabel,
       meetings:         history,
       openItems:        openItems,

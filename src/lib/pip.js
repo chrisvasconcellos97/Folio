@@ -437,6 +437,7 @@ export function callBriefMePip(payload) {
     accounts: [{
       id:     account.id,
       name:   account.name,
+      owner_user_id: account.owner_user_id || null, // so RELATIONSHIP_OWNER:NO can fire on briefs (H2)
       status: account.status,
       tier:   account.tier,
       health: account.health,
@@ -478,6 +479,7 @@ export function callBriefMePip(payload) {
       recentUpdates:   recentUpdates,
     }],
     recentDeliveries: recentDeliveries,
+    userId: payload.userId || null, // drives the RELATIONSHIP_OWNER:NO ownership guard (H2)
   };
 
   var userMsg =
@@ -1266,6 +1268,7 @@ export function callCadenceBriefPip(payload) {
     accounts: [{
       id:     account.id,
       name:   account.name,
+      owner_user_id: account.owner_user_id || null, // so RELATIONSHIP_OWNER:NO can fire on the cadence brief (H2)
       status: account.status,
       tier:   account.tier,
       health: account.health,
@@ -1308,6 +1311,7 @@ export function callCadenceBriefPip(payload) {
       recentUpdates:   Array.isArray(payload.recentUpdates)   ? payload.recentUpdates   : [],
     }],
     recentDeliveries: payload.recentDeliveries || [],
+    userId: payload.userId || null, // drives the RELATIONSHIP_OWNER:NO ownership guard (H2)
   };
 
   // V2 brain correction context — prefer compressed lessons_learned when fresh.

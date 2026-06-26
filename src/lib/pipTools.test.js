@@ -206,7 +206,7 @@ describe("routeToolCall — routing to hooks", function () {
       { id: "t1", name: "complete_task", input: { task_id: "abc-123" } },
       { accounts: sampleAccounts, updateTask: updateTask }
     );
-    expect(updateTask).toHaveBeenCalledWith("abc-123", { done: true, status: "complete" });
+    expect(updateTask).toHaveBeenCalledWith("abc-123", { done: true });
     expect(r.kind).toBe("executed");
   });
 

@@ -471,7 +471,10 @@ export function routeToolCall(tool, ctx) {
     // ---- Quick tasks ----
     case "complete_task":
       if (!input.task_id || !ctx.updateTask) return Promise.resolve(err(new Error("missing task_id or hook")));
-      return ctx.updateTask(input.task_id, { done: true, status: "complete" })
+      // folio_quick_tasks has NO `status` column — `done` is its only completion
+      // flag. Writing status here 400s (PGRST204) and the optimistic update
+      // reverts, so the task silently never completes. (Confirmed vs prod.)
+      return ctx.updateTask(input.task_id, { done: true })
         .then(function () { return { kind: "executed", label: label }; })
         .catch(err);
 

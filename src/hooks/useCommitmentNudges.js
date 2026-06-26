@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase.js";
 import { logSilentFailure } from "../lib/logSilentFailure.js";
+import { useRealtimeSync } from "./useRealtimeSync.js";
 
 export function useCommitmentNudges(userId, accounts) {
   var [nudges, setNudges] = useState([]);
@@ -45,6 +46,11 @@ export function useCommitmentNudges(userId, accounts) {
   }, [userId, accountsLen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(function () { compute(); }, [compute]);
+
+  // M6 — every other task-derived hook subscribes to folio_tasks; this one
+  // didn't, so completing/snoozing a commitment on another device left stale
+  // nudges here until the accounts array happened to change. Sync it too.
+  useRealtimeSync("folio_tasks", userId, compute);
 
   function snooze(taskId) {
     setNudges(function (prev) { return prev.filter(function (n) { return n.taskId !== taskId; }); });

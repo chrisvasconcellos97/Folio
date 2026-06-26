@@ -478,7 +478,19 @@ async function processUser(admin, client, userId, tz, isScheduled) {
   if (shouldBuild) {
     var report = { headline: "", opening: "", sections: [] };
     try { report = await runReportPass(client, admin, userId, reportInput, accounts.length, userContext); }
-    catch (e) { console.error("[operator-run] report pass failed", userId, e && e.message); }
+    catch (e) {
+      // H3 — the roll-up was failing INVISIBLY (console only), so a stale Home
+      // report had no signal. Route it to folio_errors like the account-pass does.
+      console.error("[operator-run] report pass failed", userId, e && e.message);
+      try {
+        admin.from("folio_errors").insert([{
+          user_id: userId,
+          error_type: "operator_report_pass_failed",
+          message: "operator-run report pass failed: " + (e && e.message ? e.message : String(e)),
+          context: { reportAccounts: reportInput.length },
+        }]).then(function () {}, function (ie) { console.error("[operator-run] folio_errors insert failed:", ie && ie.message); });
+      } catch (ie) { /* swallow */ }
+    }
     // opening → report_prose (the paragraph), sections → plan_items (the rows).
     if (report.opening || (report.sections && report.sections.length)) {
       await admin.from("folio_operator_reports").upsert({

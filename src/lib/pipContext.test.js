@@ -33,6 +33,30 @@ var raw = {
   openQuickTasks: [{ id: "t1", title: "Call Lisa back" }],
 };
 
+describe("brief surface ownership note (H2 drift-lock)", function () {
+  // The two brief callers (callBriefMePip / callCadenceBriefPip) must set
+  // context.userId + account.owner_user_id so the RELATIONSHIP_OWNER:NO guard
+  // fires on briefs the way it does in chat. This locks the render contract:
+  // given both, renderContextProse emits the token; missing userId → it doesn't.
+  var ownedRaw = {
+    userId: "me",
+    briefMode: true,
+    accounts: [{
+      id: "a9", name: "MSO Co", owner_user_id: "someone-else",
+      status: "active", meetings: [], openItems: [], contacts: [], activeProjects: [],
+    }],
+  };
+  it("emits RELATIONSHIP_OWNER:NO when userId + owner_user_id (mismatch) flow through", function () {
+    var out = renderContextProse(curateContext(ownedRaw, "brief me on MSO Co", ["a9"]));
+    expect(out).toMatch(/RELATIONSHIP_OWNER: NO/);
+  });
+  it("does NOT emit it when userId is absent (the pre-H2 bug)", function () {
+    var noUser = Object.assign({}, ownedRaw, { userId: null });
+    var out = renderContextProse(curateContext(noUser, "brief me on MSO Co", ["a9"]));
+    expect(out).not.toMatch(/RELATIONSHIP_OWNER: NO/);
+  });
+});
+
 describe("curateContext", function () {
   it("resolves account by name mention", function () {
     var out = curateContext(raw, "tell me about KSI", null);

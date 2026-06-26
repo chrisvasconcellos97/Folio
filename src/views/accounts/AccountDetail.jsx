@@ -398,6 +398,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
     callBriefMePip({
       mode: "brief",
       account: account,
+      userId: userId, // H2 — lets the RELATIONSHIP_OWNER:NO guard fire on Brief Me
       meetings: meetings.slice(0, 5),
       openItems: items.filter(function (i) { return !i.done; }),
       contacts: contacts,
