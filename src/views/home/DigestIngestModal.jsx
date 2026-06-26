@@ -7,6 +7,7 @@ import { parseDigest } from "../../lib/digestParse";
 import { callParseDigestPip } from "../../lib/pip";
 import { justBackFrom } from "../../lib/awayMode";
 import { insertTask } from "../../hooks/useTasks";
+import { supabase } from "../../lib/supabase";
 
 var INTER = "'Inter', system-ui, sans-serif";
 var MONO  = "'JetBrains Mono', ui-monospace, monospace";
@@ -63,6 +64,7 @@ export function DigestIngestModal({ accounts, userId, addMeeting, awayPeriods, o
   var [step, setStep]       = useState("paste"); // paste | preview
   var [raw, setRaw]         = useState("");
   var [read, setRead]       = useState(null); // Pip's plain-language read of the day
+  var [acctReads, setAcctReads] = useState([]); // per-account memory notes (Phase A)
   var [rows, setRows]       = useState([]);
   var [unparsed, setUnparsed] = useState([]);
   var [applying, setApplying] = useState(false);
@@ -98,11 +100,18 @@ export function DigestIngestModal({ accounts, userId, addMeeting, awayPeriods, o
       setParsing(false);
       var rd = (out && out.read) || null;
       setRead(rd);
-      toPreview((out && out.rows) || [], [], !!rd);
+      // Per-account memory notes — match each to a real account (drop unmatched,
+      // so we never write a digest update onto the wrong/nonexistent account).
+      var ar = ((out && out.account_reads) || [])
+        .map(function (a) { return Object.assign({}, a, { accountId: matchAccountId(a.account, accounts) }); })
+        .filter(function (a) { return a.accountId; });
+      setAcctReads(ar);
+      toPreview((out && out.rows) || [], [], !!rd || ar.length > 0);
     }).catch(function () {
       // Network/AI failure → deterministic fallback (handles tagged input too).
       setParsing(false);
       setRead(null); // deterministic fallback has no read
+      setAcctReads([]);
       var det = parseDigest(raw, accounts);
       if (det.rows.length || det.unparsed.length) {
         toPreview(det.rows, det.unparsed, false);
@@ -116,6 +125,29 @@ export function DigestIngestModal({ accounts, userId, addMeeting, awayPeriods, o
     setRows(function (prev) {
       return prev.map(function (r, i) { return i === idx ? Object.assign({}, r, fields) : r; });
     });
+  }
+
+  // Phase A — persist the per-account memory notes as folio_account_updates.
+  // These flow into the account's Recent Updates AND both briefs (cadence
+  // pre-call + daily) via buildAccountContext's recentUpdates, so the digest
+  // durably makes Pip smarter about each account. Best-effort: a failure here
+  // never blocks the task-filing the user actually confirmed.
+  function persistAcctReads() {
+    if (!acctReads.length) return Promise.resolve(0);
+    var today = new Date().toISOString().slice(0, 10);
+    var payload = acctReads.map(function (a) {
+      return {
+        user_id: userId,
+        account_id: a.accountId,
+        update_date: today,
+        update_type: "other",
+        title: a.note,
+        owner: "Pip ✦ digest",
+        observed_impact: a.impact || "unknown",
+      };
+    });
+    return supabase.from("folio_account_updates").insert(payload)
+      .then(function (r) { return r && r.error ? 0 : payload.length; }, function () { return 0; });
   }
 
   function handleApply() {
@@ -161,13 +193,16 @@ export function DigestIngestModal({ accounts, userId, addMeeting, awayPeriods, o
       }).then(function () { counts.touch++; });
     });
 
-    Promise.allSettled(ops).then(function (results) {
+    Promise.all([Promise.allSettled(ops), persistAcctReads()]).then(function (res) {
+      var results = res[0];
+      var noted = res[1];
       setApplying(false);
       var failed = results.filter(function (x) { return x.status === "rejected"; }).length;
       var bits = [];
       if (counts.owe) bits.push(counts.owe + " commitment" + (counts.owe > 1 ? "s" : ""));
       if (counts.waiting + counts.quiet) bits.push((counts.waiting + counts.quiet) + " waiting-on" + (counts.waiting + counts.quiet > 1 ? "s" : ""));
       if (counts.touch) bits.push(counts.touch + " touchpoint" + (counts.touch > 1 ? "s" : ""));
+      if (noted) bits.push("noted on " + noted + " account" + (noted > 1 ? "s" : ""));
       showToast(bits.length ? "Filed: " + bits.join(", ") + (failed ? " · " + failed + " failed" : "") + " ✦" : "Nothing filed");
       if (!failed) onClose();
     });
@@ -238,6 +273,33 @@ export function DigestIngestModal({ accounts, userId, addMeeting, awayPeriods, o
                 </div>
                 <div style={{ fontSize: 13.5, color: C.text, lineHeight: 1.55, fontFamily: INTER, whiteSpace: "pre-wrap" }}>
                   {read}
+                </div>
+              </div>
+            )}
+            {/* Per-account memory (Phase A) — what Pip will durably remember on
+                each account, shown as a receipt so it's never silent. Persists to
+                folio_account_updates → flows into the account's next pre-call brief. */}
+            {acctReads.length > 0 && (
+              <div style={{ border: "1px solid " + C.rule, borderRadius: 10, padding: "10px 13px" }}>
+                <div style={{
+                  fontFamily: MONO, fontSize: 9.5, fontWeight: 700, color: C.textMuted,
+                  textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6,
+                }}>
+                  ✦ Pip will remember this on your accounts
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                  {acctReads.map(function (a, i) {
+                    var nm = (accounts.find(function (x) { return x.id === a.accountId; }) || {}).name || a.account;
+                    return (
+                      <div key={i} style={{ fontSize: 12.5, color: C.text, lineHeight: 1.45, fontFamily: INTER }}>
+                        <span style={{ color: C.accent, fontWeight: 600 }}>{nm}</span>
+                        <span style={{ color: C.textSoft }}>{" — " + a.note}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{ fontSize: 10, color: C.textFaint, marginTop: 6, fontFamily: INTER }}>
+                  Saved to each account's history — your next brief on them will reflect it.
                 </div>
               </div>
             )}
@@ -325,7 +387,12 @@ export function DigestIngestModal({ accounts, userId, addMeeting, awayPeriods, o
                 </button>
               ) : (
                 <button
-                  onClick={onClose}
+                  onClick={function () {
+                    persistAcctReads().then(function (noted) {
+                      if (noted) showToast("Noted on " + noted + " account" + (noted > 1 ? "s" : "") + " ✦");
+                      onClose();
+                    });
+                  }}
                   style={{
                     background: C.accentDeep, border: "none", borderRadius: 8,
                     padding: "9px 18px", fontSize: 13, fontWeight: 700,

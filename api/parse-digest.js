@@ -92,10 +92,12 @@ RULES:
 
 ALSO produce a "read": a short (2-4 sentence) plain-language briefing of the user's day, in their voice, that they can scan in five seconds. Surface what they owe, what they're waiting on, what's gone quiet, and anything that genuinely shifted on an account (a decision, a warming/cooling relationship, a new name worth knowing). This is the PRIMARY output — the rows are just the few items worth filing; the read is where the intelligence lives, so it can mention things that aren't rows. Ground it ONLY in what they actually pasted — never invent. If the day is thin, one honest line is fine ("Quiet day — nothing you owe anyone, still waiting on Mike."). Same DATA LINE applies: no figures, ever.
 
+ALSO produce "account_reads": for each account that genuinely came up with a notable STATE or SHIFT — where it stands, momentum, a decision, a warming/cooling relationship, a new stakeholder — a ONE-LINE note worth remembering the next time the user preps for that account. This is durable per-account memory, so be selective: only accounts with real substance today, NOT every account mentioned in passing. An empty array is the right answer on a thin day. Each row: { "account": "<closest account name>", "note": "<one line, the user's voice, no figures>", "impact": "positive|negative|mixed|unknown" }.
+
 Today is ${today}.
 The user's accounts: ${accountNames.length ? accountNames.join(", ") : "(none provided)"}.
 
-Return ONLY JSON: { "read": "<2-4 sentence briefing>", "rows": [ { "kind": "owe|waiting|quiet|touch", "account": "<name>", "text": "<one line>", "who": "<person or null>", "due": "<YYYY-MM-DD or null>", "since": "<YYYY-MM-DD or null>", "done": false, "tone": "<positive|neutral|mixed|negative or null>", "theme": "<theme or null>" } ] }. No prose, no code fences.`;
+Return ONLY JSON: { "read": "<2-4 sentence briefing>", "account_reads": [ { "account": "<name>", "note": "<one line>", "impact": "positive|negative|mixed|unknown" } ], "rows": [ { "kind": "owe|waiting|quiet|touch", "account": "<name>", "text": "<one line>", "who": "<person or null>", "due": "<YYYY-MM-DD or null>", "since": "<YYYY-MM-DD or null>", "done": false, "tone": "<positive|neutral|mixed|negative or null>", "theme": "<theme or null>" } ] }. No prose, no code fences.`;
 
     var msg = await client.messages.create({
       model: DIGEST_MODEL,
@@ -121,6 +123,22 @@ Return ONLY JSON: { "read": "<2-4 sentence briefing>", "rows": [ { "kind": "owe|
       ? parsed.read.trim().slice(0, 1200)
       : null;
 
+    // Per-account memory notes (Phase A) — durable "where this account stands"
+    // lines that the client persists as folio_account_updates → they flow into
+    // the cadence pre-call brief AND the daily brief (recentUpdates). Selective
+    // by construction (the prompt asks only for accounts with real substance).
+    var IMPACTS = { positive: 1, negative: 1, mixed: 1, unknown: 1 };
+    var accountReads = (parsed && Array.isArray(parsed.account_reads) ? parsed.account_reads : [])
+      .filter(function (a) { return a && a.account && a.note; })
+      .slice(0, 12)
+      .map(function (a) {
+        return {
+          account: a.account.toString().trim(),
+          note: a.note.toString().trim().slice(0, 280),
+          impact: IMPACTS[a.impact] ? a.impact : "unknown",
+        };
+      });
+
     var rows = parsed && Array.isArray(parsed.rows) ? parsed.rows : [];
     // Normalize + defend: only the four known kinds, strings trimmed.
     var KINDS = { owe: 1, waiting: 1, quiet: 1, touch: 1 };
@@ -145,7 +163,7 @@ Return ONLY JSON: { "read": "<2-4 sentence briefing>", "rows": [ { "kind": "owe|
         };
       });
 
-    return res.status(200).json({ read: read, rows: rows });
+    return res.status(200).json({ read: read, account_reads: accountReads, rows: rows });
   } catch (err) {
     console.error("[parse-digest] error:", err && err.message);
     return res.status(500).json({ error: "Pip couldn't read that right now.", detail: err && err.message });
