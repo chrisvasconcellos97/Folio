@@ -1553,11 +1553,14 @@ export function callPortfolioBriefPip(payload) {
 // Payload: { text, accounts: [names], today }. Returns { rows: [...] }.
 export function callParseDigestPip(payload) {
   return authHeaders().then(function (headers) {
-    return fetch("/api/parse-digest", {
+    // 75s client timeout (was a raw fetch with NONE) to comfortably outlast the
+    // server's 60s maxDuration on a big summary — so the client waits for the
+    // real parse instead of being the thing that gives up.
+    return fetchWithTimeout("/api/parse-digest", {
       method: "POST",
       headers: headers,
       body: JSON.stringify(payload),
-    }).then(function (r) {
+    }, 75000).then(function (r) {
       if (!r.ok) throw new Error("Digest parse failed");
       return r.json();
     });

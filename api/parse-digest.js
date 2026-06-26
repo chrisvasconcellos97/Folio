@@ -15,7 +15,13 @@ import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
 import { logPipUsage } from "./_pipUsage.js";
 
-export const config = { maxDuration: 30 };
+// maxDuration raised 30→60 (+ max_tokens 2000→3500 + input 12k→16k below). A
+// richer/longer daily summary made the single Sonnet call exceed the old 30s
+// limit → Vercel killed the function (504) → the client fell back to the
+// deterministic keyword parser (can't structure free-form prose) → the paste
+// landed in "couldn't read as an item" and filed nothing. These bumps let a
+// full-size summary parse in one paste.
+export const config = { maxDuration: 60 };
 
 // Sonnet by default: this is extraction-WITH-JUDGMENT (what's a real commitment
 // vs journal noise — the precision-over-volume problem), same task class as
@@ -102,12 +108,12 @@ Return ONLY JSON: { "read": "<2-4 sentence briefing>", "account_reads": [ { "acc
 
     var msg = await client.messages.create({
       model: DIGEST_MODEL,
-      max_tokens: 2000,
+      max_tokens: 3500,
       // L3 — no cache_control: this is a once/day call whose system block embeds
       // today's date + the account roster, so the cache could never hit; the
       // ephemeral marker only added a write-premium for nothing.
       system: [{ type: "text", text: systemPrompt }],
-      messages: [{ role: "user", content: String(text).slice(0, 12000) }],
+      messages: [{ role: "user", content: String(text).slice(0, 16000) }], // 12k→16k: room for a fuller daily summary
     });
 
     logPipUsage(supabase, userId, "parse-digest", "digest", DIGEST_MODEL, msg.usage);
