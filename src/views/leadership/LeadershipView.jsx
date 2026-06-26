@@ -35,7 +35,7 @@ function AccountCard({ account, openItemCount, health }) {
   return (
     <div
       style={Object.assign({}, glass, {
-        border: "1px solid " + (isGoing ? C.yellow + "55" : "rgba(255,255,255,0.06)"),
+        border: "1px solid " + (isGoing ? C.yellow + "55" : C.rule),
         borderRadius: 10,
         padding: "12px 14px",
         display: "flex",

@@ -157,7 +157,7 @@ export function SetCadenceModal({ onSave, onClose, existing, initialValues, acco
 
   var pill = {
     active:   { border: '1px solid ' + C.accentBorder, background: C.accentGlow, color: C.accent,    fontWeight: 700 },
-    inactive: { border: '1px solid ' + C.border,          background: 'rgba(255,255,255,0.03)', color: C.textMuted, fontWeight: 400 },
+    inactive: { border: '1px solid ' + C.border,          background: C.surface2, color: C.textMuted, fontWeight: 400 },
   };
 
   function pillStyle(active) {

@@ -776,6 +776,7 @@ function MeetingTaskRow({ task, userId, members, contacts, onUpdate }) {
                 fontSize: 16, padding: "2px 5px",
                 background: C.surface, border: "1px solid " + C.rule,
                 borderRadius: 4, color: C.text, fontFamily: INTER, outline: "none",
+                colorScheme: "light dark", // L8 — native picker follows the theme
               }}
             />
           ) : (
@@ -891,6 +892,7 @@ function AddTaskInlineForm({ projectId, accountId, userId, members, contacts, on
             background: C.surface, border: "1px solid " + C.rule,
             borderRadius: 6, color: C.text,
             fontFamily: INTER, outline: "none",
+            colorScheme: "light dark", // L8 — native picker follows the theme
           }}
         />
       </div>

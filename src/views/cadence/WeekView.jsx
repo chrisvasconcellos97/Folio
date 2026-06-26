@@ -38,7 +38,7 @@ export function WeekView({ weekStart, weekEnd, events, onPrev, onNext, onSelectA
 
           return (
             <div key={day.toISOString().slice(0, 10)} style={{
-              background: 'rgba(255,255,255,0.02)',
+              background: C.surface2,
               border: '1px solid ' + (isToday ? C.accentSubtle : C.border),
               borderRadius: 8,
               padding: '8px 5px',

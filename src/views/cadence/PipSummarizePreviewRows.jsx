@@ -184,6 +184,7 @@ export function DueInput({ value, onChange }) {
         background: C.surface, color: C.text,
         border: "1px solid " + C.rule, borderRadius: 6,
         padding: "4px 8px", fontSize: 16, fontFamily: INTER,
+        colorScheme: "light dark", // L8 — native picker follows the theme
       }}
     />
   );

@@ -378,7 +378,7 @@ export function AddAccountModal({ userId, onSave, onAddContacts, onClose, existi
               onClick={function () { setAccountType(function (t) { return t === 'mso' ? 'standard' : 'mso'; }); }}
               style={{
                 width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer',
-                background: accountType === 'mso' ? C.accent : 'rgba(255,255,255,0.1)',
+                background: accountType === 'mso' ? C.accent : C.surface3,
                 position: 'relative', transition: 'background 0.2s', flexShrink: 0,
               }}
             >
