@@ -1853,6 +1853,17 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
             </div>
           </div>
         )}
+        {/* Mastermind / synthesis (item 52) — "Pip connected some dots".
+            Surfaced HIGH (was buried at the bottom of Home, invisible despite
+            the engine working + producing real observations). Quarantined: its
+            own card, never poisons the brief; renders nothing when there are no
+            open observations, so it costs zero space on a quiet day. */}
+        <ObservationsCard
+          observations={observations}
+          onAct={onObservationAct}
+          onDismiss={onObservationDismiss}
+          isMobile={isMobile}
+        />
         <div
           ref={stageRef}
           style={{ position: "relative", height: isMobile ? 280 : 310, overflow: "visible" }}
@@ -2394,15 +2405,6 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
           <OperatorRunButton onDone={refetchOperator} hasReport={false} />
         </div>
       )}
-
-      {/* Mastermind / synthesis (item 52) — quarantined strategic surface. Renders
-          nothing when there are no open observations. */}
-      <ObservationsCard
-        observations={observations}
-        onAct={onObservationAct}
-        onDismiss={onObservationDismiss}
-        isMobile={isMobile}
-      />
 
       {operatorActive && (
         <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
