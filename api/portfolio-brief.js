@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
-import { logPipUsage } from "./_pipUsage.js";
+import { logPipUsage, overDailySpendCap } from "./_pipUsage.js";
 
 export const config = { maxDuration: 60 };
 
@@ -49,6 +49,13 @@ export default async function handler(req, res) {
   if (isRateLimited(user.id)) return res.status(429).json({ error: "rate_limited" });
 
   try {
+
+  // M1 — daily spend cap (the daily brief is automatic + once/day). An empty
+  // brief is NOT cached by the client (HomeView guards on result.brief), so a
+  // capped day simply shows no new brief and regenerates once the cap clears.
+  if (await overDailySpendCap(userClient, user.id)) {
+    return res.status(200).json({ brief: "", callouts: [], skipped: "spend_cap" });
+  }
 
   var MAX_ARRAY = 200; // payload size cap — guard against unbounded client arrays
   var { snapshots, projects, overdueTasks, commitmentsDue, commitmentsOverdue, todayCadences, coldAccounts, looseEnds, healthDeltas, relationshipSignals, toneSignals, anomalySignals, leadershipTasks, portfolioThemes, recentUpdates, awayContext, facts, profileProse } = req.body || {};

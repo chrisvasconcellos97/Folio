@@ -11,7 +11,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
-import { logPipUsage } from "./_pipUsage.js";
+import { logPipUsage, overDailySpendCap } from "./_pipUsage.js";
 import { buildStreamSummary, validateObservations } from "../src/lib/observations.js";
 
 export const config = { maxDuration: 60 };
@@ -84,6 +84,11 @@ export default async function handler(req, res) {
     // Nothing meaningful to reason over → don't bill a Sonnet call.
     if (!summary || summary.trim().length < 40) {
       return res.status(200).json({ observations: [], skipped: "empty_stream" });
+    }
+
+    // M1 — daily spend cap (this is an automatic surface; skip is harmless).
+    if (await overDailySpendCap(supabase, userId)) {
+      return res.status(200).json({ observations: [], skipped: "spend_cap" });
     }
 
     var client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
