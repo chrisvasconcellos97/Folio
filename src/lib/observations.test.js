@@ -11,7 +11,25 @@ var STREAM = {
     { id: "m1", account_id: "a1", meeting_date: "2026-06-18", title: "Crash course", theme: "planning" },
   ],
   themes: [{ key: "onboarding", count: 4, accounts: ["a1", "a2"] }],
+  updates: [{ id: "u1", account_id: "a1", update_date: "2026-06-19", title: "Re-engaged after the rollout", impact: "positive" }],
 };
+
+describe("account-note (updates) stream wiring — Bundle 3 #3.2", function () {
+  it("renders recent account notes in the stream summary", function () {
+    var out = buildStreamSummary(STREAM, { todayISO: "2026-06-20" });
+    expect(out).toContain("RECENT ACCOUNT NOTES");
+    expect(out).toContain("Re-engaged after the rollout");
+    expect(out).toContain("All Star"); // account name resolved
+  });
+  it("a new account note changes the fingerprint (re-triggers synthesis)", function () {
+    var withNote = computeStreamFingerprint(STREAM);
+    var without = computeStreamFingerprint(Object.assign({}, STREAM, { updates: [] }));
+    expect(withNote).not.toBe(without);
+  });
+  it("stays stable when updates are unchanged", function () {
+    expect(computeStreamFingerprint(STREAM)).toBe(computeStreamFingerprint(STREAM));
+  });
+});
 
 describe("computeStreamFingerprint", function () {
   it("is stable for the same stream", function () {

@@ -234,23 +234,37 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
     if (!accounts || !accounts.length) return;
     var todayISO = new Date().toISOString().slice(0, 10);
     var timer = setTimeout(function () {
-      var stream = {
-        accounts: (accounts || []).map(function (a) { return { id: a.id, name: a.name }; }),
-        tasks: (items || []).map(function (i) {
-          return {
-            id: i.id, title: i.text || i.title, account_id: i.account_id,
-            is_commitment: !!i.is_commitment, waiting_on: i.waiting_on || null,
-            waiting_on_since: i.waiting_on_since || null, due_date: i.due_date || null,
-            done: !!i.done, created_at: i.created_at, updated_at: i.updated_at,
-          };
-        }),
-        meetings: (meetings || []).filter(function (m) { return m.status !== "draft" && m.status !== "scheduled"; })
-          .slice(0, 40).map(function (m) {
-            return { id: m.id, account_id: m.account_id, meeting_date: m.meeting_date, title: m.pip_short_title || m.title, theme: m.theme };
+      // Pull the recent per-account notes (digest reads / update calendar) so the
+      // synthesis pass sees what's SHIFTING on accounts, not just tasks/meetings.
+      var since = new Date(Date.now() - 21 * 86400000).toISOString().slice(0, 10);
+      Promise.resolve(
+        supabase.from("folio_account_updates")
+          .select("id, account_id, update_date, title, observed_impact")
+          .eq("user_id", userId).gte("update_date", since)
+          .order("update_date", { ascending: false }).limit(40)
+      ).then(function (r) { return (r && r.data) || []; }, function () { return []; })
+       .then(function (updRows) {
+        var stream = {
+          accounts: (accounts || []).map(function (a) { return { id: a.id, name: a.name }; }),
+          tasks: (items || []).map(function (i) {
+            return {
+              id: i.id, title: i.text || i.title, account_id: i.account_id,
+              is_commitment: !!i.is_commitment, waiting_on: i.waiting_on || null,
+              waiting_on_since: i.waiting_on_since || null, due_date: i.due_date || null,
+              done: !!i.done, created_at: i.created_at, updated_at: i.updated_at,
+            };
           }),
-        themes: (themes || []).map(function (th) { return { key: th.theme, count: th.count, accounts: th.accounts }; }),
-      };
-      generateObservations(stream, todayISO);
+          meetings: (meetings || []).filter(function (m) { return m.status !== "draft" && m.status !== "scheduled"; })
+            .slice(0, 40).map(function (m) {
+              return { id: m.id, account_id: m.account_id, meeting_date: m.meeting_date, title: m.pip_short_title || m.title, theme: m.theme };
+            }),
+          themes: (themes || []).map(function (th) { return { key: th.theme, count: th.count, accounts: th.accounts }; }),
+          updates: (updRows || []).map(function (u) {
+            return { id: u.id, account_id: u.account_id, update_date: u.update_date, title: u.title, impact: u.observed_impact };
+          }),
+        };
+        generateObservations(stream, todayISO);
+      });
     }, 2500); // debounce so realtime/late fetches settle before fingerprinting
     return function () { clearTimeout(timer); };
     // eslint-disable-next-line react-hooks/exhaustive-deps

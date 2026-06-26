@@ -40,6 +40,11 @@ export function computeStreamFingerprint(input) {
   (input.themes || []).slice().sort(function (a, b) { return String(a.key).localeCompare(String(b.key)); }).forEach(function (th) {
     parts.push("th:" + th.key + ":" + (th.count || 0));
   });
+  // Account notes (digest per-account reads / update calendar) — so a fresh
+  // "where this account stands" note re-triggers synthesis.
+  (input.updates || []).slice().sort(byId).forEach(function (u) {
+    parts.push("u:" + u.id + ":" + (u.update_date || "") + ":" + (u.account_id || ""));
+  });
 
   return hashString(parts.join("|"));
 }
@@ -93,6 +98,18 @@ export function buildStreamSummary(input, opts) {
     meetings.slice(0, 20).forEach(function (m) {
       var an = nameFor(m.account_id);
       lines.push("- " + (m.meeting_date || "") + (an ? " · " + an : "") + (m.title ? " · " + m.title : "") + (m.theme ? " · [" + m.theme + "]" : ""));
+    });
+  }
+
+  // Recent account notes — the digest's per-account "where this stands / what
+  // shifted" reads (folio_account_updates). Gives the synthesis pass the texture
+  // of what's moving on each account, not just tasks/meetings.
+  var updates = (input.updates || []).slice().sort(function (a, b) { return String(b.update_date).localeCompare(String(a.update_date)); });
+  if (updates.length) {
+    lines.push("RECENT ACCOUNT NOTES (what shifted, from daily reads):");
+    updates.slice(0, 20).forEach(function (u) {
+      var an = nameFor(u.account_id);
+      lines.push("- " + (u.update_date || "") + (an ? " · " + an : "") + (u.title ? " · " + u.title : "") + (u.impact && u.impact !== "unknown" ? " [" + u.impact + "]" : ""));
     });
   }
 

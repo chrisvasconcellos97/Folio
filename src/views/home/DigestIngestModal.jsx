@@ -155,6 +155,7 @@ export function DigestIngestModal({ accounts, userId, addMeeting, awayPeriods, o
         update_date: today,
         update_type: "other",
         title: a.note,
+        description: a.detail || null, // #17/Bundle 3 — fuller per-account context (renders in chat/brief)
         owner: "Pip ✦ digest",
         observed_impact: a.impact || "unknown",
       };

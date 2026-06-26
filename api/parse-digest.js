@@ -81,6 +81,7 @@ For "touch" rows ONLY, also read the EXCHANGE'S signal (this is the soft-structu
 
 RULES:
 - Precision over volume. Only real items. If the summary has nothing of a kind, return none of that kind. An empty result is a valid, good answer — do NOT invent items.
+- A RICHER / LONGER summary means MORE per-account memory (account_reads detail + touch rows), NOT more owe/waiting/quiet rows. Do not turn extra context into extra to-dos — the task rows stay few and precise regardless of how much detail the user pastes.
 - PRECISION APPLIES TO THE ACTION KINDS (owe / waiting / quiet): only file one when the user made a concrete commitment, is waiting on a specific named person, or a thread genuinely needs a nudge. A topic merely discussed, a status update, or a vague mention with no real next step is NOT an owe/waiting/quiet row — let the "read" (below) carry it. Two precise action rows the user will act on beat ten vague ones they'll ignore. When unsure, leave it OUT and let the read carry it.
 - touch rows are DIFFERENT — do NOT suppress them under the precision rule. A genuine decision, or a real shift in tone/direction on an account, SHOULD be a touch row even though it isn't a task — that's how the account remembers what happened (it's logged on the account, with tone/theme). Skip only routine noise. A notable exchange can appear in BOTH the read and as a touch row; that's correct.
 - Match each row to one of the user's accounts by name when you reasonably can; put your best guess in "account" (use the closest account name from the list, or the name as written if unsure).
@@ -92,12 +93,12 @@ RULES:
 
 ALSO produce a "read": a short (2-4 sentence) plain-language briefing of the user's day, in their voice, that they can scan in five seconds. Surface what they owe, what they're waiting on, what's gone quiet, and anything that genuinely shifted on an account (a decision, a warming/cooling relationship, a new name worth knowing). This is the PRIMARY output — the rows are just the few items worth filing; the read is where the intelligence lives, so it can mention things that aren't rows. Ground it ONLY in what they actually pasted — never invent. If the day is thin, one honest line is fine ("Quiet day — nothing you owe anyone, still waiting on Mike."). Same DATA LINE applies: no figures, ever.
 
-ALSO produce "account_reads": for each account that genuinely came up with a notable STATE or SHIFT — where it stands, momentum, a decision, a warming/cooling relationship, a new stakeholder — a ONE-LINE note worth remembering the next time the user preps for that account. This is durable per-account memory, so be selective: only accounts with real substance today, NOT every account mentioned in passing. An empty array is the right answer on a thin day. Each row: { "account": "<closest account name>", "note": "<one line, the user's voice, no figures>", "impact": "positive|negative|mixed|unknown" }.
+ALSO produce "account_reads": for each account that genuinely came up with a notable STATE or SHIFT — where it stands, momentum, a decision, a warming/cooling relationship, a new stakeholder — durable per-account memory worth surfacing the next time the user preps for that account. Be selective: only accounts with real substance today, NOT every account mentioned in passing. An empty array is the right answer on a thin day. Each row: { "account": "<closest account name>", "note": "<one-line headline, the user's voice, no figures>", "detail": "<optional 1-2 sentences of fuller context — who/what/why it matters; empty string if the headline says it all>", "impact": "positive|negative|mixed|unknown" }. The richer the summary, the FULLER the detail — this is where extra context belongs (NOT extra task rows).
 
 Today is ${today}.
 The user's accounts: ${accountNames.length ? accountNames.join(", ") : "(none provided)"}.
 
-Return ONLY JSON: { "read": "<2-4 sentence briefing>", "account_reads": [ { "account": "<name>", "note": "<one line>", "impact": "positive|negative|mixed|unknown" } ], "rows": [ { "kind": "owe|waiting|quiet|touch", "account": "<name>", "text": "<one line>", "who": "<person or null>", "due": "<YYYY-MM-DD or null>", "since": "<YYYY-MM-DD or null>", "done": false, "tone": "<positive|neutral|mixed|negative or null>", "theme": "<theme or null>" } ] }. No prose, no code fences.`;
+Return ONLY JSON: { "read": "<2-4 sentence briefing>", "account_reads": [ { "account": "<name>", "note": "<one-line headline>", "detail": "<optional fuller context or empty>", "impact": "positive|negative|mixed|unknown" } ], "rows": [ { "kind": "owe|waiting|quiet|touch", "account": "<name>", "text": "<one line>", "who": "<person or null>", "due": "<YYYY-MM-DD or null>", "since": "<YYYY-MM-DD or null>", "done": false, "tone": "<positive|neutral|mixed|negative or null>", "theme": "<theme or null>" } ] }. No prose, no code fences.`;
 
     var msg = await client.messages.create({
       model: DIGEST_MODEL,
@@ -137,7 +138,8 @@ Return ONLY JSON: { "read": "<2-4 sentence briefing>", "account_reads": [ { "acc
       .map(function (a) {
         return {
           account: a.account.toString().trim(),
-          note: a.note.toString().trim().slice(0, 280),
+          note: a.note.toString().trim().slice(0, 160),
+          detail: (a.detail != null && typeof a.detail === "string") ? a.detail.trim().slice(0, 400) : "",
           impact: IMPACTS[a.impact] ? a.impact : "unknown",
         };
       });
