@@ -822,6 +822,20 @@ export default function App() {
     function onTermLearned(term, definition) {
       if (!term || !definition) return;
       pipFactsAppApi.addFact({ fact: term + " — " + definition, source: "pip_inferred" }).catch(function () { /* guard-ok: inferred fact insert, fire-and-forget best-effort */ });
+      // Bundle 4 — ALSO create a proper pip_glossary entry. The terminology drip
+      // previously only wrote facts, so pip_glossary stayed empty forever and the
+      // brief receipts' glossary channel never fired. Writing the term here
+      // populates the glossary (lights up receipts via the precise term-match)
+      // AND closes detect-terminology's known-terms loop (it checks pip_glossary,
+      // so an answered term won't get re-asked). Guard: only when `term` is a bare
+      // term (trigger_context), not a fallback full-question string.
+      var t = String(term).trim();
+      if (t && t.length <= 60 && t.indexOf("?") === -1) {
+        supabase.from("pip_glossary").insert([{
+          user_id: userId, org_id: orgId || null, account_id: null,
+          term: t, definition: String(definition).trim(), preserve_case: true, aliases: [],
+        }]).then(function () {}, function () { /* guard-ok: best-effort glossary seed */ });
+      }
     }
   );
   // "Catch up with Pip" modal — answer the whole queue in one sitting.
