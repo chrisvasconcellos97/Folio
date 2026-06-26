@@ -479,7 +479,7 @@ function recentUpdatesSection(a, o) {
     if (u.update_type) parts.push(u.update_type);
     if (u.owner)       parts.push(normalizePerson(u.owner));
     var head = parts.join(" · ") + " · " + (u.title || u.description || "—");
-    if (u.observed_impact) head += " [impact: " + u.observed_impact + "]";
+    if (u.observed_impact && u.observed_impact !== "unknown") head += " [impact: " + u.observed_impact + "]"; // L1 — don't render "unknown" as noise
     lines.push(head);
     if (o.includeUpdateDescription && u.description) lines.push("  " + trunc(u.description, 200));
   });

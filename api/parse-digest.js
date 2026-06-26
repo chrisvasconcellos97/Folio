@@ -102,7 +102,10 @@ Return ONLY JSON: { "read": "<2-4 sentence briefing>", "account_reads": [ { "acc
     var msg = await client.messages.create({
       model: DIGEST_MODEL,
       max_tokens: 2000,
-      system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
+      // L3 — no cache_control: this is a once/day call whose system block embeds
+      // today's date + the account roster, so the cache could never hit; the
+      // ephemeral marker only added a write-premium for nothing.
+      system: [{ type: "text", text: systemPrompt }],
       messages: [{ role: "user", content: String(text).slice(0, 12000) }],
     });
 

@@ -588,7 +588,7 @@ export default function App() {
 
   // Ambient Pip mood — turn the orb red when there's an unresolved error.
   var pipStateCtx = usePipState();
-  useEffect(function () { pipStateCtx.setAlert(diagnosticsCount > 0); }, [diagnosticsCount, pipStateCtx]);
+  useEffect(function () { pipStateCtx.setAlert(diagnosticsCount > 0); }, [diagnosticsCount, pipStateCtx.setAlert]); // L7 — stable callback, not the whole ctx (which churns on every Pip mood change)
 
   // Pip Tier A — daily snapshot compute. Fire-and-forget once per day after
   // auth resolves. No-ops if already computed today (localStorage gate).
@@ -596,35 +596,10 @@ export default function App() {
     if (userId) computeAndSaveSnapshots(userId);
   }, [userId]);
 
-  // Prune stale per-day localStorage keys on startup (once per session).
-  // Keys like folio_daily_brief_vX_<userId>_<date> and folio_checkin_<userId>_<date>
-  // accumulate one entry per day forever. Drop anything older than 7 days.
-  useEffect(function () {
-    if (!userId) return;
-    try {
-      var cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-      var PER_DAY_PREFIXES = [
-        "folio_daily_brief_",   // folio_daily_brief_vX_<userId>_YYYY-MM-DD
-        "folio_checkin_" + userId + "_",  // folio_checkin_<userId>_YYYY-MM-DD
-      ];
-      var toDelete = [];
-      for (var i = 0; i < localStorage.length; i++) {
-        var k = localStorage.key(i);
-        if (!k) continue;
-        for (var j = 0; j < PER_DAY_PREFIXES.length; j++) {
-          if (k.indexOf(PER_DAY_PREFIXES[j]) !== 0) continue;
-          // Extract the trailing YYYY-MM-DD date from the key.
-          var datePart = k.slice(-10);
-          if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
-            var keyDate = new Date(datePart + "T00:00:00");
-            if (keyDate < cutoff) toDelete.push(k);
-          }
-          break;
-        }
-      }
-      toDelete.forEach(function (k) { try { localStorage.removeItem(k); } catch (_) {} });
-    } catch (_) { /* localStorage unavailable — swallow */ }
-  }, [userId]);
+  // L6 — stale per-day localStorage prune is handled once at startup by
+  // pruneDailyKeys() (main effect above); the duplicate inline sweep that lived
+  // here was removed (it covered the same folio_daily_brief_ / folio_checkin_
+  // prefixes).
 
   // Top-level write helpers used by Pip's native tool calls.
   // These mirror the hook-level addItem/setFollowUp paths so RLS still applies

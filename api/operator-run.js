@@ -29,7 +29,14 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
+import { timingSafeEqual } from "crypto";
 import { logPipUsage, overDailySpendCap } from "./_pipUsage.js";
+
+// L4 — constant-time CRON secret compare (avoid a timing side-channel on `===`).
+function secretEqual(a, b) {
+  if (!a || !b || a.length !== b.length) return false;
+  try { return timingSafeEqual(Buffer.from(a), Buffer.from(b)); } catch (_) { return false; }
+}
 // F1 — the ONE shared per-account context renderer (pure module, no supabase),
 // so the operator's "what Pip knows about this account" can never drift from
 // chat / summarize again. .js extension is required for the serverless bundle.
@@ -608,7 +615,7 @@ export default async function handler(req, res) {
     // Decide identity. Cron secret → privileged (all users, or ?user=). Otherwise
     // treat the bearer as a user JWT and scope strictly to that user.
     var secret = process.env.CRON_SECRET;
-    var isCron = !!secret && bearer === secret;
+    var isCron = !!secret && secretEqual(bearer, secret);
 
     // Weekend skip — a SCHEDULED (cron) run does not fire on Sat/Sun mornings.
     // Chris works weekdays; no point prepping a workday read on a day off, and it
