@@ -100,11 +100,14 @@ export function DigestIngestModal({ accounts, userId, addMeeting, awayPeriods, o
       setParsing(false);
       var rd = (out && out.read) || null;
       setRead(rd);
-      // Per-account memory notes — match each to a real account (drop unmatched,
-      // so we never write a digest update onto the wrong/nonexistent account).
+      // Per-account memory notes — keep ALL (matched + unmatched); the user can
+      // pick an account for unmatched ones or uncheck any in the preview. Matched
+      // start checked; unmatched start unchecked until an account is picked.
       var ar = ((out && out.account_reads) || [])
-        .map(function (a) { return Object.assign({}, a, { accountId: matchAccountId(a.account, accounts) }); })
-        .filter(function (a) { return a.accountId; });
+        .map(function (a) {
+          var aid = matchAccountId(a.account, accounts);
+          return Object.assign({}, a, { accountId: aid, checked: !!aid });
+        });
       setAcctReads(ar);
       toPreview((out && out.rows) || [], [], !!rd || ar.length > 0);
     }).catch(function () {
@@ -127,15 +130,23 @@ export function DigestIngestModal({ accounts, userId, addMeeting, awayPeriods, o
     });
   }
 
+  function patchAcctRead(idx, fields) {
+    setAcctReads(function (prev) {
+      return prev.map(function (a, i) { return i === idx ? Object.assign({}, a, fields) : a; });
+    });
+  }
+
   // Phase A — persist the per-account memory notes as folio_account_updates.
   // These flow into the account's Recent Updates AND both briefs (cadence
   // pre-call + daily) via buildAccountContext's recentUpdates, so the digest
   // durably makes Pip smarter about each account. Best-effort: a failure here
   // never blocks the task-filing the user actually confirmed.
   function persistAcctReads() {
-    if (!acctReads.length) return Promise.resolve(0);
+    var selected = acctReads.filter(function (a) { return a.checked && a.accountId; });
+    if (!selected.length) return Promise.resolve(0);
     var today = new Date().toISOString().slice(0, 10);
-    var payload = acctReads.map(function (a) {
+    var acctIds = selected.map(function (a) { return a.accountId; });
+    var payload = selected.map(function (a) {
       var acct = (accounts || []).find(function (x) { return x.id === a.accountId; });
       return {
         user_id: userId,
@@ -148,8 +159,16 @@ export function DigestIngestModal({ accounts, userId, addMeeting, awayPeriods, o
         observed_impact: a.impact || "unknown",
       };
     });
-    return supabase.from("folio_account_updates").insert(payload)
-      .then(function (r) { return r && r.error ? 0 : payload.length; }, function () { return 0; });
+    // Same-day dedup: re-pasting today replaces today's prior digest note for the
+    // SAME account (only accounts in this paste), so the Update Calendar doesn't
+    // collect duplicate "Pip ✦ digest" rows from multiple pastes in one day.
+    var del = supabase.from("folio_account_updates").delete()
+      .eq("user_id", userId).eq("update_date", today).eq("owner", "Pip ✦ digest")
+      .in("account_id", acctIds);
+    return Promise.resolve(del).then(function () {}, function () {}).then(function () {
+      return supabase.from("folio_account_updates").insert(payload)
+        .then(function (r) { return r && r.error ? 0 : payload.length; }, function () { return 0; });
+    });
   }
 
   function handleApply() {
@@ -285,23 +304,51 @@ export function DigestIngestModal({ accounts, userId, addMeeting, awayPeriods, o
               <div style={{ border: "1px solid " + C.rule, borderRadius: 10, padding: "10px 13px" }}>
                 <div style={{
                   fontFamily: MONO, fontSize: 9.5, fontWeight: 700, color: C.textMuted,
-                  textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6,
+                  textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 7,
                 }}>
-                  ✦ Pip will remember this on your accounts
+                  ✦ Pip will remember — uncheck any, match unlinked ones
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {acctReads.map(function (a, i) {
                     var nm = (accounts.find(function (x) { return x.id === a.accountId; }) || {}).name || a.account;
                     return (
-                      <div key={i} style={{ fontSize: 12.5, color: C.text, lineHeight: 1.45, fontFamily: INTER }}>
-                        <span style={{ color: C.accent, fontWeight: 600 }}>{nm}</span>
-                        <span style={{ color: C.textSoft }}>{" — " + a.note}</span>
+                      <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 9, opacity: a.checked ? 1 : 0.5 }}>
+                        <div
+                          role="checkbox"
+                          aria-checked={!!a.checked}
+                          tabIndex={0}
+                          onClick={function () { patchAcctRead(i, { checked: !a.checked }); }}
+                          onKeyDown={function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); patchAcctRead(i, { checked: !a.checked }); } }}
+                          title={a.checked ? "Pip will remember this — click to skip" : "Skipped — click to include"}
+                          style={{
+                            width: 20, height: 20, flexShrink: 0, marginTop: 1, borderRadius: 6,
+                            border: "2px solid " + (a.checked ? C.accent : C.textMuted),
+                            background: a.checked ? C.accent : "transparent",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer",
+                          }}
+                        >{a.checked ? "✓" : ""}</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 12.5, color: C.text, lineHeight: 1.45, fontFamily: INTER }}>{a.note}</div>
+                          <div style={{ marginTop: 4 }}>
+                            {a.accountId ? (
+                              <span style={{ fontSize: 11, color: C.accent }}>{nm}</span>
+                            ) : (
+                              <AccountPicker
+                                accounts={accounts}
+                                value={null}
+                                onChange={function (id) { patchAcctRead(i, { accountId: id, checked: true }); }}
+                                placeholder={'Match "' + a.account + '" to an account…'}
+                              />
+                            )}
+                          </div>
+                        </div>
                       </div>
                     );
                   })}
                 </div>
-                <div style={{ fontSize: 10, color: C.textFaint, marginTop: 6, fontFamily: INTER }}>
-                  Saved to each account's history — your next brief on them will reflect it.
+                <div style={{ fontSize: 10, color: C.textFaint, marginTop: 7, fontFamily: INTER }}>
+                  Checked notes save to each account's history — your next brief on them reflects it.
                 </div>
               </div>
             )}
