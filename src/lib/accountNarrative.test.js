@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateNarrative, renderNarrativeBlock, NARRATIVE_TRAJECTORIES } from "./accountNarrative";
+import { validateNarrative, renderNarrativeBlock, parseNarrativeResponse, NARRATIVE_TRAJECTORIES } from "./accountNarrative";
 
 var FULL = {
   arc: "Started at the Classic Collision integration; strong early, then slowed on product-team delays.",
@@ -61,6 +61,29 @@ describe("renderNarrativeBlock", function () {
   it("returns '' for an unusable narrative so the section omits", function () {
     expect(renderNarrativeBlock(null)).toBe("");
     expect(renderNarrativeBlock({ arc: "no standing field" })).toBe("");
+  });
+});
+
+describe("parseNarrativeResponse", function () {
+  it("parses clean JSON", function () {
+    var n = parseNarrativeResponse(JSON.stringify(FULL));
+    expect(n.standing).toBe(FULL.standing);
+    expect(n.trajectory).toBe("warming");
+  });
+  it("strips code fences", function () {
+    var n = parseNarrativeResponse("```json\n" + JSON.stringify(FULL) + "\n```");
+    expect(n).not.toBe(null);
+    expect(n.standing).toBe(FULL.standing);
+  });
+  it("salvages JSON wrapped in prose", function () {
+    var n = parseNarrativeResponse("Here you go:\n" + JSON.stringify(FULL) + "\nHope that helps!");
+    expect(n).not.toBe(null);
+    expect(n.hinges_on).toBe(FULL.hinges_on);
+  });
+  it("returns null on junk or a story missing `standing`", function () {
+    expect(parseNarrativeResponse("not json at all")).toBe(null);
+    expect(parseNarrativeResponse("")).toBe(null);
+    expect(parseNarrativeResponse(JSON.stringify({ arc: "x", trajectory: "warming" }))).toBe(null);
   });
 
   it("omits optional lines but always shows standing + trajectory", function () {

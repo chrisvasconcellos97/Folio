@@ -28,6 +28,7 @@ var handlers = [
   "api/week-wrap.js",
   "api/parse-digest.js",
   "api/observations.js",
+  "api/account-narrative.js",
 ];
 
 var failed = false;

@@ -43,6 +43,20 @@ export function validateNarrative(obj) {
   };
 }
 
+// Parse the model's raw text into a validated narrative (or null). Strips code
+// fences, tolerates prose-wrapped JSON via a {...} salvage, then runs the shape
+// guard. Used by api/account-narrative.js; pure so it's unit-tested here.
+export function parseNarrativeResponse(text) {
+  if (!text) return null;
+  var clean = String(text).replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/, "").trim();
+  var parsed = null;
+  try { parsed = JSON.parse(clean); } catch (_) {
+    var m = clean.match(/\{[\s\S]*\}/);
+    if (m) { try { parsed = JSON.parse(m[0]); } catch (__) { parsed = null; } }
+  }
+  return validateNarrative(parsed);
+}
+
 // Render the stored narrative as a prompt block (for chat / brief surfaces).
 // Returns "" when there's no usable narrative so the section simply omits.
 // The account-page header UI reads the structured fields directly instead.

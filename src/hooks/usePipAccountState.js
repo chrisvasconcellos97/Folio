@@ -83,6 +83,37 @@ export function usePipAccountState(userId) {
     });
   }
 
+  // Account Narrative Memory (#17) — re-derive the per-account story for these
+  // accounts. Mirrors refreshState; the server fingerprint-gates so an unchanged
+  // account is a $0 skip, and returns {skipped:"not_migrated"} until the columns
+  // exist (fail-soft). Best-effort + refetch on completion.
+  function deriveNarratives(accountIds, force) {
+    var ids = Array.isArray(accountIds) ? accountIds : [accountIds];
+    ids = ids.filter(function (id) { return !!id; }).slice(0, 12);
+    if (!ids.length) return Promise.resolve(null);
+    return supabase.auth.getSession().then(function (result) {
+      var token = result.data.session ? result.data.session.access_token : null;
+      var headers = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = "Bearer " + token;
+      return fetchWithTimeout("/api/account-narrative", {
+        method: "POST",
+        headers: headers,
+        body: JSON.stringify({ accountIds: ids, force: !!force }),
+      }, 60000).then(function (r) {
+        if (!r.ok) { console.warn("account-narrative failed:", r.status); return null; }
+        return r.json().then(function (body) {
+          // Only refetch when real work landed — a skip (not_migrated / spend_cap /
+          // fingerprint-unchanged) changes nothing, so don't churn a refetch loop.
+          if (body && body.derived > 0) fetch();
+          return body;
+        }, function () { return null; });
+      }).catch(function (err) {
+        console.warn("account-narrative error:", err && err.message);
+        return null;
+      });
+    });
+  }
+
   return {
     states: states,
     loading: loading,
@@ -90,6 +121,7 @@ export function usePipAccountState(userId) {
     getState: getState,
     getStateRow: getStateRow,
     refreshState: refreshState,
+    deriveNarratives: deriveNarratives,
     refetch: fetch,
   };
 }

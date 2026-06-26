@@ -427,6 +427,69 @@ export default function App() {
       .then(function () { ids.forEach(function (id) { stateSweepInFlight.current.delete(id); }); });
   }, [userId, accounts, meetings, allItems, pipAcctStateApp.loading, pipAcctStateApp.states]);
 
+  // Part 9b — EVENT-DRIVEN account narrative re-derive (#17, "knows my accounts
+  // cold"). Same signal gate as the state sweep, checkpointed on narrative_at.
+  // The server fingerprint-gates the Sonnet call (unchanged → $0 skip + a
+  // narrative_at bump so this stops re-firing) and returns {skipped:"not_migrated"}
+  // until supabase/account_narrative.sql is applied — in which case we disable the
+  // sweep for the session so it can't spin pre-migration.
+  var narrativeSweepInFlight = useRef(new Set());
+  var narrativeDisabledRef = useRef(false);
+  useEffect(function () {
+    if (narrativeDisabledRef.current) return;
+    if (!userId || !accounts || accounts.length === 0) return;
+    if (pipAcctStateApp.loading) return;
+
+    var maxMeetingByAcct = {};
+    (meetings || []).forEach(function (m) {
+      if (!m.account_id) return;
+      var t = m.updated_at || m.created_at || (m.meeting_date ? m.meeting_date + "T00:00:00Z" : null);
+      if (!t) return;
+      if (!maxMeetingByAcct[m.account_id] || t > maxMeetingByAcct[m.account_id]) maxMeetingByAcct[m.account_id] = t;
+    });
+    var maxTaskByAcct = {};
+    (allItems || []).forEach(function (i) {
+      if (!i.account_id) return;
+      var t = i.updated_at || i.created_at;
+      if (!t) return;
+      if (!maxTaskByAcct[i.account_id] || t > maxTaskByAcct[i.account_id]) maxTaskByAcct[i.account_id] = t;
+    });
+    var stateByAcct = {};
+    (pipAcctStateApp.states || []).forEach(function (s) { stateByAcct[s.account_id] = s; });
+
+    function signalTime(a) {
+      var mx = a.last_interaction_at || "";
+      if (maxMeetingByAcct[a.id] && maxMeetingByAcct[a.id] > mx) mx = maxMeetingByAcct[a.id];
+      if (maxTaskByAcct[a.id]    && maxTaskByAcct[a.id]    > mx) mx = maxTaskByAcct[a.id];
+      return mx || null;
+    }
+
+    var candidates = accounts.filter(function (a) {
+      if (a.is_inactive) return false;
+      if (narrativeSweepInFlight.current.has(a.id)) return false;
+      var row = stateByAcct[a.id];
+      var sig = signalTime(a);
+      if (!row || !row.narrative_at) return !!sig;   // no story yet → derive if anything has happened
+      if (!sig) return false;
+      return new Date(sig) > new Date(row.narrative_at);
+    });
+    if (!candidates.length) return;
+
+    candidates.sort(function (x, y) {
+      var rank = function (t) { return t === "Major" ? 0 : t === "Mid" ? 1 : 2; };
+      return rank(x.tier) - rank(y.tier);
+    });
+    var ids = candidates.slice(0, 12).map(function (a) { return a.id; });
+    ids.forEach(function (id) { narrativeSweepInFlight.current.add(id); });
+    Promise.resolve(pipAcctStateApp.deriveNarratives(ids))
+      .then(function (body) {
+        // Columns not in prod yet → stop trying this session (fail-soft, no spin).
+        if (body && body.skipped === "not_migrated") narrativeDisabledRef.current = true;
+      })
+      .catch(function () { /* guard-ok: background narrative derive, failure acceptable */ })
+      .then(function () { ids.forEach(function (id) { narrativeSweepInFlight.current.delete(id); }); });
+  }, [userId, accounts, meetings, allItems, pipAcctStateApp.loading, pipAcctStateApp.states]);
+
   // V2 brain — compression pass. Once per 6h, check each account for 5+
   // unprocessed corrections. For qualifying accounts, distill them into
   // lessons_learned on pip_account_state. Move processed rows to the archive.
