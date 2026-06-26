@@ -136,9 +136,11 @@ export function DigestIngestModal({ accounts, userId, addMeeting, awayPeriods, o
     if (!acctReads.length) return Promise.resolve(0);
     var today = new Date().toISOString().slice(0, 10);
     var payload = acctReads.map(function (a) {
+      var acct = (accounts || []).find(function (x) { return x.id === a.accountId; });
       return {
         user_id: userId,
         account_id: a.accountId,
+        org_id: (acct && acct.org_id) || null, // match addUpdate convention
         update_date: today,
         update_type: "other",
         title: a.note,

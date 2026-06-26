@@ -1853,17 +1853,6 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
             </div>
           </div>
         )}
-        {/* Mastermind / synthesis (item 52) — "Pip connected some dots".
-            Surfaced HIGH (was buried at the bottom of Home, invisible despite
-            the engine working + producing real observations). Quarantined: its
-            own card, never poisons the brief; renders nothing when there are no
-            open observations, so it costs zero space on a quiet day. */}
-        <ObservationsCard
-          observations={observations}
-          onAct={onObservationAct}
-          onDismiss={onObservationDismiss}
-          isMobile={isMobile}
-        />
         <div
           ref={stageRef}
           style={{ position: "relative", height: isMobile ? 280 : 310, overflow: "visible" }}
@@ -2145,6 +2134,20 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
             aria-label="Next card"
             style={{ background: "none", border: "1px solid " + C.rule, borderRadius: "50%", width: 32, height: 32, cursor: "pointer", color: C.textMuted, fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
           >›</button>
+        </div>
+
+        {/* Mastermind / synthesis (item 52) — "Pip connected some dots". Sits
+            right below the Your-Word hub (high + visible) but NOT above it —
+            what-you-owe stays the anchor. Was buried at the bottom of Home,
+            invisible despite the engine working. Quarantined (own card, never
+            poisons the brief); renders null when there are no open observations. */}
+        <div style={{ marginTop: 14 }}>
+          <ObservationsCard
+            observations={observations}
+            onAct={onObservationAct}
+            onDismiss={onObservationDismiss}
+            isMobile={isMobile}
+          />
         </div>
 
         {/* What Pip said toggle */}
