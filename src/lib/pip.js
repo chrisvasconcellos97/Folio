@@ -786,6 +786,9 @@ export function summarizeDraftPip(payload, opts) {
     "    { \"name\": \"Full name as it appeared in the notes\", \"context_snippet\": \"The sentence they appeared in (max 120 chars)\" }\n" +
     "  ],\n" +
     "  \"receipts\": [\"0-3 short strings naming stored knowledge you ACTUALLY used for this plan — a glossary term you applied, a person you recognized from the directory (and therefore did not flag as new), an update-calendar event you connected, a past correction you honored. Empty array if none. Never invent these.\"],\n" +
+    "  \"account_reads\": [\n" +
+    "    { \"account_id\": \"id from YOUR ACCOUNTS list, or null for the current account\", \"note\": \"one-line headline worth REMEMBERING about this account — where it stands, a decision, a warming/cooling shift, a new stakeholder, a constraint; NOT a task\", \"detail\": \"optional 1-2 sentences of fuller context, or empty string\", \"impact\": \"positive|negative|mixed|unknown\" }\n" +
+    "  ],\n" +
     "  \"plan\": [\n" +
     "    { \"kind\": \"new_item\",    \"text\": \"...\", \"due_date\": \"YYYY-MM-DD or null\", \"suggested_assignee\": \"email or null\", \"target_account_id\": \"id from YOUR ACCOUNTS list, or null if this belongs to the current account\", \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim 1-3 line slice of the draft notes that triggered this row\", \"is_commitment\": true, \"waiting_on\": \"person name or null — see waiting_on rule\", \"waiting_on_since\": \"YYYY-MM-DD or null\", \"suggested_project_title\": \"OMIT unless this item is part of a coherent NEW multi-step initiative — see the project-suggestion rule\" },\n" +
     "    { \"kind\": \"update_item\", \"target_id\": \"I-...\", \"fields\": { \"due_date\": \"...\", \"text\": \"...\" }, \"confidence\": \"high|medium|low\", \"source_excerpt\": \"verbatim slice from notes\" },\n" +
@@ -824,6 +827,7 @@ export function summarizeDraftPip(payload, opts) {
     "- source_excerpt MUST be a direct, verbatim quote from the draft notes — the specific 1-3 lines " +
     "that prompted this row. The user uses these to trace where each row came from and to correct " +
     "you when you misread. Keep them short and exact. Omit only for `skip` rows.\n" +
+    "- account_reads = DURABLE MEMORY, not tasks. The user writes notes to REMEMBER, not only to generate to-dos. Capture what's worth remembering about the account(s) next time they prep — where it stands now, a decision made, a warming/cooling shift, a new person, a constraint, a strategic read. These are SEPARATE from the plan and do NOT count against precision-over-volume: a meeting can have ZERO tasks but real memory worth keeping (an informational meeting should still produce account_reads even with an empty plan). Default account_id null (the current account); set another account's id only when the note is clearly about a different account. Be selective (genuine substance, not every line) and DATA-LINE clean (no revenue/volumes/counts/pricing — generalize). Empty array only if there's genuinely nothing worth remembering.\n" +
     "- PRECISION OVER VOLUME — the meeting notes are a JOURNAL, not a to-do list. Most lines are " +
     "observations, context, or status the user is simply recording for memory. Create a plan row ONLY for: " +
     "(1) explicit first-person commitments ('I'll send...', 'we'll get them...'), " +
@@ -1094,6 +1098,22 @@ export function summarizeDraftPip(payload, opts) {
       var unknownPeople = Array.isArray(parsed.unknown_people)
         ? parsed.unknown_people.filter(function (p) { return p && typeof p.name === "string" && p.name.trim(); })
         : [];
+      // account_reads — per-account MEMORY worth remembering (not tasks). Mirrors
+      // the digest's account_reads → persisted as folio_account_updates → flows
+      // into briefs + the narrative. The preview surfaces these as "Pip will
+      // remember" cards. Validate shape; impact enum-guarded.
+      var IMPACT_OK = { positive: 1, negative: 1, mixed: 1, unknown: 1 };
+      var accountReads = (Array.isArray(parsed.account_reads) ? parsed.account_reads : [])
+        .filter(function (a) { return a && typeof a.note === "string" && a.note.trim(); })
+        .slice(0, 12)
+        .map(function (a) {
+          return {
+            account_id: (a.account_id && typeof a.account_id === "string") ? a.account_id : null,
+            note:   a.note.trim().slice(0, 160),
+            detail: (a.detail != null && typeof a.detail === "string") ? a.detail.trim().slice(0, 400) : "",
+            impact: IMPACT_OK[a.impact] ? a.impact : "unknown",
+          };
+        });
 
       if (planRaw) {
         var plan = planRaw.map(normalizePlanRow).filter(Boolean);
@@ -1106,6 +1126,7 @@ export function summarizeDraftPip(payload, opts) {
           theme:           theme,
           unknown_people:  unknownPeople,
           receipts:        receipts,
+          account_reads:   accountReads,
           plan:            plan,
           // Keep legacy field populated from new_item rows for any caller
           // that hasn't migrated yet.
@@ -1139,6 +1160,7 @@ export function summarizeDraftPip(payload, opts) {
         theme:           theme,
         unknown_people:  unknownPeople,
         receipts:        receipts,
+        account_reads:   accountReads,
         plan:            synthPlan,
         action_items:    legacyItems,
       };
