@@ -438,6 +438,7 @@ export function callBriefMePip(payload) {
       id:     account.id,
       name:   account.name,
       owner_user_id: account.owner_user_id || null, // so RELATIONSHIP_OWNER:NO can fire on briefs (H2)
+      narrative: account.narrative || payload.narrative || null, // #17 — the account story rides Brief Me
       status: account.status,
       tier:   account.tier,
       health: account.health,
@@ -1269,6 +1270,7 @@ export function callCadenceBriefPip(payload) {
       id:     account.id,
       name:   account.name,
       owner_user_id: account.owner_user_id || null, // so RELATIONSHIP_OWNER:NO can fire on the cadence brief (H2)
+      narrative: account.narrative || payload.narrative || null, // #17 — the account story rides the pre-call brief
       status: account.status,
       tier:   account.tier,
       health: account.health,

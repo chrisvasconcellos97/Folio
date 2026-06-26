@@ -173,7 +173,7 @@ function makeAccountLinkify(accounts, onOpenAccount) {
   };
 }
 
-export function HomeView({ userName, userId, userEmail, accounts, meetings, items, cadences, projects, contacts, members, wins, awayPeriods, themes, showOnboardingCard, dripQuestion, dripQueueCount, terminologyCount, commitmentNudges, pipFacts, profileProse, scheduledMeetings, observations, onObservationAct, onObservationDismiss, generateObservations, handlers }) {
+export function HomeView({ userName, userId, userEmail, accounts, meetings, items, cadences, projects, contacts, members, wins, awayPeriods, themes, showOnboardingCard, dripQuestion, dripQueueCount, terminologyCount, commitmentNudges, pipFacts, profileProse, scheduledMeetings, accountNarratives, observations, onObservationAct, onObservationDismiss, generateObservations, handlers }) {
   // All callback props arrive grouped in one `handlers` bag (Batch 8 — prop-
   // sprawl reduction). Re-expanded to locals here so the many internal call
   // sites (onOpenAccount ×17, onOpenCadenceHub ×14, …) stay byte-for-byte
@@ -677,6 +677,7 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
         portfolioThemes: portfolioThemes,
         recentUpdates: recentUpdates,
         awayContext: awayContext,
+        narratives: accountNarratives || {}, // #17 — account story (standing line) for flagged accounts
         facts: pipFacts || [],
         profileProse: profileProse || null,
       }).then(function (result) {

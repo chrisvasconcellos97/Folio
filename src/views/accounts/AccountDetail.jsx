@@ -19,6 +19,7 @@ import { BusinessReviewModal } from "./BusinessReviewModal";
 import { PipMemoryPanel } from "./PipMemoryPanel";
 import { usePipAccountState } from "../../hooks/usePipAccountState";
 import { OperatorPanel } from "../../components/OperatorPanel";
+import { AccountNarrativeCard } from "../../components/AccountNarrativeCard";
 import { AccountDetailHeader } from "./AccountDetailHeader";
 import { AccountDetailTabs } from "./AccountDetailTabs";
 import { OverviewTab } from "./tabs/OverviewTab";
@@ -399,6 +400,7 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
       mode: "brief",
       account: account,
       userId: userId, // H2 — lets the RELATIONSHIP_OWNER:NO guard fire on Brief Me
+      narrative: (pipAcctState.getStateRow(account.id) || {}).narrative || null, // #17 — account story into Brief Me
       meetings: meetings.slice(0, 5),
       openItems: items.filter(function (i) { return !i.done; }),
       contacts: contacts,
@@ -571,6 +573,8 @@ export function AccountDetail({ account, userId, userEmail, isDesktop, orgId, ac
         onConfirmDelete={function () { setConfirmDelete(true); }}
         onCancelDelete={function () { setConfirmDelete(false); }}
       />
+
+      <AccountNarrativeCard narrative={(pipAcctState.getStateRow(account.id) || {}).narrative} />
 
       <OperatorPanel
         stateRow={pipAcctState.getStateRow(account.id) || null}

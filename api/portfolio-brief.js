@@ -58,7 +58,8 @@ export default async function handler(req, res) {
   }
 
   var MAX_ARRAY = 200; // payload size cap — guard against unbounded client arrays
-  var { snapshots, projects, overdueTasks, commitmentsDue, commitmentsOverdue, todayCadences, coldAccounts, looseEnds, healthDeltas, relationshipSignals, toneSignals, anomalySignals, leadershipTasks, portfolioThemes, recentUpdates, awayContext, facts, profileProse } = req.body || {};
+  var { snapshots, projects, overdueTasks, commitmentsDue, commitmentsOverdue, todayCadences, coldAccounts, looseEnds, healthDeltas, relationshipSignals, toneSignals, anomalySignals, leadershipTasks, portfolioThemes, recentUpdates, awayContext, narratives, facts, profileProse } = req.body || {};
+  narratives = narratives && typeof narratives === "object" ? narratives : {};
   snapshots = (snapshots || []).slice(0, MAX_ARRAY);
   projects  = (projects  || []).slice(0, MAX_ARRAY);
 
@@ -105,6 +106,9 @@ export default async function handler(req, res) {
     }
     if (s.stuck_project_count > 0) parts.push(s.stuck_project_count + " stuck project" + (s.stuck_project_count > 1 ? "s" : ""));
     if (s.objective) parts.push('goal: "' + s.objective.slice(0, 80) + '"');
+    // #17 — Pip's standing read of the account (the story), so a flagged account
+    // comes with WHY it stands where it does, not just the metrics.
+    if (narratives[s.account_id]) parts.push('story: ' + String(narratives[s.account_id]).slice(0, 160));
     flaggedLines.push(parts.join(" — "));
   });
 

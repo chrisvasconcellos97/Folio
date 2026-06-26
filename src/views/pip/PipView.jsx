@@ -293,6 +293,7 @@ export function PipView(props) {
           owner_user_id: a.owner_user_id || null,
           status_override: a.status_override || null,
           status_override_reason: a.status_override_reason || null,
+          narrative: operatorRow ? operatorRow.narrative : null, // #17 — account story into chat context
           meetings:       acctMeetings,
           scheduledMeetings: scheduledMeetings,
           openItems:      openItems,

@@ -1311,6 +1311,7 @@ export default function App() {
         awayPeriods={awayHook.periods}
         themes={recentThemes}
         scheduledMeetings={scheduledMeetings}
+        accountNarratives={(pipAcctStateApp.states || []).reduce(function (m, s) { if (s && s.narrative && s.narrative.standing) m[s.account_id] = s.narrative.standing; return m; }, {})}
         observations={observationsApi.observations}
         onObservationAct={handleObservationAct}
         onObservationDismiss={observationsApi.dismiss}
