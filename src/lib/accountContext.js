@@ -25,6 +25,7 @@
 // trimming stays explicit and reviewable in ONE place — right here).
 
 import { computeContactEngagement } from "./contactEngagement.js";
+import { renderNarrativeBlock } from "./accountNarrative.js";
 
 // ── small pure helpers (ported so this module has no cross-file coupling) ──
 
@@ -74,6 +75,7 @@ var SURFACE_DEFAULTS = {
   chat: {
     includeStatusLine: true, includeStatusOverride: true, includeTypeExtras: true,
     includeServicedStates: true, includeObjective: true, includeSystems: true,
+    includeNarrative: true,
     includeMeetings: true, meetingLimit: 8, meetingNotesChars: 600, includeRawNotes: true,
     includeMeetingExtras: true,
     includeScheduled: true,
@@ -94,6 +96,9 @@ var SURFACE_DEFAULTS = {
   summarize: {
     includeStatusLine: false, includeStatusOverride: false, includeTypeExtras: true,
     includeServicedStates: true, includeObjective: true, includeSystems: true,
+    // Narrative off for summarize in v1 (it's about extracting THIS meeting, not
+    // the long arc) — the section lives here so it can opt in later, zero render change.
+    includeNarrative: false,
     includeMeetings: true, meetingLimit: 5, meetingNotesChars: 220, includeRawNotes: false,
     includeMeetingExtras: false,
     includeScheduled: false,
@@ -112,6 +117,8 @@ var SURFACE_DEFAULTS = {
   operator: {
     includeStatusLine: true, includeStatusOverride: true, includeTypeExtras: true,
     includeServicedStates: false, includeObjective: true, includeSystems: true,
+    // Operator generates its own read each run — don't feed it its own prior story.
+    includeNarrative: false,
     includeMeetings: true, meetingLimit: 3, meetingNotesChars: 160, includeRawNotes: false,
     includeMeetingExtras: false,
     includeScheduled: false,
@@ -234,6 +241,15 @@ function servicedStatesSection(a, o) {
 function objectiveSection(a, o) {
   if (!o.includeObjective || !a.objective) return "";
   return "Account Intel: " + a.objective;
+}
+
+// Account Narrative Memory — Pip's re-derived 4-part STORY of the account (arc /
+// standing / hinges-on / trajectory). The caller attaches the stored
+// a.narrative object; this only renders it. Sits at the strategic top (right
+// after the user's own Account Intel) so the story frames the raw rows below.
+function narrativeSection(a, o) {
+  if (!o.includeNarrative) return "";
+  return renderNarrativeBlock(a.narrative);
 }
 
 function systemsSection(a, o) {
@@ -617,6 +633,7 @@ var SECTION_ORDER = [
   ["typeExtras",      typeExtrasSection,       false],
   ["servicedStates",  servicedStatesSection,   false],
   ["objective",       objectiveSection,        false],
+  ["narrative",       narrativeSection,        true],
   ["systems",         systemsSection,          false],
   ["meetings",        meetingsSection,         true],
   ["scheduled",       scheduledSection,        true],

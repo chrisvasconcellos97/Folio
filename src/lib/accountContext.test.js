@@ -21,6 +21,13 @@ function fixture() {
     status_override_reason: "exec escalation",
     serviced_states: ["NY", "NJ", "CT"],
     objective: "Grow shop coverage in the northeast.",
+    narrative: {
+      arc: "Began at the Classic Collision integration; slowed on product delays.",
+      standing: "Re-engaged after the June rollout; Rusty is the active POC.",
+      hinges_on: "Whether the new-shop onboarding lands this month.",
+      trajectory: "cooling", trajectory_why: "two follow-ups slipped",
+      as_of: "2026-06-20",
+    },
     systems: [{ name: "Fuse5", note: "their DMS" }],
     meetings: [
       {
@@ -91,6 +98,11 @@ describe("buildAccountContext — chat surface", function () {
   });
   it("ownership note fires when owned by another user (keeps RELATIONSHIP_OWNER token)", function () {
     expect(text).toMatch(/RELATIONSHIP_OWNER: NO/);
+  });
+  it("emits the account narrative story (4-part, with as-of date)", function () {
+    expect(text).toMatch(/ACCOUNT STORY \(Pip's standing read · as of 2026-06-20\)/);
+    expect(text).toMatch(/Where it stands: Re-engaged after the June rollout/);
+    expect(text).toMatch(/Trajectory: Cooling — two follow-ups slipped/);
   });
   it("emits raw meeting notes + project notes (searchability)", function () {
     expect(text).toMatch(/Q1 review/);
@@ -221,6 +233,11 @@ describe("parity cross-checks (the drift lock)", function () {
     expect(chat).toMatch(/PIP'S OVERNIGHT OPERATOR READ/);
     expect(summ).toMatch(/already surfaced — don't re-propose/);
     expect(oper).toMatch(/WHAT PIP SAID LAST RUN/);
+  });
+  it("account narrative reaches chat but NOT summarize/operator (v1 preset)", function () {
+    expect(chat).toMatch(/ACCOUNT STORY/);
+    expect(summ).not.toMatch(/ACCOUNT STORY/);
+    expect(oper).not.toMatch(/ACCOUNT STORY/);
   });
   it("systems/glossary terms reach chat + summarize + operator", function () {
     expect(chat).toMatch(/Fuse5/);

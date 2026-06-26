@@ -650,6 +650,14 @@ create table if not exists folio_pip_account_state (
   context_fingerprint     text,
   context_checked_at      timestamptz
 );
+-- Account Narrative Memory — re-derived 4-part STORY of the account (see
+-- supabase/account_narrative.sql, docs/account-narrative-plan.md). narrative =
+-- { arc, standing, hinges_on, trajectory, trajectory_why, as_of };
+-- narrative_fingerprint = the computeContextFingerprint() it was derived from
+-- (re-derive only on change); narrative_at = when it was last rebuilt.
+alter table folio_pip_account_state add column if not exists narrative jsonb;
+alter table folio_pip_account_state add column if not exists narrative_fingerprint text;
+alter table folio_pip_account_state add column if not exists narrative_at timestamptz;
 alter table folio_pip_account_state enable row level security;
 
 drop policy if exists "state_owner_select" on folio_pip_account_state;
