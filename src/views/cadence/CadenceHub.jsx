@@ -2375,7 +2375,7 @@ export function CadenceHub({
               }}
               style={{
                 background: C.accent, border: "none", borderRadius: 8,
-                padding: "9px 18px", color: "#fff", fontSize: 13, fontWeight: 700,
+                padding: "9px 18px", color: C.onAccent, fontSize: 13, fontWeight: 700,
                 cursor: "pointer", fontFamily: INTER,
                 alignSelf: "flex-start",
               }}

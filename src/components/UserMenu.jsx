@@ -59,7 +59,7 @@ function ProfileModal({ userMeta, onClose }) {
           <button onClick={handleSave} disabled={!name.trim() || saving} style={{
             background: !name.trim() || saving ? C.accentDim : C.accent,
             border: "none", borderRadius: 20, padding: "8px 22px",
-            fontSize: 12, fontWeight: 700, color: "#fff",
+            fontSize: 12, fontWeight: 700, color: C.onAccent,
             fontFamily: "'Inter', system-ui, sans-serif",
             cursor: !name.trim() || saving ? "default" : "pointer",
             opacity: saving ? 0.7 : 1,

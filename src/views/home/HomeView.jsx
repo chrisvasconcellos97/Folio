@@ -2307,7 +2307,7 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
           <button
             onClick={copyTeamSheetDirty}
             style={{
-              background: C.accent, color: "#fff", border: "none", borderRadius: 8,
+              background: C.accent, color: C.onAccent, border: "none", borderRadius: 8,
               padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer",
               fontFamily: "'Inter', system-ui, sans-serif", flexShrink: 0,
             }}

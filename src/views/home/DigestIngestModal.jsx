@@ -265,7 +265,7 @@ export function DigestIngestModal({ accounts, userId, addMeeting, awayPeriods, o
                   background: raw.trim() && !parsing ? C.accentDeep : C.accentFaint,
                   border: "none", borderRadius: 8, padding: "9px 18px",
                   fontSize: 13, fontWeight: 700,
-                  color: raw.trim() && !parsing ? "#fff" : C.textMuted,
+                  color: raw.trim() && !parsing ? C.onAccent : C.textMuted,
                   fontFamily: INTER, cursor: raw.trim() && !parsing ? "pointer" : "default",
                 }}
               >
@@ -325,7 +325,7 @@ export function DigestIngestModal({ accounts, userId, addMeeting, awayPeriods, o
                             border: "2px solid " + (a.checked ? C.accent : C.textMuted),
                             background: a.checked ? C.accent : "transparent",
                             display: "flex", alignItems: "center", justifyContent: "center",
-                            color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer",
+                            color: C.onAccent, fontSize: 13, fontWeight: 700, cursor: "pointer",
                           }}
                         >{a.checked ? "✓" : ""}</div>
                         <div style={{ flex: 1, minWidth: 0 }}>
@@ -378,7 +378,7 @@ export function DigestIngestModal({ accounts, userId, addMeeting, awayPeriods, o
                         border: "2px solid " + (r.checked ? C.accent : C.textMuted),
                         background: r.checked ? C.accent : "transparent",
                         display: "flex", alignItems: "center", justifyContent: "center",
-                        color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer",
+                        color: C.onAccent, fontSize: 14, fontWeight: 700, cursor: "pointer",
                       }}
                     >{r.checked ? "✓" : ""}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>

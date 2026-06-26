@@ -793,7 +793,7 @@ export function ProjectModal({
               border: "1px solid " + (onTeamTracker ? C.accent : C.rule),
               background: onTeamTracker ? C.accent : "transparent",
               display: "flex", alignItems: "center", justifyContent: "center",
-              color: "#fff", fontSize: 12, fontWeight: 700,
+              color: C.onAccent, fontSize: 12, fontWeight: 700,
             }}>{onTeamTracker ? "✓" : ""}</div>
             <span style={{
               fontSize: 13, color: onTeamTracker ? C.text : C.textMuted,

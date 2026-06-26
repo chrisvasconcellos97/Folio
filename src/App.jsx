@@ -1772,7 +1772,7 @@ export default function App() {
           onClick={function () { acceptInvite(myInvite.id).then(function () { showToast("Joined the team!"); }).catch(function (e) { showToast(e.message || "Couldn't accept invite", "error"); }); }}
           style={{
             background: C.accent, border: "none", borderRadius: 8, padding: "6px 16px",
-            fontSize: 12, fontWeight: 700, color: "#fff", cursor: "pointer",
+            fontSize: 12, fontWeight: 700, color: C.onAccent, cursor: "pointer",
             fontFamily: "'Inter', system-ui, sans-serif",
           }}
         >
@@ -1827,7 +1827,7 @@ export default function App() {
       <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
         <button onClick={handleAllowNotifs} style={{
           background: C.accent, border: "none", borderRadius: 8, padding: "6px 12px",
-          fontSize: 12, fontWeight: 700, color: "#fff", cursor: "pointer",
+          fontSize: 12, fontWeight: 700, color: C.onAccent, cursor: "pointer",
           fontFamily: "'Inter', system-ui, sans-serif",
         }}>Yes</button>
         <button onClick={handleDismissNotifPrompt} style={{

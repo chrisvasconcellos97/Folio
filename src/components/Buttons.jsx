@@ -30,7 +30,7 @@ export function AmberBtn({ onClick, children, style, disabled, type, title, aria
       className="cta-glow"
       style={Object.assign({}, btnBase, {
         background: disabled ? C.accentDim : C.accent,
-        color: "#fff",
+        color: C.onAccent,
         opacity: disabled ? 0.5 : 1,
       }, style || {})}
     >

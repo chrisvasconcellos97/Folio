@@ -26,6 +26,7 @@ export const C = {
 
   // ── Accent ───────────────────────────────────────────────────────────────
   accent:       "var(--c-accent)",
+  onAccent:     "var(--c-on-accent)", // text/glyph color that stays readable on an accent-filled surface
   accentHi:     "var(--c-accent-hi)",
   accentDeep:   "var(--c-accent-deep)",
   accentDim:    "var(--c-accent-dim)",

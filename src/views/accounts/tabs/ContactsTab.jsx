@@ -520,7 +520,7 @@ export function ContactsTab({ contacts, meetings, accountId, accountName, onAdd,
             <a
               href={"mailto:" + Object.values(selected).join(",")}
               style={{
-                background: C.accent, color: "#fff", borderRadius: 7, padding: "5px 14px",
+                background: C.accent, color: C.onAccent, borderRadius: 7, padding: "5px 14px",
                 fontSize: 12, fontWeight: 600, textDecoration: "none", fontFamily: "'Inter', system-ui, sans-serif",
               }}
             >
