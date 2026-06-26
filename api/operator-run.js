@@ -42,6 +42,7 @@ function secretEqual(a, b) {
 // chat / summarize again. .js extension is required for the serverless bundle.
 import { renderAccountContext } from "../src/lib/accountContext.js";
 import { currentlyAway, justBackFrom, awayLabel } from "../src/lib/awayMode.js";
+import { deriveNarratives } from "./_narrativeSynth.js";
 
 // Give the function a real time budget — it does several model calls. 60s is
 // valid on every Vercel plan; with the per-account passes parallelized below
@@ -49,9 +50,19 @@ import { currentlyAway, justBackFrom, awayLabel } from "../src/lib/awayMode.js";
 export const config = { maxDuration: 60 };
 
 var OPERATOR_MODEL = process.env.PIP_OPERATOR_MODEL || "claude-sonnet-4-6";
-var MAX_DEEP_PER_USER = 8;        // cap deep per-account passes per user per run
+var MAX_DEEP_PER_USER = 6;        // cap deep per-account passes per user per run
 var ACCOUNT_CONCURRENCY = 4;      // model calls in flight at once (rate-limit safe)
 var MAX_USERS = 200;              // safety bound
+
+// H3 — wall-clock budget so the REPORT pass always runs inside maxDuration.
+// The report-pass was dying silently: slow deep-pass waves + the report could
+// exceed 60s, and the report ran LAST, so it never completed (Home read stale
+// ~17 days). We now stop launching deep-pass waves once we've used the deep
+// budget, guaranteeing time for the report. The narrative sweep (folded onto
+// the cron) runs only with whatever budget remains AFTER the report.
+var RUN_BUDGET_MS    = 54000;     // finish everything by here (slack under 60s)
+var REPORT_RESERVE_MS = 16000;    // keep this much for the report pass + persist
+var NARRATIVE_MIN_MS  = 12000;    // only start a narrative sweep with at least this left
 
 // ── helpers ────────────────────────────────────────────────────────────
 
@@ -307,7 +318,7 @@ function pickMovedAccounts(accounts, activitySinceIds, snapshotsById, opGenByAcc
 
 // ── per-user processing ────────────────────────────────────────────────
 
-async function processUser(admin, client, userId, tz, isScheduled) {
+async function processUser(admin, client, userId, tz, isScheduled, runDeadline) {
   var local = localParts(tz);
 
   // Last run = most recent operator report for this user. Used to decide which
@@ -428,8 +439,15 @@ async function processUser(admin, client, userId, tz, isScheduled) {
   // sweep finishes well inside the function's time budget. Sequential here meant
   // ~10s × N accounts, which blew past Vercel's timeout and killed the run
   // before it could write the report.
+  // Stop launching deep-pass waves once we've used the deep budget, so the
+  // report pass (below) always has time to run inside the function's lifetime.
+  var deepDeadline = runDeadline ? (runDeadline - REPORT_RESERVE_MS) : 0;
   var worked = [];
   for (var start = 0; start < moved.length; start += ACCOUNT_CONCURRENCY) {
+    if (deepDeadline && Date.now() > deepDeadline) {
+      console.log("[operator-run] deep budget reached — stopping at", worked.length, "of", moved.length, "for", userId.slice(0, 8));
+      break;
+    }
     var wave = moved.slice(start, start + ACCOUNT_CONCURRENCY);
     var settled = await Promise.all(wave.map(function (acc) {
       return gatherAndRun(admin, client, userId, acc, snapById[acc.id], userContext)
@@ -514,26 +532,62 @@ async function processUser(admin, client, userId, tz, isScheduled) {
     }
   }
 
-  return { userId: userId, worked: worked.length, reportAccounts: reportInput.length, total: accounts.length, ranReason: ranReason };
+  // ── Narrative sweep (folded onto the cron) ──────────────────────────────
+  // Re-derive the standing STORY for the accounts that moved this run — exactly
+  // the ones whose content changed, so the fingerprint gate inside
+  // deriveNarratives bills only on real change. Runs AFTER the report (which is
+  // protected by the deep budget above) and only with budget to spare, so it can
+  // NEVER delay the report. The client app-open sweep still seeds narratives as a
+  // fallback, so a busy night that skips this loses nothing durable.
+  var narrativeResult = null;
+  var enoughTime = !runDeadline || (runDeadline - Date.now()) > NARRATIVE_MIN_MS;
+  if (!overCap && worked.length && enoughTime) {
+    try {
+      narrativeResult = await deriveNarratives({
+        client: client, db: admin, userId: userId,
+        accountIds: worked.map(function (w) { return w.id; }),
+        deadlineAt: runDeadline || 0,
+      });
+    } catch (e) {
+      console.error("[operator-run] narrative sweep failed", userId, e && e.message);
+    }
+  }
+
+  return {
+    userId: userId, worked: worked.length, reportAccounts: reportInput.length,
+    total: accounts.length, ranReason: ranReason,
+    narratives: narrativeResult ? (narrativeResult.derived || 0) : 0,
+  };
 }
 
 // Gather one account's context, run the deep pass, persist operator state.
 async function gatherAndRun(admin, client, userId, acc, snapshot, userContext) {
-  var mRes = await admin.from("folio_meetings")
-    .select("title,meeting_date,created_at,pip_summary,pip_tone")
-    .eq("account_id", acc.id).order("meeting_date", { ascending: false }).limit(5);
+  // These five reads are independent — run them concurrently to shave the
+  // per-account latency (the deep phase's main cost), which buys headroom for
+  // the report pass + the narrative sweep inside the 60s budget (H3).
   // Loose action items only (project_id IS NULL) — project work is listed
   // under its project below, so excluding it here avoids double-listing now
   // that migrated project tasks carry account_id.
-  var tRes = await admin.from("folio_tasks")
-    .select("title,due_date,is_commitment,assignee_email,done,status,waiting_on,waiting_on_since")
-    .eq("account_id", acc.id).is("project_id", null).limit(40);
-  var cRes = await admin.from("folio_contacts")
-    .select("name,title,is_primary,relationship_role")
-    .eq("account_id", acc.id).limit(20);
-  var pRes = await admin.from("gauge_projects")
-    .select("id,title,status,status_updates,account_id,account_ids,waiting_on,waiting_on_since")
-    .or("account_id.eq." + acc.id + ",account_ids.cs.{" + acc.id + "}").limit(20);
+  var gathered = await Promise.all([
+    admin.from("folio_meetings")
+      .select("title,meeting_date,created_at,pip_summary,pip_tone")
+      .eq("account_id", acc.id).order("meeting_date", { ascending: false }).limit(5),
+    admin.from("folio_tasks")
+      .select("title,due_date,is_commitment,assignee_email,done,status,waiting_on,waiting_on_since")
+      .eq("account_id", acc.id).is("project_id", null).limit(40),
+    admin.from("folio_contacts")
+      .select("name,title,is_primary,relationship_role")
+      .eq("account_id", acc.id).limit(20),
+    admin.from("gauge_projects")
+      .select("id,title,status,status_updates,account_id,account_ids,waiting_on,waiting_on_since")
+      .or("account_id.eq." + acc.id + ",account_ids.cs.{" + acc.id + "}").limit(20),
+    admin.from("folio_account_updates")
+      .select("update_date,update_type,title,description")
+      .eq("account_id", acc.id).order("update_date", { ascending: false }).limit(3),
+    admin.from("folio_pip_account_state")
+      .select("lessons_learned,operator_situation").eq("account_id", acc.id).maybeSingle(),
+  ]);
+  var mRes = gathered[0], tRes = gathered[1], cRes = gathered[2], pRes = gathered[3], uRes = gathered[4], sRes = gathered[5];
   // Project work lives in folio_tasks (task-model unification) — fetch the
   // open tasks for these projects and hydrate onto p.tasks.
   var projects = pRes.data || [];
@@ -548,11 +602,6 @@ async function gatherAndRun(admin, client, userId, acc, snapshot, userContext) {
     });
     projects = projects.map(function (p) { return Object.assign({}, p, { tasks: byProj[p.id] || [] }); });
   }
-  var uRes = await admin.from("folio_account_updates")
-    .select("update_date,update_type,title,description")
-    .eq("account_id", acc.id).order("update_date", { ascending: false }).limit(3);
-  var sRes = await admin.from("folio_pip_account_state")
-    .select("lessons_learned,operator_situation").eq("account_id", acc.id).maybeSingle();
 
   var ctxText = buildOperatorAccountContext(
     acc, mRes.data || [], tRes.data || [], cRes.data || [],
@@ -658,10 +707,15 @@ export default async function handler(req, res) {
     }
     userIds = userIds.slice(0, MAX_USERS);
 
+    // Per-user wall-clock deadline — split the run budget across users so the
+    // whole function finishes inside maxDuration even with several users; for a
+    // single user (the real case) this is just RUN_STARTED + RUN_BUDGET_MS.
+    var RUN_STARTED = Date.now();
     var results = [];
     for (var i = 0; i < userIds.length; i++) {
+      var perUserDeadline = RUN_STARTED + Math.round(RUN_BUDGET_MS * (i + 1) / userIds.length);
       try {
-        results.push(await processUser(admin, client, userIds[i], tz, isCron));
+        results.push(await processUser(admin, client, userIds[i], tz, isCron, perUserDeadline));
       } catch (e) {
         console.error("[operator-run] user failed", userIds[i], e && e.message);
         results.push({ userId: userIds[i], error: e && e.message });
