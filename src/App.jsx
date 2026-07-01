@@ -37,6 +37,7 @@ var LeadershipView = lazy(function () { return import("./views/leadership/Leader
 var ObservabilityView = lazy(function () { return import("./views/observability/ObservabilityView").then(function (m) { return { default: m.ObservabilityView }; }); });
 var CommitmentsView = lazy(function () { return import("./views/commitments/CommitmentsView").then(function (m) { return { default: m.CommitmentsView }; }); });
 var WaitingOnView = lazy(function () { return import("./views/waiting/WaitingOnView").then(function (m) { return { default: m.WaitingOnView }; }); });
+var ConferenceHub = lazy(function () { return import("./views/conference/ConferenceHub").then(function (m) { return { default: m.ConferenceHub }; }); });
 var ShareTargetView = lazy(function () { return import("./views/share/ShareTargetView").then(function (m) { return { default: m.ShareTargetView }; }); });
 // Heavy account-flow cluster — lazy so AccountDetail→CadenceHub→CadenceMeetingMode/
 // PipSummarizePreview (and pip.js) stay out of the initial index chunk (~150-200 kB).
@@ -70,6 +71,9 @@ import { useWins } from "./hooks/useWins.js";
 import { useAwayPeriods } from "./hooks/useAwayPeriods.js";
 import { useRecentThemes } from "./hooks/useRecentThemes";
 import { useObservations } from "./hooks/useObservations";
+import { useConferences } from "./hooks/useConferences.js";
+import { insertTask } from "./hooks/useTasks";
+import { PRESENTATION_CHECKLIST } from "./lib/conferencePrep.js";
 import { C } from "./lib/colors";
 import { QuickTaskModal } from "./views/quicktasks/QuickTaskModal";
 
@@ -1011,6 +1015,54 @@ export default function App() {
   var awayHook             = useAwayPeriods(userId);
   var recentThemes         = useRecentThemes(userId);
   var observationsApi      = useObservations(userId); // mastermind / synthesis (item 52)
+  var conferencesApi       = useConferences(userId); // pre-departure prep (item 56)
+  var [selectedConferenceId, setSelectedConferenceId] = useState(null);
+
+  // Conference Prep (item 56) — creates the conference row, and optionally
+  // pairs a PTO/Away Mode window + seeds a presentation-prep Gauge project.
+  // Orchestrated here (not inside useConferences) because it spans three
+  // data sources that already have single App-level instances — reusing
+  // those instead of standing up new ones (see the M7 triplication note).
+  function handleAddConference(payload) {
+    return conferencesApi.addConference(payload).then(function (conf) {
+      if (!conf) return conf;
+      var chores = [];
+      if (payload.createAway) {
+        chores.push(awayHook.addAway({
+          start_date: payload.start_date,
+          end_date: payload.end_date,
+          note: "Conference: " + payload.name,
+        }));
+      }
+      if (payload.createProject) {
+        chores.push(
+          addProjectApp({
+            title: "Presentation prep — " + payload.name,
+            status: "planned",
+            due_date: payload.start_date,
+            account_id: null,
+          }).then(function (project) {
+            if (!project || !project.id) return;
+            var seedTasks = PRESENTATION_CHECKLIST.map(function (title, idx) {
+              return insertTask(userId, {
+                project_id: project.id,
+                account_id: null,
+                title: title,
+                sort_order: idx,
+                task_status: "intake",
+                status: "planned",
+                done: false,
+              });
+            });
+            return Promise.all(seedTasks).then(function () {
+              return conferencesApi.updateConference(conf.id, { gauge_project_id: project.id });
+            });
+          })
+        );
+      }
+      return Promise.all(chores).then(function () { return conf; });
+    });
+  }
 
   // Share Target — detect when the app is launched via the PWA Web Share Target.
   // GET params title/text/url are set by the OS share sheet. Initialized once from
@@ -1323,6 +1375,7 @@ export default function App() {
         members={members}
         wins={winsHook.wins}
         awayPeriods={awayHook.periods}
+        conferences={conferencesApi.conferences}
         themes={recentThemes}
         scheduledMeetings={scheduledMeetings}
         accountNarratives={(pipAcctStateApp.states || []).reduce(function (m, s) { if (s && s.narrative && s.narrative.standing) m[s.account_id] = s.narrative.standing; return m; }, {})}
@@ -1398,6 +1451,7 @@ export default function App() {
           onOpenScheduled: handleOpenScheduled,
           onOpenCommitments: function () { handleSetView("commitments"); },
           onOpenWaiting: function () { handleSetView("waiting"); },
+          onOpenConference: function (id) { setSelectedConferenceId(id); handleSetView("conference"); },
         }}
       />
     );
@@ -1515,6 +1569,38 @@ export default function App() {
     );
   }
 
+  if (view === "conference") {
+    var selectedConference = (conferencesApi.conferences || []).find(function (c) { return c.id === selectedConferenceId; }) || null;
+    mainContent = (
+      <ErrorBoundary key="conference" label="conference-prep" inline>
+        <Suspense fallback={<PipLoader />}>
+          <ConferenceHub
+            conference={selectedConference}
+            accounts={accounts}
+            items={allItems}
+            projects={allProjects}
+            onOpenAccount={function (acctId) {
+              var a = (accounts || []).find(function (x) { return x.id === acctId; });
+              if (a) { setSelected(a); setView("accounts"); }
+            }}
+            onUpdate={function (id, payload) {
+              // Strip the modal's UI-only checkboxes (createAway/createProject —
+              // add-only, not real columns) before this hits the DB update.
+              var fields = {
+                name: payload.name, location: payload.location,
+                start_date: payload.start_date, end_date: payload.end_date,
+                account_ids: payload.account_ids, notes: payload.notes,
+              };
+              return conferencesApi.updateConference(id, fields);
+            }}
+            onDelete={function (id) { conferencesApi.removeConference(id); handleSetView("home"); }}
+            onBack={function () { handleSetView("home"); }}
+          />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
+
   if (view === "cadence") {
     mainContent = (
       <CadenceView
@@ -1595,6 +1681,8 @@ export default function App() {
         awayPeriods={awayHook.periods}
         onStartInterview={function () { setShowInterview(true); }}
         onOpenCatchUp={function () { setCatchUpOpen(true); }}
+        onAddConference={handleAddConference}
+        onOpenConference={function (id) { setSelectedConferenceId(id); handleSetView("conference"); }}
       />
     );
   }

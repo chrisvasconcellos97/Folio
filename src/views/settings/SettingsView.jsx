@@ -15,7 +15,10 @@ import { useUserProfile } from "../../hooks/useUserProfile";
 import { usePipUsage } from "../../hooks/usePipUsage";
 import { useFolioHealth, CORRECTION_TYPE_LABEL } from "../../hooks/useFolioHealth";
 import { useWins } from "../../hooks/useWins";
+import { useConferences } from "../../hooks/useConferences";
 import { PromotionPacketModal } from "./PromotionPacketModal";
+import { ConferenceModal } from "../conference/ConferenceModal";
+import { daysUntil, conferenceStatus } from "../../lib/conferencePrep";
 import { AccountPicker } from "../../components/AccountPicker";
 import { useGlossary } from "../../hooks/useGlossary";
 import { useActivity } from "../../hooks/useActivity";
@@ -877,6 +880,73 @@ function FolioHealthSection({ userId, accounts, awayPeriods }) {
             </div>
           )}
         </>
+      )}
+    </Card>
+  );
+}
+
+// Conference Prep (item 56) — pre-departure readiness before a conference:
+// closing loose ends + presentation prep, NOT an in-event tool (that's
+// Lanyard's lane). This is the only way to add one before it's Home-surfaced;
+// "Open →" routes into the full ConferenceHub (countdown + loose-ends sweep).
+function ConferencesSection({ userId, accounts, onOpenConference, onAddConference }) {
+  // Read-only local instance for the list (realtime-synced same as App's).
+  // Creation routes through App's onAddConference — it owns the away-period
+  // + Gauge-project side effects, so this section doesn't need its own
+  // useProjects/useAwayPeriods instance (those are the triplication-sensitive
+  // hooks — see CLAUDE.md M7).
+  var confApi = useConferences(userId);
+  var [showAdd, setShowAdd] = useState(false);
+  var conferences = (confApi.conferences || []).filter(function (c) { return conferenceStatus(c) !== "past"; });
+
+  return (
+    <Card>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 6 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>Conferences</div>
+        <button
+          onClick={function () { setShowAdd(true); }}
+          style={{ background: "none", border: "1px solid " + C.accentLine, borderRadius: 8, padding: "5px 11px", fontSize: 12, fontWeight: 600, color: C.accent, fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer", whiteSpace: "nowrap" }}
+        >
+          + Add conference
+        </button>
+      </div>
+      <div style={{ fontSize: 13, color: C.textSub, lineHeight: 1.6, marginBottom: 14 }}>
+        A countdown to help you close loose ends and get presentations ready before you fly out. Once it's within a few weeks, it shows up on Home.
+      </div>
+      {showAdd && (
+        <ConferenceModal
+          accounts={accounts}
+          onSave={function (payload) { return onAddConference(payload); }}
+          onClose={function () { setShowAdd(false); }}
+        />
+      )}
+      {conferences.length === 0 ? (
+        <div style={{ fontSize: 13, color: C.textMuted }}>Nothing on the calendar yet.</div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {conferences.map(function (c) {
+            var d = daysUntil(c);
+            return (
+              <div key={c.id} style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
+                padding: "9px 11px", borderRadius: 8, border: "1px solid " + C.rule, background: C.surface,
+              }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 13.5, color: C.text }}>{c.name}</div>
+                  <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
+                    {d != null && d >= 0 ? d + " days to go" : "Underway"}
+                  </div>
+                </div>
+                <button
+                  onClick={function () { if (onOpenConference) onOpenConference(c.id); }}
+                  style={{ background: "none", border: "none", color: C.accent, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif", whiteSpace: "nowrap" }}
+                >
+                  Open →
+                </button>
+              </div>
+            );
+          })}
+        </div>
       )}
     </Card>
   );
@@ -1882,7 +1952,7 @@ function AppearanceSection() {
   );
 }
 
-export function SettingsView({ userId, userMeta, orgId, role, members, accounts, awayPeriods, onStartInterview, onOpenCatchUp }) {
+export function SettingsView({ userId, userMeta, orgId, role, members, accounts, awayPeriods, onStartInterview, onOpenCatchUp, onOpenConference }) {
   return (
     <div style={{ maxWidth: 600, margin: "0 auto", padding: "8px 0 40px" }}>
       <div style={{ marginBottom: 24, display: "flex", alignItems: "center", gap: 14 }}>
@@ -1911,6 +1981,7 @@ export function SettingsView({ userId, userMeta, orgId, role, members, accounts,
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <FolioHealthSection userId={userId} accounts={accounts} awayPeriods={awayPeriods} />
+              <ConferencesSection userId={userId} accounts={accounts} onOpenConference={onOpenConference} />
               <WinLogSection userId={userId} accounts={accounts} />
               <PipPrefsSection userId={userId} />
               <PipUsageSection userId={userId} />

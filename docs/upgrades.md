@@ -1,6 +1,47 @@
 # Folios — Upgrade Log
 
-*Last updated: 2026-06-21 (Win log + the Friday Pip Wrap — your track record, kept)*
+*Last updated: 2026-07-01 (Conference Prep — pre-departure readiness)*
+
+---
+
+## 2026-07-01 — Conference Prep: closing loose ends before you fly out
+
+**What I built:** A countdown to any upcoming conference that helps you get
+ready to leave — not a schedule for while you're there (that's a job for
+Lanyard, on its own separate track). Add a conference under Settings → Pip →
+Conferences, and Folios does three things: pairs the trip with PTO/Away Mode
+automatically, seeds a Gauge project checklist for presentation prep, and
+surfaces a countdown card on Home that sweeps your portfolio for loose ends
+worth closing before you go dark — with the accounts you'll actually see at
+the conference called out first.
+
+**Problem it solves:** Flying out to a conference used to mean either
+scrambling the week before to make sure nothing's dropped, or finding out
+after you're back that something slipped while you were gone. This closes
+that gap deterministically (no AI cost) and ties into the existing Away Mode
+suppression + "while you were out" catch-up, so the whole trip — before,
+during, and after — is covered.
+
+**What changed:**
+- New `folio_conferences` table — name, location, dates, and the partner
+  accounts you'll see there. Deliberately small and generic (not tied to any
+  one conference) and isolated from the rest of the app, so a future Lanyard
+  rebuild can read the same accounts list directly for its own partner/session
+  side without this needing to change.
+- Creating a conference can auto-create a paired Away Mode window for the
+  trip dates, and a Gauge project ("Presentation prep — [name]") with a short
+  seeded checklist (outline, draft slides, rehearse, pack materials).
+- A Home countdown card appears once a conference is inside ~3 weeks, showing
+  days-to-go and a count of loose ends — overdue commitments and stalled
+  projects — with conference accounts flagged first.
+
+**What you see today:** Settings → Pip → Conferences to add one; a countdown
+card on Home once it's close; opening it shows the full loose-ends sweep and
+the linked presentation-prep project's progress.
+
+**Why it matters:** It's the part of "don't get caught flat-footed" that a
+calendar entry alone doesn't cover — actually surfacing what needs to close
+out before you're unreachable for a few days.
 
 ---
 

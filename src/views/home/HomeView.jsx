@@ -30,6 +30,7 @@ import { HexRingCanvas } from "../../components/HexRingCanvas";
 import { buildCardScript } from "../../lib/buildCardScript";
 import { MondayPackCard } from "./MondayPackCard";
 import { pickMondayCadence, shouldShowMondayCard } from "../../lib/mondayPack";
+import { nextConference, isPrepWindow, daysUntil, buildLooseEndsSweep } from "../../lib/conferencePrep";
 
 var SERIF = "'Fraunces', Georgia, serif";
 var INTER = "'Inter', system-ui, sans-serif";
@@ -173,7 +174,7 @@ function makeAccountLinkify(accounts, onOpenAccount) {
   };
 }
 
-export function HomeView({ userName, userId, userEmail, accounts, meetings, items, cadences, projects, contacts, members, wins, awayPeriods, themes, showOnboardingCard, dripQuestion, dripQueueCount, terminologyCount, commitmentNudges, pipFacts, profileProse, scheduledMeetings, accountNarratives, observations, onObservationAct, onObservationDismiss, generateObservations, handlers }) {
+export function HomeView({ userName, userId, userEmail, accounts, meetings, items, cadences, projects, contacts, members, wins, awayPeriods, conferences, themes, showOnboardingCard, dripQuestion, dripQueueCount, terminologyCount, commitmentNudges, pipFacts, profileProse, scheduledMeetings, accountNarratives, observations, onObservationAct, onObservationDismiss, generateObservations, handlers }) {
   // All callback props arrive grouped in one `handlers` bag (Batch 8 — prop-
   // sprawl reduction). Re-expanded to locals here so the many internal call
   // sites (onOpenAccount ×17, onOpenCadenceHub ×14, …) stay byte-for-byte
@@ -203,6 +204,7 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
   var onOpenCommitments      = handlers.onOpenCommitments;
   var onOpenWaiting          = handlers.onOpenWaiting;
   var onOpenPersonHub        = handlers.onOpenPersonHub;
+  var onOpenConference       = handlers.onOpenConference;
 
   commitmentNudges = commitmentNudges || [];
 
@@ -851,6 +853,20 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
       showToast("Clipboard unavailable", "error");
     }
   }
+
+  // Conference Prep (item 56) — pre-departure countdown. Shows within ~3
+  // weeks of the nearest upcoming conference; NOT an in-event tool. Fully
+  // deterministic — zero AI cost.
+  var upcomingConference = useMemo(function () {
+    return nextConference(conferences);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conferences]);
+  var conferenceInPrepWindow = upcomingConference && isPrepWindow(upcomingConference);
+  var conferenceSweep = useMemo(function () {
+    if (!conferenceInPrepWindow) return null;
+    return buildLooseEndsSweep({ conference: upcomingConference, items: items, projects: projects, accounts: accounts });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conferenceInPrepWindow, upcomingConference, items, projects, accounts]);
 
   // Friday Pip Wrap (#4) — the week-in-review. Deterministic by default; the
   // "✦ Pip's take" paragraph is an on-demand Pip call. Only computes on Fridays.
@@ -2327,6 +2343,32 @@ export function HomeView({ userName, userId, userEmail, accounts, meetings, item
               fontFamily: "'Inter', system-ui, sans-serif", flexShrink: 0,
             }}
           >Copy rows</button>
+        </div>
+      )}
+
+      {conferenceInPrepWindow && (
+        <div style={{ marginBottom: 12 }}>
+          <InfoCard label={"✦ " + upcomingConference.name} accent={C.accent}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+              <div style={{ fontSize: 13.5, color: C.text, lineHeight: 1.5 }}>
+                {(function () {
+                  var d = daysUntil(upcomingConference);
+                  var when = d === 0 ? "Today" : d === 1 ? "Tomorrow" : d + " days to go";
+                  var count = conferenceSweep ? (conferenceSweep.conferenceRows.length + conferenceSweep.portfolioRows.length) : 0;
+                  if (count === 0) return when + " — nothing hanging that needs your attention.";
+                  return when + " — " + count + " loose end" + (count === 1 ? "" : "s") + " worth closing before you fly out.";
+                })()}
+              </div>
+              {onOpenConference && (
+                <button
+                  onClick={function () { onOpenConference(upcomingConference.id); }}
+                  style={{ background: "none", border: "none", color: C.accent, fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: INTER, whiteSpace: "nowrap" }}
+                >
+                  Open →
+                </button>
+              )}
+            </div>
+          </InfoCard>
         </div>
       )}
 

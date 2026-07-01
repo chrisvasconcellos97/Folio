@@ -1568,3 +1568,39 @@ drop policy if exists "obs_delete_own" on folio_observations;
 create policy "obs_delete_own" on folio_observations for delete using ((select auth.uid()) = user_id);
 create index if not exists idx_folio_observations_open
   on folio_observations (user_id, created_at desc) where status = 'open';
+
+-- ──────────────────────────────────────────────────────────────────────
+-- Conference Prep (item 56) — pre-departure readiness before a conference
+-- (closing loose ends + presentation prep), paired with Away Mode for the
+-- trip itself. Folded in from supabase/conference_prep.sql. Deliberately
+-- ISOLATED (one small generic table, minimal touchpoints) so a future
+-- Lanyard rebuild can read `account_ids` directly for its partner list
+-- without this needing to be re-threaded. DATA LINE: scheduling only.
+-- ──────────────────────────────────────────────────────────────────────
+create table if not exists folio_conferences (
+  id                uuid primary key default gen_random_uuid(),
+  user_id           uuid references auth.users not null,
+  name              text not null,
+  location          text,
+  start_date        date not null,
+  end_date          date not null,
+  account_ids       uuid[] default '{}',  -- partner accounts attending
+  gauge_project_id  uuid references gauge_projects on delete set null,
+  away_period_id    uuid references folio_away_periods on delete set null,
+  notes             text,
+  created_at        timestamptz default now()
+);
+
+create index if not exists folio_conferences_user_idx
+  on folio_conferences (user_id, start_date);
+
+alter table folio_conferences enable row level security;
+drop policy if exists "Conferences owner access" on folio_conferences;
+create policy "Conferences owner access" on folio_conferences
+  for all
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+-- Data lineage only — away mode itself stays conference-agnostic.
+alter table folio_away_periods add column if not exists conference_id
+  uuid references folio_conferences on delete set null;

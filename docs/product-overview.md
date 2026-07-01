@@ -1,6 +1,6 @@
 # Folios — Product Overview
 
-*Last updated: 2026-06-19 (F6 — Pip semantic recall; Monday 1:1 pack; chat agent loop)*
+*Last updated: 2026-07-01 (Conference Prep — pre-departure readiness)*
 
 This is the substantive product read after the [one-pager](./one-pager.md).
 Covers what Folios does, how it's structured, and what makes the Pip
@@ -256,6 +256,26 @@ were away," not "you dropped the ball." PTO is set as a date range from the
   is cleared.
 
 Away periods are personal scheduling only — no business data is involved.
+
+### Conference Prep
+
+A pre-departure readiness feature, added ahead of a real conference trip —
+deliberately **not** an in-event tool (schedule, partner sessions, live
+notes are a separate, future capability). Add a conference (Settings → Pip →
+Conferences) with its name, dates, and the partner accounts you'll see there.
+Creating one can:
+
+- **Pair a PTO/Away Mode window** for the trip dates automatically.
+- **Seed a Gauge project** ("Presentation prep — [name]") with a short
+  checklist for getting a talk ready.
+- **Surface a Home countdown card** once the trip is within about three
+  weeks — days-to-go plus a sweep of loose ends (overdue commitments, stalled
+  projects) across the portfolio, with the accounts attending the conference
+  called out first.
+
+Entirely deterministic (zero AI cost). The `folio_conferences` table is
+intentionally small and generic — one reusable record per conference, not
+tied to any specific event — so it stays isolated from the rest of the app.
 
 ### Inactive & Merge
 
