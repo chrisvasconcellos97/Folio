@@ -37,6 +37,22 @@
 - **NEEDS (felt-intelligence rule):** Chris taps "Run Pip's pass" (or waits for the 5am cron) → confirms the home operator REPORT is fresh again (not stale 6/09), AND that account stories seed overnight without him opening the app. Not "done" until the report is live on real data.
 - **NOTE:** no `vercel.json` change — narratives ride the existing `0 9 * * *` operator cron. If Chris is on Vercel Pro he could bump `maxDuration` >60 + raise `RUN_BUDGET_MS` for more deep passes/narratives per night; current values are tuned to the plan-safe 60s.
 
+## Session Handoff — July 6 2026: "Log Conversation" now supports multiple accounts/departments (SHIPPED to `claude/multi-account-dept-logging-rj0ab4`, NOT `main`)
+
+**Chris: "I still can't add multiple accounts or departments when logging a conversation."** Root cause: the **Schedule Meeting** flow (`ScheduleMeetingModal`) already got a multi-account picker (chips + `account_ids`) back in item 32's follow-ups, but the **Log Conversation** flow (`StartConversationModal`, the "+ Conversation" pill) had its own bespoke single-account search box that never got the same upgrade — so ad-hoc conversation logging was still stuck at one account. This session ran under this environment's remote-session git workflow (branch `claude/multi-account-dept-logging-rj0ab4`, not the interactive `main`-only deploy rule) — **nothing here is on `main` / deployed to production.**
+
+- **Swapped the bespoke picker for the shared `AccountPicker` component** (adder mode: search → pick → removable chip → search again) — same pattern `ProjectModal` already uses for multi-account Gauge projects. This gets **workspace tabs (Accounts / Departments / Partners) for free**, since that's built into `AccountPicker` — Chris picks the workspace tab first, then the account/department within it, instead of scrolling one long mixed list (his explicit ask when he saw the first draft of this fix).
+- `account_ids` threaded through both `onStart` payloads (the quick-log path and the review-with-Gauge-projects path) alongside the existing primary `account_id`.
+- "Who was it with?" contact chips now merge contacts across ALL selected accounts (mirrors CadenceHub's existing multi-department cadence roster merge) so a joint call surfaces everyone's contacts, not just the primary account's.
+- The Gauge project picker (for routing extracted action items) now matches ANY selected account, not just the primary.
+- **`useMeetings`'s per-account fetch widened to match `account_ids` too** (mirrors `useProjects`'s `.or("account_id.in...,account_ids.ov...")` pattern) — a conversation logged against multiple accounts/departments now surfaces under every one of them (Meetings tab, Cadence Hub history, Pip chat context), not just the primary. `addMeeting` also bumps `last_interaction_at` for every linked account, not just the primary.
+- Real-time conversations (phone/in_person/video) still anchor the live meeting-mode overlay (contacts, cadence brief) to the primary account only — same simplification `ScheduleMeetingModal` already makes for its attendee list; only the record itself is multi-account.
+- Gates green: 448 tests · check-guards 6/6 · api-imports clean · build.
+
+**NEEDS Chris's live validation (felt-intelligence rule):** open "+ Conversation" → add 2+ accounts/departments via the picker (confirm the workspace tabs show) → log it → confirm the conversation appears in BOTH accounts' meeting/cadence history, not just the first one picked.
+
+**To bring this into the interactive `main` workflow:** this branch (`claude/multi-account-dept-logging-rj0ab4`) is NOT stacked on the `claude/folios-full-audit-er5j62` work above — it was created fresh by the remote-session harness from a point that already included that history, so a `main` fast-forward or cherry-pick of commit `34eaf5d` should apply cleanly. No DB migration needed (`folio_meetings.account_ids` already existed).
+
 ## Session Handoff — June 26 2026 (meeting memory): "✦ Pip will remember" extended to ALL meetings + quick capture (SHIPPED)
 
 **Chris: "I don't want to write notes for only tasks, I'm writing notes to remember information too" — make the digest's per-account memory ("✦ Pip will remember this on [account]" + account-linking) run on cadence/ad-hoc meeting summarize AND quick capture, not just the daily-summary paste.** Built in 3 stages on `claude/folios-full-audit-er5j62`, all HELD LOCAL, gates green throughout (448 tests · check-guards 6/6 · api-imports · build).
