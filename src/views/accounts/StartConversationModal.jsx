@@ -1,10 +1,12 @@
 import { useState, useMemo, useEffect } from "react";
 import { C } from "../../lib/colors";
 import { fmtMedium } from "../../lib/dateUtils";
+import { supabase } from "../../lib/supabase";
 import { Modal } from "../../components/Modal";
 import { AmberBtn, SecBtn } from "../../components/Buttons";
 import { InputField, TextArea } from "../../components/InputField";
 import { FL } from "../../components/FieldLabel";
+import { AccountPicker } from "../../components/AccountPicker";
 import { useBreakpoint } from "../../hooks/useBreakpoint";
 import { useContacts } from "../../hooks/useContacts";
 import { extractTouchpointActionsPip } from "../../lib/pip";
@@ -63,8 +65,7 @@ export function StartConversationModal({ accountId, accounts, userId, orgId, mem
       .sort(function (a, b) { return (a.name || "").localeCompare(b.name || ""); });
   }, [accounts]);
 
-  var [selectedAccountId, setSelectedAccountId] = useState(accountId || "");
-  var [search, setSearch]   = useState("");
+  var [selectedAccountIds, setSelectedAccountIds] = useState(accountId ? [accountId] : []);
   var [method, setMethod]   = useState("");
   var [date, setDate]       = useState(defaultDate || todayISO());
   var [quickNote, setQuickNote] = useState("");
@@ -85,43 +86,59 @@ export function StartConversationModal({ accountId, accounts, userId, orgId, mem
   var [extractedItems, setExtractedItems] = useState([]); // [{ text, due_date, assignee, confidence, checked }]
   var [extractedTitle, setExtractedTitle] = useState(""); // Pip's 3-4 word short title for the touchpoint
 
+  // Primary account — drives contact/gauge scoping and the fields other
+  // parts of the app still expect a single account_id for.
+  var selectedAccountId = selectedAccountIds[0] || "";
+
+  function addAccount(id) {
+    if (!id) return;
+    setSelectedAccountIds(function (prev) {
+      return prev.indexOf(id) !== -1 ? prev : prev.concat([id]);
+    });
+  }
+  function removeAccount(id) {
+    setSelectedAccountIds(function (prev) { return prev.filter(function (x) { return x !== id; }); });
+  }
+
   // Email = quick after-the-fact log. Other methods = real-time meeting
   // overlay. The branch happens entirely in handleStart.
   var isQuickLog = method === "email";
 
   // Load contacts when an account is picked — only needed for the quick-log
-  // flow (contact chip selector + Pip extraction context).
+  // flow (contact chip selector + Pip extraction context). When more than
+  // one account/department is logged together, merge in each additional
+  // account's contacts too (same pattern as CadenceHub's multi-department
+  // cadence roster) so "who was it with" covers everyone on the call.
   var contactsApi = useContacts(userId, selectedAccountId || null, orgId);
-  var accountContacts = contactsApi.contacts || [];
-
-  var selectedAccount = useMemo(function () {
-    if (!selectedAccountId) return null;
-    return activeAccounts.find(function (a) { return a.id === selectedAccountId; }) || null;
-  }, [selectedAccountId, activeAccounts]);
-
-  // Auto-select when the search narrows to exactly one match — saves a tap
-  // and means the Start button doesn't sit grayed-out while the user is
-  // typing what's obviously a single hit ("Ucc" → Power Auto Parts).
+  var primaryContacts = contactsApi.contacts || [];
+  var [extraContacts, setExtraContacts] = useState([]);
   useEffect(function () {
-    var q = search.trim().toLowerCase();
-    if (!q || selectedAccountId) return;
-    var matches = activeAccounts.filter(function (a) {
-      return (a.name || "").toLowerCase().includes(q);
+    var extraIds = selectedAccountIds.slice(1).filter(Boolean);
+    if (!extraIds.length || !userId) { setExtraContacts([]); return; }
+    var cancelled = false;
+    supabase.from("folio_contacts").select("*").eq("user_id", userId).in("account_id", extraIds)
+      .then(function (r) { if (!cancelled && !r.error) setExtraContacts(r.data || []); });
+    return function () { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAccountIds.join(","), userId]);
+  var accountContacts = useMemo(function () {
+    if (!extraContacts.length) return primaryContacts;
+    var seen = {};
+    return primaryContacts.concat(extraContacts).filter(function (c) {
+      if (seen[c.id]) return false;
+      seen[c.id] = true;
+      return true;
     });
-    if (matches.length === 1) {
-      setSelectedAccountId(matches[0].id);
-    }
-  }, [search, activeAccounts, selectedAccountId]);
+  }, [primaryContacts, extraContacts]);
 
-  var filteredAccounts = useMemo(function () {
-    var q = search.trim().toLowerCase();
-    if (!q) return activeAccounts.slice(0, 50);
-    return activeAccounts.filter(function (a) {
-      return (a.name || "").toLowerCase().indexOf(q) >= 0;
-    }).slice(0, 50);
-  }, [search, activeAccounts]);
+  var selectedAccountNames = useMemo(function () {
+    return selectedAccountIds.map(function (id) {
+      var a = activeAccounts.find(function (x) { return x.id === id; });
+      return a ? a.name : null;
+    }).filter(Boolean);
+  }, [selectedAccountIds, activeAccounts]);
 
-  var canStart = Boolean(selectedAccountId && method && date && !loading);
+  var canStart = Boolean(selectedAccountIds.length && method && date && !loading);
 
   function commitLog(itemsToCreate, shortTitleOverride) {
     setError(null);
@@ -135,6 +152,7 @@ export function StartConversationModal({ accountId, accounts, userId, orgId, mem
       : "";
     return Promise.resolve(onStart({
       account_id:      selectedAccountId,
+      account_ids:     selectedAccountIds,
       user_id:         userId,
       cadence_id:      null,
       method:          method,
@@ -185,7 +203,7 @@ export function StartConversationModal({ accountId, accounts, userId, orgId, mem
     setLoading(true);
     extractTouchpointActionsPip({
       note:        note,
-      accountName: selectedAccount ? selectedAccount.name : "",
+      accountName: selectedAccountNames.join(", "),
       contacts:    withContacts.map(function (n) { return { name: n }; }),
       orgMembers:  members || [],
     }).then(function (result) {
@@ -264,7 +282,7 @@ export function StartConversationModal({ accountId, accounts, userId, orgId, mem
 
       var title = "Email — " + formatDateLong(date);
       return Promise.resolve(onStart({
-        account_id: selectedAccountId, user_id: userId, cadence_id: null,
+        account_id: selectedAccountId, account_ids: selectedAccountIds, user_id: userId, cadence_id: null,
         method: method, meeting_date: date, title: title, notes: quickNote.trim(),
         attendees: withContacts.length > 0 ? withContacts.slice() : null,
         pip_short_title: extractedTitle || null, status: "summarized",
@@ -306,13 +324,14 @@ export function StartConversationModal({ accountId, accounts, userId, orgId, mem
     });
   }
 
-  // Projects for the selected account, open only — used in the gauge dropdown.
+  // Projects for any selected account, open only — used in the gauge dropdown.
   var accountGaugeProjects = useMemo(function () {
-    if (!selectedAccountId || !allGaugeProjects) return [];
+    if (!selectedAccountIds.length || !allGaugeProjects) return [];
     return allGaugeProjects.filter(function (p) {
-      return projectMatchesAccount(p, selectedAccountId) && p.status !== "complete" && p.status !== "draft";
+      return selectedAccountIds.some(function (id) { return projectMatchesAccount(p, id); })
+        && p.status !== "complete" && p.status !== "draft";
     });
-  }, [selectedAccountId, allGaugeProjects]);
+  }, [selectedAccountIds.join(","), allGaugeProjects]);
 
   function toggleContact(name) {
     setWithContacts(function (prev) {
@@ -326,94 +345,53 @@ export function StartConversationModal({ accountId, accounts, userId, orgId, mem
         {needsAccountPicker && (
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-              <FL htmlFor="start-conv-acct">Account</FL>
-              {selectedAccount ? (
+              <FL>Account</FL>
+              {selectedAccountIds.length > 0 ? (
                 <span style={{ fontSize: 10.5, color: C.accent, fontFamily: "'JetBrains Mono', ui-monospace, monospace", letterSpacing: "0.06em", textTransform: "uppercase" }}>
-                  ✓ {selectedAccount.name}
+                  ✓ {selectedAccountIds.length} account{selectedAccountIds.length > 1 ? "s" : ""}
                 </span>
               ) : (
                 <span style={{ fontSize: 10.5, color: C.textMuted, fontFamily: "'JetBrains Mono', ui-monospace, monospace", letterSpacing: "0.06em", textTransform: "uppercase" }}>
-                  {search.trim() ? filteredAccounts.length + " of " + activeAccounts.length : activeAccounts.length + " accounts"}
+                  required
                 </span>
               )}
             </div>
-            <div style={{ position: "relative" }}>
-              <input
-                id="start-conv-acct"
-                type="text"
-                value={search}
-                onChange={function (e) {
-                  setSearch(e.target.value);
-                  if (selectedAccountId) setSelectedAccountId("");
-                }}
-                placeholder={selectedAccount ? selectedAccount.name : "Type an account name…"}
-                autoComplete="off"
-                style={{
-                  width: "100%",
-                  background: C.bgDark,
-                  border: "1px solid " + (selectedAccount ? C.accentBorder : C.border),
-                  borderRadius: 10,
-                  padding: "10px 36px 10px 14px",
-                  color: C.text,
-                  fontSize: 16,
-                  fontFamily: INTER,
-                  outline: "none",
-                  boxSizing: "border-box",
-                }}
-              />
-              {(search || selectedAccount) && (
-                <button
-                  type="button"
-                  onClick={function () { setSearch(""); setSelectedAccountId(""); }}
-                  aria-label="Clear account"
-                  style={{
-                    position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)",
-                    background: "transparent", border: "none", color: C.textMuted,
-                    fontSize: 18, lineHeight: 1, padding: "4px 8px", cursor: "pointer",
-                  }}
-                >
-                  ×
-                </button>
-              )}
-            </div>
-            {!selectedAccount && (
-              <div style={{
-                marginTop: 6,
-                maxHeight: 200, overflowY: "auto",
-                background: C.bgDropdown,
-                border: "1px solid " + C.border,
-                borderRadius: 10,
-              }}>
-                {filteredAccounts.length === 0 ? (
-                  <div style={{ padding: "10px 14px", fontSize: 12, color: C.textMuted, fontFamily: INTER }}>
-                    No matches.
-                  </div>
-                ) : (
-                  filteredAccounts.map(function (a) {
-                    return (
+
+            {/* Selected account/department chips — logging a joint call, a
+                department cadence, or a multi-account touchpoint all just
+                mean adding more than one here. */}
+            {selectedAccountIds.length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                {selectedAccountIds.map(function (id) {
+                  var a = activeAccounts.find(function (x) { return x.id === id; });
+                  return (
+                    <span key={id} style={{
+                      display: "inline-flex", alignItems: "center", gap: 4,
+                      background: C.accentFaint, border: "1px solid " + C.accentBorder,
+                      borderRadius: 12, padding: "3px 8px", fontSize: 11, color: C.accent,
+                      fontFamily: INTER,
+                    }}>
+                      {a ? a.name : "Unknown account"}
                       <button
-                        key={a.id}
                         type="button"
-                        onClick={function () {
-                          setSelectedAccountId(a.id);
-                          setSearch("");
-                        }}
-                        style={{
-                          display: "block", width: "100%", textAlign: "left",
-                          background: "transparent",
-                          border: "none",
-                          padding: "9px 14px",
-                          color: C.text, fontSize: 13, fontFamily: INTER,
-                          cursor: "pointer",
-                        }}
+                        aria-label={"Remove " + (a ? a.name : "account")}
+                        onClick={function () { removeAccount(id); }}
+                        style={{ background: "transparent", border: "none", color: C.textMuted, cursor: "pointer", padding: 0, fontSize: 13, lineHeight: 1 }}
                       >
-                        {a.name}
+                        ×
                       </button>
-                    );
-                  })
-                )}
+                    </span>
+                  );
+                })}
               </div>
             )}
+
+            <AccountPicker
+              accounts={activeAccounts.filter(function (a) { return selectedAccountIds.indexOf(a.id) === -1; })}
+              value=""
+              onChange={function (id) { addAccount(id); }}
+              placeholder={selectedAccountIds.length > 0 ? "Add another account or department…" : "Search accounts or departments…"}
+            />
           </div>
         )}
 
@@ -456,7 +434,7 @@ export function StartConversationModal({ accountId, accounts, userId, orgId, mem
           />
         </div>
 
-        {isQuickLog && selectedAccountId && accountContacts.length > 0 && phase === "compose" && (
+        {isQuickLog && selectedAccountIds.length > 0 && accountContacts.length > 0 && phase === "compose" && (
           <div>
             <FL>
               Who was it with? <span style={{ color: C.textMuted, fontWeight: 400 }}>(optional)</span>
@@ -692,7 +670,7 @@ export function StartConversationModal({ accountId, accounts, userId, orgId, mem
             fontFamily: INTER, fontSize: 11.5, color: C.textMuted,
             marginTop: -4, marginBottom: -4, textAlign: "right",
           }}>
-            {!selectedAccountId ? "Pick an account from the list to start."
+            {!selectedAccountIds.length ? "Pick an account to start."
               : !method ? "Pick a method to start."
               : !date ? "Pick a date to start."
               : ""}

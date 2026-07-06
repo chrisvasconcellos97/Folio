@@ -22,8 +22,11 @@ export function useMeetings(userId, accountId, orgId) {
       .order("meeting_date", { ascending: false });
     if (accountId) {
       // Per-account: cap at 150 most-recent; the account page doesn't paginate
-      // and Pip only reads the last 3-5 for summaries anyway.
-      query = query.eq("account_id", accountId).limit(150);
+      // and Pip only reads the last 3-5 for summaries anyway. Match the
+      // primary account_id OR membership in the multi-account account_ids
+      // array (mirrors useProjects), so a conversation logged against
+      // several accounts/departments surfaces under every one of them.
+      query = query.or("account_id.eq." + accountId + ",account_ids.ov.{" + accountId + "}").limit(150);
     } else {
       query = query.limit(300);
     }
@@ -65,6 +68,11 @@ export function useMeetings(userId, accountId, orgId) {
         if (data.account_id && data.meeting_date) {
           touchAccount(data.account_id, { last_meeting: data.meeting_date });
         }
+        // Multi-account/department conversations bump every linked
+        // account's last_interaction_at too, not just the primary.
+        (data.account_ids || []).forEach(function (id) {
+          if (id && id !== data.account_id) touchAccount(id);
+        });
         logActivity(orgId, userId, data.account_id, "meeting_logged", { title: data.title || "Meeting" });
         fetch();
         return meeting;
