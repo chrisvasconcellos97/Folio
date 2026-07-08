@@ -241,15 +241,26 @@ export function CadenceView({ cadences, cadencesError, onRetryCadences, accounts
             accounts={accounts}
             onSave={function (data) {
               var ids = data.account_ids;
+              var hasIds = Array.isArray(ids) && ids.length > 0;
               var rest = Object.assign({}, data);
               delete rest.account_ids;
-              if (ids && accounts && ids.length === accounts.length && rest.type === 'task') {
+              if (hasIds && rest.type === 'task' && accounts && ids.length === accounts.length) {
                 return addCadence(Object.assign({}, rest, { is_global: true, account_id: null }))
                   .then(function () { setShowAddModal(false); showToast("Cadence set"); });
               }
-              var saves = ids
-                ? ids.map(function (id) { return addCadence(Object.assign({}, rest, { account_id: id })); })
-                : [addCadence(data)];
+              var saves;
+              if (hasIds && rest.type === 'task') {
+                // Recurring task cadence applied to several accounts — one
+                // independent row per account (each tracks its own instance).
+                saves = ids.map(function (id) { return addCadence(Object.assign({}, rest, { account_id: id })); });
+              } else if (hasIds) {
+                // Joint meeting cadence spanning departments — ONE row with
+                // account_ids populated (CadenceHub merges the roster from
+                // this array); NOT one duplicate row per department.
+                saves = [addCadence(Object.assign({}, rest, { account_id: ids[0], account_ids: ids }))];
+              } else {
+                saves = [addCadence(data)];
+              }
               return Promise.all(saves).then(function () { setShowAddModal(false); showToast("Cadence set"); });
             }}
             onClose={function () { setShowAddModal(false); }}
@@ -357,15 +368,26 @@ export function CadenceView({ cadences, cadencesError, onRetryCadences, accounts
           accounts={accounts}
           onSave={function (data) {
             var ids = data.account_ids;
+            var hasIds = Array.isArray(ids) && ids.length > 0;
             var rest = Object.assign({}, data);
             delete rest.account_ids;
-            if (ids && accounts && ids.length === accounts.length && rest.type === 'task') {
+            if (hasIds && rest.type === 'task' && accounts && ids.length === accounts.length) {
               return addCadence(Object.assign({}, rest, { is_global: true, account_id: null }))
                 .then(function () { setShowAddModal(false); showToast("Cadence set"); });
             }
-            var saves = ids
-              ? ids.map(function (id) { return addCadence(Object.assign({}, rest, { account_id: id })); })
-              : [addCadence(data)];
+            var saves;
+            if (hasIds && rest.type === 'task') {
+              // Recurring task cadence applied to several accounts — one
+              // independent row per account (each tracks its own instance).
+              saves = ids.map(function (id) { return addCadence(Object.assign({}, rest, { account_id: id })); });
+            } else if (hasIds) {
+              // Joint meeting cadence spanning departments — ONE row with
+              // account_ids populated (CadenceHub merges the roster from
+              // this array); NOT one duplicate row per department.
+              saves = [addCadence(Object.assign({}, rest, { account_id: ids[0], account_ids: ids }))];
+            } else {
+              saves = [addCadence(data)];
+            }
             return Promise.all(saves).then(function () { setShowAddModal(false); showToast("Cadence set"); });
           }}
           onClose={function () { setShowAddModal(false); }}
